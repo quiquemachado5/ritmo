@@ -3,3 +3,9 @@ node_modules/
 .netlify/
 .claude/
 *.log
+.impeccable/decision-world.json
+.impeccable/mocks/
+.impeccable/questions/
+.impeccable/sketches/
+.impeccable/surface-brief-index.md
+.impeccable/surfaces/

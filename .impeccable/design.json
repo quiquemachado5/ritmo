@@ -1,69 +1,77 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-22T00:00:00.000Z",
+  "generatedAt": "2026-08-22T17:34:15.000Z",
   "title": "Design System: Composición",
   "extensions": {
     "colorMeta": {
-      "canvas": { "role": "neutral", "displayName": "Papel azul grisáceo", "canonical": "#f4f6fc", "tonalRamp": ["oklch(15% 0.0083 271.3)", "oklch(26% 0.0083 271.3)", "oklch(37% 0.0083 271.3)", "oklch(48% 0.0083 271.3)", "oklch(59% 0.0083 271.3)", "oklch(71% 0.0083 271.3)", "oklch(83% 0.0083 271.3)", "oklch(95% 0.0083 271.3)"] },
-      "surface": { "role": "neutral", "displayName": "Papel de tarjeta", "canonical": "#ffffff", "tonalRamp": ["oklch(15% 0.0000 89.9)", "oklch(26% 0.0000 89.9)", "oklch(37% 0.0000 89.9)", "oklch(48% 0.0000 89.9)", "oklch(59% 0.0000 89.9)", "oklch(71% 0.0000 89.9)", "oklch(83% 0.0000 89.9)", "oklch(95% 0.0000 89.9)"] },
-      "surface-2": { "role": "neutral", "displayName": "Superficie suave", "canonical": "#eef1f7", "tonalRamp": ["oklch(15% 0.0087 264.5)", "oklch(26% 0.0087 264.5)", "oklch(37% 0.0087 264.5)", "oklch(48% 0.0087 264.5)", "oklch(59% 0.0087 264.5)", "oklch(71% 0.0087 264.5)", "oklch(83% 0.0087 264.5)", "oklch(95% 0.0087 264.5)"] },
-      "surface-3": { "role": "neutral", "displayName": "Superficie activa", "canonical": "#e1e7f0", "tonalRamp": ["oklch(15% 0.0138 258.3)", "oklch(26% 0.0138 258.3)", "oklch(37% 0.0138 258.3)", "oklch(48% 0.0138 258.3)", "oklch(59% 0.0138 258.3)", "oklch(71% 0.0138 258.3)", "oklch(83% 0.0138 258.3)", "oklch(95% 0.0138 258.3)"] },
-      "border": { "role": "neutral", "displayName": "Borde de papel", "canonical": "#dce3ef", "tonalRamp": ["oklch(15% 0.0180 261.3)", "oklch(26% 0.0180 261.3)", "oklch(37% 0.0180 261.3)", "oklch(48% 0.0180 261.3)", "oklch(59% 0.0180 261.3)", "oklch(71% 0.0180 261.3)", "oklch(83% 0.0180 261.3)", "oklch(95% 0.0180 261.3)"] },
-      "border-strong": { "role": "neutral", "displayName": "Borde de control", "canonical": "#c5cfdf", "tonalRamp": ["oklch(15% 0.0248 259.8)", "oklch(26% 0.0248 259.8)", "oklch(37% 0.0248 259.8)", "oklch(48% 0.0248 259.8)", "oklch(59% 0.0248 259.8)", "oklch(71% 0.0248 259.8)", "oklch(83% 0.0248 259.8)", "oklch(95% 0.0248 259.8)"] },
-      "ink": { "role": "neutral", "displayName": "Tinta azul noche", "canonical": "#18213b", "tonalRamp": ["oklch(15% 0.0510 268.2)", "oklch(26% 0.0510 268.2)", "oklch(37% 0.0510 268.2)", "oklch(48% 0.0510 268.2)", "oklch(59% 0.0510 268.2)", "oklch(71% 0.0510 268.2)", "oklch(83% 0.0510 268.2)", "oklch(95% 0.0510 268.2)"] },
-      "ink-2": { "role": "neutral", "displayName": "Tinta de lectura", "canonical": "#3c4862", "tonalRamp": ["oklch(15% 0.0468 265.2)", "oklch(26% 0.0468 265.2)", "oklch(37% 0.0468 265.2)", "oklch(48% 0.0468 265.2)", "oklch(59% 0.0468 265.2)", "oklch(71% 0.0468 265.2)", "oklch(83% 0.0468 265.2)", "oklch(95% 0.0468 265.2)"] },
-      "ink-3": { "role": "neutral", "displayName": "Tinta secundaria", "canonical": "#526078", "tonalRamp": ["oklch(15% 0.0425 261.1)", "oklch(26% 0.0425 261.1)", "oklch(37% 0.0425 261.1)", "oklch(48% 0.0425 261.1)", "oklch(59% 0.0425 261.1)", "oklch(71% 0.0425 261.1)", "oklch(83% 0.0425 261.1)", "oklch(95% 0.0425 261.1)"] },
-      "ink-4": { "role": "neutral", "displayName": "Tinta tenue", "canonical": "#5b6880", "tonalRamp": ["oklch(15% 0.0414 262.6)", "oklch(26% 0.0414 262.6)", "oklch(37% 0.0414 262.6)", "oklch(48% 0.0414 262.6)", "oklch(59% 0.0414 262.6)", "oklch(71% 0.0414 262.6)", "oklch(83% 0.0414 262.6)", "oklch(95% 0.0414 262.6)"] },
-      "weight": { "role": "primary", "displayName": "Índigo de peso", "canonical": "#4559d7", "tonalRamp": ["oklch(15% 0.1932 271.2)", "oklch(26% 0.1932 271.2)", "oklch(37% 0.1932 271.2)", "oklch(48% 0.1932 271.2)", "oklch(59% 0.1932 271.2)", "oklch(71% 0.1932 271.2)", "oklch(83% 0.1932 271.2)", "oklch(95% 0.1932 271.2)"] },
-      "weight-hover": { "role": "primary", "displayName": "Índigo de peso hover", "canonical": "#3548bf", "tonalRamp": ["oklch(15% 0.1864 270.3)", "oklch(26% 0.1864 270.3)", "oklch(37% 0.1864 270.3)", "oklch(48% 0.1864 270.3)", "oklch(59% 0.1864 270.3)", "oklch(71% 0.1864 270.3)", "oklch(83% 0.1864 270.3)", "oklch(95% 0.1864 270.3)"] },
-      "weight-active": { "role": "primary", "displayName": "Índigo de peso activo", "canonical": "#293a9c", "tonalRamp": ["oklch(15% 0.1598 269.9)", "oklch(26% 0.1598 269.9)", "oklch(37% 0.1598 269.9)", "oklch(48% 0.1598 269.9)", "oklch(59% 0.1598 269.9)", "oklch(71% 0.1598 269.9)", "oklch(83% 0.1598 269.9)", "oklch(95% 0.1598 269.9)"] },
-      "weight-soft": { "role": "primary", "displayName": "Índigo suave", "canonical": "#aeb9ff", "tonalRamp": ["oklch(15% 0.0999 277.0)", "oklch(26% 0.0999 277.0)", "oklch(37% 0.0999 277.0)", "oklch(48% 0.0999 277.0)", "oklch(59% 0.0999 277.0)", "oklch(71% 0.0999 277.0)", "oklch(83% 0.0999 277.0)", "oklch(95% 0.0999 277.0)"] },
-      "weight-wash": { "role": "primary", "displayName": "Lavado de peso", "canonical": "#eef0ff", "tonalRamp": ["oklch(15% 0.0202 279.9)", "oklch(26% 0.0202 279.9)", "oklch(37% 0.0202 279.9)", "oklch(48% 0.0202 279.9)", "oklch(59% 0.0202 279.9)", "oklch(71% 0.0202 279.9)", "oklch(83% 0.0202 279.9)", "oklch(95% 0.0202 279.9)"] },
-      "weight-border": { "role": "primary", "displayName": "Borde de peso", "canonical": "#c8d0ff", "tonalRamp": ["oklch(15% 0.0658 277.4)", "oklch(26% 0.0658 277.4)", "oklch(37% 0.0658 277.4)", "oklch(48% 0.0658 277.4)", "oklch(59% 0.0658 277.4)", "oklch(71% 0.0658 277.4)", "oklch(83% 0.0658 277.4)", "oklch(95% 0.0658 277.4)"] },
-      "weight-ink": { "role": "primary", "displayName": "Tinta de peso", "canonical": "#3346b7", "tonalRamp": ["oklch(15% 0.1787 270.2)", "oklch(26% 0.1787 270.2)", "oklch(37% 0.1787 270.2)", "oklch(48% 0.1787 270.2)", "oklch(59% 0.1787 270.2)", "oklch(71% 0.1787 270.2)", "oklch(83% 0.1787 270.2)", "oklch(95% 0.1787 270.2)"] },
-      "habit": { "role": "secondary", "displayName": "Verde azulado de hábito", "canonical": "#07866b", "tonalRamp": ["oklch(15% 0.1060 171.8)", "oklch(26% 0.1060 171.8)", "oklch(37% 0.1060 171.8)", "oklch(48% 0.1060 171.8)", "oklch(59% 0.1060 171.8)", "oklch(71% 0.1060 171.8)", "oklch(83% 0.1060 171.8)", "oklch(95% 0.1060 171.8)"] },
-      "habit-soft": { "role": "secondary", "displayName": "Verde azulado suave", "canonical": "#91d6bf", "tonalRamp": ["oklch(15% 0.0770 171.5)", "oklch(26% 0.0770 171.5)", "oklch(37% 0.0770 171.5)", "oklch(48% 0.0770 171.5)", "oklch(59% 0.0770 171.5)", "oklch(71% 0.0770 171.5)", "oklch(83% 0.0770 171.5)", "oklch(95% 0.0770 171.5)"] },
-      "habit-wash": { "role": "secondary", "displayName": "Lavado de hábito", "canonical": "#e9f8f2", "tonalRamp": ["oklch(15% 0.0177 170.1)", "oklch(26% 0.0177 170.1)", "oklch(37% 0.0177 170.1)", "oklch(48% 0.0177 170.1)", "oklch(59% 0.0177 170.1)", "oklch(71% 0.0177 170.1)", "oklch(83% 0.0177 170.1)", "oklch(95% 0.0177 170.1)"] },
-      "habit-border": { "role": "secondary", "displayName": "Borde de hábito", "canonical": "#b9eadb", "tonalRamp": ["oklch(15% 0.0544 174.4)", "oklch(26% 0.0544 174.4)", "oklch(37% 0.0544 174.4)", "oklch(48% 0.0544 174.4)", "oklch(59% 0.0544 174.4)", "oklch(71% 0.0544 174.4)", "oklch(83% 0.0544 174.4)", "oklch(95% 0.0544 174.4)"] },
-      "habit-ink": { "role": "secondary", "displayName": "Tinta de hábito", "canonical": "#057158", "tonalRamp": ["oklch(15% 0.0951 170.3)", "oklch(26% 0.0951 170.3)", "oklch(37% 0.0951 170.3)", "oklch(48% 0.0951 170.3)", "oklch(59% 0.0951 170.3)", "oklch(71% 0.0951 170.3)", "oklch(83% 0.0951 170.3)", "oklch(95% 0.0951 170.3)"] },
-      "energy": { "role": "secondary", "displayName": "Coral de energía", "canonical": "#d85d42", "tonalRamp": ["oklch(15% 0.1608 33.9)", "oklch(26% 0.1608 33.9)", "oklch(37% 0.1608 33.9)", "oklch(48% 0.1608 33.9)", "oklch(59% 0.1608 33.9)", "oklch(71% 0.1608 33.9)", "oklch(83% 0.1608 33.9)", "oklch(95% 0.1608 33.9)"] },
-      "energy-soft": { "role": "secondary", "displayName": "Coral suave", "canonical": "#f4ae9d", "tonalRamp": ["oklch(15% 0.0862 34.1)", "oklch(26% 0.0862 34.1)", "oklch(37% 0.0862 34.1)", "oklch(48% 0.0862 34.1)", "oklch(59% 0.0862 34.1)", "oklch(71% 0.0862 34.1)", "oklch(83% 0.0862 34.1)", "oklch(95% 0.0862 34.1)"] },
-      "energy-wash": { "role": "secondary", "displayName": "Lavado de energía", "canonical": "#fff0ec", "tonalRamp": ["oklch(15% 0.0172 35.3)", "oklch(26% 0.0172 35.3)", "oklch(37% 0.0172 35.3)", "oklch(48% 0.0172 35.3)", "oklch(59% 0.0172 35.3)", "oklch(71% 0.0172 35.3)", "oklch(83% 0.0172 35.3)", "oklch(95% 0.0172 35.3)"] },
-      "energy-border": { "role": "secondary", "displayName": "Borde de energía", "canonical": "#f8cfc4", "tonalRamp": ["oklch(15% 0.0489 35.5)", "oklch(26% 0.0489 35.5)", "oklch(37% 0.0489 35.5)", "oklch(48% 0.0489 35.5)", "oklch(59% 0.0489 35.5)", "oklch(71% 0.0489 35.5)", "oklch(83% 0.0489 35.5)", "oklch(95% 0.0489 35.5)"] },
-      "energy-ink": { "role": "secondary", "displayName": "Tinta de energía", "canonical": "#ad442f", "tonalRamp": ["oklch(15% 0.1423 33.1)", "oklch(26% 0.1423 33.1)", "oklch(37% 0.1423 33.1)", "oklch(48% 0.1423 33.1)", "oklch(59% 0.1423 33.1)", "oklch(71% 0.1423 33.1)", "oklch(83% 0.1423 33.1)", "oklch(95% 0.1423 33.1)"] },
-      "body": { "role": "tertiary", "displayName": "Violeta de composición", "canonical": "#754bc0", "tonalRamp": ["oklch(15% 0.1755 296.3)", "oklch(26% 0.1755 296.3)", "oklch(37% 0.1755 296.3)", "oklch(48% 0.1755 296.3)", "oklch(59% 0.1755 296.3)", "oklch(71% 0.1755 296.3)", "oklch(83% 0.1755 296.3)", "oklch(95% 0.1755 296.3)"] },
-      "body-soft": { "role": "tertiary", "displayName": "Violeta suave", "canonical": "#c5afea", "tonalRamp": ["oklch(15% 0.0854 301.5)", "oklch(26% 0.0854 301.5)", "oklch(37% 0.0854 301.5)", "oklch(48% 0.0854 301.5)", "oklch(59% 0.0854 301.5)", "oklch(71% 0.0854 301.5)", "oklch(83% 0.0854 301.5)", "oklch(95% 0.0854 301.5)"] },
-      "body-wash": { "role": "tertiary", "displayName": "Lavado de composición", "canonical": "#f4effd", "tonalRamp": ["oklch(15% 0.0193 302.2)", "oklch(26% 0.0193 302.2)", "oklch(37% 0.0193 302.2)", "oklch(48% 0.0193 302.2)", "oklch(59% 0.0193 302.2)", "oklch(71% 0.0193 302.2)", "oklch(83% 0.0193 302.2)", "oklch(95% 0.0193 302.2)"] },
-      "body-border": { "role": "tertiary", "displayName": "Borde de composición", "canonical": "#ddcef6", "tonalRamp": ["oklch(15% 0.0567 302.3)", "oklch(26% 0.0567 302.3)", "oklch(37% 0.0567 302.3)", "oklch(48% 0.0567 302.3)", "oklch(59% 0.0567 302.3)", "oklch(71% 0.0567 302.3)", "oklch(83% 0.0567 302.3)", "oklch(95% 0.0567 302.3)"] },
-      "body-ink": { "role": "tertiary", "displayName": "Tinta de composición", "canonical": "#6335ad", "tonalRamp": ["oklch(15% 0.1804 296.0)", "oklch(26% 0.1804 296.0)", "oklch(37% 0.1804 296.0)", "oklch(48% 0.1804 296.0)", "oklch(59% 0.1804 296.0)", "oklch(71% 0.1804 296.0)", "oklch(83% 0.1804 296.0)", "oklch(95% 0.1804 296.0)"] },
+      "canvas": { "role": "neutral", "displayName": "Lienzo gris frío", "canonical": "#f6f8fa", "tonalRamp": ["oklch(15% 0.0034 247.9)", "oklch(26% 0.0034 247.9)", "oklch(37% 0.0034 247.9)", "oklch(48% 0.0034 247.9)", "oklch(59% 0.0034 247.9)", "oklch(71% 0.0034 247.9)", "oklch(83% 0.0034 247.9)", "oklch(95% 0.0034 247.9)"] },
+      "surface": { "role": "neutral", "displayName": "Superficie blanca", "canonical": "#ffffff", "tonalRamp": ["oklch(15% 0.0000 89.9)", "oklch(26% 0.0000 89.9)", "oklch(37% 0.0000 89.9)", "oklch(48% 0.0000 89.9)", "oklch(59% 0.0000 89.9)", "oklch(71% 0.0000 89.9)", "oklch(83% 0.0000 89.9)", "oklch(95% 0.0000 89.9)"] },
+      "surface-2": { "role": "neutral", "displayName": "Superficie gris suave", "canonical": "#f1f4f8", "tonalRamp": ["oklch(15% 0.0062 255.5)", "oklch(26% 0.0062 255.5)", "oklch(37% 0.0062 255.5)", "oklch(48% 0.0062 255.5)", "oklch(59% 0.0062 255.5)", "oklch(71% 0.0062 255.5)", "oklch(83% 0.0062 255.5)", "oklch(95% 0.0062 255.5)"] },
+      "surface-3": { "role": "neutral", "displayName": "Superficie de presión", "canonical": "#e9eef5", "tonalRamp": ["oklch(15% 0.0108 256.7)", "oklch(26% 0.0108 256.7)", "oklch(37% 0.0108 256.7)", "oklch(48% 0.0108 256.7)", "oklch(59% 0.0108 256.7)", "oklch(71% 0.0108 256.7)", "oklch(83% 0.0108 256.7)", "oklch(95% 0.0108 256.7)"] },
+      "border": { "role": "neutral", "displayName": "Borde de lectura", "canonical": "#dfe6ee", "tonalRamp": ["oklch(15% 0.0132 251.6)", "oklch(26% 0.0132 251.6)", "oklch(37% 0.0132 251.6)", "oklch(48% 0.0132 251.6)", "oklch(59% 0.0132 251.6)", "oklch(71% 0.0132 251.6)", "oklch(83% 0.0132 251.6)", "oklch(95% 0.0132 251.6)"] },
+      "border-strong": { "role": "neutral", "displayName": "Borde de control", "canonical": "#c7d2df", "tonalRamp": ["oklch(15% 0.0217 252.5)", "oklch(26% 0.0217 252.5)", "oklch(37% 0.0217 252.5)", "oklch(48% 0.0217 252.5)", "oklch(59% 0.0217 252.5)", "oklch(71% 0.0217 252.5)", "oklch(83% 0.0217 252.5)", "oklch(95% 0.0217 252.5)"] },
+      "ink": { "role": "neutral", "displayName": "Tinta principal", "canonical": "#1d2939", "tonalRamp": ["oklch(15% 0.0341 255.8)", "oklch(26% 0.0341 255.8)", "oklch(37% 0.0341 255.8)", "oklch(48% 0.0341 255.8)", "oklch(59% 0.0341 255.8)", "oklch(71% 0.0341 255.8)", "oklch(83% 0.0341 255.8)", "oklch(95% 0.0341 255.8)"] },
+      "ink-2": { "role": "neutral", "displayName": "Tinta de lectura", "canonical": "#344054", "tonalRamp": ["oklch(15% 0.0381 260.5)", "oklch(26% 0.0381 260.5)", "oklch(37% 0.0381 260.5)", "oklch(48% 0.0381 260.5)", "oklch(59% 0.0381 260.5)", "oklch(71% 0.0381 260.5)", "oklch(83% 0.0381 260.5)", "oklch(95% 0.0381 260.5)"] },
+      "ink-3": { "role": "neutral", "displayName": "Tinta secundaria", "canonical": "#667085", "tonalRamp": ["oklch(15% 0.0350 265.1)", "oklch(26% 0.0350 265.1)", "oklch(37% 0.0350 265.1)", "oklch(48% 0.0350 265.1)", "oklch(59% 0.0350 265.1)", "oklch(71% 0.0350 265.1)", "oklch(83% 0.0350 265.1)", "oklch(95% 0.0350 265.1)"] },
+      "ink-4": { "role": "neutral", "displayName": "Tinta tenue", "canonical": "#98a2b3", "tonalRamp": ["oklch(15% 0.0273 261.1)", "oklch(26% 0.0273 261.1)", "oklch(37% 0.0273 261.1)", "oklch(48% 0.0273 261.1)", "oklch(59% 0.0273 261.1)", "oklch(71% 0.0273 261.1)", "oklch(83% 0.0273 261.1)", "oklch(95% 0.0273 261.1)"] },
+      "overlay": { "role": "neutral", "displayName": "Velo modal", "canonical": "rgba(15, 23, 42, .45)", "tonalRamp": ["oklch(15% 0.0398 265.8 / 0.45)", "oklch(26% 0.0398 265.8 / 0.45)", "oklch(37% 0.0398 265.8 / 0.45)", "oklch(48% 0.0398 265.8 / 0.45)", "oklch(59% 0.0398 265.8 / 0.45)", "oklch(71% 0.0398 265.8 / 0.45)", "oklch(83% 0.0398 265.8 / 0.45)", "oklch(95% 0.0398 265.8 / 0.45)"] },
+      "weight": { "role": "primary", "displayName": "Azul de peso", "canonical": "#2f6fdb", "tonalRamp": ["oklch(15% 0.1782 260.3)", "oklch(26% 0.1782 260.3)", "oklch(37% 0.1782 260.3)", "oklch(48% 0.1782 260.3)", "oklch(59% 0.1782 260.3)", "oklch(71% 0.1782 260.3)", "oklch(83% 0.1782 260.3)", "oklch(95% 0.1782 260.3)"] },
+      "weight-hover": { "role": "primary", "displayName": "Azul de peso hover", "canonical": "#1f5fbe", "tonalRamp": ["oklch(15% 0.1628 258.8)", "oklch(26% 0.1628 258.8)", "oklch(37% 0.1628 258.8)", "oklch(48% 0.1628 258.8)", "oklch(59% 0.1628 258.8)", "oklch(71% 0.1628 258.8)", "oklch(83% 0.1628 258.8)", "oklch(95% 0.1628 258.8)"] },
+      "weight-active": { "role": "primary", "displayName": "Azul de peso activo", "canonical": "#184fa9", "tonalRamp": ["oklch(15% 0.1557 260.1)", "oklch(26% 0.1557 260.1)", "oklch(37% 0.1557 260.1)", "oklch(48% 0.1557 260.1)", "oklch(59% 0.1557 260.1)", "oklch(71% 0.1557 260.1)", "oklch(83% 0.1557 260.1)", "oklch(95% 0.1557 260.1)"] },
+      "weight-soft": { "role": "primary", "displayName": "Azul de peso suave", "canonical": "#9fc5ff", "tonalRamp": ["oklch(15% 0.0920 258.7)", "oklch(26% 0.0920 258.7)", "oklch(37% 0.0920 258.7)", "oklch(48% 0.0920 258.7)", "oklch(59% 0.0920 258.7)", "oklch(71% 0.0920 258.7)", "oklch(83% 0.0920 258.7)", "oklch(95% 0.0920 258.7)"] },
+      "weight-wash": { "role": "primary", "displayName": "Lavado de peso", "canonical": "#eff6ff", "tonalRamp": ["oklch(15% 0.0142 254.6)", "oklch(26% 0.0142 254.6)", "oklch(37% 0.0142 254.6)", "oklch(48% 0.0142 254.6)", "oklch(59% 0.0142 254.6)", "oklch(71% 0.0142 254.6)", "oklch(83% 0.0142 254.6)", "oklch(95% 0.0142 254.6)"] },
+      "weight-border": { "role": "primary", "displayName": "Borde de peso", "canonical": "#bfdbfe", "tonalRamp": ["oklch(15% 0.0571 254.1)", "oklch(26% 0.0571 254.1)", "oklch(37% 0.0571 254.1)", "oklch(48% 0.0571 254.1)", "oklch(59% 0.0571 254.1)", "oklch(71% 0.0571 254.1)", "oklch(83% 0.0571 254.1)", "oklch(95% 0.0571 254.1)"] },
+      "weight-ink": { "role": "primary", "displayName": "Tinta de peso", "canonical": "#175cd3", "tonalRamp": ["oklch(15% 0.1955 260.9)", "oklch(26% 0.1955 260.9)", "oklch(37% 0.1955 260.9)", "oklch(48% 0.1955 260.9)", "oklch(59% 0.1955 260.9)", "oklch(71% 0.1955 260.9)", "oklch(83% 0.1955 260.9)", "oklch(95% 0.1955 260.9)"] },
+      "habit": { "role": "secondary", "displayName": "Verde de hábitos", "canonical": "#3d9b70", "tonalRamp": ["oklch(15% 0.1110 160.6)", "oklch(26% 0.1110 160.6)", "oklch(37% 0.1110 160.6)", "oklch(48% 0.1110 160.6)", "oklch(59% 0.1110 160.6)", "oklch(71% 0.1110 160.6)", "oklch(83% 0.1110 160.6)", "oklch(95% 0.1110 160.6)"] },
+      "habit-soft": { "role": "secondary", "displayName": "Verde de hábitos suave", "canonical": "#9bd5b8", "tonalRamp": ["oklch(15% 0.0724 162.6)", "oklch(26% 0.0724 162.6)", "oklch(37% 0.0724 162.6)", "oklch(48% 0.0724 162.6)", "oklch(59% 0.0724 162.6)", "oklch(71% 0.0724 162.6)", "oklch(83% 0.0724 162.6)", "oklch(95% 0.0724 162.6)"] },
+      "habit-wash": { "role": "secondary", "displayName": "Lavado de hábitos", "canonical": "#effaf3", "tonalRamp": ["oklch(15% 0.0148 158.3)", "oklch(26% 0.0148 158.3)", "oklch(37% 0.0148 158.3)", "oklch(48% 0.0148 158.3)", "oklch(59% 0.0148 158.3)", "oklch(71% 0.0148 158.3)", "oklch(83% 0.0148 158.3)", "oklch(95% 0.0148 158.3)"] },
+      "habit-border": { "role": "secondary", "displayName": "Borde de hábitos", "canonical": "#bce8ce", "tonalRamp": ["oklch(15% 0.0578 159.1)", "oklch(26% 0.0578 159.1)", "oklch(37% 0.0578 159.1)", "oklch(48% 0.0578 159.1)", "oklch(59% 0.0578 159.1)", "oklch(71% 0.0578 159.1)", "oklch(83% 0.0578 159.1)", "oklch(95% 0.0578 159.1)"] },
+      "habit-ink": { "role": "secondary", "displayName": "Tinta de hábitos", "canonical": "#287c55", "tonalRamp": ["oklch(15% 0.1016 159.4)", "oklch(26% 0.1016 159.4)", "oklch(37% 0.1016 159.4)", "oklch(48% 0.1016 159.4)", "oklch(59% 0.1016 159.4)", "oklch(71% 0.1016 159.4)", "oklch(83% 0.1016 159.4)", "oklch(95% 0.1016 159.4)"] },
+      "energy": { "role": "secondary", "displayName": "Coral de energía", "canonical": "#e16d57", "tonalRamp": ["oklch(15% 0.1494 32.3)", "oklch(26% 0.1494 32.3)", "oklch(37% 0.1494 32.3)", "oklch(48% 0.1494 32.3)", "oklch(59% 0.1494 32.3)", "oklch(71% 0.1494 32.3)", "oklch(83% 0.1494 32.3)", "oklch(95% 0.1494 32.3)"] },
+      "energy-soft": { "role": "secondary", "displayName": "Coral de energía suave", "canonical": "#f2ae9d", "tonalRamp": ["oklch(15% 0.0839 34.5)", "oklch(26% 0.0839 34.5)", "oklch(37% 0.0839 34.5)", "oklch(48% 0.0839 34.5)", "oklch(59% 0.0839 34.5)", "oklch(71% 0.0839 34.5)", "oklch(83% 0.0839 34.5)", "oklch(95% 0.0839 34.5)"] },
+      "energy-wash": { "role": "secondary", "displayName": "Lavado de energía", "canonical": "#fff1ed", "tonalRamp": ["oklch(15% 0.0161 36.5)", "oklch(26% 0.0161 36.5)", "oklch(37% 0.0161 36.5)", "oklch(48% 0.0161 36.5)", "oklch(59% 0.0161 36.5)", "oklch(71% 0.0161 36.5)", "oklch(83% 0.0161 36.5)", "oklch(95% 0.0161 36.5)"] },
+      "energy-border": { "role": "secondary", "displayName": "Borde de energía", "canonical": "#f6c9be", "tonalRamp": ["oklch(15% 0.0536 34.0)", "oklch(26% 0.0536 34.0)", "oklch(37% 0.0536 34.0)", "oklch(48% 0.0536 34.0)", "oklch(59% 0.0536 34.0)", "oklch(71% 0.0536 34.0)", "oklch(83% 0.0536 34.0)", "oklch(95% 0.0536 34.0)"] },
+      "energy-ink": { "role": "secondary", "displayName": "Tinta de energía", "canonical": "#b44f3d", "tonalRamp": ["oklch(15% 0.1355 31.9)", "oklch(26% 0.1355 31.9)", "oklch(37% 0.1355 31.9)", "oklch(48% 0.1355 31.9)", "oklch(59% 0.1355 31.9)", "oklch(71% 0.1355 31.9)", "oklch(83% 0.1355 31.9)", "oklch(95% 0.1355 31.9)"] },
+      "body": { "role": "tertiary", "displayName": "Violeta de composición", "canonical": "#7f56d9", "tonalRamp": ["oklch(15% 0.1916 293.8)", "oklch(26% 0.1916 293.8)", "oklch(37% 0.1916 293.8)", "oklch(48% 0.1916 293.8)", "oklch(59% 0.1916 293.8)", "oklch(71% 0.1916 293.8)", "oklch(83% 0.1916 293.8)", "oklch(95% 0.1916 293.8)"] },
+      "body-soft": { "role": "tertiary", "displayName": "Violeta de previsión suave", "canonical": "#c4b5fd", "tonalRamp": ["oklch(15% 0.1013 293.6)", "oklch(26% 0.1013 293.6)", "oklch(37% 0.1013 293.6)", "oklch(48% 0.1013 293.6)", "oklch(59% 0.1013 293.6)", "oklch(71% 0.1013 293.6)", "oklch(83% 0.1013 293.6)", "oklch(95% 0.1013 293.6)"] },
+      "body-wash": { "role": "tertiary", "displayName": "Lavado de composición", "canonical": "#f4f1ff", "tonalRamp": ["oklch(15% 0.0189 295.9)", "oklch(26% 0.0189 295.9)", "oklch(37% 0.0189 295.9)", "oklch(48% 0.0189 295.9)", "oklch(59% 0.0189 295.9)", "oklch(71% 0.0189 295.9)", "oklch(83% 0.0189 295.9)", "oklch(95% 0.0189 295.9)"] },
+      "body-border": { "role": "tertiary", "displayName": "Borde de composición", "canonical": "#ddd4fe", "tonalRamp": ["oklch(15% 0.0579 295.0)", "oklch(26% 0.0579 295.0)", "oklch(37% 0.0579 295.0)", "oklch(48% 0.0579 295.0)", "oklch(59% 0.0579 295.0)", "oklch(71% 0.0579 295.0)", "oklch(83% 0.0579 295.0)", "oklch(95% 0.0579 295.0)"] },
+      "body-ink": { "role": "tertiary", "displayName": "Tinta de composición", "canonical": "#6941c6", "tonalRamp": ["oklch(15% 0.1953 291.5)", "oklch(26% 0.1953 291.5)", "oklch(37% 0.1953 291.5)", "oklch(48% 0.1953 291.5)", "oklch(59% 0.1953 291.5)", "oklch(71% 0.1953 291.5)", "oklch(83% 0.1953 291.5)", "oklch(95% 0.1953 291.5)"] },
       "warning": { "role": "warning", "displayName": "Ocre de advertencia", "canonical": "#bd7b12", "tonalRamp": ["oklch(15% 0.1328 70.7)", "oklch(26% 0.1328 70.7)", "oklch(37% 0.1328 70.7)", "oklch(48% 0.1328 70.7)", "oklch(59% 0.1328 70.7)", "oklch(71% 0.1328 70.7)", "oklch(83% 0.1328 70.7)", "oklch(95% 0.1328 70.7)"] },
       "warning-wash": { "role": "warning", "displayName": "Lavado de advertencia", "canonical": "#fff7e7", "tonalRamp": ["oklch(15% 0.0227 84.6)", "oklch(26% 0.0227 84.6)", "oklch(37% 0.0227 84.6)", "oklch(48% 0.0227 84.6)", "oklch(59% 0.0227 84.6)", "oklch(71% 0.0227 84.6)", "oklch(83% 0.0227 84.6)", "oklch(95% 0.0227 84.6)"] },
       "warning-border": { "role": "warning", "displayName": "Borde de advertencia", "canonical": "#f1d59b", "tonalRamp": ["oklch(15% 0.0807 85.0)", "oklch(26% 0.0807 85.0)", "oklch(37% 0.0807 85.0)", "oklch(48% 0.0807 85.0)", "oklch(59% 0.0807 85.0)", "oklch(71% 0.0807 85.0)", "oklch(83% 0.0807 85.0)", "oklch(95% 0.0807 85.0)"] },
       "warning-ink": { "role": "warning", "displayName": "Tinta de advertencia", "canonical": "#95600b", "tonalRamp": ["oklch(15% 0.1116 70.8)", "oklch(26% 0.1116 70.8)", "oklch(37% 0.1116 70.8)", "oklch(48% 0.1116 70.8)", "oklch(59% 0.1116 70.8)", "oklch(71% 0.1116 70.8)", "oklch(83% 0.1116 70.8)", "oklch(95% 0.1116 70.8)"] }
     },
     "typographyMeta": {
-      "display": { "displayName": "Título de vista", "purpose": "Abre cada sección principal." },
-      "headline": { "displayName": "Título de sección", "purpose": "Nombra grupos temáticos y mantiene la jerarquía de lectura." },
+      "display": { "displayName": "Título de vista", "purpose": "Abre cada vista principal, como «Tu progreso»." },
+      "headline": { "displayName": "Título de sección", "purpose": "Nombra bloques de lectura y mantiene la jerarquía." },
+      "title": { "displayName": "Título de panel", "purpose": "Jerarquía intermedia para diálogos y paneles." },
       "body": { "displayName": "Texto de apoyo", "purpose": "Explica rangos, contexto y acciones sin competir con el dato." },
-      "label": { "displayName": "Etiqueta de métrica", "purpose": "Introduce claves, microestados y cabeceras de tabla." },
-      "metric": { "displayName": "Cifra principal", "purpose": "Da prioridad a peso, balance y objetivos." }
+      "label": { "displayName": "Etiqueta", "purpose": "Introduce claves de métrica, tablas y microestados." },
+      "input": { "displayName": "Dato introducido", "purpose": "Evita el zoom de iOS y mantiene la legibilidad de campos táctiles." },
+      "metric": { "displayName": "Cifra de métrica", "purpose": "Da prioridad a peso, balance y objetivo." },
+      "metric-hero": { "displayName": "Cifra de estado", "purpose": "Resalta el peso actual dentro de la tarjeta de estado." }
     },
     "shadows": [
-      { "name": "shadow-sm", "value": "0 2px 5px rgba(24, 33, 59, 0.04), 0 8px 18px rgba(24, 33, 59, 0.025)", "purpose": "Tarjetas, controles activos y navegación segmentada." },
-      { "name": "shadow-md", "value": "0 12px 28px -20px rgba(24, 33, 59, 0.22), 0 3px 8px rgba(24, 33, 59, 0.04)", "purpose": "Objetivo y previsión cuando usan elevación." },
-      { "name": "shadow-lg", "value": "0 28px 54px -30px rgba(24, 33, 59, 0.38), 0 12px 22px -16px rgba(24, 33, 59, 0.16)", "purpose": "Modales y toasts." },
-      { "name": "shadow-focus", "value": "0 0 0 4px rgba(69, 89, 215, 0.16)", "purpose": "Foco de peso por defecto." },
-      { "name": "overview-weight", "value": "0 24px 44px -30px rgba(69, 89, 215, 0.78), 0 12px 22px -18px rgba(24, 33, 59, 0.28)", "purpose": "Tarjeta de estado de peso actual." }
+      { "name": "shadow-sm", "value": "0 1px 2px rgba(16, 24, 40, 0.035)", "purpose": "Separación mínima de controles y capas ligeras." },
+      { "name": "shadow-md", "value": "0 8px 24px rgba(16, 24, 40, 0.055)", "purpose": "Jerarquía de la tarjeta de estado actual." },
+      { "name": "shadow-lg", "value": "0 20px 44px -28px rgba(16, 24, 40, 0.26), 0 8px 16px -14px rgba(16, 24, 40, 0.08)", "purpose": "Modales y toasts sobre el contenido." },
+      { "name": "focus-weight", "value": "0 0 0 4px rgba(47, 111, 219, 0.14)", "purpose": "Foco por defecto de peso y ajustes." },
+      { "name": "focus-habit", "value": "0 0 0 4px rgba(61, 155, 112, 0.14)", "purpose": "Foco contextual de Registro." },
+      { "name": "focus-body", "value": "0 0 0 4px rgba(127, 86, 217, 0.14)", "purpose": "Foco contextual de Cuerpo." }
     ],
     "motion": [
-      { "name": "ease", "value": "cubic-bezier(0.2, 0, 0, 1)", "purpose": "Curva estándar para estados e incorporaciones." },
+      { "name": "ease", "value": "cubic-bezier(0.2, 0, 0, 1)", "purpose": "Curva estándar de estados y entradas." },
       { "name": "t-fast", "value": "120ms", "purpose": "Respuesta de controles y salida de toast." },
-      { "name": "t-mid", "value": "200ms", "purpose": "Cambio de vista, navegación y entrada de toast." },
-      { "name": "reduced-motion", "value": "0ms", "purpose": "Sustituye las transiciones cuando el usuario pide movimiento reducido." }
+      { "name": "t-mid", "value": "200ms", "purpose": "Cambio de vista y entrada de toast." },
+      { "name": "reduced-motion", "value": "0ms", "purpose": "Sustituye el movimiento cuando se solicita reducción." }
     ],
     "breakpoints": [
+      { "name": "ultra-narrow-max", "value": "379px" },
+      { "name": "compact-max", "value": "479px" },
       { "name": "stats-3-4", "value": "520px" },
       { "name": "forms-and-habits", "value": "560px" },
+      { "name": "forecast-rail-stack-max", "value": "679px" },
       { "name": "desktop-grid-and-nav", "value": "768px" },
       { "name": "brand-descriptor", "value": "900px" },
       { "name": "tablet-grid-range-end", "value": "1023px" }
@@ -74,108 +82,102 @@
       "name": "Botón primario de peso",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Acción principal por defecto para peso, panel y ajustes.",
-      "html": "<button class='ds-btn-weight' type='button'>Guardar peso</button>",
-      "css": ".ds-btn-weight { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:0 18px; border:1px solid #4559d7; border-radius:12px; background:#4559d7; box-shadow:0 2px 5px rgba(24,33,59,.04),0 8px 18px rgba(24,33,59,.025); color:#fff; font-family:Onest,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:.875rem; font-weight:600; letter-spacing:-.01em; cursor:pointer; transition:background 120ms cubic-bezier(.2,0,0,1),border-color 120ms cubic-bezier(.2,0,0,1),box-shadow 120ms cubic-bezier(.2,0,0,1); } .ds-btn-weight:hover { background:#3548bf; border-color:#3548bf; } .ds-btn-weight:active { background:#293a9c; border-color:#293a9c; } .ds-btn-weight:focus-visible { outline:2px solid #4559d7; outline-offset:2px; }"
-    },
-    {
-      "name": "Botón primario de hábitos",
-      "kind": "button",
-      "refersTo": "button-primary-habit",
-      "description": "Acción principal contextual de Registro.",
-      "html": "<button class='ds-btn-habit' type='button'>Guardar día</button>",
-      "css": ".ds-btn-habit { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:0 18px; border:1px solid #07866b; border-radius:12px; background:#07866b; box-shadow:0 2px 5px rgba(24,33,59,.04),0 8px 18px rgba(24,33,59,.025); color:#fff; font-family:Onest,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:.875rem; font-weight:600; letter-spacing:-.01em; cursor:pointer; transition:background 120ms cubic-bezier(.2,0,0,1),border-color 120ms cubic-bezier(.2,0,0,1); } .ds-btn-habit:hover,.ds-btn-habit:active { background:#057158; border-color:#057158; } .ds-btn-habit:focus-visible { outline:2px solid #07866b; outline-offset:2px; }"
-    },
-    {
-      "name": "Botón primario de composición",
-      "kind": "button",
-      "refersTo": "button-primary-body",
-      "description": "Acción principal contextual de Cuerpo.",
-      "html": "<button class='ds-btn-body' type='button'>Guardar medición</button>",
-      "css": ".ds-btn-body { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:0 18px; border:1px solid #754bc0; border-radius:12px; background:#754bc0; box-shadow:0 2px 5px rgba(24,33,59,.04),0 8px 18px rgba(24,33,59,.025); color:#fff; font-family:Onest,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:.875rem; font-weight:600; letter-spacing:-.01em; cursor:pointer; transition:background 120ms cubic-bezier(.2,0,0,1),border-color 120ms cubic-bezier(.2,0,0,1); } .ds-btn-body:hover,.ds-btn-body:active { background:#6335ad; border-color:#6335ad; } .ds-btn-body:focus-visible { outline:2px solid #754bc0; outline-offset:2px; }"
+      "description": "Acción principal por defecto de Panel y Ajustes.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Registrar peso</button>",
+      "css": ".ds-btn-primary { display:inline-flex; align-items:center; justify-content:center; min-height:var(--touch); padding:0 18px; border:1px solid var(--weight); border-radius:var(--r-md); background:var(--weight); box-shadow:var(--shadow-sm); color:#fff; font-family:var(--font); font-size:var(--fs-sm); font-weight:600; letter-spacing:-.01em; cursor:pointer; transition:background var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease),box-shadow var(--t-fast) var(--ease); } .ds-btn-primary:hover { background:var(--weight-hover); border-color:var(--weight-hover); } .ds-btn-primary:active { background:var(--weight-active); border-color:var(--weight-active); } .ds-btn-primary:focus-visible { outline:2px solid var(--weight); outline-offset:2px; }"
     },
     {
       "name": "Botón secundario",
       "kind": "button",
       "refersTo": "button-secondary",
-      "description": "Acción secundaria con superficie blanca y borde de control.",
-      "html": "<button class='ds-btn-secondary' type='button'>Editar día</button>",
-      "css": ".ds-btn-secondary { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:0 18px; border:1px solid #c5cfdf; border-radius:12px; background:#fff; color:#18213b; font-family:Onest,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:.875rem; font-weight:600; letter-spacing:-.01em; cursor:pointer; transition:background 120ms cubic-bezier(.2,0,0,1),border-color 120ms cubic-bezier(.2,0,0,1); } .ds-btn-secondary:hover { background:#eef1f7; } .ds-btn-secondary:active { background:#e1e7f0; } .ds-btn-secondary:focus-visible { outline:2px solid #4559d7; outline-offset:2px; }"
-    },
-    {
-      "name": "Tarjeta estándar",
-      "kind": "card",
-      "refersTo": "card",
-      "description": "Contenedor base para una pregunta o un bloque de datos relacionado.",
-      "html": "<article class='ds-card'><span class='ds-card-label'>HÁBITOS</span><strong class='ds-card-value'>4/6</strong><span class='ds-card-note'>completados hoy</span></article>",
-      "css": ".ds-card { display:flex; flex-direction:column; gap:3px; padding:16px; border:1px solid #dce3ef; border-radius:16px; background:#fff; box-shadow:0 2px 5px rgba(24,33,59,.04),0 8px 18px rgba(24,33,59,.025); color:#18213b; font-family:Onest,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; } .ds-card-label { color:#526078; font-size:.6875rem; font-weight:700; letter-spacing:.06em; } .ds-card-value { font-size:1.3rem; font-variant-numeric:tabular-nums; letter-spacing:-.03em; } .ds-card-note { color:#5b6880; font-size:.8125rem; }"
-    },
-    {
-      "name": "Tarjeta de peso actual",
-      "kind": "card",
-      "refersTo": "card-overview-weight",
-      "description": "Estado de peso actual, la tarjeta de mayor jerarquía del panel.",
-      "html": "<article class='ds-weight-card'><span class='ds-weight-label'>ÚLTIMO PESO REGISTRADO</span><strong class='ds-weight-value'>74,8 <small>kg</small></strong><span class='ds-weight-note'>Medido el <b>22 ago</b></span></article>",
-      "css": ".ds-weight-card { display:flex; flex-direction:column; min-height:208px; padding:16px; border:1px solid #4559d7; border-radius:16px; background:#4559d7; box-shadow:0 24px 44px -30px rgba(69,89,215,.78),0 12px 22px -18px rgba(24,33,59,.28); color:#f8fbff; font-family:Onest,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; } .ds-weight-label { color:rgba(248,251,255,.66); font-size:.8125rem; font-weight:700; letter-spacing:.06em; } .ds-weight-value { margin-top:8px; color:#fff; font-size:clamp(3.25rem,8vw,4.75rem); font-weight:700; letter-spacing:-.055em; line-height:.95; font-variant-numeric:tabular-nums; } .ds-weight-value small { color:rgba(248,251,255,.68); font-size:.96rem; letter-spacing:0; } .ds-weight-note { margin-top:auto; color:rgba(248,251,255,.72); font-size:.8125rem; } .ds-weight-note b { color:#fff; }"
+      "description": "Edición y acciones secundarias sobre superficie blanca.",
+      "html": "<button class=\"ds-btn-secondary\" type=\"button\">Editar día</button>",
+      "css": ".ds-btn-secondary { display:inline-flex; align-items:center; justify-content:center; min-height:var(--touch); padding:0 18px; border:1px solid var(--border-strong); border-radius:var(--r-md); background:var(--surface); color:var(--ink); font-family:var(--font); font-size:var(--fs-sm); font-weight:600; letter-spacing:-.01em; cursor:pointer; transition:background var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease); } .ds-btn-secondary:hover { background:var(--surface-2); } .ds-btn-secondary:active { background:var(--surface-3); } .ds-btn-secondary:focus-visible { outline:2px solid var(--weight); outline-offset:2px; }"
     },
     {
       "name": "Campo numérico",
       "kind": "input",
       "refersTo": "input",
-      "description": "Campo de registro táctil para peso, grasa o calorías.",
-      "html": "<label class='ds-field'><span class='ds-field-label'>Peso <em>kg</em></span><input class='ds-input' type='number' value='74.8' aria-label='Peso en kilogramos'></label>",
-      "css": ".ds-field { display:flex; flex-direction:column; gap:6px; font-family:Onest,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; } .ds-field-label { color:#3c4862; font-size:.8125rem; font-weight:600; } .ds-field-label em { color:#5b6880; font-style:normal; font-weight:500; } .ds-input { width:100%; min-height:44px; padding:10px 12px; border:1px solid #c5cfdf; border-radius:12px; background:#fff; color:#18213b; font:600 16px Onest,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-variant-numeric:tabular-nums; transition:border-color 120ms cubic-bezier(.2,0,0,1),box-shadow 120ms cubic-bezier(.2,0,0,1); } .ds-input:hover { border-color:#5b6880; } .ds-input:focus { outline:none; border-color:#4559d7; box-shadow:0 0 0 4px rgba(69,89,215,.16); } .ds-input:focus-visible { outline:2px solid #4559d7; outline-offset:2px; }"
+      "description": "Registro táctil para peso, composición o calorías.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Peso <em>kg</em></span><input class=\"ds-input\" type=\"number\" value=\"74.8\" aria-label=\"Peso en kilogramos\"></label>",
+      "css": ".ds-field { display:flex; flex-direction:column; gap:6px; font-family:var(--font); } .ds-field-label { color:var(--ink-2); font-size:var(--fs-xs); font-weight:600; } .ds-field-label em { color:var(--ink-4); font-style:normal; font-weight:500; } .ds-input { width:100%; min-height:var(--touch); padding:10px 12px; border:1px solid var(--border-strong); border-radius:var(--r-md); background:var(--surface); color:var(--ink); font-family:var(--font); font-size:var(--fs-input); font-weight:600; font-variant-numeric:tabular-nums; transition:border-color var(--t-fast) var(--ease),box-shadow var(--t-fast) var(--ease); } .ds-input:hover { border-color:var(--ink-4); } .ds-input:focus { outline:none; border-color:var(--weight); box-shadow:var(--shadow-focus); } .ds-input:focus-visible { outline:2px solid var(--weight); outline-offset:2px; }"
+    },
+    {
+      "name": "Tarjeta estándar",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Contenedor base para una pregunta o grupo de datos relacionado.",
+      "html": "<article class=\"ds-card\"><span class=\"ds-card-label\">HÁBITOS</span><strong class=\"ds-card-value\">4/6</strong><span class=\"ds-card-note\">completados hoy</span></article>",
+      "css": ".ds-card { display:flex; flex-direction:column; gap:3px; padding:var(--pad-card); border:var(--line); border-radius:var(--r-lg); background:var(--surface); color:var(--ink); font-family:var(--font); } .ds-card-label { color:var(--ink-3); font-size:var(--fs-xs); font-weight:700; line-height:1.3; } .ds-card-value { margin-top:5px; font-size:1.375rem; font-variant-numeric:tabular-nums; letter-spacing:-.03em; } .ds-card-note { color:var(--ink-3); font-size:var(--fs-xs); }"
+    },
+    {
+      "name": "Tarjeta de estado de peso",
+      "kind": "card",
+      "refersTo": "overview-card",
+      "description": "Estado actual de mayor prioridad: mantiene fondo claro, borde azul y elevación media.",
+      "html": "<article class=\"ds-overview\"><span class=\"ds-overview-label\">PESO ESTIMADO</span><strong class=\"ds-overview-value\">74,8 <small>kg</small></strong><span class=\"ds-overview-note\">Báscula: <b>74,9 kg · 22 ago</b></span></article>",
+      "css": ".ds-overview { display:flex; flex-direction:column; min-height:0; padding:var(--pad-card); border:1px solid var(--weight-border); border-radius:var(--r-lg); background:var(--surface); box-shadow:var(--shadow-md); color:var(--ink); font-family:var(--font); } .ds-overview-label { color:var(--weight-ink); font-size:var(--fs-xs); font-weight:700; letter-spacing:var(--track-label); text-transform:uppercase; } .ds-overview-value { margin-top:7px; color:var(--ink); font-size:var(--fs-metric-hero); font-weight:700; letter-spacing:-.052em; line-height:.95; font-variant-numeric:tabular-nums; } .ds-overview-value small { color:var(--ink-3); font-size:.96rem; font-weight:600; letter-spacing:0; } .ds-overview-note { margin-top:24px; color:var(--ink-3); font-size:var(--fs-xs); } .ds-overview-note b { color:var(--ink); }"
+    },
+    {
+      "name": "Raíl de previsión",
+      "kind": "custom",
+      "refersTo": "forecast-card",
+      "description": "Une la última báscula con el próximo pesaje y hace visible el cambio de medido a estimado.",
+      "html": "<article class=\"ds-forecast\"><div class=\"ds-forecast-rail\"><div class=\"ds-stop\"><span>Última báscula</span><strong>74,9 <small>kg</small></strong><em>Medido · 22 ago</em></div><i class=\"ds-line ds-line-measured\"></i><div class=\"ds-today\"><i></i><span>Hoy</span></div><i class=\"ds-line ds-line-estimated\"></i><div class=\"ds-stop ds-stop-next\"><span>Próximo pesaje</span><strong>74,6 <small>kg</small></strong><em>Estimado · rango orientativo</em></div></div></article>",
+      "css": ".ds-forecast { padding:var(--pad-card); border:1px solid var(--body-border); border-radius:var(--r-lg); background:var(--surface); color:var(--ink); font-family:var(--font); } .ds-forecast-rail { display:grid; grid-template-columns:minmax(0,1fr) minmax(28px,.55fr) auto minmax(28px,.55fr) minmax(0,1fr); align-items:center; gap:8px; } .ds-stop { display:flex; flex-direction:column; min-width:0; } .ds-stop > span { color:var(--weight-ink); font-size:var(--fs-xs); font-weight:700; } .ds-stop strong { margin-top:5px; font-size:1.375rem; letter-spacing:-.03em; } .ds-stop small { font-size:.8125rem; color:var(--ink-3); } .ds-stop em { margin-top:2px; color:var(--ink-3); font-size:var(--fs-xs); font-style:normal; } .ds-stop-next { text-align:right; } .ds-stop-next > span,.ds-stop-next strong { color:var(--body-ink); } .ds-line { height:2px; min-width:0; } .ds-line-measured { background:var(--weight); } .ds-line-estimated { border-top:2px dashed var(--body-soft); } .ds-today { position:relative; display:grid; justify-items:center; min-width:30px; padding-bottom:17px; } .ds-today i { width:12px; height:12px; border:3px solid var(--weight); border-radius:50%; background:var(--surface); box-shadow:0 0 0 3px var(--weight-wash); } .ds-today span { position:absolute; top:17px; color:var(--ink-4); font-size:var(--fs-micro); font-weight:700; white-space:nowrap; } @media (max-width:679px) { .ds-forecast-rail { grid-template-columns:1fr; gap:14px; } .ds-line,.ds-today { display:none; } .ds-stop-next { padding-top:14px; border-top:var(--line); text-align:left; } }"
+    },
+    {
+      "name": "Chip de estimación",
+      "kind": "chip",
+      "refersTo": "chip-estimate",
+      "description": "Etiqueta compacta que nombra una previsión o calidad del modelo.",
+      "html": "<span class=\"ds-chip-estimate\">Calibrado</span>",
+      "css": ".ds-chip-estimate { display:inline-flex; align-items:center; min-height:24px; padding:3px 9px; border:1px solid var(--body-border); border-radius:var(--r-pill); background:var(--body-wash); color:var(--body-ink); font-family:var(--font); font-size:var(--fs-xs); font-weight:600; white-space:nowrap; }"
     },
     {
       "name": "Control de hábito marcado",
       "kind": "button",
-      "refersTo": "habit-toggle",
-      "description": "Selección explícita de un hábito en la vista de Registro.",
-      "html": "<button class='ds-habit' type='button' aria-pressed='true'><span class='ds-habit-box'><svg viewBox='0 0 16 16' fill='none' stroke='currentColor' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M3 8.5l3.2 3.2L13 4.8'/></svg></span>Verduras</button>",
-      "css": ".ds-habit { display:inline-flex; align-items:center; gap:9px; min-height:44px; padding:10px 12px; border:1px solid #b9eadb; border-radius:12px; background:#e9f8f2; color:#057158; font-family:Onest,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:.875rem; font-weight:600; cursor:pointer; transition:background 120ms cubic-bezier(.2,0,0,1),border-color 120ms cubic-bezier(.2,0,0,1); } .ds-habit:hover { background:#d9f3ea; } .ds-habit:active { background:#e9f8f2; } .ds-habit:focus-visible { outline:2px solid #07866b; outline-offset:2px; } .ds-habit-box { display:grid; place-items:center; width:20px; height:20px; border:1px solid #07866b; border-radius:6px; background:#07866b; color:#fff; } .ds-habit-box svg { width:12px; height:12px; }"
+      "refersTo": "habit-toggle-on",
+      "description": "Confirmación explícita y contextual de un hábito en Registro.",
+      "html": "<button class=\"ds-habit-on\" type=\"button\" aria-pressed=\"true\"><span class=\"ds-habit-box\"><svg viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 8.5l3.2 3.2L13 4.8\"/></svg></span>Verduras</button>",
+      "css": ".ds-habit-on { display:inline-flex; align-items:center; gap:9px; min-height:var(--touch); padding:10px 12px; border:1px solid var(--habit-border); border-radius:var(--r-md); background:var(--habit-wash); color:var(--habit-ink); font-family:var(--font); font-size:var(--fs-sm); font-weight:600; cursor:pointer; transition:background var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease),color var(--t-fast) var(--ease); } .ds-habit-on:hover { background:var(--surface-2); } .ds-habit-on:active { background:var(--habit-wash); } .ds-habit-on:focus-visible { outline:2px solid var(--habit); outline-offset:2px; } .ds-habit-box { display:grid; place-items:center; width:20px; height:20px; border:1.5px solid var(--habit); border-radius:6px; background:var(--habit); color:#fff; } .ds-habit-box svg { width:12px; height:12px; }"
     },
     {
-      "name": "Chip de previsión",
-      "kind": "chip",
-      "refersTo": "chip-accent",
-      "description": "Etiqueta compacta para el estado de una estimación o previsión.",
-      "html": "<span class='ds-chip'>Calibrado</span>",
-      "css": ".ds-chip { display:inline-flex; align-items:center; min-height:24px; padding:3px 9px; border:1px solid #ddcef6; border-radius:999px; background:#f4effd; color:#6335ad; font-family:Onest,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:.8125rem; font-weight:600; white-space:nowrap; }"
-    },
-    {
-      "name": "Navegación segmentada",
+      "name": "Navegación de escritorio",
       "kind": "nav",
-      "refersTo": "nav-desktop",
-      "description": "Navegación de escritorio que transforma los cuatro destinos en un control segmentado.",
-      "html": "<nav class='ds-nav' aria-label='Secciones'><button class='ds-nav-btn' type='button'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M3 13h4l3-8 4 15 3-7h4'/></svg>Panel</button><button class='ds-nav-btn ds-nav-btn-active' type='button' aria-current='page'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><rect x='3' y='5' width='18' height='16' rx='2.5'/><path d='M8 3v4M16 3v4M3 10h18M9 15l2 2 4-4'/></svg>Registro</button></nav>",
-      "css": ".ds-nav { display:inline-flex; gap:2px; padding:3px; border:1px solid #dce3ef; border-radius:12px; background:#eef1f7; font-family:Onest,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; } .ds-nav-btn { display:inline-flex; align-items:center; gap:7px; min-height:34px; padding:0 14px; border:0; border-radius:9px; background:transparent; color:#526078; font:600 .875rem Onest,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; cursor:pointer; transition:color 120ms cubic-bezier(.2,0,0,1),background 120ms cubic-bezier(.2,0,0,1); } .ds-nav-btn svg { width:16px; height:16px; stroke-width:1.9; } .ds-nav-btn:hover { color:#18213b; } .ds-nav-btn-active { background:#fff; box-shadow:0 2px 5px rgba(24,33,59,.04),0 8px 18px rgba(24,33,59,.025); color:#057158; } .ds-nav-btn:focus-visible { outline:2px solid #4559d7; outline-offset:2px; }"
+      "refersTo": "navigation-active",
+      "description": "Cuatro destinos de cabecera; el activo usa una línea inferior, no una píldora.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Secciones\"><button class=\"ds-nav-btn ds-nav-btn-active\" type=\"button\" aria-current=\"page\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 13h4l3-8 4 15 3-7h4\"/></svg>Panel</button><button class=\"ds-nav-btn\" type=\"button\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"16\" rx=\"2.5\"/><path d=\"M8 3v4M16 3v4M3 10h18\"/></svg>Registro</button></nav>",
+      "css": ".ds-nav { display:flex; gap:2px; font-family:var(--font); } .ds-nav-btn { display:inline-flex; align-items:center; gap:7px; min-height:42px; padding:0 12px; border:0; border-bottom:2px solid transparent; background:transparent; color:var(--ink-3); font-family:inherit; font-size:var(--fs-sm); font-weight:600; cursor:pointer; transition:color var(--t-fast) var(--ease); } .ds-nav-btn svg { width:16px; height:16px; stroke-width:1.9; } .ds-nav-btn:hover { color:var(--ink); } .ds-nav-btn-active { border-bottom-color:currentColor; color:var(--weight); } .ds-nav-btn:focus-visible { outline:2px solid var(--weight); outline-offset:2px; }"
     }
   ],
   "narrative": {
-    "northStar": "Libreta de seguimiento cromática",
-    "overview": "Composición convierte el seguimiento personal en una libreta activa: peso, hábitos, energía y cuerpo se entienden como asuntos distintos y legibles, nunca como la misma cifra azul. El fondo azul grisáceo contiene tarjetas blancas, mientras los lavados de color organizan cada dominio sin perder sobriedad.\n\nLa lectura prioriza estado actual y próxima revisión; después permite registrar el día y estudiar la evolución. Las mediciones reales, estimaciones e imputaciones conservan etiquetas explícitas y no se presentan como equivalentes.",
+    "northStar": "La revisión de salud calibrada",
+    "overview": "Composición se siente como una revisión de salud personal de alta calidad: sobria, clara y preparada para el uso cotidiano. La composición aprobada prioriza el estado de peso, la próxima revisión, el trabajo de hoy y la evolución, con superficies blancas sobre un fondo gris frío y una cabecera que no compite con los datos.\n\nEl sistema no trata una predicción como una medición. El último pesaje queda anclado como evidencia; el momento presente marca el cambio de certeza; y la proyección aparece después como una estimación con rango. La claridad de esa transición importa más que la decoración de la tarjeta.",
     "keyCharacteristics": [
-      "Jerarquía de datos clara, compacta y móvil primero.",
-      "Cuatro familias cromáticas persistentes, aplicadas por significado.",
-      "Superficies de papel, bordes suaves y profundidad contenida."
+      "Jerarquía de seguimiento: estado, próxima revisión, hoy, composición e histórico.",
+      "Color semántico contenido sobre superficies neutras; el azul no invade la pantalla.",
+      "Datos numéricos estables, etiquetas explícitas y un cambio visible entre medido y estimado."
     ],
     "rules": [
-      { "name": "The Four Families Rule", "body": "Índigo es peso, verde azulado es hábito, coral es energía y violeta es cuerpo. No se intercambian para decorar ni se reduce todo a un único acento.", "section": "colors" },
-      { "name": "The Labelled Evidence Rule", "body": "El color acompaña etiquetas como «medido», «estimado», «anotado» o «sin registrar»; nunca sustituye esa evidencia textual.", "section": "colors" },
-      { "name": "The Tabular Number Rule", "body": "Pesos, calorías, porcentajes y deltas se componen con cifras tabulares; un dato que se actualiza no debe desplazar la lectura.", "section": "typography" },
-      { "name": "The Tonal Card Rule", "body": "Cuando una tarjeta pertenece a hábitos, energía o composición, la familia se expresa primero con lavado y borde; la sombra no compite con ese significado.", "section": "elevation" }
+      { "name": "The Evidence First Rule", "body": "Azul continuo y etiqueta de medición representan evidencia de báscula; violeta discontinuo y etiqueta de estimación representan proyección. No intercambiar los dos lenguajes.", "section": "colors" },
+      { "name": "The Contained Color Rule", "body": "El color se concentra en acción, selección, categoría y estado. Las superficies de lectura permanecen neutrales salvo un contexto operativo breve.", "section": "colors" },
+      { "name": "The Tabular Number Rule", "body": "Pesos, calorías, porcentajes, fechas cuantificadas y deltas usan cifras tabulares; una actualización no debe mover el dato adyacente.", "section": "typography" },
+      { "name": "The Flat Reading Rule", "body": "La lectura cotidiana se organiza con espacio, borde y jerarquía tipográfica. La sombra solo indica prioridad o superposición.", "section": "elevation" }
     ],
     "dos": [
-      "**Do** usar la familia del dominio en su vista, tarjeta, chip, control principal y foco.",
-      "**Do** preservar las etiquetas de medición, estimación, imputación y registro junto al color.",
-      "**Do** usar lavados y bordes semánticos para información secundaria; reservar la elevación fuerte para estado actual, modales y toasts.",
-      "**Do** mantener los números tabulares y el orden estado actual → próxima revisión → registro → evolución."
+      "**Do** mantener la secuencia estado actual → próxima revisión → hoy → composición → histórico en el Panel.",
+      "**Do** unir cada color semántico a su dominio y acompañarlo con etiqueta, signo, fecha, rango o patrón legible.",
+      "**Do** preservar en el raíl el hito de «Hoy», el tramo azul continuo medido y el violeta discontinuo estimado.",
+      "**Do** conservar controles de al menos altura táctil y el foco contextual visible.",
+      "**Do** dejar que el borde, el espacio y el texto hagan la mayor parte de la jerarquía."
     ],
     "donts": [
-      "**Don't** presentar una estimación o un dato imputado con la misma certeza visual que una medición de báscula.",
-      "**Don't** reutilizar índigo, verde azulado, coral o violeta como adorno intercambiable.",
-      "**Don't** volver a una pantalla de tarjetas azules homogéneas ni usar color sin una etiqueta, signo o patrón legible.",
-      "**Don't** añadir densidad mediante tarjetas anidadas cuando una zona y una línea divisoria bastan."
+      "**Don't** presentar un valor estimado o imputado con la misma evidencia visual que un pesaje real.",
+      "**Don't** usar el azul, verde, coral o violeta como adornos intercambiables ni bañar toda la interfaz en una familia.",
+      "**Don't** volver a una navegación de escritorio en píldora segmentada cuando la implementación vigente usa pestañas subrayadas.",
+      "**Don't** comprimir el raíl horizontal en móvil: debe apilarse sin perder sus etiquetas ni el rango.",
+      "**Don't** crear densidad mediante tarjetas dentro de tarjetas cuando un divisor de zona es suficiente."
     ]
   }
 }

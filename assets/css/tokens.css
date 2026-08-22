@@ -7,48 +7,49 @@
 
 :root {
   /* --- Superficies ----------------------------------------------------- */
-  --canvas:      #f8f8f6;
+  --canvas:      #f6f8fa;
   --surface:     #ffffff;
-  --surface-2:   #f2f3f3;
-  --surface-3:   #e7e9e9;
+  --surface-2:   #f1f4f8;
+  --surface-3:   #e9eef5;
 
   /* --- Bordes ----------------------------------------------------------- */
-  --border:        #dde1e3;
-  --border-strong: #c5cbcf;
+  --border:        #dfe6ee;
+  --border-strong: #c7d2df;
   --line:          1px solid var(--border);
 
   /* --- Texto: la única escala que se usa para escribir -------------------- */
-  --ink:    #17232b;
-  --ink-2:  #394850;
-  --ink-3:  #5c6a70;
-  --ink-4:  #69777c;
+  --ink:    #1d2939;
+  --ink-2:  #344054;
+  --ink-3:  #667085;
+  --ink-4:  #98a2b3;
+  --overlay: rgba(15, 23, 42, .45);
 
   /* --- Familias de datos ------------------------------------------------- */
-  --weight:        #3d62c7;
-  --weight-hover:  #3153ad;
-  --weight-active: #284590;
-  --weight-soft:   #aabceb;
-  --weight-wash:   #edf2ff;
-  --weight-border: #cbd8f5;
-  --weight-ink:    #2f50a9;
+  --weight:        #2f6fdb;
+  --weight-hover:  #1f5fbe;
+  --weight-active: #184fa9;
+  --weight-soft:   #9fc5ff;
+  --weight-wash:   #eff6ff;
+  --weight-border: #bfdbfe;
+  --weight-ink:    #175cd3;
 
-  --habit:         #16806a;
-  --habit-soft:    #9ed5c4;
-  --habit-wash:    #ebf7f1;
-  --habit-border:  #c4e6d9;
-  --habit-ink:     #126b59;
+  --habit:         #3d9b70;
+  --habit-soft:    #9bd5b8;
+  --habit-wash:    #effaf3;
+  --habit-border:  #bce8ce;
+  --habit-ink:     #287c55;
 
-  --energy:        #c96745;
-  --energy-soft:   #edb09d;
-  --energy-wash:   #fff1ec;
-  --energy-border: #f3d2c6;
-  --energy-ink:    #a65035;
+  --energy:        #e16d57;
+  --energy-soft:   #f2ae9d;
+  --energy-wash:   #fff1ed;
+  --energy-border: #f6c9be;
+  --energy-ink:    #b44f3d;
 
-  --body:          #7953b8;
-  --body-soft:     #c7b3e5;
-  --body-wash:     #f5f0fc;
-  --body-border:   #e1d4f2;
-  --body-ink:      #66449c;
+  --body:          #7f56d9;
+  --body-soft:     #c4b5fd;
+  --body-wash:     #f4f1ff;
+  --body-border:   #ddd4fe;
+  --body-ink:      #6941c6;
 
   --warning:       #bd7b12;
   --warning-wash:  #fff7e7;
@@ -71,28 +72,29 @@
   --data-flat: var(--energy);
 
   /* --- Tipografía --------------------------------------------------------- */
-  --font: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+  --font: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI',
           Roboto, Helvetica, Arial, sans-serif;
 
-  --fs-display: clamp(1.75rem, 5.5vw, 2.25rem);
+  --fs-display: clamp(1.75rem, 4.5vw, 2.25rem);
   --fs-xl:      clamp(1.375rem, 4vw, 1.5rem);
   --fs-lg:      1.0625rem;
   --fs-md:      0.9375rem;
   --fs-sm:      0.875rem;
   --fs-xs:      0.8125rem;
   --fs-micro:   0.6875rem;
+  --fs-input:   1rem;
 
-  --fs-metric:      clamp(1.75rem, 7vw, 2rem);
-  --fs-metric-hero: clamp(2.5rem, 11vw, 3rem);
+  --fs-metric:      clamp(1.625rem, 6vw, 2rem);
+  --fs-metric-hero: clamp(2.125rem, 8vw, 2.75rem);
 
   --track-tight: -0.022em;
   --track-label:  0.06em;
 
   /* --- Geometría ---------------------------------------------------------- */
-  --r-sm:   9px;
-  --r-md:  12px;
-  --r-lg:  16px;
-  --r-xl:  22px;
+  --r-sm:   8px;
+  --r-md:  10px;
+  --r-lg:  12px;
+  --r-xl:  16px;
   --r-pill: 999px;
 
   --gap:      12px;
@@ -100,10 +102,10 @@
   --touch:    44px;
 
   /* --- Elevación ---------------------------------------------------------- */
-  --shadow-sm: 0 1px 2px rgba(23, 35, 43, 0.025), 0 6px 18px rgba(23, 35, 43, 0.035);
-  --shadow-md: 0 12px 30px -24px rgba(23, 35, 43, 0.18), 0 2px 6px rgba(23, 35, 43, 0.035);
-  --shadow-lg: 0 20px 44px -28px rgba(23, 35, 43, 0.26), 0 8px 16px -14px rgba(23, 35, 43, 0.08);
-  --shadow-focus: 0 0 0 4px rgba(61, 98, 199, 0.14);
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.035);
+  --shadow-md: 0 8px 24px rgba(16, 24, 40, 0.055);
+  --shadow-lg: 0 20px 44px -28px rgba(16, 24, 40, 0.26), 0 8px 16px -14px rgba(16, 24, 40, 0.08);
+  --shadow-focus: 0 0 0 4px rgba(47, 111, 219, 0.14);
 
   /* --- Movimiento --------------------------------------------------------- */
   --ease:   cubic-bezier(0.2, 0, 0, 1);

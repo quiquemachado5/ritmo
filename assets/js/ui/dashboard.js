@@ -79,7 +79,7 @@ function seccionEstado(r) {
       </div>
       <div class="overview__foot">
         ${esEstimacion
-          ? `<span>Báscula: <strong>${kg(p.actual)} kg · ${fechaCorta(p.fecha)}</strong> · rango ${intervalo(prevision.hoy)}</span>`
+          ? `<span>Báscula: <strong>${kg(p.actual)} kg · ${fechaCorta(p.fecha)}</strong> · estimación actualizada con tus registros</span>`
           : `<span>Medido el <strong>${fechaCorta(p.fecha)}</strong></span>`}
         <a class="btn btn--light btn--sm" href="#registro">Registrar peso</a>
       </div>
@@ -191,12 +191,25 @@ function seccionProyeccion(r) {
 
   return seccion('Próxima revisión', `${base} · rango orientativo`, `
     <article class="card card--forecast w-12">
-      <div class="stats stats--3">
-        <div class="stat stat--next-weigh">
-          <div class="stat__k">Siguiente pesaje</div>
-          <div class="stat__v">${proy(p.quincena)}</div>
-          <div class="stat__s">${sub(p.quincena)} · dentro de 14 días</div>
+      <div class="forecast__rail" aria-label="Del último peso medido a la próxima revisión estimada">
+        <div class="forecast__stop forecast__stop--measured">
+          <div class="stat__k">Última báscula</div>
+          <div class="stat__v">${kg(r.peso.actual)} <small>kg</small></div>
+          <div class="stat__s">Medido · ${fechaCorta(r.peso.fecha)}</div>
         </div>
+        <div class="forecast__line forecast__line--measured" aria-hidden="true"></div>
+        <div class="forecast__transition" aria-label="A partir de hoy, los valores son estimados">
+          <span class="forecast__transition-dot" aria-hidden="true"></span>
+          <span class="forecast__transition-label">Hoy</span>
+        </div>
+        <div class="forecast__line forecast__line--estimated" aria-hidden="true"></div>
+        <div class="forecast__stop forecast__stop--next">
+          <div class="stat__k">Próximo pesaje</div>
+          <div class="stat__v">${proy(p.quincena)}</div>
+          <div class="stat__s">Estimado · ${sub(p.quincena)} · en 14 días</div>
+        </div>
+      </div>
+      <div class="forecast__horizons">
         ${dato('En 7 días', proy(p.semana), sub(p.semana))}
         ${dato('En 30 días', proy(p.mes), sub(p.mes))}
       </div>
@@ -256,8 +269,8 @@ export function renderDashboard(estado) {
       </div>
     </header>
     ${seccionEstado(r)}
-    ${seccionHoy(r, estado)}
     ${seccionProyeccion(r)}
+    ${seccionHoy(r, estado)}
     ${seccionCuerpo(r)}
     ${seccionHistorico(r, estado)}
   `;
