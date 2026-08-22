@@ -192,8 +192,12 @@ function seccionProyeccion(r) {
   return seccion('Próxima revisión', `${base} · rango orientativo`, `
     <article class="card card--forecast w-12">
       <div class="stats stats--3">
+        <div class="stat stat--next-weigh">
+          <div class="stat__k">Siguiente pesaje</div>
+          <div class="stat__v">${proy(p.quincena)}</div>
+          <div class="stat__s">${sub(p.quincena)} · dentro de 14 días</div>
+        </div>
         ${dato('En 7 días', proy(p.semana), sub(p.semana))}
-        ${dato('Siguiente pesaje', proy(p.quincena), `${sub(p.quincena)} · dentro de 14 días`)}
         ${dato('En 30 días', proy(p.mes), sub(p.mes))}
       </div>
       <div class="zone forecast__details">
@@ -252,9 +256,9 @@ export function renderDashboard(estado) {
       </div>
     </header>
     ${seccionEstado(r)}
+    ${seccionHoy(r, estado)}
     ${seccionProyeccion(r)}
     ${seccionCuerpo(r)}
-    ${seccionHoy(r, estado)}
     ${seccionHistorico(r, estado)}
   `;
 }

@@ -8,6 +8,7 @@
 html {
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
+  overflow-x: clip;
 }
 
 body {
@@ -19,7 +20,7 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
+  overflow-x: clip;
   /* Deja hueco para la barra de pestañas fija del móvil */
   padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
 }
@@ -37,6 +38,7 @@ h1, h2, h3, h4 {
   font-size: var(--fs-display);
   font-weight: 700;
   letter-spacing: -0.03em;
+  text-wrap: balance;
 }
 
 .page-sub {
@@ -44,6 +46,8 @@ h1, h2, h3, h4 {
   color: var(--ink-3);
   font-size: var(--fs-sm);
   max-width: 60ch;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
 }
 
 /* Etiqueta de sección: pequeña, en versalitas, gris */
@@ -77,16 +81,16 @@ a:hover { text-decoration: underline; }
 
 /* --- Esqueleto ------------------------------------------------------------ */
 .shell {
-  max-width: 1240px;
+  width: min(100%, 1160px);
   margin: 0 auto;
-  padding: 0 18px 48px;
+  padding: 0 clamp(16px, 3vw, 32px) 48px;
 }
 
 @media (min-width: 768px) {
-  .shell { padding: 0 24px 64px; }
+  .shell { padding-bottom: 72px; }
 }
 
-.view { display: none; }
+.view { display: none; min-width: 0; }
 .view.is-active { display: block; animation: aparecer var(--t-mid) var(--ease) both; }
 
 @keyframes aparecer {
@@ -95,17 +99,18 @@ a:hover { text-decoration: underline; }
 }
 
 .page-head {
-  padding: 34px 0 22px;
+  padding: 32px 0 24px;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
 }
+.page-head > * { min-width: 0; }
 
 @media (min-width: 768px) {
-  .page-head { padding: 52px 0 34px; }
-  .page-head--dashboard { padding-bottom: 38px; }
+  .page-head { padding: 48px 0 32px; }
+  .page-head--dashboard { padding-bottom: 34px; }
 }
 
 /* --- Rejilla -------------------------------------------------------------- */
@@ -116,6 +121,7 @@ a:hover { text-decoration: underline; }
   gap: var(--gap);
   align-items: start;
 }
+.grid > * { min-width: 0; }
 
 /* Métricas pequeñas: dos por fila ya en móvil, que caben y ahorran scroll */
 .grid--metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -136,6 +142,10 @@ a:hover { text-decoration: underline; }
   .w-3 { grid-column: span 6; }
   .w-4, .w-5 { grid-column: span 6; }
   .w-7, .w-8 { grid-column: span 12; }
+}
+
+@media (max-width: 479px) {
+  .grid--metrics { grid-template-columns: 1fr; }
 }
 
 /* --- Utilidades ----------------------------------------------------------- */
