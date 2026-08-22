@@ -8,6 +8,7 @@
 import { fechaCorta, n as fmtN, entero, esc } from '../core/format.js';
 
 const escalaLineal = (d0, d1, r0, r1) => (v) => (d1 === d0 ? (r0 + r1) / 2 : r0 + ((v - d0) / (d1 - d0)) * (r1 - r0));
+const ICONO_GRAFICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18.5h16"/><path d="m5.5 15 4-4 3 2.5 5.5-6"/><circle cx="5.5" cy="15" r="1"/><circle cx="9.5" cy="11" r="1"/><circle cx="12.5" cy="13.5" r="1"/><circle cx="18" cy="7.5" r="1"/></svg>';
 
 /** Curva de Catmull-Rom convertida a Bézier: suaviza sin inventar extremos. */
 function trazoSuave(puntos) {
@@ -31,7 +32,7 @@ function trazoSuave(puntos) {
 
 function sinDatos(alto, mensaje) {
   return `<div class="empty" style="min-height:${alto}px">
-    <div class="empty__icon">◔</div>
+    <div class="empty__icon">${ICONO_GRAFICO}</div>
     <p>${esc(mensaje)}</p>
   </div>`;
 }
@@ -39,10 +40,10 @@ function sinDatos(alto, mensaje) {
 /* ------------------------------------------------------ EVOLUCIÓN DE PESO */
 
 /**
- * Gráfico de línea con área degradada, media móvil y línea de objetivo.
+ * Gráfico de línea con área de color, media móvil y línea de objetivo.
  * @param {{puntos:Array, suavizado:Array}} serie
  */
-export function graficoPeso(serie, { objetivo = null, alto = 260 } = {}) {
+export function graficoPeso(serie, { objetivo = null, alto = 260, color = 'var(--weight)' } = {}) {
   const puntos = serie.puntos || [];
   if (puntos.length < 2) return sinDatos(alto, 'Registra al menos dos pesajes para ver la evolución.');
 
@@ -85,7 +86,7 @@ export function graficoPeso(serie, { objetivo = null, alto = 260 } = {}) {
     : '';
 
   const puntosSvg = coords.map((c) => `<circle class="chart__dot" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="3"
-      fill="var(--surface)" stroke="var(--accent)" stroke-width="2">
+      fill="var(--surface)" stroke="${color}" stroke-width="2">
       <title>${esc(fechaCorta(c.d.fecha))} · ${fmtN(c.d.peso, 1)} kg</title></circle>`).join('');
 
   const etiquetaIni = fechaCorta(puntos[0].fecha);
@@ -93,17 +94,11 @@ export function graficoPeso(serie, { objetivo = null, alto = 260 } = {}) {
 
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
       aria-label="Evolución del peso de ${esc(etiquetaIni)} a ${esc(etiquetaFin)}">
-    <defs>
-      <linearGradient id="gradPeso" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%"   stop-color="var(--accent)" stop-opacity="0.16"/>
-        <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
-      </linearGradient>
-    </defs>
     ${rejilla}
-    <path class="chart__area--animated" d="${area}" fill="url(#gradPeso)"/>
+    <path class="chart__area--animated" d="${area}" fill="${color}" opacity="0.10"/>
     ${suaves.length > 2 ? `<path d="${trazoSuave(suaves)}" fill="none" stroke="var(--ink-4)"
         stroke-width="1.5" stroke-dasharray="4 4"/>` : ''}
-    <path d="${linea}" fill="none" stroke="var(--accent)" stroke-width="2.25"
+    <path d="${linea}" fill="none" stroke="${color}" stroke-width="2.25"
       stroke-linecap="round" stroke-linejoin="round"/>
     ${lineaObjetivo}
     ${puntosSvg}
@@ -136,7 +131,7 @@ export function graficoBalance(serie, { alto = 190 } = {}) {
     const py = y(d.balance);
     const alturaBarra = Math.max(2, Math.abs(py - cero));
     const arriba = d.balance > 0;
-    const color = arriba ? 'var(--data-flat)' : 'var(--accent)';
+    const color = arriba ? 'var(--energy)' : 'var(--habit)';
     // Los días imputados se rayan para que nunca se confundan con datos reales.
     const relleno = d.imputado ? 'url(#rayado)' : color;
     return `<rect x="${(cx - barra / 2).toFixed(1)}" y="${(arriba ? py : cero).toFixed(1)}"
@@ -184,12 +179,12 @@ export function anilloComposicion({ grasaPct }, { tam = 190 } = {}) {
       aria-label="Composición corporal: ${fmtN(grasaPct, 1)} por ciento de grasa">
     <g transform="rotate(-90 ${c} ${c})">
       <circle class="ring__track" cx="${c}" cy="${c}" r="${rExt}" fill="none" stroke-width="11"/>
-      <circle class="ring__arc" cx="${c}" cy="${c}" r="${rExt}" fill="none" stroke="var(--accent)"
+      <circle class="ring__arc" cx="${c}" cy="${c}" r="${rExt}" fill="none" stroke="var(--body)"
         stroke-width="11" stroke-linecap="round"
         stroke-dasharray="${circExt.toFixed(1)}"
         stroke-dashoffset="${(circExt * (1 - fraccionGrasa)).toFixed(1)}"/>
       <circle class="ring__track" cx="${c}" cy="${c}" r="${rInt}" fill="none" stroke-width="9"/>
-      <circle class="ring__arc" cx="${c}" cy="${c}" r="${rInt}" fill="none" stroke="var(--accent-soft)"
+      <circle class="ring__arc" cx="${c}" cy="${c}" r="${rInt}" fill="none" stroke="var(--habit)"
         stroke-width="9" stroke-linecap="round"
         stroke-dasharray="${circInt.toFixed(1)}"
         stroke-dashoffset="${(circInt * fraccionGrasa).toFixed(1)}"/>

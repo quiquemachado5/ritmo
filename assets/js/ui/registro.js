@@ -19,6 +19,9 @@ import { kg, pct, entero, kcalConSigno, fechaLarga, fechaCorta, mesLargo, n, esc
 const vista = { fecha: hoy(), mes: claveMes(hoy()) };
 
 const ICONO_CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 4.8"/></svg>';
+const ICONO_RELOJ = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/></svg>';
+const ICONO_ANTERIOR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg>';
+const ICONO_SIGUIENTE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg>';
 
 const seccion = (titulo, meta, contenido) => `
   <section class="section">
@@ -42,7 +45,7 @@ function tarjetaDia(dia) {
   const marcados = Object.values(dia.habitos || {}).filter((v) => v === true).length;
   const v = (k) => (dia[k] === undefined || dia[k] === null ? '' : dia[k]);
 
-  return `<article class="card w-8">
+  return `<article class="card card--habit-log w-8">
 
     <div class="zone">
       <div class="row-between" style="margin-bottom:10px">
@@ -174,14 +177,14 @@ function tarjetaCalendario(estado) {
       title="${esc(titulo)}">${d}</button>`);
   }
 
-  return `<article class="card w-5">
+  return `<article class="card card--habit-calendar w-5">
     <div class="row-between" style="margin-bottom:12px">
       <span class="stat__k">Calendario</span>
       <div class="month-nav">
-        <button type="button" class="icon-btn" data-mes="-1" aria-label="Mes anterior">‹</button>
+        <button type="button" class="icon-btn" data-mes="-1" aria-label="Mes anterior">${ICONO_ANTERIOR}</button>
         <span class="month-nav__label">${esc(mesLargo(vista.mes))}</span>
         <button type="button" class="icon-btn" data-mes="1" aria-label="Mes siguiente"
-          ${vista.mes >= claveMes(ahora) ? 'disabled' : ''}>›</button>
+          ${vista.mes >= claveMes(ahora) ? 'disabled' : ''}>${ICONO_SIGUIENTE}</button>
       </div>
     </div>
     <div class="cal">
@@ -232,7 +235,7 @@ function tarjetaHistorial(estado) {
   const dias = A.diasOrdenados(estado).slice(-14).reverse();
   if (dias.length === 0) {
     return `<article class="card w-12">
-      <div class="empty"><div class="empty__icon">◷</div>
+      <div class="empty"><div class="empty__icon">${ICONO_RELOJ}</div>
         <p class="empty__title">Sin registros todavía</p></div>
     </article>`;
   }
@@ -274,7 +277,7 @@ export function renderRegistro(estado) {
     <header class="page-head">
       <div>
         <h1 class="page-title">Registro</h1>
-        <p class="page-sub">Anota el día y registra el peso cuando te toque. Cada pesaje recalibra la estimación.</p>
+        <p class="page-sub">Marca hábitos, anota el día y registra el peso cuando toque. Cada pesaje recalibra la estimación.</p>
       </div>
       <div class="row">
         <input class="input" type="date" data-selector-fecha value="${vista.fecha}" max="${hoy()}"
@@ -285,7 +288,7 @@ export function renderRegistro(estado) {
 
     ${seccion(vista.fecha === hoy() ? 'Hoy' : 'Día', fechaLarga(vista.fecha),
       tarjetaDia(dia)
-      + `<article class="card w-4" data-calculos>${bloqueCalculos(dia, estado)}</article>`)}
+      + `<article class="card card--energy w-4" data-calculos>${bloqueCalculos(dia, estado)}</article>`)}
 
     ${seccion('Constancia', '', tarjetaCalendario(estado) + tarjetaConstancia(estado, h))}
 

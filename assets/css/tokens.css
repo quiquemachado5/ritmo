@@ -1,58 +1,77 @@
 /* ============================================================================
-   TOKENS — sistema monocromo: neutros + un único tono (azul cobalto).
+   TOKENS — libreta de seguimiento cromática.
 
-   Regla que gobierna todo el archivo:
-
-     · EL TEXTO NUNCA LLEVA COLOR. Todas las cifras y etiquetas usan la escala
-       de grises. La dirección de un dato la comunican el signo (+/−) y la
-       flecha (↑/↓), que ya viajan dentro del propio número.
-
-     · El acento se reserva a dos cosas: los controles con los que se
-       interactúa (botón principal, foco) y los datos representados
-       gráficamente (barras, curvas, calendario), donde la forma manda y el
-       color solo acompaña.
-
-   No hay verde, rojo, ámbar ni violeta. Un tono, cuatro intensidades.
+   Cada familia de datos tiene un color persistente. El color acompaña a una
+   etiqueta, un signo o un patrón: nunca es el único modo de entender un dato.
    ========================================================================= */
 
 :root {
   /* --- Superficies ----------------------------------------------------- */
-  --canvas:      #f4f6fa;
+  --canvas:      #f4f6fc;
   --surface:     #ffffff;
-  --surface-2:   #f0f3f8;
-  --surface-3:   #e3e8f0;
+  --surface-2:   #eef1f7;
+  --surface-3:   #e1e7f0;
 
   /* --- Bordes ----------------------------------------------------------- */
-  --border:        #e1e7ef;
-  --border-strong: #c9d2de;
+  --border:        #dce3ef;
+  --border-strong: #c5cfdf;
   --line:          1px solid var(--border);
 
   /* --- Texto: la única escala que se usa para escribir -------------------- */
-  --ink:    #142033;   /* cifras y titulares */
-  --ink-2:  #344256;   /* texto corriente */
-  --ink-3:  #66758a;   /* etiquetas y secundario */
-  --ink-4:  #96a3b4;   /* terciario, ejes, marcas de agua */
+  --ink:    #18213b;
+  --ink-2:  #3c4862;
+  --ink-3:  #526078;
+  --ink-4:  #5b6880;
 
-  /* --- Acento y sus intensidades ----------------------------------------- */
-  --accent:        #3157d5;
-  --accent-hover:  #2849b9;
-  --accent-active: #203b95;
-  --accent-soft:   #9eb6ff;   /* mismo tono, serie secundaria en gráficos */
-  --accent-faint:  #dce5ff;   /* fondo de intensidad baja */
-  --accent-wash:   #f0f4ff;   /* fondo de superficie destacada */
-  --accent-border: #c7d5ff;
-  --accent-ink:    #ffffff;   /* texto sobre acento sólido */
+  /* --- Familias de datos ------------------------------------------------- */
+  --weight:        #4559d7;
+  --weight-hover:  #3548bf;
+  --weight-active: #293a9c;
+  --weight-soft:   #aeb9ff;
+  --weight-wash:   #eef0ff;
+  --weight-border: #c8d0ff;
+  --weight-ink:    #3346b7;
 
-  /* --- Series de datos ---------------------------------------------------
-     Tres intensidades del mismo tono más un gris. Suficiente para cualquier
-     gráfico de esta aplicación y coherente en todas las pantallas.          */
-  --data-1: var(--accent);
-  --data-2: var(--accent-soft);
-  --data-3: var(--ink-4);
-  --data-flat: var(--border-strong);
+  --habit:         #07866b;
+  --habit-soft:    #91d6bf;
+  --habit-wash:    #e9f8f2;
+  --habit-border:  #b9eadb;
+  --habit-ink:     #057158;
+
+  --energy:        #d85d42;
+  --energy-soft:   #f4ae9d;
+  --energy-wash:   #fff0ec;
+  --energy-border: #f8cfc4;
+  --energy-ink:    #ad442f;
+
+  --body:          #754bc0;
+  --body-soft:     #c5afea;
+  --body-wash:     #f4effd;
+  --body-border:   #ddcef6;
+  --body-ink:      #6335ad;
+
+  --warning:       #bd7b12;
+  --warning-wash:  #fff7e7;
+  --warning-border:#f1d59b;
+  --warning-ink:   #95600b;
+
+  /* El acento general sigue el hilo del peso y los controles principales. */
+  --accent:        var(--weight);
+  --accent-hover:  var(--weight-hover);
+  --accent-active: var(--weight-active);
+  --accent-soft:   var(--weight-soft);
+  --accent-faint:  var(--weight-wash);
+  --accent-wash:   var(--weight-wash);
+  --accent-border: var(--weight-border);
+  --accent-ink:    #ffffff;
+
+  --data-1: var(--weight);
+  --data-2: var(--habit);
+  --data-3: var(--body);
+  --data-flat: var(--energy);
 
   /* --- Tipografía --------------------------------------------------------- */
-  --font: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+  --font: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI',
           Roboto, Helvetica, Arial, sans-serif;
 
   --fs-display: clamp(1.75rem, 5.5vw, 2.25rem);
@@ -81,10 +100,10 @@
   --touch:    44px;
 
   /* --- Elevación ---------------------------------------------------------- */
-  --shadow-sm: 0 1px 2px rgba(20, 32, 51, 0.03), 0 3px 8px rgba(20, 32, 51, 0.025);
-  --shadow-md: 0 8px 22px -16px rgba(20, 32, 51, 0.20), 0 2px 5px rgba(20, 32, 51, 0.04);
-  --shadow-lg: 0 24px 48px -28px rgba(20, 32, 51, 0.38), 0 8px 16px -12px rgba(20, 32, 51, 0.12);
-  --shadow-focus: 0 0 0 4px rgba(49, 87, 213, 0.14);
+  --shadow-sm: 0 2px 5px rgba(24, 33, 59, 0.04), 0 8px 18px rgba(24, 33, 59, 0.025);
+  --shadow-md: 0 12px 28px -20px rgba(24, 33, 59, 0.22), 0 3px 8px rgba(24, 33, 59, 0.04);
+  --shadow-lg: 0 28px 54px -30px rgba(24, 33, 59, 0.38), 0 12px 22px -16px rgba(24, 33, 59, 0.16);
+  --shadow-focus: 0 0 0 4px rgba(69, 89, 215, 0.16);
 
   /* --- Movimiento --------------------------------------------------------- */
   --ease:   cubic-bezier(0.2, 0, 0, 1);

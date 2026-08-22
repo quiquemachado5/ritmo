@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Composición · Hábitos, peso y composición corporal</title>
   <meta name="description" content="Registro de hábitos alimenticios, control de peso y análisis de composición corporal con balance calórico y proyección realista.">
-  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" content="#f4f6fc">
   <meta name="color-scheme" content="light">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap">
 
   <link rel="stylesheet" href="assets/css/tokens.css">
   <link rel="stylesheet" href="assets/css/base.css">
@@ -19,6 +19,14 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%231d4ed8'/><text x='16' y='23' font-family='sans-serif' font-size='19' font-weight='700' text-anchor='middle' fill='%23ffffff'>C</text></svg>">
 </head>
 <body>
+  <!--
+  THESIS: Composición es una libreta de seguimiento activa: peso, energía, hábitos y cuerpo se leen como asuntos distintos, no como el mismo dato azul.
+  OWN-WORLD: Un fondo azul grisáceo muy claro sostiene tarjetas de papel blanco y cuatro familias estables: índigo para peso, verde azulado para hábitos, coral para energía y violeta para composición.
+  STORY: Primero se entiende el estado de hoy y la próxima revisión; después se registra el día y se consulta la evolución, sin perder la diferencia entre medido y estimado.
+  FIRST VIEWPORT: La cabecera compacta precede a un bloque de estado índigo con el peso, un objetivo verde y una previsión violeta; el registro de peso queda visible como acción concreta.
+  FORM: Libreta de seguimiento cromática, tercera dirección del conjunto propio; semilla c5e7c89f.
+  FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+  -->
 
   <div id="cargando" class="shell" style="padding-top:96px">
     <p class="label">Cargando</p>
@@ -32,31 +40,31 @@
         <span class="brand__name">Composición<span> · control corporal</span></span>
       </div>
 
-      <nav id="nav" class="nav" role="tablist" aria-label="Secciones">
+      <nav id="nav" class="nav" aria-label="Secciones">
         <span id="navPill" class="nav__pill" aria-hidden="true"></span>
 
-        <button class="nav__btn" role="tab" data-vista="panel" aria-selected="true">
+        <button class="nav__btn" type="button" data-vista="panel" data-active="true" aria-current="page">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M3 13h4l3-8 4 15 3-7h4"/>
           </svg>
           <span>Panel</span>
         </button>
 
-        <button class="nav__btn" role="tab" data-vista="registro" aria-selected="false">
+        <button class="nav__btn" type="button" data-vista="registro" data-active="false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M8 3v4M16 3v4M3 10h18M9 15l2 2 4-4"/>
           </svg>
           <span>Registro</span>
         </button>
 
-        <button class="nav__btn" role="tab" data-vista="composicion" aria-selected="false">
+        <button class="nav__btn" type="button" data-vista="composicion" data-active="false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="9"/><path d="M12 3v9l7 4.5"/>
           </svg>
           <span>Cuerpo</span>
         </button>
 
-        <button class="nav__btn" role="tab" data-vista="ajustes" aria-selected="false">
+        <button class="nav__btn" type="button" data-vista="ajustes" data-active="false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M4 7h8M17 7h3M4 17h3M12 17h8"/><circle cx="14.5" cy="7" r="2.2"/><circle cx="9.5" cy="17" r="2.2"/>
           </svg>
@@ -71,10 +79,10 @@
     </header>
 
     <main class="shell">
-      <section id="view-panel"       class="view is-active" role="tabpanel" aria-label="Panel"></section>
-      <section id="view-registro"    class="view"           role="tabpanel" aria-label="Registro diario"></section>
-      <section id="view-composicion" class="view"           role="tabpanel" aria-label="Composición corporal"></section>
-      <section id="view-ajustes"     class="view"           role="tabpanel" aria-label="Ajustes"></section>
+      <section id="view-panel"       class="view is-active" aria-label="Panel"></section>
+      <section id="view-registro"    class="view"           aria-label="Registro diario"></section>
+      <section id="view-composicion" class="view"           aria-label="Composición corporal"></section>
+      <section id="view-ajustes"     class="view"           aria-label="Ajustes"></section>
     </main>
   </div>
 

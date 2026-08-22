@@ -72,7 +72,9 @@ function activarVista(vista, { desplazar = false } = {}) {
     contenedor(v).classList.toggle('is-active', v === vista);
   }
   el.nav.querySelectorAll('[data-vista]').forEach((btn) => {
-    btn.setAttribute('aria-selected', String(btn.dataset.vista === vista));
+    const activa = btn.dataset.vista === vista;
+    btn.dataset.active = String(activa);
+    btn.toggleAttribute('aria-current', activa);
   });
 
   colocarPill();
@@ -82,7 +84,7 @@ function activarVista(vista, { desplazar = false } = {}) {
 
 /** Coloca el indicador deslizante bajo la pestaña activa. */
 function colocarPill() {
-  const activo = el.nav.querySelector('[aria-selected="true"]');
+  const activo = el.nav.querySelector('[data-active="true"]');
   // En móvil la navegación es una barra inferior sin indicador deslizante.
   if (!activo || getComputedStyle(el.pill).display === 'none') return;
   el.pill.style.width = `${activo.offsetWidth}px`;
@@ -119,6 +121,33 @@ function actualizarSync() {
  */
 function pedirAcceso() {
   return new Promise((resolver) => {
+    const focoPrevio = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const cerrar = (modo = 'local') => {
+      el.gate.classList.add('hidden');
+      el.gate.removeEventListener('keydown', gestionarTeclado);
+      focoPrevio?.focus();
+      resolver(modo);
+    };
+    const gestionarTeclado = (ev) => {
+      if (ev.key === 'Escape') {
+        ev.preventDefault();
+        cerrar();
+        return;
+      }
+      if (ev.key !== 'Tab') return;
+      const foco = [...el.gate.querySelectorAll('button:not([disabled]), input:not([disabled])')];
+      if (foco.length === 0) return;
+      const primero = foco[0];
+      const ultimo = foco[foco.length - 1];
+      if (ev.shiftKey && document.activeElement === primero) {
+        ev.preventDefault();
+        ultimo.focus();
+      } else if (!ev.shiftKey && document.activeElement === ultimo) {
+        ev.preventDefault();
+        primero.focus();
+      }
+    };
+
     el.gate.classList.remove('hidden');
     el.gate.innerHTML = `
       <div class="modal__panel">
@@ -160,10 +189,8 @@ function pedirAcceso() {
           <button type="button" class="btn btn--block" style="margin-top:18px" data-local>
             Mientras tanto, usar este dispositivo
           </button>`;
-        el.gate.querySelector('[data-local]').addEventListener('click', () => {
-          el.gate.classList.add('hidden');
-          resolver('local');
-        });
+        el.gate.querySelector('[data-local]').addEventListener('click', () => cerrar());
+        el.gate.querySelector('[data-local]')?.focus();
       } catch (e) {
         console.error(e);
         boton.disabled = false;
@@ -172,10 +199,9 @@ function pedirAcceso() {
       }
     });
 
-    el.gate.querySelector('[data-local]').addEventListener('click', () => {
-      el.gate.classList.add('hidden');
-      resolver('local');
-    });
+    el.gate.querySelector('[data-local]').addEventListener('click', () => cerrar());
+    el.gate.addEventListener('keydown', gestionarTeclado);
+    el.gate.querySelector('input[name="email"]')?.focus();
   });
 }
 
@@ -230,13 +256,22 @@ async function arrancar() {
 
 arrancar().catch((e) => {
   console.error('Error fatal en el arranque', e);
-  document.body.innerHTML = `
-    <div class="shell" style="padding-top:80px">
-      <div class="card">
-        <h1 class="page-title">Algo ha fallado al arrancar</h1>
-        <p style="color:var(--ink-3)">${e.message}</p>
-        <p style="color:var(--ink-4);font-size:0.85rem">
-          Revisa la consola del navegador para ver el detalle completo.</p>
-      </div>
-    </div>`;
+  const shell = document.createElement('div');
+  shell.className = 'shell';
+  shell.style.paddingTop = '80px';
+  const card = document.createElement('div');
+  card.className = 'card';
+  const titulo = document.createElement('h1');
+  titulo.className = 'page-title';
+  titulo.textContent = 'Algo ha fallado al arrancar';
+  const detalle = document.createElement('p');
+  detalle.style.color = 'var(--ink-3)';
+  detalle.textContent = e instanceof Error ? e.message : 'Error desconocido';
+  const ayuda = document.createElement('p');
+  ayuda.style.color = 'var(--ink-4)';
+  ayuda.style.fontSize = '0.85rem';
+  ayuda.textContent = 'Revisa la consola del navegador para ver el detalle completo.';
+  card.append(titulo, detalle, ayuda);
+  shell.append(card);
+  document.body.replaceChildren(shell);
 });

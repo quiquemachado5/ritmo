@@ -43,7 +43,7 @@ function seccionPerfil(estado) {
   const observado = A.tdeeDesdeHistorial(estado);
 
   return seccion('Perfil', '', `
-    <article class="card w-7">
+    <article class="card card--settings-profile w-7">
       <div class="form-grid">
         <label class="field">
           <span class="field__label">Altura <span class="field__unit">cm</span></span>
@@ -82,7 +82,7 @@ function seccionPerfil(estado) {
       </div>
     </article>
 
-    <article class="card w-5">
+    <article class="card card--settings-profile w-5">
       <div class="stats">
         ${dato('Basal', `${entero(basal)} <small>kcal</small>`)}
         ${dato('Gasto teórico', `${entero(teorico)} <small>kcal</small>`, `×${n(p.factorActividad, 3)}`)}
@@ -102,7 +102,7 @@ function seccionModelo(estado) {
   const activa = p.imputarActiva !== false;
 
   return seccion('Modelo de estimación', activa ? 'los huecos aumentan el margen' : 'los huecos quedan abiertos', `
-    <article class="card w-7">
+    <article class="card card--settings-model w-7">
       <div class="form-grid">
         <label class="field">
           <span class="field__label">Días sin registro</span>
@@ -126,7 +126,7 @@ function seccionModelo(estado) {
       </div>
     </article>
 
-    <article class="card w-5">
+    <article class="card card--settings-model w-5">
       ${estimacion.disponible ? `<div class="stats">
         ${dato('Estimación actual', `${n(estimacion.hoy.peso, 1)} <small>kg</small>`, `rango ${n(estimacion.hoy.minimo, 1)}–${n(estimacion.hoy.maximo, 1)}`)}
         ${dato('Última báscula', ultimo ? `${n(ultimo.peso, 1)} <small>kg</small>` : '—', ultimo ? ultimo.fecha : '')}
@@ -140,7 +140,7 @@ function seccionModelo(estado) {
 
 function tarjetaNube(estado, repo) {
   if (!supabaseConfigurado()) {
-    return `<article class="card w-6">
+    return `<article class="card card--settings-data w-6">
       <div class="row-between" style="margin-bottom:12px">
         <span class="stat__k">Sincronización</span>
         <span class="chip chip--warn">Solo este dispositivo</span>
@@ -152,7 +152,7 @@ function tarjetaNube(estado, repo) {
   }
 
   if (estado.modo === 'nube') {
-    return `<article class="card w-6">
+    return `<article class="card card--settings-data w-6">
       <div class="row-between" style="margin-bottom:12px">
         <span class="stat__k">Sincronización</span>
         <span class="chip chip--pos">Activa</span>
@@ -167,7 +167,7 @@ function tarjetaNube(estado, repo) {
     </article>`;
   }
 
-  return `<article class="card w-6">
+  return `<article class="card card--settings-data w-6">
     <div class="row-between" style="margin-bottom:12px">
       <span class="stat__k">Sincronización</span>
       <span class="chip chip--warn">Sin sesión</span>
@@ -184,7 +184,7 @@ function tarjetaCopias(estado) {
   const dias = Object.keys(estado.dias).length;
   const mediciones = (estado.composicion || []).length;
 
-  return `<article class="card w-6">
+  return `<article class="card card--settings-data w-6">
     <div class="row-between" style="margin-bottom:12px">
       <span class="stat__k">Copias</span>
       <span class="card__hint">${dias} días · ${mediciones} mediciones</span>

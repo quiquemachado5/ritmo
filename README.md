@@ -231,32 +231,22 @@ rígido.
 
 ## Diseño
 
-Monocromo: **una escala de grises y un único tono de acento**. Nada más.
+La interfaz usa una **paleta por tipo de dato**, no un único azul. Cada color se
+acompaña de una etiqueta, un signo o una leyenda para que siga siendo comprensible
+sin depender del color.
 
-```
-Neutros   #f8f9fa  canvas      #ffffff  tarjeta
-          #f1f5f9  hundido     #e2e8f0  borde      #cbd5e1  borde fuerte
-          #0f172a  cifras      #334155  texto      #64748b  etiquetas   #94a3b8  ejes
-Acento    #2563eb  pleno       #93c5fd  suave      #dbeafe  tenue       #eff6ff  fondo
-```
+| Familia | Uso |
+|---|---|
+| Índigo | Peso, tendencia y acciones principales |
+| Verde azulado | Hábitos, adherencia y déficit |
+| Coral | Energía, balance y atención al registro diario |
+| Violeta | Composición corporal y revisión quincenal |
+| Ámbar | Incertidumbre, datos pendientes y avisos |
 
-Tres reglas sostienen la coherencia:
-
-**1. El texto nunca lleva color.** Todas las cifras y etiquetas usan la escala de
-grises. La dirección de un dato la comunican el signo (`+`/`−`) y la flecha
-(`↑`/`↓`), que ya viajan dentro del propio número: no hace falta además pintarlo
-de verde o rojo. Se verifica recorriendo el DOM y comprobando que ningún color de
-texto se sale de los cuatro grises.
-
-**2. El acento se reserva a dos usos.** Los controles con los que se interactúa
-(botón principal, foco) y los datos representados gráficamente (barras, curvas,
-calendario), donde la forma manda y el color solo acompaña. Las dos series de
-composición corporal son el mismo tono a dos intensidades — grasa en pleno,
-masa magra en suave — con leyenda, no dos colores distintos.
-
-**3. Un solo patrón por concepto.** `.section` (bloque temático), `.zone`
-(división interna por hairline), `.stats` (rejilla de cifra + micro-etiqueta),
-`.facts` (datos en línea). Se repiten idénticos en las cuatro vistas.
+La lectura del panel sigue el orden de uso: **estado actual → próxima revisión →
+hoy → evolución**. Las otras vistas conservan la misma estructura de sección,
+tarjeta y zonas internas para que los datos relacionados vivan juntos sin crear
+una sopa de cajas.
 
 ### Arquitectura de la información
 
@@ -266,7 +256,7 @@ se explican mutuamente, viven en la misma tarjeta.
 
 | Vista | Secciones |
 |---|---|
-| Panel | Estado actual · Hoy · Proyección · Histórico |
+| Panel | Estado actual · Próxima revisión · Hoy · Evolución |
 | Registro | Día · Constancia · Últimos días |
 | Cuerpo | Actual · Progreso · Medición · Histórico |
 | Ajustes | Perfil · Días sin registro · Datos |

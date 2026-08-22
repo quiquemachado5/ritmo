@@ -95,7 +95,7 @@ a:hover { text-decoration: underline; }
 }
 
 .page-head {
-  padding: 32px 0 20px;
+  padding: 34px 0 22px;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -104,8 +104,8 @@ a:hover { text-decoration: underline; }
 }
 
 @media (min-width: 768px) {
-  .page-head { padding: 46px 0 30px; }
-  .page-head--dashboard { padding-bottom: 34px; }
+  .page-head { padding: 52px 0 34px; }
+  .page-head--dashboard { padding-bottom: 38px; }
 }
 
 /* --- Rejilla -------------------------------------------------------------- */

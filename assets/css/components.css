@@ -87,8 +87,8 @@
   -webkit-tap-highlight-color: transparent;
 }
 .nav__btn svg { width: 21px; height: 21px; stroke-width: 1.9; }
-.nav__btn[aria-selected='true'] { color: var(--ink); }
-.nav__btn[aria-selected='true'] svg { stroke-width: 2.4; }
+.nav__btn[data-active='true'] { color: var(--ink); }
+.nav__btn[data-active='true'] svg { stroke-width: 2.4; }
 
 /* El indicador deslizante solo existe en escritorio */
 .nav__pill { display: none; }
@@ -120,7 +120,7 @@
   }
   .nav__btn svg { width: 16px; height: 16px; }
   .nav__btn:hover { color: var(--ink); }
-  .nav__btn[aria-selected='true'] { color: var(--ink); }
+  .nav__btn[data-active='true'] { color: var(--ink); }
 
   .nav__pill {
     display: block;
@@ -887,4 +887,133 @@ select.input {
   background: var(--surface);
   color: var(--ink);
   box-shadow: var(--shadow-sm);
+}
+
+/* ==================================================== SISTEMA CROMÁTICO */
+
+/* Las familias de color se aplican por concepto, no de forma decorativa. */
+.topbar {
+  background: rgba(255, 255, 255, 0.94);
+  border-bottom-color: var(--border);
+}
+
+.brand__mark {
+  background: var(--weight);
+  box-shadow: 0 6px 14px -8px rgba(69, 89, 215, 0.72);
+}
+
+.nav__btn[data-active='true'] { color: var(--weight); }
+.nav__btn[data-vista='registro'][data-active='true'] { color: var(--habit-ink); }
+.nav__btn[data-vista='composicion'][data-active='true'] { color: var(--body-ink); }
+.nav__btn[data-vista='ajustes'][data-active='true'] { color: var(--energy-ink); }
+
+.sync[data-state='ok'] .sync__dot { background: var(--habit); }
+.sync[data-state='busy'] .sync__dot { background: var(--weight); }
+.sync[data-state='error'] .sync__dot { background: var(--energy); }
+
+.section + .section { margin-top: 48px; }
+.section__head { margin-bottom: 16px; }
+.section__title { font-size: 1.2rem; }
+.section__meta { color: var(--ink-3); }
+
+.card {
+  border-color: var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.card--overview {
+  background: var(--weight);
+  border-color: var(--weight);
+  box-shadow: 0 24px 44px -30px rgba(69, 89, 215, 0.78), 0 12px 22px -18px rgba(24, 33, 59, 0.28);
+}
+
+.card--goal {
+  background: var(--habit-wash);
+  border-color: var(--habit-border);
+  box-shadow: none;
+}
+.card--goal .stat__k { color: var(--habit-ink); }
+.card--goal .bar { background: #ccefe2; }
+.card--goal .bar__fill { background: var(--habit); }
+
+.card--forecast {
+  background: var(--body-wash);
+  border-color: var(--body-border);
+  box-shadow: none;
+}
+.card--forecast .stat__k { color: var(--body-ink); }
+.card--forecast .stat__v { color: var(--body-ink); }
+.card--forecast .zone { border-top-color: var(--body-border); }
+
+.card--today { background: var(--energy-wash); border-color: var(--energy-border); }
+.card--today .stat__k { color: var(--energy-ink); }
+.card--today .zone { border-top-color: var(--energy-border); }
+
+.card--body-summary { background: var(--body-wash); border-color: var(--body-border); }
+.card--habit-log { border-color: var(--habit-border); }
+.card--habit-calendar { background: var(--habit-wash); border-color: var(--habit-border); }
+.card--energy { background: var(--energy-wash); border-color: var(--energy-border); }
+.card--energy .zone { border-top-color: var(--energy-border); }
+.card--energy .stat__k { color: var(--energy-ink); }
+.card--body-visual, .card--body-form { border-color: var(--body-border); }
+.card--body-progress { background: var(--body-wash); border-color: var(--body-border); }
+.card--body-progress .zone { border-top-color: var(--body-border); }
+
+.stat__v.is-pos { color: var(--habit-ink); }
+.stat__v.is-neg { color: var(--energy-ink); }
+.stat__v.is-warn { color: var(--warning-ink); }
+.stat__v.is-accent { color: var(--body-ink); }
+
+.delta--pos { color: var(--habit-ink); background: var(--habit-wash); border-color: var(--habit-border); }
+.delta--neg { color: var(--energy-ink); background: var(--energy-wash); border-color: var(--energy-border); }
+.delta--flat { color: var(--ink-2); background: var(--surface-2); border-color: var(--border); }
+
+.chip--accent { color: var(--body-ink); background: var(--body-wash); border-color: var(--body-border); }
+.chip--pos { color: var(--habit-ink); background: var(--habit-wash); border-color: var(--habit-border); }
+.chip--neg { color: var(--energy-ink); background: var(--energy-wash); border-color: var(--energy-border); }
+.chip--warn { color: var(--warning-ink); background: var(--warning-wash); border-color: var(--warning-border); }
+
+.notice--accent { background: var(--body-wash); border-color: var(--body-border); }
+.notice--warn, .notice--neg { background: var(--warning-wash); border-color: var(--warning-border); }
+
+#view-registro .habit[aria-pressed='true'] {
+  background: var(--habit-wash);
+  border-color: var(--habit-border);
+  color: var(--habit-ink);
+}
+#view-registro .habit[aria-pressed='true'] .habit__box { background: var(--habit); border-color: var(--habit); }
+#view-registro .hpill[data-on='1'] { background: var(--habit-wash); border-color: var(--habit-border); color: var(--habit-ink); }
+#view-registro .btn--primary { background: var(--habit); border-color: var(--habit); }
+#view-registro .btn--primary:hover { background: var(--habit-ink); border-color: var(--habit-ink); }
+#view-registro .cal__day[aria-pressed='true'] { border-color: var(--habit); box-shadow: 0 0 0 1px var(--habit); }
+#view-registro .cal__day[data-level='1'] { background: #d9f3ea; }
+#view-registro .cal__day[data-level='2'] { background: var(--habit-border); }
+#view-registro .cal__day[data-level='3'] { background: var(--habit-soft); }
+#view-registro .cal__day[data-level='4'] { background: var(--habit); }
+#view-registro .bar__fill { background: var(--habit); }
+#view-registro .bar__fill--muted { background: var(--habit-soft); }
+
+#view-composicion .btn--primary { background: var(--body); border-color: var(--body); }
+#view-composicion .btn--primary:hover { background: var(--body-ink); border-color: var(--body-ink); }
+#view-composicion .bar__fill--fat { background: var(--body); }
+#view-composicion .bar__fill--lean, #view-composicion .bar__fill--pos { background: var(--habit); }
+
+#view-ajustes .card--settings-model { background: var(--weight-wash); border-color: var(--weight-border); }
+#view-ajustes .card--settings-data { background: var(--surface); border-color: var(--border); }
+#view-ajustes .btn--primary { background: var(--weight); border-color: var(--weight); }
+
+.input:focus { border-color: var(--weight); box-shadow: var(--shadow-focus); }
+#view-registro .input:focus { border-color: var(--habit); box-shadow: 0 0 0 4px rgba(7, 134, 107, 0.14); }
+#view-composicion .input:focus { border-color: var(--body); box-shadow: 0 0 0 4px rgba(117, 75, 192, 0.14); }
+
+.chart .grid-line { stroke: #e6eaf2; }
+.chart .axis-line { stroke: #cfd7e5; }
+.empty__icon { background: var(--weight-wash); color: var(--weight-ink); }
+.empty__icon svg { width: 21px; height: 21px; }
+
+@media (min-width: 768px) {
+  .nav__btn[data-active='true'] { color: var(--weight); }
+  .nav__btn[data-vista='registro'][data-active='true'] { color: var(--habit-ink); }
+  .nav__btn[data-vista='composicion'][data-active='true'] { color: var(--body-ink); }
+  .nav__btn[data-vista='ajustes'][data-active='true'] { color: var(--energy-ink); }
 }

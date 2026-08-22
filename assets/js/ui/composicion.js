@@ -26,6 +26,7 @@ const CAMPOS = [
 ];
 
 const vista = { fecha: hoy() };
+const ICONO_MEDICION = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v4.5l3 2.5"/><path d="M5 5 3.5 3.5M19 5l1.5-1.5"/></svg>';
 
 const seccion = (titulo, meta, contenido) => `
   <section class="section">
@@ -50,7 +51,7 @@ function seccionActual(estado) {
   if (!c) {
     return seccion('Actual', '', `<article class="card w-12">
       <div class="empty">
-        <div class="empty__icon">◍</div>
+        <div class="empty__icon">${ICONO_MEDICION}</div>
         <p class="empty__title">Sin mediciones</p>
         <p>Añade peso y % de grasa para desglosar tu composición.</p>
       </div>
@@ -66,19 +67,19 @@ function seccionActual(estado) {
   const imcValor = M.imc(usar.pesoKg, perfil.alturaCm);
 
   return seccion('Actual', fechaCorta(c.fecha), `
-    <article class="card w-5">
+    <article class="card card--body-visual w-5">
       ${anilloComposicion(usar, { tam: 200 })}
       <div class="split" style="margin-top:16px">
-        <div class="split__seg" style="width:${usar.grasaPct}%;background:var(--accent)"></div>
-        <div class="split__seg" style="width:${usar.magraPct}%;background:var(--accent-soft)"></div>
+        <div class="split__seg" style="width:${usar.grasaPct}%;background:var(--body)"></div>
+        <div class="split__seg" style="width:${usar.magraPct}%;background:var(--habit)"></div>
       </div>
       <div class="legend" style="margin-top:10px;justify-content:center">
-        <span class="legend__item"><span class="legend__swatch" style="background:var(--accent)"></span>Grasa</span>
-        <span class="legend__item"><span class="legend__swatch" style="background:var(--accent-soft)"></span>Magra</span>
+        <span class="legend__item"><span class="legend__swatch" style="background:var(--body)"></span>Grasa</span>
+        <span class="legend__item"><span class="legend__swatch" style="background:var(--habit)"></span>Magra</span>
       </div>
     </article>
 
-    <article class="card w-7">
+    <article class="card card--body-summary w-7">
       <div class="zone">
         <div class="stats">
           ${dato('Masa grasa', `${kg(usar.grasaKg)} <small>kg</small>`, pct(usar.grasaPct), 'is-warn')}
@@ -131,7 +132,7 @@ function seccionProgreso(estado) {
   };
 
   return seccion('Progreso', `${fechaCorta(ini.fecha)} → ${fechaCorta(fin.fecha)}`, `
-    <article class="card w-12">
+    <article class="card card--body-progress w-12">
       <div class="zone">
         <div class="stats stats--4">
           ${dato('Peso', `${conSigno(dPeso, 1)} <small>kg</small>`, `${kg(a.pesoKg)} → ${kg(b.pesoKg)}`, tono(dPeso))}
@@ -159,7 +160,7 @@ function seccionFormulario(estado) {
   const v = (k) => (existente && existente[k] !== undefined && existente[k] !== null ? existente[k] : '');
 
   return seccion(existente ? 'Editar medición' : 'Nueva medición', '', `
-    <article class="card w-12">
+    <article class="card card--body-form w-12">
       <form data-form-medicion>
         <div class="form-grid">
           <label class="field">
@@ -208,11 +209,11 @@ function seccionHistorico(estado) {
     curvas = `
       <article class="card w-6 card--flush">
         <div class="card__pad" style="padding-bottom:4px"><span class="stat__k">Masa grasa · kg</span></div>
-        <div style="padding:0 8px 8px">${graficoPeso(grasa, { alto: 210 })}</div>
+        <div style="padding:0 8px 8px">${graficoPeso(grasa, { alto: 210, color: 'var(--body)' })}</div>
       </article>
       <article class="card w-6 card--flush">
         <div class="card__pad" style="padding-bottom:4px"><span class="stat__k">Masa magra · kg</span></div>
-        <div style="padding:0 8px 8px">${graficoPeso(magra, { alto: 210 })}</div>
+        <div style="padding:0 8px 8px">${graficoPeso(magra, { alto: 210, color: 'var(--habit)' })}</div>
       </article>`;
   }
 
@@ -253,7 +254,7 @@ export function renderComposicion(estado) {
     <header class="page-head">
       <div>
         <h1 class="page-title">Cuerpo</h1>
-        <p class="page-sub">Tu composición se muestra solo a partir de mediciones reales de la báscula.</p>
+        <p class="page-sub">Aquí solo aparecen mediciones reales de la báscula: no se inventa composición entre pesajes.</p>
       </div>
     </header>
     ${seccionActual(estado)}

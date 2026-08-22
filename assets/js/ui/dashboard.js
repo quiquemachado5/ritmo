@@ -67,7 +67,6 @@ function seccionEstado(r) {
   const progreso = (p.inicial !== null && p.objetivo !== null && p.inicial !== p.objetivo)
     ? Math.max(0, Math.min(100, ((p.inicial - peso) / (p.inicial - p.objetivo)) * 100))
     : null;
-  const comp = r.composicion;
 
   return seccion('Estado actual', esEstimacion ? 'estimación a día de hoy' : `último pesaje · ${fechaCorta(p.fecha)}`, `
     <article class="card card--overview w-8">
@@ -95,16 +94,24 @@ function seccionEstado(r) {
         ${prevision.diasObjetivo ? `<span>Ritmo actual: <strong>${duracion(prevision.diasObjetivo)}</strong></span>` : ''}
       </div>
     </article>` : ''}
+  `);
+}
 
-    ${comp ? `<article class="card w-12">
+function seccionCuerpo(r) {
+  const comp = r.composicion;
+  const p = r.peso;
+  if (!comp) return '';
+  const peso = p.estimadoHoy ?? p.actual;
+
+  return seccion('Composición', 'solo datos de báscula', `
+    <article class="card card--body-summary w-12">
       <div class="stats stats--4">
         ${dato('Cambio desde el inicio', delta(peso - p.inicial), `desde ${fechaCorta(p.fechaInicial)}`)}
         ${dato('Masa grasa', `${kg(comp.grasaKg)} <small>kg</small>`, pct(comp.grasaPct))}
         ${dato('Masa magra', `${kg(comp.magraKg)} <small>kg</small>`, pct(comp.magraPct))}
         ${r.imc ? dato('IMC', n(r.imc.valor, 1), esc(r.imc.categoria.etiqueta)) : ''}
       </div>
-    </article>` : ''}
-  `);
+    </article>`);
 }
 
 /* =============================================================== 2. HOY */
@@ -129,7 +136,7 @@ function seccionHoy(r, estado) {
     </article>`);
   }
 
-  return seccion('Hoy', fechaCorta(fecha), `<article class="card w-12">
+  return seccion('Hoy', fechaCorta(fecha), `<article class="card card--today w-12">
     <div class="day-summary">
       <div>
         <div class="stat__k">Balance registrado</div>
@@ -182,12 +189,11 @@ function seccionProyeccion(r) {
 
   const base = modelo.calibrado ? 'estimación calibrada con tu historial' : 'estimación con gasto de referencia';
 
-  return seccion('Previsión de peso', `${base} · rango orientativo`, `
+  return seccion('Próxima revisión', `${base} · rango orientativo`, `
     <article class="card card--forecast w-12">
-      <div class="stats stats--4">
-        ${dato('Mañana', proy(p.manana), sub(p.manana))}
+      <div class="stats stats--3">
         ${dato('En 7 días', proy(p.semana), sub(p.semana))}
-        ${dato('En 14 días', proy(p.quincena), sub(p.quincena))}
+        ${dato('Siguiente pesaje', proy(p.quincena), `${sub(p.quincena)} · dentro de 14 días`)}
         ${dato('En 30 días', proy(p.mes), sub(p.mes))}
       </div>
       <div class="zone forecast__details">
@@ -216,7 +222,7 @@ function seccionHistorico(r, estado) {
           <div class="card__hint">La línea punteada suaviza las variaciones diarias.</div>
         </div>
         <div class="legend">
-          <span class="legend__item"><span class="legend__swatch" style="background:var(--accent)"></span>Pesajes</span>
+          <span class="legend__item"><span class="legend__swatch" style="background:var(--weight)"></span>Pesajes</span>
           <span class="legend__item"><span class="legend__swatch" style="background:var(--ink-4)"></span>Objetivo</span>
         </div>
       </div>
@@ -242,11 +248,12 @@ export function renderDashboard(estado) {
     <header class="page-head page-head--dashboard">
       <div>
         <h1 class="page-title">Tu progreso</h1>
-        <p class="page-sub">Peso, hábitos y una estimación que muestra con claridad lo medido, lo calculado y su margen.</p>
+        <p class="page-sub">Mira qué está medido, qué es una estimación y cuándo te conviene volver a pesarte.</p>
       </div>
     </header>
     ${seccionEstado(r)}
     ${seccionProyeccion(r)}
+    ${seccionCuerpo(r)}
     ${seccionHoy(r, estado)}
     ${seccionHistorico(r, estado)}
   `;
