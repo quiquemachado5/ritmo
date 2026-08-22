@@ -28,8 +28,8 @@ const CAMPOS = [
 const vista = { fecha: hoy() };
 const ICONO_MEDICION = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v4.5l3 2.5"/><path d="M5 5 3.5 3.5M19 5l1.5-1.5"/></svg>';
 
-const seccion = (titulo, meta, contenido) => `
-  <section class="section">
+const seccion = (titulo, meta, contenido, clase = '') => `
+  <section class="section ${clase}">
     <header class="section__head">
       <h2 class="section__title">${esc(titulo)}</h2>
       ${meta ? `<span class="section__meta">${esc(meta)}</span>` : ''}
@@ -55,7 +55,7 @@ function seccionActual(estado) {
         <p class="empty__title">Sin mediciones</p>
         <p>Añade peso y % de grasa para desglosar tu composición.</p>
       </div>
-    </article>`);
+    </article>`, 'section--body-current');
   }
 
   const perfil = estado.perfil || {};
@@ -101,7 +101,7 @@ function seccionActual(estado) {
           <span>Última medición <b>${esc(fechaCorta(c.fecha))}</b></span>
         </div>
       </div>
-    </article>`);
+    </article>`, 'section--body-current');
 }
 
 /* ----------------------------------------------------------- 2. PROGRESO */
@@ -150,7 +150,7 @@ function seccionProgreso(estado) {
           <div class="bar"><div class="bar__fill ${calidad >= 75 ? 'bar__fill--pos' : 'bar__fill--fat'}"
             style="width:${Math.min(100, calidad)}%"></div></div>
         </div>` : ''}
-    </article>`);
+    </article>`, 'section--body-progress');
 }
 
 /* ----------------------------------------------------------- 3. MEDICIÓN */
@@ -183,7 +183,7 @@ function seccionFormulario(estado) {
             : ''}
         </div>
       </form>
-    </article>`);
+    </article>`, 'section--body-form');
 }
 
 /* ---------------------------------------------------------- 4. HISTÓRICO */
@@ -227,7 +227,7 @@ function seccionHistorico(estado) {
         <tbody>
           ${filas.map((m) => {
             const c = M.num(m.grasaPct) !== null ? M.composicion(m.peso, m.grasaPct) : null;
-            return `<tr data-editar="${m.fecha}" style="cursor:pointer">
+            return `<tr>
               <td><strong>${esc(fechaCorta(m.fecha))}</strong></td>
               <td><strong>${kg(m.peso)}</strong></td>
               <td>${M.num(m.grasaPct) !== null ? pct(m.grasaPct) : '—'}</td>
@@ -235,8 +235,12 @@ function seccionHistorico(estado) {
               <td class="${c ? 'is-accent' : ''}">${c ? kg(c.magraKg) : '—'}</td>
               <td>${M.num(m.aguaPct) !== null ? pct(m.aguaPct) : '—'}</td>
               <td>${M.num(m.grasaVisceral) !== null ? entero(m.grasaVisceral) : '—'}</td>
-              <td><button type="button" class="btn btn--sm btn--ghost btn--danger"
-                data-borrar-medicion="${m.fecha}">Borrar</button></td>
+              <td class="table__actions">
+                <button type="button" class="btn btn--sm btn--ghost" data-editar="${m.fecha}"
+                  aria-label="Editar medición del ${esc(fechaCorta(m.fecha))}">Editar</button>
+                <button type="button" class="btn btn--sm btn--ghost btn--danger"
+                  data-borrar-medicion="${m.fecha}">Borrar</button>
+              </td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -244,7 +248,7 @@ function seccionHistorico(estado) {
     </div>
   </article>`;
 
-  return seccion('Histórico', `${filas.length} mediciones`, curvas + tabla);
+  return seccion('Histórico', `${filas.length} mediciones`, curvas + tabla, 'section--body-history');
 }
 
 /* ---------------------------------------------------------------- RENDER */
@@ -319,4 +323,5 @@ export function conectarComposicion(raiz, store, repintar) {
       raiz.querySelector('[data-form-medicion]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   });
+
 }

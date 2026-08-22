@@ -81,7 +81,7 @@ a:hover { text-decoration: underline; }
 
 /* --- Esqueleto ------------------------------------------------------------ */
 .shell {
-  width: min(100%, 1160px);
+  width: min(100%, 1320px);
   margin: 0 auto;
   padding: 0 clamp(16px, 3vw, 32px) 48px;
 }
@@ -99,7 +99,7 @@ a:hover { text-decoration: underline; }
 }
 
 .page-head {
-  padding: 32px 0 24px;
+  padding: 36px 0 26px;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -109,8 +109,8 @@ a:hover { text-decoration: underline; }
 .page-head > * { min-width: 0; }
 
 @media (min-width: 768px) {
-  .page-head { padding: 48px 0 32px; }
-  .page-head--dashboard { padding-bottom: 34px; }
+  .page-head { padding: 36px 0 28px; }
+  .page-head--dashboard { padding-bottom: 28px; }
 }
 
 /* --- Rejilla -------------------------------------------------------------- */

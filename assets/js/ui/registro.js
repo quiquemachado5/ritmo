@@ -23,8 +23,8 @@ const ICONO_RELOJ = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 const ICONO_ANTERIOR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg>';
 const ICONO_SIGUIENTE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg>';
 
-const seccion = (titulo, meta, contenido) => `
-  <section class="section">
+const seccion = (titulo, meta, contenido, clase = '') => `
+  <section class="section ${clase}">
     <header class="section__head">
       <h2 class="section__title">${esc(titulo)}</h2>
       ${meta ? `<span class="section__meta">${esc(meta)}</span>` : ''}
@@ -250,15 +250,19 @@ function tarjetaHistorial(estado) {
           ${dias.map((d) => {
             const e = A.energiaDe(estado, d.fecha);
             const marcados = Object.values(d.habitos || {}).filter((v) => v === true).length;
-            return `<tr data-ir="${d.fecha}" style="cursor:pointer">
+            return `<tr>
               <td><strong>${esc(fechaCorta(d.fecha))}</strong></td>
               <td>${marcados}/${TOTAL_HABITOS}</td>
               <td>${M.num(d.peso) !== null ? `<strong>${kg(d.peso)}</strong>` : '—'}</td>
               <td>${entero(e.consumidas)}</td>
               <td>${entero(e.quemadas)}</td>
               <td class="${e.balance < 0 ? 'is-pos' : 'is-neg'}"><strong>${kcalConSigno(e.balance)}</strong></td>
-              <td><button type="button" class="btn btn--sm btn--ghost btn--danger"
-                data-borrar="${d.fecha}">Borrar</button></td>
+              <td class="table__actions">
+                <button type="button" class="btn btn--sm btn--ghost" data-ir="${d.fecha}"
+                  aria-label="Editar registro del ${esc(fechaCorta(d.fecha))}">Editar</button>
+                <button type="button" class="btn btn--sm btn--ghost btn--danger"
+                  data-borrar="${d.fecha}">Borrar</button>
+              </td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -288,11 +292,11 @@ export function renderRegistro(estado) {
 
     ${seccion(vista.fecha === hoy() ? 'Hoy' : 'Día', fechaLarga(vista.fecha),
       tarjetaDia(dia)
-      + `<article class="card card--energy w-4" data-calculos>${bloqueCalculos(dia, estado)}</article>`)}
+      + `<article class="card card--energy w-4" data-calculos>${bloqueCalculos(dia, estado)}</article>`, 'section--day-work')}
 
-    ${seccion('Constancia', '', tarjetaCalendario(estado) + tarjetaConstancia(estado, h))}
+    ${seccion('Constancia', '', tarjetaCalendario(estado) + tarjetaConstancia(estado, h), 'section--consistency-work')}
 
-    ${seccion('Últimos días', '', tarjetaHistorial(estado))}
+    ${seccion('Últimos días', '', tarjetaHistorial(estado), 'section--table-work')}
   `;
 }
 

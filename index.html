@@ -5,27 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Composición · Hábitos, peso y composición corporal</title>
   <meta name="description" content="Registro de hábitos alimenticios, control de peso y análisis de composición corporal con balance calórico y proyección realista.">
-  <meta name="theme-color" content="#f6f8fa">
+  <meta name="theme-color" content="#f8fafc">
   <meta name="color-scheme" content="light">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:opsz,wght@8..144,400;8..144,500;8..144,600;8..144,700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
 
   <link rel="stylesheet" href="assets/css/tokens.css">
   <link rel="stylesheet" href="assets/css/base.css">
   <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/rebuild.css">
 
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%231d4ed8'/><text x='16' y='23' font-family='sans-serif' font-size='19' font-weight='700' text-anchor='middle' fill='%23ffffff'>C</text></svg>">
 </head>
 <body>
   <!--
-  THESIS: Composición convierte datos personales en una revisión de salud simple: qué está medido, qué se estima y qué toca hacer ahora.
-  OWN WORLD: estándar de categoría, fondo gris-azulado muy claro, superficies blancas, tipografía precisa y color semántico contenido.
-  STORY: estado → próxima revisión → hoy → cuerpo → historial.
-  FIRST: el último peso real y la próxima estimación, siempre diferenciados.
-  FORM: seguimiento personal canónico elegido por el usuario; dirección seed fe02a25e.
-  FINISH: sobrio, legible y fiable; información útil antes que decoración.
+  THESIS: Composición se lee como una hoja de seguimiento clara, no como una colección de widgets: cada dato guía la siguiente decisión.
+  OWN WORLD: interfaz clínica luminosa, tinta azul profunda, líneas finas, módulos blancos continuos e iconografía de trazo suave.
+  STORY: estado confirmado → próxima revisión → registro de hoy → evolución → composición.
+  FIRST VIEWPORT: título corto, una franja única de peso medido y próxima revisión, con la acción de registro en el extremo útil.
+  FORM: registro sanitario editorial inspirado explícitamente por la referencia del usuario; dirección pinned, seed 399da020.
+  FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
   -->
 
   <div id="cargando" class="shell" style="padding-top:96px">
@@ -47,7 +48,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M3 13h4l3-8 4 15 3-7h4"/>
           </svg>
-          <span>Panel</span>
+          <span>Progreso</span>
         </button>
 
         <button class="nav__btn" type="button" data-vista="registro" data-active="false">

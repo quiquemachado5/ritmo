@@ -12,8 +12,8 @@ import { hoy } from '../core/dates.js';
 import { graficoPeso, graficoBalance } from './charts.js';
 import { kg, pct, entero, kcalConSigno, conSigno, fechaCorta, duracion, n, esc } from '../core/format.js';
 
-const seccion = (titulo, meta, contenido) => `
-  <section class="section">
+const seccion = (titulo, meta, contenido, clase = '') => `
+  <section class="section ${clase}">
     <header class="section__head">
       <h2 class="section__title">${esc(titulo)}</h2>
       ${meta ? `<span class="section__meta">${esc(meta)}</span>` : ''}
@@ -59,7 +59,7 @@ function seccionEstado(r) {
         <p>Registra un primer peso para empezar a ver tu evolución.</p>
         <a class="btn btn--primary btn--sm" href="#registro">Añadir pesaje</a>
       </div>
-    </article>`);
+    </article>`, 'section--summary');
   }
 
   const peso = p.estimadoHoy ?? p.actual;
@@ -94,7 +94,7 @@ function seccionEstado(r) {
         ${prevision.diasObjetivo ? `<span>Ritmo actual: <strong>${duracion(prevision.diasObjetivo)}</strong></span>` : ''}
       </div>
     </article>` : ''}
-  `);
+  `, 'section--summary');
 }
 
 function seccionCuerpo(r) {
@@ -111,7 +111,7 @@ function seccionCuerpo(r) {
         ${dato('Masa magra', `${kg(comp.magraKg)} <small>kg</small>`, pct(comp.magraPct))}
         ${r.imc ? dato('IMC', n(r.imc.valor, 1), esc(r.imc.categoria.etiqueta)) : ''}
       </div>
-    </article>`);
+    </article>`, 'section--body-snapshot');
 }
 
 /* =============================================================== 2. HOY */
@@ -133,7 +133,7 @@ function seccionHoy(r, estado) {
         <p>Registrar el día mantiene el contexto de tus hábitos; no modifica por sí solo la previsión de peso.</p>
         <a class="btn btn--primary btn--sm" href="#registro">Registrar hoy</a>
       </div>
-    </article>`);
+    </article>`, 'section--today-work');
   }
 
   return seccion('Hoy', fechaCorta(fecha), `<article class="card card--today w-12">
@@ -156,7 +156,7 @@ function seccionHoy(r, estado) {
       </div>
     </div>
     <div class="zone">${pills}</div>
-  </article>`);
+  </article>`, 'section--today-work');
 }
 
 /* ========================================================= 3. PREVISIÓN */
@@ -180,7 +180,7 @@ function seccionProyeccion(r) {
         <p>${mensajeSinPrevision(p)}</p>
         <a class="btn btn--primary btn--sm" href="#registro">Registrar peso</a>
       </div>
-    </article>`);
+    </article>`, 'section--forecast-work');
   }
 
   const proy = (valor) => `${kg(valor.peso)} <small>kg</small>`;
@@ -225,7 +225,7 @@ function seccionProyeccion(r) {
     <div class="notice notice--accent w-12" role="note">
       <span>Parte de la última báscula y suma el balance diario. Los días estimados o sin registrar ensanchan el rango; registra el pesaje recomendado cada 14 días para reajustarlo.</span>
     </div>
-  `);
+  `, 'section--forecast-work');
 }
 
 /* =========================================================== 4. HISTÓRICO */
@@ -254,7 +254,7 @@ function seccionHistorico(r, estado) {
         </div>
       </div>
       <div class="chart-card__canvas">${graficoBalance(A.serieBalance(estado, 30), { alto: 210 })}</div>
-    </article>`);
+    </article>`, 'section--history-work');
 }
 
 /* ---------------------------------------------------------------- RENDER */

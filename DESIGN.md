@@ -1,332 +1,318 @@
 ---
 name: "Composición"
-description: "Seguimiento corporal claro que separa el dato medido de la estimación."
+description: "Hoja sanitaria luminosa para seguir hábitos, peso y composición corporal con claridad."
 colors:
-  canvas: "#f6f8fa"
+  canvas: "#f8fafc"
   surface: "#ffffff"
-  surface-2: "#f1f4f8"
-  surface-3: "#e9eef5"
-  border: "#dfe6ee"
-  border-strong: "#c7d2df"
-  ink: "#1d2939"
-  ink-2: "#344054"
-  ink-3: "#667085"
-  ink-4: "#98a2b3"
+  surface-2: "#f5f7fa"
+  surface-3: "#edf1f6"
+  border: "#e1e7ef"
+  border-strong: "#cbd5e1"
+  ink: "#152238"
+  ink-2: "#334155"
+  ink-3: "#56657b"
+  ink-4: "#5b6880"
   overlay: "rgba(15, 23, 42, .45)"
-  weight: "#2f6fdb"
-  weight-hover: "#1f5fbe"
-  weight-active: "#184fa9"
-  weight-soft: "#9fc5ff"
-  weight-wash: "#eff6ff"
-  weight-border: "#bfdbfe"
-  weight-ink: "#175cd3"
-  habit: "#3d9b70"
-  habit-soft: "#9bd5b8"
+  weight: "#1f6fda"
+  weight-hover: "#1765d1"
+  weight-active: "#1356b3"
+  weight-soft: "#9bc7ff"
+  weight-wash: "#eef5ff"
+  weight-border: "#c7dcff"
+  weight-ink: "#1b63c9"
+  habit: "#347b55"
+  habit-soft: "#a9dbbb"
   habit-wash: "#effaf3"
-  habit-border: "#bce8ce"
-  habit-ink: "#287c55"
-  energy: "#e16d57"
-  energy-soft: "#f2ae9d"
+  habit-border: "#c3e8d0"
+  habit-ink: "#347b55"
+  energy: "#bd4b3c"
+  energy-soft: "#f7b7aa"
   energy-wash: "#fff1ed"
-  energy-border: "#f6c9be"
-  energy-ink: "#b44f3d"
-  body: "#7f56d9"
-  body-soft: "#c4b5fd"
-  body-wash: "#f4f1ff"
-  body-border: "#ddd4fe"
-  body-ink: "#6941c6"
+  energy-border: "#f8d0c8"
+  energy-ink: "#a44235"
+  body: "#7768ca"
+  body-soft: "#c9c0f0"
+  body-wash: "#f4f2ff"
+  body-border: "#ded8fa"
+  body-ink: "#6557ae"
   warning: "#bd7b12"
   warning-wash: "#fff7e7"
   warning-border: "#f1d59b"
   warning-ink: "#95600b"
 typography:
   display:
-    fontFamily: "Archivo, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
-    fontSize: "clamp(1.75rem, 4.5vw, 2.25rem)"
-    fontWeight: 700
-    lineHeight: 1.2
-    letterSpacing: "-0.03em"
+    fontFamily: "Manrope, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+    fontSize: "clamp(1.85rem, 3.4vw, 2.55rem)"
+    fontWeight: 800
+    lineHeight: 1.1
+    letterSpacing: "-0.055em"
   headline:
-    fontFamily: "Archivo, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
-    fontSize: "1.125rem"
-    fontWeight: 700
+    fontFamily: "Manrope, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+    fontSize: "1.04rem"
+    fontWeight: 800
     lineHeight: 1.2
-    letterSpacing: "-0.025em"
+    letterSpacing: "-0.035em"
   title:
-    fontFamily: "Archivo, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+    fontFamily: "Manrope, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
     fontSize: "clamp(1.375rem, 4vw, 1.5rem)"
     fontWeight: 700
     lineHeight: 1.2
     letterSpacing: "-0.022em"
   body:
-    fontFamily: "Archivo, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+    fontFamily: "Manrope, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
     fontSize: "0.9375rem"
     fontWeight: 400
     lineHeight: 1.5
+    letterSpacing: "-0.012em"
   label:
-    fontFamily: "Archivo, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+    fontFamily: "Manrope, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
     fontSize: "0.6875rem"
     fontWeight: 700
+    lineHeight: 1.5
     letterSpacing: "0.06em"
   input:
-    fontFamily: "Archivo, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+    fontFamily: "Manrope, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
     fontSize: "1rem"
     fontWeight: 600
+    lineHeight: 1.5
   metric:
-    fontFamily: "Archivo, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
-    fontSize: "clamp(1.625rem, 6vw, 2rem)"
-    fontWeight: 700
-    lineHeight: 1.05
-    letterSpacing: "-0.035em"
+    fontFamily: "Manrope, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+    fontSize: "clamp(1.8rem, 3.8vw, 2.4rem)"
+    fontWeight: 800
+    lineHeight: 1
+    letterSpacing: "-0.06em"
   metric-hero:
-    fontFamily: "Archivo, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
-    fontSize: "clamp(2.125rem, 8vw, 2.75rem)"
-    fontWeight: 700
-    lineHeight: 0.95
-    letterSpacing: "-0.052em"
+    fontFamily: "Manrope, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+    fontSize: "clamp(2.35rem, 6vw, 3.4rem)"
+    fontWeight: 800
+    lineHeight: 0.94
+    letterSpacing: "-0.075em"
 rounded:
-  sm: "8px"
-  md: "10px"
-  lg: "12px"
-  xl: "16px"
+  sm: "9px"
+  md: "12px"
+  lg: "14px"
+  xl: "18px"
   pill: "999px"
 spacing:
   gap-mobile: "12px"
   gap-desktop: "16px"
-  card-mobile: "16px"
-  card-desktop: "20px"
+  card-mobile: "18px"
+  card-desktop: "22px"
   page-inline: "clamp(16px, 3vw, 32px)"
-  section: "44px"
-  section-history: "56px"
   touch: "44px"
-  header-mobile: "56px"
+  header-mobile: "60px"
   header-desktop: "64px"
   tabbar-mobile: "60px"
 components:
   button-primary:
     backgroundColor: "{colors.weight}"
     textColor: "{colors.surface}"
-    typography: "{typography.body}"
-    rounded: "{rounded.md}"
-    padding: "0 18px"
-    height: "{spacing.touch}"
-  button-primary-habit:
-    backgroundColor: "{colors.habit}"
-    textColor: "{colors.surface}"
-    typography: "{typography.body}"
-    rounded: "{rounded.md}"
-    padding: "0 18px"
-    height: "{spacing.touch}"
-  button-primary-body:
-    backgroundColor: "{colors.body}"
-    textColor: "{colors.surface}"
-    typography: "{typography.body}"
-    rounded: "{rounded.md}"
-    padding: "0 18px"
-    height: "{spacing.touch}"
+    rounded: "{rounded.sm}"
+    padding: "0 16px"
+    height: "42px"
   button-secondary:
     backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink-2}"
+    rounded: "{rounded.sm}"
+    padding: "0 16px"
+    height: "42px"
+  input:
+    backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
-    typography: "{typography.body}"
-    rounded: "{rounded.md}"
-    padding: "0 18px"
+    typography: "{typography.input}"
+    rounded: "{rounded.sm}"
+    padding: "10px 12px"
     height: "{spacing.touch}"
   card:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
     rounded: "{rounded.lg}"
-    padding: "{spacing.card-mobile}"
+    padding: "{spacing.card-desktop}"
   overview-card:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
     rounded: "{rounded.lg}"
-    padding: "{spacing.card-mobile}"
+    padding: "{spacing.card-desktop}"
   forecast-card:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
     rounded: "{rounded.lg}"
-    padding: "{spacing.card-mobile}"
-  input:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
-    typography: "{typography.input}"
-    rounded: "{rounded.md}"
-    padding: "10px 12px"
-    height: "{spacing.touch}"
   chip-estimate:
     backgroundColor: "{colors.body-wash}"
     textColor: "{colors.body-ink}"
-    typography: "{typography.body}"
     rounded: "{rounded.pill}"
     padding: "3px 9px"
   habit-toggle-on:
     backgroundColor: "{colors.habit-wash}"
     textColor: "{colors.habit-ink}"
-    typography: "{typography.body}"
-    rounded: "{rounded.md}"
-    padding: "10px 12px"
-    height: "{spacing.touch}"
+    rounded: "{rounded.sm}"
+    padding: "9px 11px"
+    height: "48px"
   navigation-active:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.weight}"
-    typography: "{typography.label}"
-    rounded: "{rounded.sm}"
-    padding: "0 12px"
-    height: "42px"
+    rounded: "{rounded.pill}"
+    padding: "0 17px"
+    height: "{spacing.header-desktop}"
 ---
 
 # Design System: Composición
 
 ## Overview
 
-**Creative North Star: "La revisión de salud calibrada"**
+**Creative North Star: "La hoja sanitaria calibrada"**
 
-Composición se siente como una revisión de salud personal de alta calidad: sobria, clara y preparada para el uso cotidiano. La composición aprobada prioriza el estado de peso, la próxima revisión, el trabajo de hoy y la evolución, con superficies blancas sobre un fondo gris frío y una cabecera que no compite con los datos.
+Composición se presenta como una hoja de seguimiento personal, luminosa y rigurosa: fondo de papel frío, módulos blancos de borde fino y una tinta azul profunda que estructura la lectura. La referencia vinculante se traduce en espacio blanco generoso, iconografía de trazo ligero, reglas discretas y grandes áreas que conectan datos relacionados en vez de apilarlos como widgets aislados.
 
-El sistema no trata una predicción como una medición. El último pesaje queda anclado como evidencia; el momento presente marca el cambio de certeza; y la proyección aparece después como una estimación con rango. La claridad de esa transición importa más que la decoración de la tarjeta.
+La interfaz prioriza la revisión cotidiana antes que la ornamentación. Cada bloque responde a una sola pregunta; el color aparece para indicar dominio, acción o certeza, y nunca sustituye texto, fecha, rango o patrón. El peso real, el presente y la previsión siguen un orden visual explícito.
 
 **Key Characteristics:**
 
-- Jerarquía de seguimiento: estado, próxima revisión, hoy, composición e histórico.
-- Color semántico contenido sobre superficies neutras; el azul no invade la pantalla.
-- Datos numéricos estables, etiquetas explícitas y un cambio visible entre medido y estimado.
+- Hoja clínica clara: superficie blanca, contornos tenues y jerarquía editorial de alto contraste.
+- Azul profundo para peso y acción; verde para hábitos, coral para energía, violeta para cuerpo y estimación.
+- Módulos continuos para estado, jornada, evolución y composición; divisores internos antes que tarjetas anidadas.
+- Cifras tabulares y etiquetas visibles para distinguir medición, dato introducido y estimación.
 
 ## Colors
 
-La base es blanca y gris fría; las familias cromáticas identifican el dominio y el nivel de certeza sin sustituir el texto.
+La paleta mantiene el papel en neutros fríos y reserva las familias cromáticas para hechos que la persona debe reconocer rápidamente.
 
 ### Primary
 
-- **Azul de peso:** acción principal, selección de Panel, marca, estado de peso y tramo medido del raíl de previsión.
-- **Escala de azul de peso:** la variante de interacción oscurece la acción; las variantes suave, lavado, borde y tinta construyen foco, marca y contexto sin crear fondos dominantes.
+- **Azul de seguimiento:** identifica peso, acción principal, navegación activa, gráficos y el tramo de evidencia medida.
+- **Escala azul:** hover, active, soft, wash, border e ink construyen respuesta, foco y contexto sin llenar las superficies de lectura.
 
 ### Secondary
 
-- **Verde de hábitos:** Registro, hábitos confirmados, objetivos y estados favorables.
-- **Coral de energía:** balance diario, ingesta y gasto; identifica el dominio, no un juicio de valor.
+- **Verde de hábito:** identifica Registro, consistencia, estados confirmados y resultados favorables.
+- **Escala verde:** el lavado, borde y tono suave forman estados marcados que conservan texto y marca de verificación.
 
 ### Tertiary
 
-- **Violeta de composición:** mediciones de cuerpo y la previsión de peso; el violeta claro puntea el tramo estimado para diferenciarlo del pesaje real.
-- **Ocre de advertencia:** datos sin registrar, incertidumbre y atención pendiente.
+- **Coral de energía:** delimita ingesta, gasto, balance y acciones de ajuste relacionadas.
+- **Violeta de cuerpo:** delimita composición corporal y predicciones; su línea discontinua expresa un tramo estimado.
+- **Ocre de atención:** acompaña incertidumbre o registros pendientes; debe conservar su etiqueta explicativa.
 
 ### Neutral
 
-- **Lienzo gris frío:** sostiene la página sin transformar la app en un panel oscuro.
-- **Superficies blancas y grises suaves:** delimitan tarjetas, navegación y controles en capas ligeras.
-- **Tintas azul grisáceas:** organizan el orden de lectura desde cifra y título hasta metadato tenue.
+- **Papel frío:** canvas, surface-2 y surface-3 sostienen la página, las áreas tranquilas y los fondos de apoyo.
+- **Superficie blanca:** el plano principal de módulos, campos, tablas y navegación.
+- **Tinta azul grisácea:** ink establece la lectura principal; ink-2, ink-3 e ink-4 degradan a control, ayuda y metadato.
+- **Reglas suaves:** border y border-strong ordenan zonas, controles y tablas sin crear una cuadrícula pesada.
 
 ### Named Rules
 
-**The Evidence First Rule.** Azul continuo y etiqueta de medición representan evidencia de báscula; violeta discontinuo y etiqueta de estimación representan proyección. No intercambiar los dos lenguajes.
+**The Evidence Line Rule.** El segmento azul sólido siempre representa un dato medido; el violeta discontinuo siempre representa una estimación. Ambos conservan una etiqueta que nombra su condición.
 
-**The Contained Color Rule.** El color se concentra en acción, selección, categoría y estado. Las superficies de lectura permanecen neutrales salvo un contexto operativo breve.
+**The Quiet Surface Rule.** El color semántico vive en bordes, iconos, líneas, texto de estado y lavados breves. El área principal de lectura permanece blanca o gris muy clara.
 
 ## Typography
 
-**Display Font:** Archivo, con una pila de sistema como respaldo.
+**Display Font:** Manrope, con pila de sistema como respaldo.
 
-**Body Font:** Archivo, con una pila de sistema como respaldo.
+**Body Font:** Manrope, con pila de sistema como respaldo.
 
-**Character:** Archivo da a la interfaz una precisión cordial, más cercana a un registro fiable que a una ficha clínica. El contraste entre títulos compactos, etiquetas pequeñas y cifras anchas ordena una revisión rápida.
+**Character:** Manrope aporta una precisión técnica amable: títulos compactos y pesados para orientar, texto de apoyo más sereno y cifras firmes que se leen como datos, no como decoración.
 
 ### Hierarchy
 
-- **Display:** abre cada vista, como «Tu progreso», y se equilibra para no romper la columna en móvil.
-- **Headline:** nombra secciones temáticas sin competir con su cifra principal.
-- **Title:** se reserva para títulos de panel o diálogo que requieren una escala intermedia.
-- **Body:** explica modelo, rango, contexto y acción; los textos de apoyo no deben superar el peso visual de un dato.
-- **Metric / Metric hero:** prioriza peso, balance, objetivo y las dos paradas del raíl.
-- **Label:** introduce claves breves, microestados y metadatos; puede usar mayúsculas espaciadas cuando la implementación ya lo hace.
+- **Display:** abre cada vista y fija la prioridad de la página.
+- **Headline:** titula secciones de trabajo y lecturas agrupadas.
+- **Title:** nombra paneles, diálogos y jerarquías intermedias.
+- **Body:** explica rangos, modelo, fecha y contexto; mantiene líneas cómodas dentro de la columna.
+- **Label:** introduce claves breves, columnas, microestados y navegación; puede usar mayúsculas espaciadas.
+- **Input:** mantiene valores introducidos claramente legibles en controles táctiles.
+- **Metric / Metric hero:** reservados a peso, balance, objetivo y cifras de estado.
 
 ### Named Rules
 
-**The Tabular Number Rule.** Pesos, calorías, porcentajes, fechas cuantificadas y deltas usan cifras tabulares; una actualización no debe mover el dato adyacente.
+**The Stable Figure Rule.** Pesos, calorías, porcentajes, fechas cuantificadas y deltas usan cifras tabulares. Una actualización no puede desplazar la lectura de la cifra vecina.
 
 ## Layout
 
-La página es mobile-first y usa una sola columna hasta el escritorio. El contenedor central limita su anchura y conserva un margen lateral fluido. En móvil, la navegación de cuatro destinos queda fija en el borde inferior y el cuerpo deja su espacio seguro; desde escritorio pasa a la cabecera como navegación horizontal subrayada.
+El contenedor central tiene un límite amplio y un margen lateral fluido; la página respira con una cabecera limpia y bloques separados por ritmo vertical, no por decoración. La rejilla es de una columna por defecto y pasa a doce columnas desde 768px. Entre 768px y 1023px, los grupos complejos recuperan todo el ancho o se separan en tarjetas individuales para mantener la lectura.
 
-La rejilla se vuelve de doce columnas desde 768px. Las métricas ocupan dos columnas mientras caben, pasan a tres o cuatro desde 520px y vuelven a apilarse en el ancho más estrecho. Entre 768px y 1023px, los bloques de lectura compleja recuperan todo el ancho para no forzar tarjetas comprimidas. El relleno de tarjeta y la separación de rejilla crecen en escritorio.
+Por encima de 960px, la cabecera alberga las cuatro secciones en pestañas horizontales subrayadas. Por debajo, la misma navegación se fija abajo en una barra de cuatro destinos; el contenido reserva su espacio seguro. Las parejas de módulos se conectan visualmente en escritorio con borde compartido y esquinas exteriores, y se convierten en tarjetas completas con separación en móvil.
 
-El raíl de previsión es horizontal desde 680px: última báscula a la izquierda, tramo azul continuo, marcador «Hoy», tramo violeta discontinuo y próximo pesaje a la derecha. Por debajo de 680px, el mismo orden se vuelve vertical; se ocultan las líneas y el segundo hito empieza tras un divisor. Nunca se elimina la distinción textual «Medido» / «Estimado» ni el rango orientativo.
+El raíl de previsión se lee de izquierda a derecha en escritorio: última báscula, línea medida, hito «Hoy», línea estimada y próximo pesaje. Bajo el umbral móvil se apila en el mismo orden; nunca desaparecen las etiquetas de condición ni el rango orientativo.
 
 ## Elevation & Depth
 
-La profundidad es deliberadamente contenida. Las tarjetas normales se separan con borde fino, no con una pila de sombras; la tarjeta de estado actual usa elevación media como prioridad puntual. La cabecera es plana y blanca; un velo oscuro reservado a modales y la elevación fuerte de modales y toasts señalan la superposición al trabajo. Las transiciones son breves y respetan el modo de movimiento reducido.
+El sistema es esencialmente plano: borde, separación y fondo tonal organizan el trabajo cotidiano. La elevación aparece solo cuando una capa necesita prioridad real. La tarjeta normal no lleva sombra; modales y toasts usan una capa superior, y el estado de foco combina contorno visible con halo contextual. Las transiciones de control usan una curva breve y se anulan con la preferencia de movimiento reducido.
 
 ### Shadow Vocabulary
 
-- **Separación baja:** apoya controles o tarjetas cuando necesitan despegar mínimamente del lienzo.
-- **Estado principal:** eleva la tarjeta de peso actual sin convertirla en un héroe visual pesado.
-- **Capa flotante:** reserva la sombra fuerte a modales y avisos efímeros.
-- **Foco:** un anillo contextual hace visible el campo activo; cambia a verde en Registro y a violeta en Cuerpo.
+- **Separación baja** (\`0 1px 2px rgba(15, 23, 42, 0.025)\`): detalle leve para elementos que necesitan apenas despegarse.
+- **Elevación media** (\`0 10px 28px rgba(15, 23, 42, 0.055)\`): capas flotantes discretas, como un toast.
+- **Capa alta** (\`0 20px 44px -28px rgba(16, 24, 40, 0.26), 0 8px 16px -14px rgba(16, 24, 40, 0.08)\`): panel de modal sobre el velo.
+- **Foco** (\`0 0 0 4px rgba(47, 111, 219, 0.14)\`): halo de peso y ajustes; Registro y Cuerpo cambian a la familia correspondiente.
 
 ### Named Rules
 
-**The Flat Reading Rule.** La lectura cotidiana se organiza con espacio, borde y jerarquía tipográfica. La sombra solo indica prioridad o superposición.
+**The Flat Reading Rule.** Las sombras no sustituyen la jerarquía. Usar superficie, línea y espacio primero; elevar solo una prioridad o una capa superpuesta.
 
 ## Shapes
 
-La geometría es suavemente técnica: esquinas pequeñas para navegación, botones y campos; tarjetas con la esquina amplia; y píldoras solo para chips, barras y estados compactos. Los bordes son claros y discretos. Los tramos del raíl se mantienen lineales y el punto de «Hoy» es circular para que el cambio de evidencia se lea como un hito, no como una decoración.
+La geometría es técnica y amable. Botones, iconos y campos usan la esquina pequeña; las tarjetas y grupos conectados usan la esquina amplia; las píldoras quedan reservadas para chips, barras y el pequeño indicador activo de la navegación móvil. Los bordes son de un píxel y las uniones entre módulos eliminan el radio interior para que se perciban como una hoja de trabajo continua.
 
 ## Components
 
 ### Buttons
 
-- **Character:** controles táctiles, contenidos y directos.
-- **Primary:** azul de peso por defecto; cambia a verde en Registro y a violeta en Cuerpo sin cambiar la silueta ni la jerarquía.
-- **Secondary / Ghost:** blanco con borde de control para edición; el fantasma solo gana superficie en interacción. Peligro no usa un rojo dominante en reposo.
-- **Hover / Focus:** oscurecer la familia correspondiente en hover; mostrar foco contextual visible y no depender del cambio de relleno.
+- **Character:** acciones compactas, firmes y táctiles.
+- **Primary:** azul de peso sobre blanco; en Cuerpo adopta violeta. El hover oscurece el mismo dominio y el active profundiza otro paso.
+- **Secondary / Ghost:** blanco con borde para edición; el fantasma retira el borde y el fondo hasta la interacción.
+- **Focus:** anillo visible y separado de la silueta; no se comunica solo con el cambio de relleno.
 
 ### Chips
 
-- **Style:** píldoras compactas con borde y lavado semántico.
-- **State:** violeta para previsión, verde para anotado o favorable, coral para energía y ocre para advertencia. El texto sigue nombrando «Estimado», «Anotado» o «Sin registrar».
+- **Style:** píldora corta, borde semántico y lavado tenue.
+- **State:** violeta para previsión, verde para confirmado, coral para energía y ocre para atención. La etiqueta verbal permanece siempre.
 
 ### Cards / Containers
 
-- **Character:** una tarjeta responde a una pregunta; las subsecciones relacionadas se dividen con una línea, no con tarjetas anidadas.
-- **Overview:** superficie blanca, borde azul de peso y elevación media. Es la referencia de estado, no un bloque de marca oscuro.
-- **Forecast:** superficie blanca y borde violeta; contiene el raíl medido → Hoy → estimado, horizontes y detalle del modelo.
-- **Today / Body / Habit:** conservan superficie blanca con borde coral, violeta o verde según el dominio; el color no cubre la tarjeta completa.
+- **Character:** un módulo responde a una pregunta; los detalles relacionados se separan con una regla interior.
+- **Groups:** en escritorio, resumen, jornada, registro, cuerpo e histórico conectan tarjetas adyacentes con una sola figura exterior.
+- **Responsive:** en móvil cada módulo recupera su borde y radio completos para que el contenido respire.
+- **Forecast:** superficie blanca con borde azul y la evidencia como eje; los horizontes y detalles se organizan por reglas, no por contenedores anidados.
 
 ### Inputs / Fields
 
-- **Style:** campo blanco de altura táctil, borde perceptible y datos numéricos tabulares.
-- **Focus:** azul por defecto; verde en Registro y violeta en Cuerpo. El contraste de foco se mantiene además del cambio de color.
-- **Disabled:** reduce la opacidad y deja de aceptar interacción. No existe una variante de error específica implementada.
+- **Style:** superficie blanca, borde perceptible y altura táctil.
+- **Focus:** azul por defecto y violeta en Cuerpo; el foco conserva un halo además del cambio de borde.
+- **Numbers:** peso, porcentaje y energía usan cifras tabulares.
 
 ### Navigation
 
-- **Mobile:** cuatro destinos con icono y etiqueta en una barra inferior fija; el activo toma el color semántico de su vista.
-- **Desktop:** los mismos destinos pasan a la cabecera como acciones horizontales con una línea inferior en el color activo; no usar la antigua píldora segmentada.
+- **Desktop:** cabecera blanca de línea fina; el destino activo se expresa con color semántico y subrayado, nunca con una píldora segmentada.
+- **Mobile:** barra fija inferior de cuatro columnas con icono, etiqueta y un indicador superior del color activo.
+- **Iconography:** SVG de trazo ligero, siempre acompañados por texto en la navegación.
 
 ### Habit Controls
 
-- **Style:** botón táctil con casilla cuadrada y comprobación SVG.
-- **State:** en Registro, el marcado combina lavado, borde, texto y marca verde; la confirmación no depende solo del color.
+- **Style:** filas táctiles blancas con una casilla cuadrada.
+- **State:** el marcado combina borde verde, lavado, texto verde y check SVG. Ningún estado depende solo del color.
 
 ### Forecast Rail
 
-- **Structure:** última báscula medida → hoy → próximo pesaje estimado; los horizontes de 7 y 30 días quedan después del raíl.
-- **Evidence:** el segmento medido es azul continuo; tras «Hoy», el estimado es violeta claro discontinuo. Cada parada conserva cifra, fecha o horizonte, estado y rango.
-- **Responsive:** la transición se muestra como punto con anillo en horizontal y como secuencia dividida en móvil. No convertir el tramo estimado en una continuidad azul.
+- **Structure:** última báscula medida → Hoy → próximo pesaje estimado.
+- **Evidence:** línea azul sólida para la medición, punto «Hoy» con anillo y línea violeta discontinua para estimación.
+- **Responsive:** conserva las dos paradas y sus etiquetas al apilarse; no comprimir la trayectoria hasta borrar su significado.
 
 ## Do's and Don'ts
 
 ### Do:
 
-- **Do** mantener la secuencia estado actual → próxima revisión → hoy → composición → histórico en el Panel.
-- **Do** unir cada color semántico a su dominio y acompañarlo con etiqueta, signo, fecha, rango o patrón legible.
-- **Do** preservar en el raíl el hito de «Hoy», el tramo azul continuo medido y el violeta discontinuo estimado.
-- **Do** conservar controles de al menos altura táctil y el foco contextual visible.
-- **Do** dejar que el borde, el espacio y el texto hagan la mayor parte de la jerarquía.
+- **Do** usar superficie blanca, reglas tenues y espacio amplio como estructura principal de cada vista.
+- **Do** conectar datos relacionados en módulos continuos de escritorio y separarlos con bordes completos en móvil.
+- **Do** mantener azul para peso/acción, verde para hábitos, coral para energía, violeta para cuerpo/estimación y ocre para atención.
+- **Do** acompañar cada condición semántica con texto, fecha, signo, rango o patrón legible.
+- **Do** preservar números tabulares, foco visible y controles táctiles.
 
 ### Don't:
 
-- **Don't** presentar un valor estimado o imputado con la misma evidencia visual que un pesaje real.
-- **Don't** usar el azul, verde, coral o violeta como adornos intercambiables ni bañar toda la interfaz en una familia.
-- **Don't** volver a una navegación de escritorio en píldora segmentada cuando la implementación vigente usa pestañas subrayadas.
-- **Don't** comprimir el raíl horizontal en móvil: debe apilarse sin perder sus etiquetas ni el rango.
-- **Don't** crear densidad mediante tarjetas dentro de tarjetas cuando un divisor de zona es suficiente.
+- **Don't** tratar una predicción, un dato imputado y una medición de báscula como la misma clase de evidencia.
+- **Don't** bañar la interfaz en azul u otra familia semántica; el color es un acento de lectura.
+- **Don't** volver a fragmentar grupos de trabajo con tarjetas dentro de tarjetas.
+- **Don't** sustituir las pestañas subrayadas por navegación de escritorio segmentada.
+- **Don't** ocultar etiquetas o rangos al adaptar el raíl de previsión a móvil.

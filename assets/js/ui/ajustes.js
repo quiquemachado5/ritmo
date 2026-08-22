@@ -13,8 +13,8 @@ import { supabaseConfigurado } from '../data/supabase-adapter.js';
 import { toast } from './toast.js';
 import { entero, n, esc } from '../core/format.js';
 
-const seccion = (titulo, meta, contenido) => `
-  <section class="section">
+const seccion = (titulo, meta, contenido, clase = '') => `
+  <section class="section ${clase}">
     <header class="section__head">
       <h2 class="section__title">${esc(titulo)}</h2>
       ${meta ? `<span class="section__meta">${esc(meta)}</span>` : ''}
@@ -90,7 +90,7 @@ function seccionPerfil(estado) {
           observado ? `${observado.cobertura}% de cobertura · ${observado.explicitas} kcal anotadas` : 'sin historial', observado ? 'is-accent' : '')}
         ${dato('En uso', `${entero(A.tdeeVigente(estado))} <small>kcal</small>`)}
       </div>
-    </article>`);
+    </article>`, 'section--settings-profile');
 }
 
 /* ------------------------------------------------------------- 2. MODELO */
@@ -133,7 +133,7 @@ function seccionModelo(estado) {
         ${dato('Días sin pesar', estimacion.diasSinPesaje)}
         ${dato('Gasto en uso', `${entero(estimacion.modelo.tdee)} <small>kcal</small>`, estimacion.modelo.calibrado ? 'calibrado' : 'teórico')}
       </div>` : `<div class="empty empty--compact"><p class="empty__title">Falta un primer pesaje</p><p>La estimación necesita una báscula de partida.</p></div>`}
-    </article>`);
+    </article>`, 'section--settings-model');
 }
 
 /* -------------------------------------------------------------- 3. DATOS */
@@ -210,7 +210,7 @@ export function renderAjustes(estado, repo) {
     </header>
     ${seccionPerfil(estado)}
     ${seccionModelo(estado)}
-    ${seccion('Datos', '', tarjetaNube(estado, repo) + tarjetaCopias(estado))}
+    ${seccion('Datos', '', tarjetaNube(estado, repo) + tarjetaCopias(estado), 'section--settings-data')}
   `;
 }
 

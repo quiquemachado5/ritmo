@@ -7,49 +7,49 @@
 
 :root {
   /* --- Superficies ----------------------------------------------------- */
-  --canvas:      #f6f8fa;
+  --canvas:      #f8fafc;
   --surface:     #ffffff;
-  --surface-2:   #f1f4f8;
-  --surface-3:   #e9eef5;
+  --surface-2:   #f5f7fa;
+  --surface-3:   #edf1f6;
 
   /* --- Bordes ----------------------------------------------------------- */
-  --border:        #dfe6ee;
-  --border-strong: #c7d2df;
+  --border:        #e1e7ef;
+  --border-strong: #cbd5e1;
   --line:          1px solid var(--border);
 
   /* --- Texto: la única escala que se usa para escribir -------------------- */
-  --ink:    #1d2939;
-  --ink-2:  #344054;
-  --ink-3:  #667085;
-  --ink-4:  #98a2b3;
+  --ink:    #152238;
+  --ink-2:  #334155;
+  --ink-3:  #56657b;
+  --ink-4:  #5b6880;
   --overlay: rgba(15, 23, 42, .45);
 
   /* --- Familias de datos ------------------------------------------------- */
-  --weight:        #2f6fdb;
-  --weight-hover:  #1f5fbe;
-  --weight-active: #184fa9;
-  --weight-soft:   #9fc5ff;
-  --weight-wash:   #eff6ff;
-  --weight-border: #bfdbfe;
-  --weight-ink:    #175cd3;
+  --weight:        #1f6fda;
+  --weight-hover:  #1765d1;
+  --weight-active: #1356b3;
+  --weight-soft:   #9bc7ff;
+  --weight-wash:   #eef5ff;
+  --weight-border: #c7dcff;
+  --weight-ink:    #1b63c9;
 
-  --habit:         #3d9b70;
-  --habit-soft:    #9bd5b8;
+  --habit:         #347b55;
+  --habit-soft:    #a9dbbb;
   --habit-wash:    #effaf3;
-  --habit-border:  #bce8ce;
-  --habit-ink:     #287c55;
+  --habit-border:  #c3e8d0;
+  --habit-ink:     #347b55;
 
-  --energy:        #e16d57;
-  --energy-soft:   #f2ae9d;
+  --energy:        #bd4b3c;
+  --energy-soft:   #f7b7aa;
   --energy-wash:   #fff1ed;
-  --energy-border: #f6c9be;
-  --energy-ink:    #b44f3d;
+  --energy-border: #f8d0c8;
+  --energy-ink:    #a44235;
 
-  --body:          #7f56d9;
-  --body-soft:     #c4b5fd;
-  --body-wash:     #f4f1ff;
-  --body-border:   #ddd4fe;
-  --body-ink:      #6941c6;
+  --body:          #7768ca;
+  --body-soft:     #c9c0f0;
+  --body-wash:     #f4f2ff;
+  --body-border:   #ded8fa;
+  --body-ink:      #6557ae;
 
   --warning:       #bd7b12;
   --warning-wash:  #fff7e7;
@@ -72,10 +72,10 @@
   --data-flat: var(--energy);
 
   /* --- Tipografía --------------------------------------------------------- */
-  --font: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+  --font: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI',
           Roboto, Helvetica, Arial, sans-serif;
 
-  --fs-display: clamp(1.75rem, 4.5vw, 2.25rem);
+  --fs-display: clamp(1.85rem, 3.4vw, 2.55rem);
   --fs-xl:      clamp(1.375rem, 4vw, 1.5rem);
   --fs-lg:      1.0625rem;
   --fs-md:      0.9375rem;
@@ -84,17 +84,17 @@
   --fs-micro:   0.6875rem;
   --fs-input:   1rem;
 
-  --fs-metric:      clamp(1.625rem, 6vw, 2rem);
-  --fs-metric-hero: clamp(2.125rem, 8vw, 2.75rem);
+  --fs-metric:      clamp(1.5rem, 4vw, 2rem);
+  --fs-metric-hero: clamp(2.35rem, 6vw, 3.4rem);
 
   --track-tight: -0.022em;
   --track-label:  0.06em;
 
   /* --- Geometría ---------------------------------------------------------- */
-  --r-sm:   8px;
-  --r-md:  10px;
-  --r-lg:  12px;
-  --r-xl:  16px;
+  --r-sm:   9px;
+  --r-md:  12px;
+  --r-lg:  14px;
+  --r-xl:  18px;
   --r-pill: 999px;
 
   --gap:      12px;
@@ -102,8 +102,8 @@
   --touch:    44px;
 
   /* --- Elevación ---------------------------------------------------------- */
-  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.035);
-  --shadow-md: 0 8px 24px rgba(16, 24, 40, 0.055);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.025);
+  --shadow-md: 0 10px 28px rgba(15, 23, 42, 0.055);
   --shadow-lg: 0 20px 44px -28px rgba(16, 24, 40, 0.26), 0 8px 16px -14px rgba(16, 24, 40, 0.08);
   --shadow-focus: 0 0 0 4px rgba(47, 111, 219, 0.14);
 
@@ -116,7 +116,7 @@
   --tabbar-h: 60px;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 960px) {
   :root {
     --gap: 16px;
     --pad-card: 20px;
