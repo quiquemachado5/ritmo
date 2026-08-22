@@ -1,0 +1,114 @@
+/* ============================================================================
+   TOKENS — sistema monocromo: neutros + un único tono (azul cobalto).
+
+   Regla que gobierna todo el archivo:
+
+     · EL TEXTO NUNCA LLEVA COLOR. Todas las cifras y etiquetas usan la escala
+       de grises. La dirección de un dato la comunican el signo (+/−) y la
+       flecha (↑/↓), que ya viajan dentro del propio número.
+
+     · El acento se reserva a dos cosas: los controles con los que se
+       interactúa (botón principal, foco) y los datos representados
+       gráficamente (barras, curvas, calendario), donde la forma manda y el
+       color solo acompaña.
+
+   No hay verde, rojo, ámbar ni violeta. Un tono, cuatro intensidades.
+   ========================================================================= */
+
+:root {
+  /* --- Superficies ----------------------------------------------------- */
+  --canvas:      #f4f6fa;
+  --surface:     #ffffff;
+  --surface-2:   #f0f3f8;
+  --surface-3:   #e3e8f0;
+
+  /* --- Bordes ----------------------------------------------------------- */
+  --border:        #e1e7ef;
+  --border-strong: #c9d2de;
+  --line:          1px solid var(--border);
+
+  /* --- Texto: la única escala que se usa para escribir -------------------- */
+  --ink:    #142033;   /* cifras y titulares */
+  --ink-2:  #344256;   /* texto corriente */
+  --ink-3:  #66758a;   /* etiquetas y secundario */
+  --ink-4:  #96a3b4;   /* terciario, ejes, marcas de agua */
+
+  /* --- Acento y sus intensidades ----------------------------------------- */
+  --accent:        #3157d5;
+  --accent-hover:  #2849b9;
+  --accent-active: #203b95;
+  --accent-soft:   #9eb6ff;   /* mismo tono, serie secundaria en gráficos */
+  --accent-faint:  #dce5ff;   /* fondo de intensidad baja */
+  --accent-wash:   #f0f4ff;   /* fondo de superficie destacada */
+  --accent-border: #c7d5ff;
+  --accent-ink:    #ffffff;   /* texto sobre acento sólido */
+
+  /* --- Series de datos ---------------------------------------------------
+     Tres intensidades del mismo tono más un gris. Suficiente para cualquier
+     gráfico de esta aplicación y coherente en todas las pantallas.          */
+  --data-1: var(--accent);
+  --data-2: var(--accent-soft);
+  --data-3: var(--ink-4);
+  --data-flat: var(--border-strong);
+
+  /* --- Tipografía --------------------------------------------------------- */
+  --font: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+          Roboto, Helvetica, Arial, sans-serif;
+
+  --fs-display: clamp(1.75rem, 5.5vw, 2.25rem);
+  --fs-xl:      clamp(1.375rem, 4vw, 1.5rem);
+  --fs-lg:      1.0625rem;
+  --fs-md:      0.9375rem;
+  --fs-sm:      0.875rem;
+  --fs-xs:      0.8125rem;
+  --fs-micro:   0.6875rem;
+
+  --fs-metric:      clamp(1.75rem, 7vw, 2rem);
+  --fs-metric-hero: clamp(2.5rem, 11vw, 3rem);
+
+  --track-tight: -0.022em;
+  --track-label:  0.06em;
+
+  /* --- Geometría ---------------------------------------------------------- */
+  --r-sm:   9px;
+  --r-md:  12px;
+  --r-lg:  16px;
+  --r-xl:  22px;
+  --r-pill: 999px;
+
+  --gap:      12px;
+  --pad-card: 16px;
+  --touch:    44px;
+
+  /* --- Elevación ---------------------------------------------------------- */
+  --shadow-sm: 0 1px 2px rgba(20, 32, 51, 0.03), 0 3px 8px rgba(20, 32, 51, 0.025);
+  --shadow-md: 0 8px 22px -16px rgba(20, 32, 51, 0.20), 0 2px 5px rgba(20, 32, 51, 0.04);
+  --shadow-lg: 0 24px 48px -28px rgba(20, 32, 51, 0.38), 0 8px 16px -12px rgba(20, 32, 51, 0.12);
+  --shadow-focus: 0 0 0 4px rgba(49, 87, 213, 0.14);
+
+  /* --- Movimiento --------------------------------------------------------- */
+  --ease:   cubic-bezier(0.2, 0, 0, 1);
+  --t-fast: 120ms;
+  --t-mid:  200ms;
+
+  --header-h: 56px;
+  --tabbar-h: 60px;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --gap: 16px;
+    --pad-card: 20px;
+    --header-h: 64px;
+    --tabbar-h: 0px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --t-fast: 0ms; --t-mid: 0ms; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

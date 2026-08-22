@@ -1,0 +1,3494 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Panel · Hábitos y Composición</title>
+<link rel="manifest" href="manifest.json">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
+<link rel="icon" href="icon-512.png" type="image/png" sizes="512x512">
+<link rel="shortcut icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png" sizes="180x180">
+<link rel="apple-touch-icon" href="icon-192.png" sizes="192x192">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Hábitos">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+:root{
+
+  --pine:var(--blue);
+  --pine-deep:var(--ink);
+  --sage:var(--blue);
+  --sage-pale:var(--blue-soft);
+  --brick:var(--red);
+  --brick-pale:var(--red-soft);
+  --good:var(--green);
+  --good-pale:var(--green-soft);
+  --gold:var(--orange);
+  --paper:var(--surface);
+  --line:var(--sep);
+  --line-soft:var(--sep);
+  --ink-soft:var(--ink-2);
+  --ink-faint:var(--ink-3);
+  --radius:12px;
+
+  --bg:#F2F2F7;
+  --surface:#FFFFFF;
+  --surface-2:#EFEFF4;
+  --ink:#000000;
+  --ink-2:#3A3A3C;
+  --ink-3:#8E8E93;
+  --ink-4:#C7C7CC;
+  --sep:rgba(60,60,67,.12);
+  --sep-opaque:#E5E5EA;
+  --blue:#007AFF;
+  --blue-press:#0066D6;
+  --blue-soft:rgba(0,122,255,.12);
+  --green:#34C759;
+  --green-soft:rgba(52,199,89,.14);
+  --red:#FF3B30;
+  --red-soft:rgba(255,59,48,.12);
+  --orange:#FF9500;
+  --orange-soft:rgba(255,149,0,.14);
+  --yellow:#FFCC00;
+  --radius:12px;
+  --radius-lg:20px;
+  --nav-h:50px;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --font-display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --font-mono:"SF Mono",ui-monospace,Menlo,monospace;
+  --shadow-card:0 1px 3px rgba(0,0,0,.04);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
+html,body{height:100%;}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--font);
+  font-size:16px;
+  line-height:1.35;
+  -webkit-font-smoothing:antialiased;
+  padding-bottom:calc(86px + env(safe-area-inset-bottom));
+}
+button,input,select{font:inherit;}
+.mono{font-family:var(--font-mono);}
+h1,h2,h3,.display{font-family:var(--font-display);font-weight:700;letter-spacing:-0.03em;}
+
+/* ========== HEADER (Apple large title style) ========== */
+header.top{
+  background:transparent;
+  color:var(--ink);
+  padding:12px 20px 0;
+  position:relative;
+  overflow:visible;
+}
+header.top::after{display:none!important;}
+.top-inner{max-width:1100px;margin:0 auto;}
+.eyebrow{
+  display:none;
+}
+header.top h1{
+  font-size:34px;
+  font-weight:700;
+  letter-spacing:-0.04em;
+  color:var(--ink);
+  margin:4px 0 2px;
+  line-height:1.1;
+}
+header.top p{
+  font-size:15px;
+  color:var(--ink-3);
+  font-weight:400;
+  margin:0 0 8px;
+}
+.sync-badge{
+  font-size:12px;color:var(--ink-3);font-weight:500;
+}
+.sync-badge.ok{color:var(--green);}
+.sync-badge.busy{color:var(--orange);}
+.sync-badge.err{color:var(--red);}
+
+/* hide desktop tabs - use bottom nav style even on desktop or refine */
+nav.tabs{
+  display:none!important;
+}
+
+/* ========== BOTTOM NAV — tab bar (rediseño) ========== */
+nav.bottom-nav{
+  position:fixed;left:0;right:0;bottom:0;z-index:100;
+  display:flex;gap:4px;
+  padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+  background:rgba(249,249,249,.86);
+  backdrop-filter:saturate(180%) blur(22px);
+  -webkit-backdrop-filter:saturate(180%) blur(22px);
+  border-top:0.5px solid var(--sep);
+}
+nav.bottom-nav button{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;background:none;border:none;color:var(--ink-3);
+  padding:8px 4px;border-radius:16px;cursor:pointer;
+  font-size:11px;font-weight:600;letter-spacing:-0.01em;
+  transition:background .18s ease, color .18s ease, transform .12s ease;
+  -webkit-tap-highlight-color:transparent;
+}
+nav.bottom-nav button svg{width:24px;height:24px;stroke-width:1.9;transition:transform .18s ease;}
+nav.bottom-nav button:active{transform:scale(.93);}
+nav.bottom-nav button.active{color:var(--blue);background:var(--blue-soft);}
+nav.bottom-nav button.active svg{stroke:var(--blue);transform:translateY(-1px);}
+
+/* ========== LAYOUT ========== */
+main{max-width:1100px;margin:0 auto;padding:8px 16px 0;}
+.view{display:none;}
+.view.active{display:block;}
+
+/* ========== GROUPED LISTS (iOS Settings style) ========== */
+.card{
+  background:var(--surface);
+  border:none;
+  border-radius:var(--radius-lg);
+  padding:16px;
+  box-shadow:none;
+  overflow:hidden;
+}
+.card.quicklog{padding:18px 16px;}
+.card:has(form.add-comp){padding:0;}
+.card:has(#kcalCard){padding:0;}
+#kcalCard{padding:0;}
+section.block{margin-bottom:28px;}
+section.block h2{
+  font-size:13px;
+  font-weight:400;
+  letter-spacing:-0.01em;
+  text-transform:uppercase;
+  color:var(--ink-3);
+  margin:0 0 8px 4px;
+  display:block;
+}
+section.block h2::after{display:none;}
+section.block .subtext{
+  font-size:13px;color:var(--ink-3);margin:-2px 0 10px 4px;line-height:1.35;
+}
+
+/* KPI grid as iOS widget row */
+.grid{display:grid;gap:10px;}
+.grid-6{grid-template-columns:repeat(2,1fr);}
+.grid-2{grid-template-columns:1fr 1fr;}
+@media(min-width:600px){
+  .grid-6{grid-template-columns:repeat(3,1fr);}
+}
+.kpi{
+  background:var(--surface);
+  border-radius:var(--radius-lg);
+  padding:14px 16px;
+  min-height:88px;
+}
+.kpi .label{
+  font-size:12px;font-weight:600;color:var(--ink-3);
+  text-transform:uppercase;letter-spacing:0.02em;
+}
+.kpi .value{
+  font-family:var(--font-display);
+  font-size:28px;font-weight:700;letter-spacing:-0.04em;
+  color:var(--ink);margin:6px 0 2px;font-variant-numeric:tabular-nums;
+}
+.kpi .value small{font-size:14px;font-weight:600;color:var(--ink-3);}
+.kpi .sub{font-size:12px;color:var(--ink-3);margin-top:2px;}
+.kpi.warn .value{color:var(--red);}
+.kpi.good .value{color:var(--green);}
+.kpi.gold .value{color:var(--orange);}
+
+/* ========== QUICK LOG ========== */
+.quicklog{
+  background:var(--surface);
+  border:none;
+  border-radius:var(--radius-lg);
+  padding:18px 16px !important;
+}
+.quicklog .qhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:8px;}
+.quicklog .qhead .qdate{
+  font-size:20px;font-weight:700;letter-spacing:-0.03em;text-transform:capitalize;
+}
+.quicklog .qhead .qtotal{
+  font-size:13px;font-weight:600;color:var(--blue);
+  background:var(--blue-soft);padding:5px 12px;border-radius:980px;
+  font-family:var(--font-mono);
+}
+.qchips{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+@media(min-width:480px){.qchips{grid-template-columns:repeat(3,1fr);}}
+.qweight{
+  display:flex;gap:12px;align-items:center;margin-top:16px;padding-top:16px;
+  border-top:0.5px solid var(--sep);
+}
+.qweight label{font-size:15px;color:var(--ink-2);font-weight:400;}
+.qweight input{
+  width:100px;padding:10px 12px;border:none;border-radius:10px;
+  background:var(--bg);font-family:var(--font-mono);font-size:16px;font-weight:600;
+}
+
+/* ========== CHIPS as large tappable rows ========== */
+.chip{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 14px;border-radius:14px;
+  border:none;background:var(--bg);cursor:pointer;
+  font-size:15px;font-weight:500;color:var(--ink-2);
+  transition:background .12s, color .12s, transform .1s;
+  width:100%;
+}
+.chip:active{transform:scale(0.98);}
+.chip .code{
+  font-family:var(--font-mono);font-size:11px;font-weight:700;
+  background:var(--surface);color:var(--ink-3);padding:4px 7px;border-radius:6px;
+  min-width:36px;text-align:center;
+}
+.chip .lbl{flex:1;text-align:left;}
+.chip.on{background:var(--blue);color:#fff;}
+.chip.on .code{background:rgba(255,255,255,.22);color:#fff;}
+.chip.compact{
+  width:auto;padding:8px 10px;border-radius:10px;display:inline-flex;
+}
+.chip.compact .code{min-width:0;font-size:11px;}
+.chip.compact .lbl{display:none;}
+
+/* ========== PROGRESS ========== */
+.pbar-row{display:flex;align-items:center;gap:12px;padding:8px 0;}
+.pbar-row .lbl{width:100px;font-size:14px;font-weight:400;color:var(--ink-2);flex-shrink:0;}
+.pbar-track{flex:1;height:4px;border-radius:2px;background:var(--sep-opaque);overflow:hidden;}
+.pbar-fill{height:100%;border-radius:2px;background:var(--blue);}
+.pbar-pct{width:42px;text-align:right;font-family:var(--font-mono);font-size:13px;font-weight:500;color:var(--ink-3);}
+
+.weight-track{position:relative;height:4px;border-radius:2px;background:var(--sep-opaque);margin:16px 0 8px;}
+.weight-fill{position:absolute;left:0;top:0;height:100%;border-radius:2px;background:var(--green);}
+.weight-marks{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-3);font-family:var(--font-mono);}
+
+.dotgrid-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 0;}
+.dotgrid{display:grid;grid-template-columns:52px repeat(6,minmax(32px,1fr));gap:8px;align-items:center;min-width:380px;}
+.dotgrid .colhead{font-size:10px;color:var(--ink-3);text-align:center;font-weight:600;text-transform:uppercase;}
+.dotgrid .rowhead{font-size:13px;color:var(--ink-2);font-weight:400;}
+.dot{width:22px;height:22px;border-radius:50%;margin:0 auto;border:2px solid var(--sep-opaque);background:transparent;}
+.dot.on{background:var(--blue);border-color:var(--blue);}
+.dot.today{box-shadow:0 0 0 3px var(--blue-soft);}
+
+/* ========== CONTROLS ========== */
+.controls-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;justify-content:space-between;}
+.controls-left{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+select, .btn{
+  font-size:15px;font-weight:500;
+  border-radius:980px;border:none;background:var(--blue-soft);color:var(--blue);
+  padding:9px 16px;cursor:pointer;
+}
+.btn.primary{background:var(--blue);color:#fff;}
+.btn.primary:active{background:var(--blue-press);}
+.btn.ghost{background:transparent;color:var(--blue);padding:9px 12px;}
+select{appearance:none;background:var(--surface);color:var(--ink);border:0.5px solid var(--sep);padding-right:28px;}
+
+.month-summary{font-size:14px;color:var(--ink-3);margin:0 0 12px 4px;}
+
+/* ========== DAY CARDS ========== */
+.day-card{
+  display:flex;flex-wrap:wrap;align-items:center;gap:10px;
+  padding:14px 14px;border:none;border-radius:var(--radius-lg);
+  margin-bottom:8px;background:var(--surface);
+}
+.day-card.today{box-shadow:inset 0 0 0 2px var(--blue);}
+.day-card.weekend{opacity:0.95;}
+.day-card .datebox{width:44px;flex-shrink:0;text-align:center;}
+.day-card .datebox .num{font-size:22px;font-weight:700;letter-spacing:-0.03em;color:var(--ink);line-height:1;}
+.day-card .datebox .dow{font-size:11px;color:var(--ink-3);text-transform:uppercase;margin-top:3px;font-weight:500;}
+.day-card .chips{display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:140px;}
+.day-card .total-badge{
+  font-family:var(--font-mono);font-weight:600;font-size:13px;color:var(--blue);
+  background:var(--blue-soft);padding:5px 10px;border-radius:980px;margin-left:auto;
+}
+.day-card .meta{
+  display:flex;gap:8px;align-items:center;width:100%;margin-top:4px;padding-top:12px;
+  border-top:0.5px solid var(--sep);
+}
+.day-card .meta input.wk{
+  width:78px;font-family:var(--font-mono);font-size:15px;border:none;border-radius:10px;
+  padding:8px;text-align:center;background:var(--bg);font-weight:600;
+}
+.day-card .meta input.notek{
+  flex:1;font-size:15px;border:none;border-radius:10px;padding:8px 12px;background:var(--bg);
+}
+.day-card .meta label{font-size:13px;color:var(--ink-3);font-weight:400;}
+
+/* ========== TABLES ========== */
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+table.monthly, table.comp{border-collapse:collapse;width:100%;font-size:14px;}
+table.monthly{min-width:600px;}
+table.comp{min-width:780px;}
+table.monthly th, table.comp th{
+  font-size:12px;font-weight:500;color:var(--ink-3);text-align:left;
+  padding:10px 8px;border-bottom:0.5px solid var(--sep);text-transform:none;
+}
+table.monthly td, table.comp td{
+  padding:11px 8px;border-bottom:0.5px solid var(--sep);font-family:var(--font-mono);font-size:13px;
+  text-align:center;
+}
+table.monthly td:first-child, table.monthly th:first-child,
+table.comp td:first-child, table.comp th:first-child{
+  text-align:left;font-family:var(--font);font-weight:500;
+}
+table.monthly td.global{font-weight:600;}
+.del-btn{border:none;background:none;color:var(--red);cursor:pointer;font-size:16px;padding:4px 8px;}
+
+@media(max-width:759px){
+  .comp-wrap{overflow:visible;}
+  table.comp{min-width:0;}
+  table.comp thead{display:none;}
+  table.comp, table.comp tbody, table.comp tr, table.comp td{display:block;width:100%;}
+  table.comp tr{
+    background:var(--surface);border-radius:var(--radius-lg);margin-bottom:10px;
+    padding:14px 16px;border:none;
+  }
+  table.comp td{
+    display:flex;justify-content:space-between;padding:7px 0;border:none;text-align:right;white-space:normal;
+  }
+  table.comp td::before{content:attr(data-label);font-family:var(--font);font-weight:400;color:var(--ink-3);}
+  table.comp td:first-child{font-size:17px;font-weight:600;color:var(--ink);padding-bottom:10px;}
+}
+
+form.add-comp{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:8px;padding:16px;}
+@media(min-width:600px){form.add-comp{grid-template-columns:repeat(3,1fr);}}
+form.add-comp label{font-size:12px;color:var(--ink-3);display:block;margin-bottom:4px;font-weight:400;}
+form.add-comp input{
+  width:100%;padding:11px 12px;border:none;border-radius:10px;
+  background:var(--bg);font-family:var(--font-mono);font-size:15px;
+}
+
+.change-card{
+  padding:14px 16px;border:none;border-radius:var(--radius-lg);background:var(--surface);
+}
+.change-card .m{font-size:12px;color:var(--ink-3);font-weight:500;text-transform:uppercase;letter-spacing:0.02em;}
+.change-row{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:15px;margin-top:8px;color:var(--ink-3);}
+.change-row > span:last-child{margin-left:auto;text-align:right;font-family:var(--font-mono);font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;}
+.change-row .delta.up{color:var(--red);}
+.change-row .delta.down{color:var(--green);}
+
+footer.data{
+  max-width:1100px;margin:40px auto 20px;padding:0 16px;
+  display:flex;gap:8px;flex-wrap:wrap;justify-content:center;
+}
+footer.data span{font-size:12px;color:var(--ink-3);width:100%;text-align:center;margin-bottom:10px;}
+footer.data .btn{font-size:13px;padding:8px 14px;background:var(--surface);color:var(--ink-2);}
+
+.empty{padding:32px 16px;color:var(--ink-3);font-size:15px;text-align:center;}
+.chart-wrap{width:100%;overflow-x:auto;padding:8px 0;}
+.mini-chart-card{background:var(--surface);border-radius:var(--radius-lg);padding:14px 12px;}
+.mini-chart-card .mc-title{font-size:12px;font-weight:500;color:var(--ink-3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.02em;}
+
+/* Kcal */
+.kcal-basics{
+  display:flex;gap:24px;flex-wrap:wrap;margin-bottom:16px;padding:16px 16px 16px;
+  border-bottom:0.5px solid var(--sep);
+}
+.kcal-basics .kb .n{font-size:28px;font-weight:700;letter-spacing:-0.03em;color:var(--ink);font-family:var(--font-display);}
+.kcal-basics .kb .l{font-size:12px;color:var(--ink-3);font-weight:400;margin-top:2px;}
+.kcal-tiers{display:grid;grid-template-columns:1fr;gap:8px;padding:0 12px 12px;}
+@media(min-width:520px){.kcal-tiers{grid-template-columns:repeat(3,1fr);}}
+.kcal-tier{
+  border:none;border-radius:14px;padding:16px;cursor:pointer;background:var(--bg);
+  transition:background .12s;
+}
+.kcal-tier.selected{background:var(--blue-soft);}
+.kcal-tier .tt{font-size:12px;font-weight:500;color:var(--ink-3);}
+.kcal-tier .tv{font-size:24px;font-weight:700;letter-spacing:-0.03em;color:var(--ink);margin:4px 0;font-family:var(--font-display);}
+.kcal-tier .td{font-size:13px;color:var(--ink-3);}
+.kcal-custom{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:0 16px 16px;}
+.kcal-custom label{font-size:15px;color:var(--ink-2);}
+.kcal-custom input{
+  width:110px;padding:10px 12px;border:none;border-radius:10px;background:var(--bg);
+  font-family:var(--font-mono);font-size:16px;font-weight:600;
+}
+.kcal-warn{margin:0 16px 16px;padding:12px 14px;border-radius:12px;background:var(--red-soft);color:var(--red);font-size:14px;display:none;}
+.kcal-warn.show{display:block;}
+
+/* Prediction — iOS widget style */
+#weightPredictionCard{
+  padding:0 !important;
+  background:transparent !important;
+  border:none !important;
+  box-shadow:none !important;
+}
+#weightPredictionCard .pred-panel{
+  background:var(--surface);
+  border-radius:var(--radius-lg);
+  padding:16px;
+  margin-top:10px;
+}
+.pred-kpi-grid{display:grid;grid-template-columns:1fr;gap:10px;}
+@media(min-width:520px){.pred-kpi-grid{grid-template-columns:repeat(3,1fr);}}
+.pred-kpi-grid > div{
+  background:var(--surface) !important;
+  border:none !important;
+  border-radius:var(--radius-lg) !important;
+  padding:16px !important;
+  min-height:96px;
+}
+
+input:focus, select:focus{
+  outline:none;
+  box-shadow:0 0 0 3px var(--blue-soft);
+}
+
+/* Padding for card sections that need internal padding */
+.card > .grid,
+.card > .dotgrid-wrap,
+.card > .chart-wrap,
+.card > .table-wrap,
+.card > #compChangeCards,
+.card > form,
+.card > .kcal-basics{ }
+
+/* force dashboard card children padding via common wrappers */
+#streakCard, #progressBars, #weightTrack, #weekDots, #monthlyTable, #compTable,
+#compCharts, #kcalCard, #insightText, #weightPredictionCard{ }
+
+.card:has(#progressBars),
+.card:has(#weekDots),
+.card:has(#weightTrack),
+.card:has(#monthlyTable),
+.card:has(#compCharts),
+.card:has(#kcalCard){
+  padding:16px;
+}
+
+/* desktop */
+@media(min-width:760px){
+  body{padding-bottom:96px;}
+  main{padding:12px 24px 0;}
+  header.top{padding:20px 24px 0;}
+  header.top h1{font-size:40px;}
+}
+@media(max-width:380px){
+  header.top h1{font-size:28px;}
+  .kpi .value{font-size:24px;}
+}
+
+/* =====================================================================
+   v2 · REFINAMIENTO PROFESIONAL — modo oscuro, jerarquía y tarjeta de
+   predicción destacada. (Este bloque va al final: gana en cascada.)
+   ===================================================================== */
+
+/* ---------- Modo oscuro automático ---------- */
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#000000;
+    --surface:#1C1C1E;
+    --surface-2:#2C2C2E;
+    --ink:#FFFFFF;
+    --ink-2:#EBEBF5;
+    --ink-3:#8D8D93;
+    --ink-4:#48484A;
+    --sep:rgba(84,84,88,.42);
+    --sep-opaque:#38383A;
+    --blue:#0A84FF;
+    --blue-press:#409CFF;
+    --blue-soft:rgba(10,132,255,.20);
+    --green:#30D158;
+    --green-soft:rgba(48,209,88,.20);
+    --red:#FF453A;
+    --red-soft:rgba(255,69,58,.20);
+    --orange:#FF9F0A;
+    --orange-soft:rgba(255,159,10,.22);
+    --shadow-card:0 1px 3px rgba(0,0,0,.5);
+  }
+  nav.bottom-nav{background:rgba(22,22,24,.86);}
+  select{background:var(--surface-2);}
+}
+/* respeta el toggle manual del visor si algún día se añade */
+:root[data-theme="dark"]{color-scheme:dark;}
+:root[data-theme="light"]{color-scheme:light;}
+
+body{color-scheme:light dark;}
+
+
+/* ---------- Tarjetas con micro-sombra sutil ---------- */
+.card,.kpi,.day-card,.change-card,.mini-chart-card{
+  box-shadow:0 1px 2px rgba(0,0,0,.04),0 1px 10px rgba(0,0,0,.02);
+}
+@media(prefers-color-scheme:dark){
+  .card,.kpi,.day-card,.change-card,.mini-chart-card{box-shadow:none;border:0.5px solid var(--sep);}
+}
+.kpi{transition:transform .12s ease;}
+.kpi .value{font-variant-numeric:tabular-nums;}
+
+/* =========================================================
+   TARJETA DE PREDICCIÓN — pieza estrella
+   ========================================================= */
+#weightPredictionCard{padding:0 !important;background:transparent !important;box-shadow:none !important;border:none !important;display:grid;gap:12px;}
+
+.pred-hero{
+  position:relative;overflow:hidden;
+  background:
+    radial-gradient(120% 140% at 100% 0%, var(--blue-soft) 0%, transparent 55%),
+    var(--surface);
+  border-radius:var(--radius-lg);
+  padding:20px;
+  display:grid;grid-template-columns:1fr;gap:14px;
+}
+@media(min-width:560px){
+  .pred-hero{grid-template-columns:1.15fr 1fr;align-items:center;}
+}
+.pred-hero-label{
+  font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;
+  color:var(--ink-3);
+}
+.pred-hero-num{
+  font-family:var(--font-display);font-weight:700;letter-spacing:-0.045em;
+  font-size:52px;line-height:1;margin-top:8px;color:var(--ink);
+  font-variant-numeric:tabular-nums;display:flex;align-items:baseline;flex-wrap:wrap;gap:8px;
+}
+.pred-hero-num .u{font-size:19px;font-weight:700;color:var(--ink-3);letter-spacing:0;}
+.pred-band{
+  font-family:var(--font);font-size:14px;font-weight:600;color:var(--blue);
+  background:var(--blue-soft);padding:4px 10px;border-radius:980px;letter-spacing:0;
+  align-self:center;
+}
+.pred-hero-refs{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
+.pred-hero-refs .pill{
+  font-size:13px;color:var(--ink-2);background:var(--surface-2);
+  padding:6px 11px;border-radius:980px;font-weight:500;
+}
+.pred-hero-refs .pill b{font-family:var(--font-mono);color:var(--ink);font-weight:700;}
+.pred-spark{width:100%;}
+.pred-spark-svg{width:100%;height:92px;display:block;}
+
+.pred-chips{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+@media(max-width:520px){.pred-chips{grid-template-columns:1fr;}}
+.pred-chipbox{
+  background:var(--surface);border-radius:var(--radius-lg);padding:15px 16px;
+  box-shadow:0 1px 2px rgba(0,0,0,.04);
+}
+@media(prefers-color-scheme:dark){.pred-chipbox{box-shadow:none;border:0.5px solid var(--sep);}}
+.pc-label{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-3);}
+.pc-value{font-family:var(--font-display);font-size:24px;font-weight:700;letter-spacing:-0.03em;margin:7px 0 3px;font-variant-numeric:tabular-nums;display:flex;align-items:baseline;gap:4px;}
+.pc-value .u{font-size:13px;font-weight:600;color:var(--ink-3);}
+.pc-sub{font-size:12.5px;color:var(--ink-3);}
+
+.pred-panel{background:var(--surface);border-radius:var(--radius-lg);padding:16px 18px;}
+.pred-panel .pp-row{display:flex;justify-content:space-between;align-items:center;font-size:15px;color:var(--ink-2);padding:6px 0;}
+.pred-panel .pp-row .mono{font-family:var(--font-mono);font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;}
+.pred-panel .pp-sep{height:0.5px;background:var(--sep);margin:8px 0;}
+
+.pred-note{
+  margin:0;padding:13px 16px;border-radius:14px;
+  background:var(--orange-soft);color:var(--ink-2);
+  font-size:13.5px;line-height:1.45;
+}
+.pred-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:2px 4px;}
+.pred-reliability{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-3);line-height:1.35;}
+.pred-reliability .dot-ok{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;box-shadow:0 0 0 3px var(--green-soft);}
+.pred-fineprint{margin:0 4px;font-size:12px;color:var(--ink-4);line-height:1.5;}
+@media(prefers-color-scheme:dark){.pred-fineprint{color:var(--ink-3);}}
+
+/* pequeñas mejoras de legibilidad general */
+section.block h2{font-size:13px;letter-spacing:0;color:var(--ink-3);font-weight:600;}
+.btn.ghost{border:0.5px solid var(--sep);}
+.btn.ghost:active{background:var(--blue-soft);}
+
+/* =====================================================================
+   SISTEMA RESPONSIVE COMPLETO — móvil pequeño → pantallas grandes
+   ===================================================================== */
+/* red de seguridad: ningún desbordamiento horizontal de página
+   (solo en body; en <html> rompería position:fixed en iOS Safari) */
+body{overflow-x:hidden;max-width:100%;}
+.table-wrap,.dotgrid-wrap,.chart-wrap{max-width:100%;}
+
+/* --- Composición: rejillas de tarjetas y mini-gráficas --- */
+#compChangeCards{grid-template-columns:repeat(2,1fr);}
+#compCharts{grid-template-columns:1fr;}
+@media(min-width:560px){ #compCharts{grid-template-columns:repeat(2,1fr);} }
+@media(min-width:1000px){
+  #compCharts{grid-template-columns:repeat(3,1fr);}
+  #compChangeCards{grid-template-columns:repeat(4,1fr);}
+}
+
+/* --- Dashboard: apilar los dos bloques de barras en móvil --- */
+@media(max-width:600px){ .grid-2{grid-template-columns:1fr;} }
+
+/* --- KPIs del dashboard: 4 tarjetas (2×2 móvil → 4 en fila) --- */
+#kpiCards{grid-template-columns:repeat(2,1fr);}
+@media(min-width:560px){ #kpiCards{grid-template-columns:repeat(4,1fr);} }
+
+/* --- Móvil pequeño (≤360px): reducir tipografías grandes --- */
+@media(max-width:360px){
+  header.top h1{font-size:26px;}
+  .eyebrow{font-size:11px;}
+  .pred-hero-num{font-size:44px;}
+  .quicklog .qhead .qdate{font-size:17px;}
+  .kpi .value{font-size:22px;}
+  main{padding:8px 12px 0;}
+  header.top{padding:12px 14px 0;}
+  .card{padding:14px;}
+}
+
+/* --- Tablet (≥760px): más aire y tipografías --- */
+@media(min-width:760px){
+  main{max-width:1200px;padding:16px 28px 0;}
+  header.top{padding:24px 28px 0;}
+  .top-inner{max-width:1200px;}
+  section.block{margin-bottom:32px;}
+}
+
+/* --- Desktop grande (≥1080px): maquetación en dos columnas ---
+   El panel deja de ser una única columna infinita: las secciones
+   secundarias se emparejan, y las destacadas ocupan todo el ancho. */
+@media(min-width:1080px){
+  /* OJO: debe ser .active para no ganarle en especificidad a `.view{display:none}`,
+     o el Dashboard quedaría visible también en Registro/Composición. */
+  #view-dashboard.active{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    column-gap:24px;
+    align-items:start;
+  }
+  #view-dashboard > section.block{margin-bottom:24px;}
+  #view-dashboard > section.block.span-all,
+  #view-dashboard > .grid.grid-2{grid-column:1 / -1;}
+}
+
+/* --- Pantallas muy grandes (≥1440px): centrar y limitar --- */
+@media(min-width:1440px){
+  main{max-width:1280px;}
+  .top-inner{max-width:1280px;}
+}
+
+/* --- Nav inferior: en escritorio, píldora flotante centrada --- */
+@media(min-width:760px){
+  nav.bottom-nav{
+    left:50%;right:auto;transform:translateX(-50%);
+    bottom:18px;width:min(460px, calc(100% - 48px));
+    padding:8px 10px;
+    border:0.5px solid var(--sep);border-radius:22px;
+    box-shadow:0 8px 30px rgba(0,0,0,.12);
+  }
+}
+@media(prefers-color-scheme:dark) and (min-width:760px){
+  nav.bottom-nav{box-shadow:0 8px 30px rgba(0,0,0,.5);}
+}
+
+/* =====================================================================
+   FIX iOS / iPhone (Safari)
+   ---------------------------------------------------------------------
+   1) Safari hace ZOOM automático al enfocar un input con font-size < 16px
+      y deja la página ampliada. Forzamos 16px en TODOS los controles en
+      móvil para que no vuelva a pasar (el usuario ni lo nota).
+   2) Reforzamos que nada se salga horizontalmente y que imágenes/SVG
+      nunca superen el ancho de pantalla.
+   ===================================================================== */
+@media(max-width:768px){
+  input, select, textarea{ font-size:16px !important; }
+}
+img, svg, canvas, video{ max-width:100%; }
+*{ min-width:0; }
+/* iOS: respeta el área segura del notch/Dynamic Island a los lados */
+@supports(padding:max(0px)){
+  main{ padding-left:max(16px, env(safe-area-inset-left)); padding-right:max(16px, env(safe-area-inset-right)); }
+}
+
+/* =====================================================================
+   CABECERA POR VISTA (cada pestaña tiene su propia identidad) + chip sync
+   ===================================================================== */
+main{ padding-top:max(16px, env(safe-area-inset-top)); }
+.view-head{ margin:2px 4px 20px; }
+.view-head h1{
+  font-family:var(--font-display);font-size:33px;font-weight:800;
+  letter-spacing:-0.045em;line-height:1.04;color:var(--ink);margin:0;
+}
+.view-head .view-sub{ font-size:15px;color:var(--ink-3);margin:7px 0 0;line-height:1.4;max-width:56ch; }
+@media(min-width:760px){ .view-head h1{ font-size:42px; } .view-head{ margin-bottom:26px; } }
+@media(max-width:360px){ .view-head h1{ font-size:28px; } }
+
+.sync-chip{
+  position:fixed;top:max(10px, env(safe-area-inset-top));right:14px;z-index:120;
+  font-size:11px;font-weight:600;color:var(--ink-3);
+  background:color-mix(in srgb, var(--surface) 82%, transparent);
+  -webkit-backdrop-filter:saturate(180%) blur(12px);backdrop-filter:saturate(180%) blur(12px);
+  border:0.5px solid var(--sep);border-radius:980px;padding:5px 10px;
+  display:inline-flex;align-items:center;gap:5px;pointer-events:none;
+  box-shadow:0 2px 8px rgba(0,0,0,.05);
+}
+.sync-chip.ok{color:var(--green);}
+.sync-chip.busy{color:var(--orange);}
+.sync-chip.err{color:var(--red);}
+
+/* =====================================================================
+   SKIN v4 · "CINEMATIC DARK"
+   Cambio de aires total: negro profundo con auroras de gradiente
+   (violeta / azul / ámbar), textura de puntos, paneles glass, tipografía
+   display enorme y CTAs de degradado. Tema OSCURO fijo (la app se
+   compromete con esta estética). Va al FINAL: gana en cascada.
+   ===================================================================== */
+:root{
+  color-scheme:dark;
+  --accent:#7C6BFF; --accent-2:#D338E6; --accent-press:#8E7EFF;
+  --accent-soft:rgba(124,107,255,.16);
+  --blue:#6D8BFF; --blue-press:#8AA2FF; --blue-soft:rgba(109,139,255,.16);
+  --bg:#06070C; --surface:#0E1018; --surface-2:#161A25;
+  --ink:#F6F7FD; --ink-2:#C3C8DB; --ink-3:#868DA6; --ink-4:#565D75;
+  --sep:rgba(255,255,255,.09); --sep-opaque:rgba(255,255,255,.11);
+  --green:#35E0A1; --green-soft:rgba(53,224,161,.16);
+  --red:#FF5C6C; --red-soft:rgba(255,92,108,.16);
+  --orange:#FFB84D; --orange-soft:rgba(255,184,77,.16); --gold:#FFB84D; --yellow:#FFB84D;
+  --radius:14px; --radius-lg:20px;
+  --grad:linear-gradient(100deg,var(--accent-2) 0%,var(--accent) 55%,var(--blue) 110%);
+  --font:"Inter","SF Pro Display",ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --font-display:"Inter","SF Pro Display",ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --font-mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+  --shadow-card:0 24px 50px -30px rgba(0,0,0,.9);
+}
+
+/* ---- Fondo cinematográfico con auroras + textura de puntos ---- */
+body{
+  background:#06070C;
+  color:var(--ink);
+  letter-spacing:-0.01em;
+}
+body::before{
+  content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+  background:
+    radial-gradient(1100px 720px at 108% -8%, rgba(124,107,255,.42), transparent 58%),
+    radial-gradient(920px 640px at 118% 42%, rgba(83,120,255,.30), transparent 55%),
+    radial-gradient(760px 700px at -12% 112%, rgba(255,150,60,.16), transparent 55%),
+    radial-gradient(720px 560px at 44% 128%, rgba(211,56,230,.20), transparent 60%),
+    #06070C;
+}
+body::after{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.5;
+  background-image:radial-gradient(rgba(255,255,255,.055) 1px, transparent 1.4px);
+  background-size:22px 22px;
+  -webkit-mask-image:linear-gradient(180deg, rgba(0,0,0,.9), transparent 70%);
+          mask-image:linear-gradient(180deg, rgba(0,0,0,.9), transparent 70%);
+}
+
+h1,h2,h3,.display{font-family:var(--font-display);}
+
+/* ---- Cabeceras de vista: titular DISPLAY enorme ---- */
+.view-head{position:relative;padding-left:0;margin-bottom:26px;}
+.view-head::before{display:none;}
+.view-head h1{
+  font-family:var(--font-display);text-transform:none;font-weight:800;
+  font-size:clamp(38px,7.5vw,66px);line-height:.98;letter-spacing:-0.045em;color:#fff;
+}
+.view-head .view-sub{color:var(--ink-3);font-size:15px;margin-top:10px;}
+
+/* ---- Rótulos de sección: mayúsculas finas tipo dashboard ---- */
+section.block h2{
+  text-transform:uppercase;letter-spacing:.16em;font-weight:600;font-size:11px;
+  color:var(--ink-3);padding-left:0;position:relative;margin-bottom:12px;
+}
+section.block h2::before{display:none;}
+section.block .subtext{color:var(--ink-3);}
+
+/* ---- Tarjetas: cristal esmerilado ---- */
+.card,.kpi,.day-card,.change-card,.mini-chart-card,.pred-panel,.pred-chipbox{
+  background:linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.018))!important;
+  border:1px solid var(--sep)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05), var(--shadow-card)!important;
+  border-radius:var(--radius-lg);
+  -webkit-backdrop-filter:blur(16px) saturate(140%);backdrop-filter:blur(16px) saturate(140%);
+}
+.card,.kpi,.change-card,.mini-chart-card{transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease;}
+@media(hover:hover){
+  .kpi:hover,.change-card:hover,.mini-chart-card:hover,.card:hover{
+    transform:translateY(-3px);border-color:rgba(255,255,255,.20)!important;
+  }
+}
+
+/* ---- KPI: tiles de datos con número gigante ---- */
+.kpi{min-height:104px;position:relative;overflow:hidden;}
+.kpi::after{content:"";position:absolute;inset:0 auto auto 0;width:34%;height:3px;background:var(--grad);opacity:.9;}
+.kpi.good::after{background:var(--green);}
+.kpi.warn::after{background:var(--red);}
+.kpi.gold::after{background:var(--gold);}
+.kpi .label{text-transform:uppercase;letter-spacing:.12em;font-weight:600;font-size:10px;color:var(--ink-3);}
+.kpi .value{font-family:var(--font-display);font-weight:800;letter-spacing:-0.04em;color:#fff;font-size:32px;}
+.kpi .value small,.kpi .sub{color:var(--ink-3);}
+
+/* ---- Botones y selects: píldoras de degradado ---- */
+select,.btn{border-radius:980px;font-weight:600;letter-spacing:.01em;}
+.btn.primary{
+  background:var(--grad)!important;color:#fff;text-transform:none;font-weight:700;font-size:15px;
+  box-shadow:0 10px 30px -10px var(--accent-2);border:none;
+}
+.btn.primary:active{transform:scale(.98);}
+.btn.ghost{border:1px solid rgba(255,255,255,.20);color:#fff;background:rgba(255,255,255,.02);border-radius:980px;}
+.btn.ghost:active{background:rgba(255,255,255,.06);}
+select{border:1px solid var(--sep);background:var(--surface-2);color:var(--ink);border-radius:12px;}
+input,textarea{color:var(--ink);}
+.day-card .meta input.wk,.day-card .meta input.notek,.qweight input,
+form.add-comp input,.kcal-custom input{background:rgba(255,255,255,.04)!important;color:var(--ink);}
+
+/* ---- Chips ---- */
+.chip{border-radius:12px;background:rgba(255,255,255,.04);color:var(--ink-2);}
+.chip .code{border-radius:6px;background:rgba(255,255,255,.06);color:var(--ink-3);}
+.chip.on{background:var(--grad);color:#fff;box-shadow:0 8px 22px -12px var(--accent-2);}
+.chip.on .code{background:rgba(255,255,255,.22);color:#fff;}
+.quicklog .qhead .qtotal,.day-card .total-badge{
+  border-radius:980px;font-family:var(--font-mono);
+  background:var(--accent-soft);color:#fff;border:1px solid var(--sep);
+}
+.quicklog .qhead .qdate{font-family:var(--font-display);font-weight:700;letter-spacing:-0.02em;text-transform:none;}
+
+/* ---- Barras / puntos ---- */
+.pbar-track,.weight-track{background:rgba(255,255,255,.08);}
+.pbar-fill{background:var(--grad);}
+.weight-fill{background:linear-gradient(90deg,var(--green),#7CE7C0);}
+.dot{border-radius:6px;border-color:rgba(255,255,255,.16);}
+.dot.on{background:var(--grad);border-color:transparent;}
+.dot.today{box-shadow:0 0 0 3px var(--accent-soft);}
+
+/* ---- Nav inferior: barra glass con indicador de degradado ---- */
+nav.bottom-nav{
+  background:rgba(10,12,18,.72)!important;
+  -webkit-backdrop-filter:blur(22px) saturate(160%)!important;backdrop-filter:blur(22px) saturate(160%)!important;
+  border-top:1px solid var(--sep);gap:0;
+}
+nav.bottom-nav button{
+  border-radius:0;text-transform:uppercase;letter-spacing:.12em;font-weight:600;font-size:10px;
+  position:relative;color:var(--ink-3);
+}
+nav.bottom-nav button.active{background:transparent!important;color:#fff;}
+nav.bottom-nav button.active svg{stroke:url(#navgrad) var(--accent);}
+nav.bottom-nav button.active::after{
+  content:"";position:absolute;top:-8px;left:26%;right:26%;height:3px;background:var(--grad);border-radius:0 0 3px 3px;
+}
+@media(min-width:760px){
+  nav.bottom-nav{left:0;right:0;transform:none;width:auto;bottom:0;border-radius:0;box-shadow:0 -1px 0 var(--sep)!important;}
+}
+
+/* ---- Tablas ---- */
+table.monthly th,table.comp th{text-transform:uppercase;letter-spacing:.1em;font-weight:600;font-size:10px;color:var(--ink-3);}
+@media(max-width:759px){ table.comp tr{background:linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.018))!important;border:1px solid var(--sep)!important;} }
+
+/* ---- Insight card: acento sutil ---- */
+#insightCard{border-left:3px solid transparent;border-image:var(--grad) 1;}
+
+/* ---- Predicción: hero cinematográfico ---- */
+.pred-hero{
+  background:
+    radial-gradient(120% 160% at 100% 0%, rgba(255,255,255,.12), transparent 55%),
+    var(--grad)!important;
+  border:none!important;color:#fff;
+  box-shadow:0 30px 60px -30px var(--accent-2), inset 0 1px 0 rgba(255,255,255,.18);
+}
+.pred-hero-label{color:rgba(255,255,255,.75)!important;letter-spacing:.14em;text-transform:uppercase;}
+.pred-hero-num{color:#fff!important;font-family:var(--font-display);font-weight:800;}
+.pred-hero-num .u{color:rgba(255,255,255,.72)!important;}
+.pred-band{background:rgba(255,255,255,.22)!important;color:#fff!important;border-radius:980px;}
+.pred-hero-refs .pill{background:rgba(255,255,255,.16)!important;color:#fff!important;border-radius:980px;}
+.pred-hero-refs .pill b{color:#fff!important;}
+.pc-value{font-family:var(--font-display);font-weight:800;color:#fff;}
+.pc-label{color:var(--ink-3);letter-spacing:.1em;}
+.pred-reliability .dot-ok{background:var(--green);box-shadow:0 0 0 3px var(--green-soft);}
+.pred-note{border-radius:var(--radius);background:rgba(255,184,77,.12);color:var(--ink-2);}
+.pred-panel .pp-row .mono{color:#fff;}
+
+/* ---- Tooltip de gráfico ---- */
+.chart-tip{
+  position:absolute;pointer-events:none;z-index:6;
+  background:rgba(14,16,24,.92);color:#fff;border:1px solid var(--sep);
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  font-family:var(--font-mono);font-size:11.5px;font-weight:600;
+  padding:6px 9px;border-radius:8px;white-space:nowrap;
+  transition:opacity .12s ease;box-shadow:0 10px 24px rgba(0,0,0,.5);
+}
+.chart-tip b{font-size:12.5px;}
+.chart-tip .ct-date{display:block;color:var(--ink-4);font-weight:500;font-size:10px;margin-top:1px;letter-spacing:.03em;}
+
+/* ---- Sync chip ---- */
+.sync-chip{
+  border-radius:980px;text-transform:uppercase;letter-spacing:.1em;font-weight:600;
+  background:rgba(14,16,24,.7)!important;border:1px solid var(--sep);color:var(--ink-2);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+}
+
+/* ---- Footer ---- */
+footer.data .btn{background:rgba(255,255,255,.03);color:var(--ink-2);border:1px solid var(--sep);}
+footer.data span{color:var(--ink-4);}
+</style>
+</head>
+<body>
+
+<div class="sync-chip" id="syncBadge" title="Estado de sincronización">● local</div>
+
+<main>
+
+<div class="view active" id="view-dashboard">
+
+  <header class="view-head">
+    <h1>Resumen de hoy</h1>
+    <p id="dashDate" class="view-sub">Marca tus hábitos y revisa tu peso de un vistazo.</p>
+  </header>
+
+  <section class="block span-all">
+    <div class="card quicklog" id="quicklog"></div>
+  </section>
+
+  <section class="block span-all">
+    <div class="card" id="insightCard"></div>
+  </section>
+
+  <section class="block span-all">
+    <h2>Predicción de peso</h2>
+    <p class="subtext">Estima tu peso de hoy sin báscula, partiendo de tu último pesaje y tus hábitos. El modelo está entrenado con tu histórico (sep‑25 → jun‑26); la franja ± es tu margen honesto.</p>
+    <div class="card" id="weightPredictionCard"></div>
+  </section>
+
+  <section class="block span-all">
+    <div class="grid grid-6" id="kpiCards"></div>
+  </section>
+
+</div>
+
+<div class="view" id="view-registro">
+
+  <header class="view-head">
+    <h1>Registro diario</h1>
+    <p class="view-sub">Marca cada día lo que cumples. Se guarda al instante.</p>
+  </header>
+
+  <section class="block">
+    <div class="controls-row">
+      <div class="controls-left">
+        <select id="monthSelect"></select>
+        <button class="btn ghost" id="gotoToday">Ir a hoy</button>
+      </div>
+    </div>
+    <p class="month-summary" id="monthSummary"></p>
+    <div id="regList"></div>
+  </section>
+
+  <div class="grid grid-2">
+    <section class="block">
+      <h2>Cumplimiento por hábito</h2>
+      <div class="card" id="habitBars"></div>
+    </section>
+    <section class="block">
+      <h2>Por día de la semana</h2>
+      <div class="card" id="dowBars"></div>
+    </section>
+  </div>
+
+  <section class="block">
+    <h2>Esta semana, de un vistazo</h2>
+    <div class="card dotgrid-wrap" id="weekDotsWrap"><div class="dotgrid" id="weekDots"></div></div>
+  </section>
+
+  <section class="block">
+    <h2>Evolución mensual</h2>
+    <p class="subtext">% de cumplimiento sobre los días ya transcurridos de cada mes</p>
+    <div class="card table-wrap">
+      <table class="monthly" id="monthlyTable"></table>
+    </div>
+  </section>
+</div>
+
+<div class="view" id="view-composicion">
+
+  <header class="view-head">
+    <h1>Composición</h1>
+    <p class="view-sub">Tu peso y tu composición corporal a lo largo del tiempo.</p>
+  </header>
+
+  <section class="block">
+    <h2>Peso y objetivo</h2>
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:12px;">
+        <label style="font-size:12.5px;font-weight:600;color:var(--ink-soft);">Objetivo de peso</label>
+        <input type="number" inputmode="decimal" step="0.1" id="objetivoInput" style="width:84px;padding:7px 8px;border:1px solid var(--line);border-radius:8px;font-family:var(--font-mono);font-size:13px;">
+        <span style="font-size:12px;color:var(--ink-faint);">kg</span>
+      </div>
+      <div class="weight-track"><div class="weight-fill" id="weightFill"></div></div>
+      <div class="weight-marks" id="weightMarks"></div>
+      <div id="weightExtra" style="margin-top:12px;font-size:12.5px;color:var(--ink-soft);"></div>
+      <div id="weightProjection" style="margin-top:6px;font-size:12.5px;color:var(--ink-soft);"></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>Evolución del peso</h2>
+    <div class="card chart-wrap" id="weightChart"></div>
+  </section>
+
+  <section class="block">
+    <h2>Cambio desde el inicio</h2>
+    <div class="grid" id="compChangeCards"></div>
+  </section>
+
+  <section class="block">
+    <h2>Evolución de la composición</h2>
+    <div class="grid" id="compCharts"></div>
+  </section>
+
+  <section class="block">
+    <h2>Objetivo calórico diario</h2>
+    <p class="subtext">Pon el objetivo kcal que quieras (libre). La predicción asume que lo cumples si marcas comida y cena; si no, reduce el déficit o asume superávit.</p>
+    <div class="card" id="kcalCard"></div>
+  </section>
+
+  <section class="block">
+    <h2>Historial de mediciones</h2>
+    <div class="card table-wrap comp-wrap">
+      <table class="comp" id="compTable"></table>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>Añadir medición</h2>
+    <div class="card">
+      <form class="add-comp" id="compForm">
+        <div><label>Fecha</label><input type="date" name="fecha" required></div>
+        <div><label>Peso (kg)</label><input type="number" inputmode="decimal" step="0.1" name="peso" required></div>
+        <div><label>% Grasa</label><input type="number" inputmode="decimal" step="0.1" name="grasa"></div>
+        <div><label>Masa muscular (kg)</label><input type="number" inputmode="decimal" step="0.1" name="masaMuscular"></div>
+        <div><label>IMC</label><input type="number" inputmode="decimal" step="0.1" name="imc"></div>
+        <div><label>Grasa visceral</label><input type="number" inputmode="numeric" step="1" name="grasaVisceral"></div>
+        <div><label>Metab. basal (kcal)</label><input type="number" inputmode="numeric" step="1" name="metabBasal"></div>
+        <div><label>Gasto diario (kcal)</label><input type="number" inputmode="numeric" step="1" name="gastoDiario"></div>
+        <div><label>Masa ósea (kg)</label><input type="number" inputmode="decimal" step="0.1" name="masaOsea"></div>
+        <div><label>% Agua</label><input type="number" inputmode="numeric" step="1" name="agua"></div>
+        <div style="display:flex;align-items:flex-end;"><button type="submit" class="btn primary" style="width:100%;">Añadir medición</button></div>
+      </form>
+    </div>
+  </section>
+</div>
+
+</main>
+
+<nav class="bottom-nav">
+  <button data-view="dashboard" class="active">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+    Dashboard
+  </button>
+  <button data-view="registro">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18"/><path d="M8 2v4M16 2v4"/><path d="M7.5 13.5l2 2 3.5-4"/></svg>
+    Registro
+  </button>
+  <button data-view="composicion">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V10M11 19V5M18 19v-7"/></svg>
+    Composición
+  </button>
+</nav>
+
+<footer class="data">
+  <span>Tus datos se guardan solo en este navegador.</span>
+  <button class="btn ghost" id="btnExport">Exportar copia (JSON)</button>
+  <button class="btn ghost" id="btnImport">Importar copia (JSON)</button>
+  <input type="file" id="fileImport" accept="application/json" style="display:none;">
+  <button class="btn ghost" id="btnRecalibrate">Recalibrar predicción con historial</button>
+  <button class="btn ghost" id="btnReset">Restaurar histórico (conserva julio+)</button>
+</footer>
+
+<script>
+const START = '2026-07-01';
+const END   = '2027-07-01';
+const OBJETIVO_DEFAULT = 80;
+const STORAGE_KEY = 'dietaTrackerV1';
+const STREAK_THRESHOLD = 4;
+function getObjetivo(){ return (state.meta && typeof state.meta.objetivo==='number') ? state.meta.objetivo : OBJETIVO_DEFAULT; }
+function setObjetivo(v){ if(!state.meta) state.meta = {}; state.meta.objetivo = v; saveState(); }
+function getKcalObjetivo(){ return (state.meta && typeof state.meta.kcalObjetivo==='number') ? state.meta.kcalObjetivo : 1350; }
+function setKcalObjetivo(v){ if(!state.meta) state.meta = {}; state.meta.kcalObjetivo = v; saveState(); }
+
+/* =========================================================
+   SINCRONIZACIÓN ENTRE DISPOSITIVOS (Firebase Firestore)
+   Rellena firebaseConfig con los datos de tu proyecto de Firebase.
+   Instrucciones al final del chat.
+   ========================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyCQayh0BzfwnUJNQp7uSb3qvrEiQZcegls",
+  authDomain: "dieta-5fe5d.firebaseapp.com",
+  projectId: "dieta-5fe5d",
+  storageBucket: "dieta-5fe5d.firebasestorage.app",
+  messagingSenderId: "545701374731",
+  appId: "1:545701374731:web:4ad6a46b98e97aa5c2100e"
+};
+// La nube es OPCIONAL. Si los scripts de Firebase no cargan (sin internet, CDN
+// bloqueado…) la app debe seguir funcionando en local. Por eso comprobamos que
+// `firebase` exista y envolvemos la inicialización en try/catch: un fallo aquí
+// NUNCA debe detener el resto del JavaScript (que conecta el menú, etc.).
+let SYNC_ENABLED = !!(firebaseConfig.apiKey && firebaseConfig.projectId && typeof firebase !== 'undefined');
+let db = null;
+let docRef = null;
+let syncTimer = null;
+let suppressNextSnapshot = false;
+
+if(SYNC_ENABLED){
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    db.enablePersistence().catch(()=>{});
+    docRef = db.collection('dietaTracker').doc('estado');
+  }catch(e){
+    console.warn('Firebase no disponible; funcionando solo en este navegador.', e);
+    SYNC_ENABLED = false; db = null; docRef = null;
+  }
+}
+
+/* =========================================================================
+   FUSIÓN DE ESTADOS (anti pérdida de datos)
+   -------------------------------------------------------------------------
+   Nunca sobrescribimos el documento de la nube por completo. Cualquier
+   guardado FUSIONA (unión) el estado local con el remoto: así ningún
+   dispositivo —ni una pestaña con datos viejos— puede borrar lo que otro
+   haya registrado. En conflictos por la misma clave gana 'over'.
+   ========================================================================= */
+function mergeStates(base, over){
+  base = base || {}; over = over || {};
+  const registro = Object.assign({}, base.registro || {}, over.registro || {});
+  const compMap = {};
+  (base.composicion || []).forEach(c => { if(c && c.fecha) compMap[c.fecha] = Object.assign({}, c); });
+  (over.composicion || []).forEach(c => { if(c && c.fecha) compMap[c.fecha] = Object.assign({}, compMap[c.fecha] || {}, c); });
+  const composicion = Object.keys(compMap).sort().map(f => compMap[f]);
+  const meta = Object.assign({}, base.meta || {}, over.meta || {});
+  meta.updatedAt = Math.max((base.meta && base.meta.updatedAt) || 0, (over.meta && over.meta.updatedAt) || 0);
+  return { registro, composicion, meta };
+}
+
+function setSyncBadge(mode){
+  const el = document.getElementById('syncBadge');
+  if(!el) return;
+  el.classList.remove('ok','busy','err');
+  if(!SYNC_ENABLED){ el.textContent = '● solo este navegador'; return; }
+  if(mode==='busy'){ el.textContent = '↻ sincronizando…'; el.classList.add('busy'); }
+  else if(mode==='ok'){ el.textContent = '● sincronizado'; el.classList.add('ok'); }
+  else if(mode==='err'){ el.textContent = '● sin conexión a la nube'; el.classList.add('err'); }
+}
+
+function pushRemote(payload){
+  if(!SYNC_ENABLED || !docRef || !db) return Promise.resolve(false);
+  // Transacción: lee lo remoto y FUSIONA lo local encima. Nunca borra días de
+  // la nube que no estén en local (evita que una pestaña vieja pise a otra).
+  return db.runTransaction(async (t) => {
+    const snap = await t.get(docRef);
+    const remote = snap.exists ? snap.data() : null;
+    const merged = remote ? mergeStates(remote, payload) : payload;
+    t.set(docRef, merged);
+    return merged;
+  }).then((merged) => {
+    // Adoptamos el resultado fusionado en local para converger sin re-subir.
+    state = merged;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    return true;
+  }).catch(() => false); // ante fallo, NO hacemos overwrite destructivo
+}
+function queueRemotePush(){
+  if(!SYNC_ENABLED) return;
+  setSyncBadge('busy');
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(async ()=>{
+    suppressNextSnapshot = true;
+    const ok = await pushRemote(state);
+    setSyncBadge(ok ? 'ok' : 'err');
+  }, 900);
+}
+function startRealtimeSync(){
+  if(!SYNC_ENABLED || !docRef) return;
+  setSyncBadge('busy');
+  docRef.onSnapshot((snap)=>{
+    const remote = snap.data();
+    if(!remote){
+      // primer uso: el documento aún no existe, sube lo que haya en local
+      pushRemote(state).then(ok=>setSyncBadge(ok?'ok':'err'));
+      return;
+    }
+    if(suppressNextSnapshot){ suppressNextSnapshot = false; setSyncBadge('ok'); return; }
+    if(remote.registro){
+      // FUSIÓN aditiva: local gana en conflictos (no perdemos ediciones sin
+      // subir) y añadimos los días/mediciones que existan solo en remoto.
+      const before = JSON.stringify(state.registro || {}) + '#' + (state.composicion || []).length;
+      const merged = mergeStates(remote, state);
+      const after = JSON.stringify(merged.registro) + '#' + merged.composicion.length;
+      // ¿Este dispositivo tiene datos que la nube NO tiene? (recuperación)
+      const remoteReg = remote.registro || {};
+      const remoteComp = remote.composicion || [];
+      const localOnly =
+        Object.keys(state.registro || {}).some(k => !(k in remoteReg)) ||
+        (state.composicion || []).some(c => c && c.fecha && !remoteComp.find(r => r.fecha === c.fecha));
+      if(after !== before){
+        state = merged;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        renderDashboard(); renderRegistro(); renderComposicion();
+      }
+      // Si teníamos días propios que faltaban en la nube, los subimos (fusión).
+      if(localOnly) queueRemotePush();
+    }
+    setSyncBadge('ok');
+  }, ()=> setSyncBadge('err'));
+}
+
+const HABITS = [
+  {key:'comida', label:'Comida', code:'COM'},
+  {key:'cena', label:'Cena', code:'CEN'},
+  {key:'noAlcohol', label:'Sin alcohol', code:'0%'},
+  {key:'deporte', label:'Deporte', code:'DEP'},
+  {key:'beberAgua', label:'Beber agua', code:'AGU'},
+  {key:'dormirBien', label:'Dormir bien', code:'ZZZ'},
+];
+
+const SEED_REGISTRO = {"2025-09-01": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-09-02": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-09-03": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-09-04": {"beberAgua": true, "dormirBien": true}, "2025-09-05": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true}, "2025-09-06": {"comida": true, "cena": true}, "2025-09-07": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-09-08": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-09-09": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-09-10": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true, "peso": 105.6}, "2025-09-11": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-09-12": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-09-13": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true}, "2025-09-14": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-09-15": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true, "peso": 103.7}, "2025-09-16": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-09-17": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-09-18": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-09-19": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-09-20": {"dormirBien": true}, "2025-09-21": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true}, "2025-09-22": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true, "peso": 102.8}, "2025-09-23": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-09-24": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-09-25": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-09-26": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-09-27": {"beberAgua": true, "deporte": true, "dormirBien": true}, "2025-09-28": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-09-29": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-09-30": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true, "peso": 100.8}, "2025-10-01": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-10-02": {"beberAgua": true, "deporte": true, "dormirBien": true, "noAlcohol": true}, "2025-10-03": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-10-04": {"beberAgua": true, "deporte": true, "dormirBien": true, "noAlcohol": true}, "2025-10-05": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-10-06": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true, "peso": 100.0}, "2025-10-07": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-10-08": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-10-09": {"beberAgua": true, "deporte": true, "dormirBien": true, "noAlcohol": true}, "2025-10-10": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-10-11": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-10-12": {"dormirBien": true}, "2025-10-13": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-10-14": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true, "peso": 99.7}, "2025-10-15": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-10-16": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-10-17": {"beberAgua": true, "deporte": true, "dormirBien": true, "peso": 98.7}, "2025-10-18": {"dormirBien": true}, "2025-10-19": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-10-20": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-10-21": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-10-22": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-10-23": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-10-24": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true, "peso": 98.0}, "2025-10-25": {"beberAgua": true, "dormirBien": true}, "2025-10-26": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-10-27": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-10-28": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-10-29": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-10-30": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-10-31": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "peso": 96.3}, "2025-11-01": {"deporte": true, "dormirBien": true}, "2025-11-02": {"beberAgua": true, "dormirBien": true, "noAlcohol": true}, "2025-11-03": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-11-04": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-11-05": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-11-06": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-11-07": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "peso": 95.5}, "2025-11-08": {"deporte": true}, "2025-11-09": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-11-10": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-11-11": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-11-12": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-11-13": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-11-14": {"beberAgua": true, "comida": true, "cena": true, "noAlcohol": true}, "2025-11-17": {"comida": true, "cena": true}, "2025-11-18": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "peso": 94.3}, "2025-11-19": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-11-20": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-11-21": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-11-23": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-11-24": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-11-25": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-11-26": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-11-27": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true}, "2025-11-28": {"beberAgua": true, "deporte": true, "dormirBien": true, "peso": 93.2}, "2025-11-29": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-11-30": {"comida": true, "cena": true}, "2025-12-01": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-12-02": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-12-03": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-12-04": {"beberAgua": true, "dormirBien": true}, "2025-12-05": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "peso": 92.8}, "2025-12-06": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true}, "2025-12-07": {"beberAgua": true, "deporte": true, "dormirBien": true}, "2025-12-08": {"beberAgua": true, "dormirBien": true, "noAlcohol": true}, "2025-12-09": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-12-10": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-12-11": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "noAlcohol": true, "peso": 92.0}, "2025-12-12": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "noAlcohol": true}, "2025-12-13": {"beberAgua": true, "deporte": true, "noAlcohol": true}, "2025-12-14": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-12-15": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-12-16": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-12-17": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-12-18": {"deporte": true, "noAlcohol": true}, "2025-12-19": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-12-20": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2025-12-21": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "noAlcohol": true}, "2025-12-22": {"beberAgua": true, "deporte": true, "dormirBien": true}, "2025-12-23": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true}, "2025-12-24": {"beberAgua": true, "deporte": true, "comida": true, "cena": true}, "2025-12-25": {"beberAgua": true, "comida": true, "cena": true, "noAlcohol": true}, "2025-12-26": {"beberAgua": true, "comida": true, "cena": true, "noAlcohol": true}, "2025-12-27": {"beberAgua": true, "comida": true, "cena": true, "noAlcohol": true}, "2025-12-28": {"deporte": true, "dormirBien": true}, "2025-12-29": {"dormirBien": true}, "2025-12-30": {"deporte": true}, "2026-01-04": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-01-05": {"dormirBien": true}, "2026-01-06": {"dormirBien": true}, "2026-01-07": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true, "peso": 93.8}, "2026-01-08": {"beberAgua": true, "deporte": true, "dormirBien": true}, "2026-01-11": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-01-12": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-01-13": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-01-14": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-01-15": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-01-16": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true, "peso": 92.5}, "2026-01-17": {"comida": true, "cena": true, "noAlcohol": true}, "2026-01-18": {"beberAgua": true, "comida": true, "cena": true, "noAlcohol": true}, "2026-01-19": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-01-20": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-01-21": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-01-22": {"beberAgua": true, "deporte": true, "dormirBien": true, "peso": 92.0}, "2026-01-23": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true}, "2026-01-24": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true}, "2026-01-25": {"beberAgua": true, "dormirBien": true}, "2026-01-26": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-01-27": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true}, "2026-01-28": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-01-29": {"beberAgua": true, "deporte": true, "dormirBien": true, "peso": 90.2}, "2026-01-30": {"beberAgua": true, "deporte": true, "dormirBien": true}, "2026-01-31": {"dormirBien": true}, "2026-02-01": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-02-02": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-02-03": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-02-04": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-02-05": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-02-06": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true, "peso": 89.6}, "2026-02-11": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-02-12": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true}, "2026-02-13": {"beberAgua": true, "comida": true, "cena": true, "noAlcohol": true}, "2026-02-16": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-02-17": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true}, "2026-02-18": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true, "peso": 90.0}, "2026-02-19": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true}, "2026-02-20": {"beberAgua": true, "deporte": true, "dormirBien": true}, "2026-02-21": {"comida": true, "cena": true, "noAlcohol": true}, "2026-02-22": {"comida": true, "cena": true, "noAlcohol": true}, "2026-02-23": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-02-24": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true}, "2026-02-25": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-02-26": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true, "peso": 89.3}, "2026-03-01": {"dormirBien": true}, "2026-03-02": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-03-03": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true}, "2026-03-04": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true}, "2026-03-05": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true}, "2026-03-06": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "peso": 90.5}, "2026-03-07": {"comida": true, "cena": true}, "2026-03-09": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-03-10": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-03-11": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true}, "2026-03-12": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true}, "2026-03-13": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "peso": 89.6}, "2026-03-14": {"comida": true, "cena": true}, "2026-03-15": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true}, "2026-03-16": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true}, "2026-03-17": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true}, "2026-03-18": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-03-19": {"beberAgua": true, "deporte": true, "dormirBien": true}, "2026-03-20": {"beberAgua": true, "dormirBien": true}, "2026-03-23": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-03-24": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true}, "2026-03-25": {"beberAgua": true, "deporte": true, "dormirBien": true}, "2026-03-26": {"beberAgua": true, "comida": true, "cena": true}, "2026-04-05": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-04-06": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true, "peso": 90.1}, "2026-04-07": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-04-08": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-04-09": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-04-10": {"beberAgua": true, "comida": true, "cena": true, "noAlcohol": true}, "2026-04-11": {"beberAgua": true, "comida": true, "cena": true, "noAlcohol": true}, "2026-04-12": {"beberAgua": true, "comida": true, "cena": true, "noAlcohol": true}, "2026-04-13": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-04-14": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-04-15": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-04-16": {"beberAgua": true, "deporte": true, "dormirBien": true, "peso": 88.2}, "2026-04-17": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-04-27": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-04-28": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true, "peso": 89.2}, "2026-04-29": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-04-30": {"beberAgua": true, "deporte": true, "dormirBien": true}, "2026-05-01": {"comida": true, "cena": true, "noAlcohol": true}, "2026-05-02": {"deporte": true, "dormirBien": true}, "2026-05-03": {"beberAgua": true, "comida": true, "cena": true, "noAlcohol": true}, "2026-05-04": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true, "peso": 89.5}, "2026-05-05": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-05-06": {"beberAgua": true, "deporte": true, "dormirBien": true, "peso": 88.9}, "2026-05-07": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true}, "2026-05-08": {"deporte": true, "dormirBien": true}, "2026-05-09": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-05-10": {"deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-05-11": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-05-12": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-05-13": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-05-14": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-05-15": {"beberAgua": true, "deporte": true, "dormirBien": true, "peso": 88.1}, "2026-05-16": {"beberAgua": true, "comida": true, "cena": true, "dormirBien": true}, "2026-05-17": {"beberAgua": true, "dormirBien": true}, "2026-05-18": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true, "peso": 88.7}, "2026-05-19": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-05-20": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-05-21": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-05-22": {"comida": true, "cena": true}, "2026-05-24": {"comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-05-25": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true}, "2026-05-26": {"beberAgua": true, "deporte": true, "dormirBien": true}, "2026-05-27": {"beberAgua": true, "deporte": true, "dormirBien": true, "noAlcohol": true}, "2026-05-28": {"deporte": true, "comida": true, "cena": true}, "2026-06-01": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-06-02": {"beberAgua": true, "comida": true, "cena": true, "noAlcohol": true}, "2026-06-03": {"beberAgua": true, "comida": true, "cena": true}, "2026-06-04": {"dormirBien": true}, "2026-06-05": {"comida": true, "cena": true, "noAlcohol": true}, "2026-06-06": {"comida": true, "cena": true, "noAlcohol": true}, "2026-06-07": {"beberAgua": true, "comida": true, "cena": true, "noAlcohol": true}, "2026-06-08": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true, "peso": 88.6}, "2026-06-09": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-06-10": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-06-11": {"beberAgua": true, "dormirBien": true}, "2026-06-12": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-06-13": {"beberAgua": true, "comida": true, "cena": true, "noAlcohol": true}, "2026-06-14": {"beberAgua": true, "deporte": true, "dormirBien": true, "noAlcohol": true}, "2026-06-15": {"beberAgua": true, "deporte": true, "dormirBien": true, "noAlcohol": true}, "2026-06-16": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-06-17": {"beberAgua": true, "deporte": true}, "2026-06-18": {"deporte": true}, "2026-06-22": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-06-23": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true, "noAlcohol": true}, "2026-06-24": {"beberAgua": true, "deporte": true, "comida": true, "cena": true, "dormirBien": true}, "2026-06-25": {"beberAgua": true}, "2026-05-23": {"peso": 88.1}, "2026-07-01": {"comida": true, "cena": true, "noAlcohol": true, "deporte": true, "beberAgua": true, "dormirBien": true}, "2026-07-02": {"comida": true, "deporte": true, "beberAgua": true, "dormirBien": true, "peso": 88.5}, "2026-07-03": {"comida": true}, "2026-07-05": {"comida": true, "cena": true, "noAlcohol": true}, "2026-07-06": {"comida": true, "deporte": true, "beberAgua": true, "dormirBien": true}, "2026-07-07": {"comida": true, "cena": true, "beberAgua": true, "dormirBien": true}, "2026-07-08": {"comida": true, "beberAgua": true}, "2026-07-09": {"dormirBien": true}, "2026-07-12": {"cena": true, "noAlcohol": true, "beberAgua": true, "dormirBien": true}};
+
+const SEED_COMPOSICION = [{"fecha": "2025-09-10", "peso": 105.6, "grasa": 26.5, "masaMuscular": 73.5, "imc": 31, "grasaVisceral": 8, "metabBasal": 2050, "gastoDiario": 3720, "masaOsea": 3.8, "agua": 51}, {"fecha": "2025-09-15", "peso": 103.7, "grasa": 25.8, "masaMuscular": 73.2, "imc": 30.3, "grasaVisceral": 8, "metabBasal": 2034, "gastoDiario": 3703, "masaOsea": 3.8, "agua": 51}, {"fecha": "2025-09-22", "peso": 102.8, "grasa": 25.2, "masaMuscular": 73.2, "imc": 30, "grasaVisceral": 7, "metabBasal": 2021, "gastoDiario": 3678, "masaOsea": 3.8, "agua": 52}, {"fecha": "2025-09-30", "peso": 100.8, "grasa": 23.7, "masaMuscular": 73.5, "imc": 29.6, "grasaVisceral": 7, "metabBasal": 1998, "gastoDiario": 3636, "masaOsea": 3.8, "agua": 52}, {"fecha": "2025-10-03", "peso": 100.8, "grasa": 23.8, "masaMuscular": 73, "imc": 29.5, "grasaVisceral": 7, "metabBasal": 1991, "gastoDiario": 3624, "masaOsea": 3.8, "agua": 52}, {"fecha": "2025-10-06", "peso": 100.0, "grasa": 23, "masaMuscular": 73.3, "imc": 29.2, "grasaVisceral": 6, "metabBasal": 1979, "gastoDiario": 3602, "masaOsea": 3.8, "agua": 53}, {"fecha": "2025-10-14", "peso": 99.7, "grasa": 21.7, "masaMuscular": 74.2, "imc": 29.1, "grasaVisceral": 6, "metabBasal": 1975, "gastoDiario": 3594, "masaOsea": 3.8, "agua": 54}, {"fecha": "2025-10-17", "peso": 98.7, "grasa": 21.5, "masaMuscular": 73.6, "imc": 28.8, "grasaVisceral": 6, "metabBasal": 1959, "gastoDiario": 3566, "masaOsea": 3.8, "agua": 54}, {"fecha": "2025-10-24", "peso": 98.0, "grasa": 20.2, "masaMuscular": 74.4, "imc": 28.6, "grasaVisceral": 5, "metabBasal": 1949, "gastoDiario": 3548, "masaOsea": 3.8, "agua": 55}, {"fecha": "2025-10-31", "peso": 96.3, "grasa": 20.4, "masaMuscular": 72.9, "imc": 28.1, "grasaVisceral": 5, "metabBasal": 1923, "gastoDiario": 3501, "masaOsea": 3.8, "agua": 55}, {"fecha": "2025-11-07", "peso": 95.5, "grasa": 20.9, "masaMuscular": 71.8, "imc": 27.9, "grasaVisceral": 5, "metabBasal": 1912, "gastoDiario": 3480, "masaOsea": 3.7, "agua": 54}, {"fecha": "2025-11-18", "peso": 94.3, "grasa": 21.4, "masaMuscular": 70.4, "imc": 27.5, "grasaVisceral": 5, "metabBasal": 1893, "gastoDiario": 3445, "masaOsea": 3.6, "agua": 54}, {"fecha": "2025-11-28", "peso": 93.2, "grasa": 20.3, "masaMuscular": 70.6, "imc": 27.2, "grasaVisceral": 5, "metabBasal": 1877, "gastoDiario": 3417, "masaOsea": 3.7, "agua": 54}, {"fecha": "2025-12-05", "peso": 92.8, "grasa": 19.2, "masaMuscular": 71.3, "imc": 27.1, "grasaVisceral": 4, "metabBasal": 1871, "gastoDiario": 3406, "masaOsea": 3.7, "agua": 55}, {"fecha": "2025-12-11", "peso": 92.0, "grasa": 20.08, "masaMuscular": 69.9, "imc": 26.9, "grasaVisceral": 5, "metabBasal": 1859, "gastoDiario": 3385, "masaOsea": 3.6, "agua": 55}, {"fecha": "2026-01-07", "peso": 93.8, "grasa": 22.3, "masaMuscular": 69.2, "imc": 27.4, "grasaVisceral": 6, "metabBasal": 1886, "gastoDiario": 3432, "masaOsea": 3.6, "agua": 53}, {"fecha": "2026-01-16", "peso": 92.5, "grasa": 20.7, "masaMuscular": 69.7, "imc": 27, "grasaVisceral": 5, "metabBasal": 1866, "gastoDiario": 3397, "masaOsea": 3.6, "agua": 54}, {"fecha": "2026-01-22", "peso": 92.0, "grasa": 20.5, "masaMuscular": 69.5, "imc": 26.9, "grasaVisceral": 5, "metabBasal": 1858, "gastoDiario": 3383, "masaOsea": 3.6, "agua": 54}, {"fecha": "2026-01-29", "peso": 90.2, "grasa": 19.3, "masaMuscular": 69.2, "imc": 26.3, "grasaVisceral": 4, "metabBasal": 1832, "gastoDiario": 3335, "masaOsea": 3.6, "agua": 55}, {"fecha": "2026-02-06", "peso": 89.6, "grasa": 19.5, "masaMuscular": 68.6, "imc": 26.2, "grasaVisceral": 4, "metabBasal": 1824, "gastoDiario": 3319, "masaOsea": 3.6, "agua": 55}, {"fecha": "2026-02-18", "peso": 90.0}, {"fecha": "2026-02-26", "peso": 89.3, "grasa": 18.9, "masaMuscular": 68.8, "imc": 26.1, "grasaVisceral": 4, "metabBasal": 1819, "gastoDiario": 3311, "masaOsea": 3.6, "agua": 55}, {"fecha": "2026-03-06", "peso": 90.5}, {"fecha": "2026-03-13", "peso": 89.6}, {"fecha": "2026-04-06", "peso": 90.1}, {"fecha": "2026-04-16", "peso": 88.2, "grasa": 18, "masaMuscular": 68.7, "imc": 25.8, "grasaVisceral": 4, "metabBasal": 1803, "gastoDiario": 3282, "masaOsea": 3.6, "agua": 56}, {"fecha": "2026-04-28", "peso": 89.2}, {"fecha": "2026-05-04", "peso": 89.5}, {"fecha": "2026-05-06", "peso": 88.9}, {"fecha": "2026-05-15", "peso": 88.1}, {"fecha": "2026-05-18", "peso": 88.7}, {"fecha": "2026-05-23", "peso": 88.1}, {"fecha": "2026-06-08", "peso": 88.6}, {"fecha": "2026-07-02", "peso": 88.5, "grasa": 16.7, "masaMuscular": 70.1, "imc": 25.8, "grasaVisceral": 3, "metabBasal": 1806, "gastoDiario": 3288, "masaOsea": 3.6, "agua": 57}];
+
+let state = loadState();
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      // Si el usuario tiene pocos días de registro, fusiona el histórico del cuaderno
+      const nReg = parsed.registro ? Object.keys(parsed.registro).length : 0;
+      if(nReg < 40){
+        const seed = seedState();
+        parsed.registro = Object.assign({}, seed.registro, parsed.registro || {});
+        // fusionar composición por fecha
+        const byF = {};
+        (seed.composicion||[]).forEach(c => byF[c.fecha] = Object.assign({}, c));
+        (parsed.composicion||[]).forEach(c => {
+          byF[c.fecha] = Object.assign({}, byF[c.fecha]||{}, c);
+        });
+        parsed.composicion = Object.keys(byF).sort().map(f => byF[f]);
+        if(!parsed.meta) parsed.meta = {};
+        delete parsed.meta.calibratedAt;
+        delete parsed.meta.calibratedN;
+      }
+      return parsed;
+    }
+  }catch(e){}
+  return seedState();
+}
+function seedState(){
+  return {
+    registro: JSON.parse(JSON.stringify(SEED_REGISTRO)),
+    composicion: JSON.parse(JSON.stringify(SEED_COMPOSICION)),
+    meta: { objetivo: 80, kcalObjetivo: 1350, activityLevel: 'moderado' }
+  };
+}
+function saveState(){
+  if(!state.meta) state.meta = {};
+  state.meta.updatedAt = Date.now();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  queueRemotePush();
+}
+
+const DOW_NAMES = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+function toDate(str){ const [y,m,d] = str.split('-').map(Number); return new Date(y, m-1, d); }
+function toStr(date){ return date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0'); }
+function todayStr(){ return toStr(new Date()); }
+function dowIndex(str){ return toDate(str).getDay(); }
+function dowName(str){ return DOW_NAMES[dowIndex(str)]; }
+function addDays(str,n){ const d = toDate(str); d.setDate(d.getDate()+n); return toStr(d); }
+function clampMax(a,b){ return a < b ? a : b; }
+function clampMin(a,b){ return a > b ? a : b; }
+
+function rangeArray(startStr, endStr){
+  if(toDate(startStr) > toDate(endStr)) return [];
+  const out = []; let cur = startStr;
+  while(cur <= endStr){ out.push(cur); cur = addDays(cur,1); }
+  return out;
+}
+
+function monthsList(){
+  const out = [];
+  let y=2026, m=7;
+  for(let i=0;i<13;i++){
+    out.push({year:y, month:m});
+    m++; if(m>12){m=1;y++;}
+  }
+  return out;
+}
+function monthLabel(y,m){ return MONTH_NAMES[m-1] + ' ' + y; }
+function monthBounds(y,m){
+  const first = new Date(y, m-1, 1);
+  const last = new Date(y, m, 0);
+  return {first: toStr(first), last: toStr(last)};
+}
+
+function getEntry(dateStr){ return state.registro[dateStr] || {}; }
+function dayTotal(entry){ return HABITS.reduce((n,h)=> n + (entry[h.key]?1:0), 0); }
+function effectiveEnd(){ return clampMax(todayStr(), END); }
+
+function habitCompliance(habitKey, upto){
+  const days = rangeArray(START, clampMax(upto, END));
+  if(days.length===0) return 0;
+  let count = 0;
+  days.forEach(d=>{ if(getEntry(d)[habitKey]) count++; });
+  return count/days.length;
+}
+function globalCompliance(upto){
+  const days = rangeArray(START, clampMax(upto, END));
+  if(days.length===0) return 0;
+  let done = 0;
+  days.forEach(d=>{ done += dayTotal(getEntry(d)); });
+  return done/(days.length*6);
+}
+function dowCompliance(dow, upto){
+  const days = rangeArray(START, clampMax(upto, END)).filter(d=>dowIndex(d)===dow);
+  if(days.length===0) return 0;
+  let done = 0;
+  days.forEach(d=>{ done += dayTotal(getEntry(d)); });
+  return done/(days.length*6);
+}
+function monthlyRow(y,m){
+  const {first,last} = monthBounds(y,m);
+  let s = first < START ? START : first;
+  let e = last > END ? END : last;
+  const today = effectiveEnd();
+  if(e > today) e = today;
+  if(s > e) return null;
+  const days = rangeArray(s,e);
+  const row = {label: monthLabel(y,m)};
+  HABITS.forEach(h=>{
+    let done=0;
+    days.forEach(d=>{ if(getEntry(d)[h.key]) done++; });
+    row[h.key] = done/days.length;
+  });
+  let totalDone=0;
+  days.forEach(d=>{ totalDone += dayTotal(getEntry(d)); });
+  row.global = totalDone/(days.length*6);
+  return row;
+}
+function currentStreak(threshold){
+  let start = todayStr();
+  if(Object.keys(getEntry(start)).length===0) start = addDays(start,-1);
+  if(start < START) return 0;
+  let streak=0, d=start;
+  while(d>=START){
+    if(dayTotal(getEntry(d))>=threshold){ streak++; d=addDays(d,-1); } else break;
+  }
+  return streak;
+}
+function bestStreak(threshold){
+  let best=0, cur=0, d=START, end=effectiveEnd();
+  while(d<=end){
+    if(dayTotal(getEntry(d))>=threshold){ cur++; best=Math.max(best,cur); } else { cur=0; }
+    d=addDays(d,1);
+  }
+  return best;
+}
+
+function sortedComp(){
+  return [...state.composicion].sort((a,b)=> a.fecha < b.fecha ? -1 : a.fecha>b.fecha?1:0);
+}
+function firstComp(){ const s = sortedComp(); return s[0] || null; }
+function lastComp(){ const s = sortedComp(); return s[s.length-1] || null; }
+
+function chipHtml(dateStr, habit, {compact=false}={}){
+  const active = !!getEntry(dateStr)[habit.key];
+  return `<button type="button" class="chip ${active?'on':''} ${compact?'compact':''}" data-date="${dateStr}" data-habit="${habit.key}" title="${habit.label}">
+    <span class="code">${habit.code}</span><span class="lbl">${habit.label}</span>
+  </button>`;
+}
+function toggleHabit(d,h){
+  if(!state.registro[d]) state.registro[d] = {};
+  if(state.registro[d][h]) delete state.registro[d][h]; else state.registro[d][h] = true;
+  cleanupEmpty(d);
+  saveState();
+}
+function cleanupEmpty(d){
+  // IMPORTANTE (sincronización): NO borramos el día aunque quede vacío.
+  // Lo conservamos como {} para que "desmarcar" se propague a la nube. Si lo
+  // borrásemos, la fusión aditiva volvería a añadir el día desde el remoto
+  // (parecería que un hábito "se marca solo"). Un {} = día visto y vacío.
+  if(state.registro[d] && typeof state.registro[d] !== 'object') delete state.registro[d];
+}
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function fmt1(n){ return (Math.round(n*10)/10).toFixed(1); }
+function fmtPct(n){ return Math.round(n*100)+'%'; }
+
+function bmiCategory(imc){
+  if(imc==null) return null;
+  if(imc<18.5) return {label:'bajo peso', color:'var(--gold)'};
+  if(imc<25) return {label:'peso normal', color:'var(--good)'};
+  if(imc<30) return {label:'sobrepeso', color:'var(--gold)'};
+  return {label:'obesidad', color:'var(--brick)'};
+}
+
+function daysBetween(a,b){ return Math.round((toDate(b)-toDate(a))/86400000); }
+
+function weightProjection(){
+  const data = sortedComp();
+  if(data.length<3) return {status:'insufficient'};
+  const subset = data.slice(-8);
+  const x0 = subset[0].fecha;
+  const pts = subset.map(d=>({x:daysBetween(x0,d.fecha), y:d.peso}));
+  const n = pts.length;
+  const sx = pts.reduce((s,p)=>s+p.x,0), sy = pts.reduce((s,p)=>s+p.y,0);
+  const sxy = pts.reduce((s,p)=>s+p.x*p.y,0), sxx = pts.reduce((s,p)=>s+p.x*p.x,0);
+  const denom = (n*sxx - sx*sx);
+  if(denom===0) return {status:'insufficient'};
+  const slope = (n*sxy - sx*sy)/denom;
+  const intercept = (sy - slope*sx)/n;
+  const objetivo = getObjetivo();
+  const lastY = pts[pts.length-1].y;
+  if(lastY<=objetivo) return {status:'reached'};
+  if(slope>=-0.005) return {status:'flat'};
+  const xGoal = (objetivo-intercept)/slope;
+  const daysFromNow = Math.round(xGoal - pts[pts.length-1].x);
+  if(daysFromNow<=0) return {status:'reached'};
+  const goalDate = addDays(subset[subset.length-1].fecha, daysFromNow);
+  const weeklyRate = -slope*7;
+  return {status:'ok', goalDate, weeklyRate};
+}
+
+
+/* =============================================================================
+   MODELO PREDICTIVO DE PESO — DOCUMENTACIÓN PARA HUMANOS Y OTRAS IAs
+   =============================================================================
+   Contexto: panel de hábitos de Ana (sept 2025 → …). UI en español.
+
+   OBJETIVO
+   --------
+   Estimar el peso actual y la tendencia a partir de:
+     • Último pesaje real (composición o registro diario)
+     • Objetivo calórico libre (kcal/día) vs TDEE estimado (MB × actividad)
+     • Hábitos diarios: comida, cena, deporte, noAlcohol, beberAgua, dormirBien
+     • Corrección aprendida POR CATEGORÍA de día, entrenada con el histórico real
+
+   ARQUITECTURA: MASA + AGUA (revisión ago-2026)
+   ---------------------------------------------
+   El peso que marca la báscula NO es una sola cosa:
+
+       peso_leído(d) = MASA(d) + AGUA(d)
+
+   · MASA se ACUMULA día a día por balance energético. Es lo que de verdad
+     quieres mover.
+   · AGUA es un desplazamiento de NIVEL que depende sólo de tu estado en las
+     últimas ~72 h (alcohol reciente, sodio, sueño). Aparece y desaparece; no
+     se acumula.
+
+   La versión anterior metía el agua dentro del delta diario, así que el agua
+   se sumaba como si fuera grasa. Peor: una retención que aparece y desaparece
+   DENTRO de un intervalo entre pesajes se cancela sola, así que la regresión
+   por intervalos era estructuralmente incapaz de verla — por eso "no salía" el
+   efecto del alcohol aunque en los datos está y es grande.
+
+   Medido directamente sobre los pesajes reales (desviación de cada lectura
+   respecto a su propia tendencia):
+       bebiste AYER          → +644 g
+       bebiste hace 2 días   → +988 g
+       pesaje en LUNES       → +1178 g   (rebote de fin de semana)
+       dormiste mal          →  +395 g
+   Es decir: el pico de hinchazón es la MAÑANA SIGUIENTE, no el mismo día. El
+   modelo viejo tenía el signo al revés (sumaba agua el día de beber y la
+   restaba al siguiente).
+
+   VALIDACIÓN (backtest walk-forward, no validación cruzada optimista)
+   -------------------------------------------------------------------
+   Método: para cada pesaje se oculta ese pesaje Y todo lo posterior, se
+   recalibra sólo con el histórico previo y se predice ese día. Nunca se mira
+   al futuro. n=26 pesajes.
+
+                        ANTES    AHORA
+     error medio        636 g    480 g
+     mediana            490 g    320 g
+     huecos ≥12 días    953 g    610 g
+     peor caso         3030 g   2090 g
+     cobertura banda      54%      65%   (objetivo 68%)
+
+   Test emparejado: −156 g de media, IC95 [−260, −52] g. Gana el nuevo en 20 de
+   26 pesajes. La mejora es real, no ruido.
+
+   OJO AL MEDIR: la validación cruzada leave-one-out resultó DEMASIADO OPTIMISTA
+   aquí (entrena con intervalos futuros). Con LOO parecía que quitar los
+   términos físicos de alcohol era neutro; en walk-forward era claramente peor.
+   Si tocas el modelo, valida con backtest walk-forward, no con LOO.
+
+   SESGO PRUDENTE (decisión de producto, no del modelo)
+   ----------------------------------------------------
+   Por petición explícita: ante la duda, el número mostrado debe ir EN TU
+   CONTRA, para no confiarse. Se mantiene intacta la estimación neutra (la
+   mediana, que es la que se valida contra el histórico) y encima se añade un
+   recargo proporcional a la incertidumbre:
+
+       mostrado = mediana + (0.45 + 0.40·fracción_días_sin_registrar) · sigma
+
+   Propiedad deseada: el recargo NO es un castigo fijo, es una consecuencia de
+   la ignorancia del modelo. Si te pesas a menudo y marcas hábitos, sigma cae y
+   el recargo casi desaparece; si dejas de registrar, crece. Los días sin
+   registrar cuentan doble porque, si no sabemos qué hiciste, se asume lo peor.
+   La UI muestra SIEMPRE las dos cifras (prudente y neutra) para no engañar.
+
+   TRES CAPAS DEL MODELO
+   ---------------------
+   0) ADAPTACIÓN METABÓLICA (metabAdaptFactor): defensa del set-point. Frena la
+      PÉRDIDA cuanto más cerca estás de tu suelo reciente (termogénesis
+      adaptativa). Va DENTRO del modelo crudo para que la calibración también la
+      vea. Corrige el sesgo sistemático de sobreestimar la pérdida en plateau,
+      que ni la física lineal ni una corrección-constante por categoría pueden
+      capturar. Ver el bloque de doc sobre metabAdaptFactor más abajo.
+   1) MODELO FÍSICO "crudo" (estimateDayDeltaKgRaw): traduce hábitos del día en
+      un balance kcal (ingesta vs gasto) y ese balance en kg (÷7700), con reglas
+      fijas razonables (ver PRED_DEFAULTS y computeDayEnergy). Es el "prior":
+      lo que cabría esperar de cualquier persona con ese perfil, antes de saber
+      nada específico del cuerpo de Ana.
+   2) CORRECCIÓN APRENDIDA POR CATEGORÍA (state.meta.catCorrections): un ajuste
+      en kg/día específico para cada tipo de día —
+        'full'          comida+cena+sin alcohol cumplidos
+        'full+alcohol'  comida+cena cumplidos pero con alcohol
+        'partial'       solo una de las dos comidas marcada
+        'off'           día registrado pero sin comida/cena marcadas
+        'empty'         día sin ningún registro
+        'bias'          deriva constante (agua/hormonal/error sistemático)
+      Este ajuste se calcula por REGRESIÓN RIDGE sobre TODOS los intervalos
+      entre pesajes reales del histórico (calibrateFromHistory) — es decir,
+      "cuánto se equivocó el modelo físico en los tramos donde predominaba
+      cada tipo de día, y en qué dirección". Con más pesajes reales, esta
+      corrección se afina sola; por eso el modelo "va aprendiendo".
+
+   POR QUÉ POR CATEGORÍA Y NO UN ÚNICO FACTOR GLOBAL
+   ---------------------------------------------------
+   Un solo factor de escala/sesgo global no puede capturar que, por ejemplo,
+   "los días con alcohol le cuestan más de lo que dice la teoría" sin También
+   distorsionar los días normales. Con una corrección por categoría, el modelo
+   puede aprender de forma independiente cómo responde el cuerpo de Ana a cada
+   patrón de comportamiento.
+
+   REGULARIZACIÓN (ridge, no mínimos cuadrados puros)
+   ----------------------------------------------------
+   Con ~25-30 intervalos de histórico y 6 parámetros, un ajuste sin regularizar
+   sobreajustaría a ruido. Cada corrección se "tira" hacia 0 (confiar en el
+   modelo físico) con una fuerza inversamente proporcional a cuántos días de
+   esa categoría hay en el histórico: categorías raras (p.ej. pocos días de
+   alcohol registrados) se corrigen poco; categorías abundantes (días vacíos,
+   días completos) se corrigen más si los datos lo sostienen. Límites duros
+   ±0.12 kg/día por categoría y ±0.03 kg/día de sesgo, para que ningún ajuste
+   pueda desbocarse aunque el histórico sea ruidoso.
+
+   APRENDIZAJE ONLINE (learnFromWeighIn) — cada pesaje nuevo
+   ------------------------------------------------------------
+   Un solo pesaje nuevo no tiene información suficiente para reajustar 6
+   parámetros con fiabilidad. Por eso, el aprendizaje "al vuelo" tras cada
+   pesaje solo mueve el término de sesgo (bias) con un paso muy pequeño; el
+   reaprendizaje de las categorías completas se reserva a calibrateFromHistory,
+   que usa TODO el histórico a la vez y por tanto es estadísticamente más
+   fiable para separar 6 efectos distintos.
+
+   SERIE DESDE ÚLTIMO PESAJE (predictWeightSeries / predictToday)
+   -------------------------------------------------------------
+   peso_estimado(hoy) = peso_último + Σ deltaKg(días intermedios)
+   Si un día tiene peso real registrado, se ANCLA (no se predice ese día).
+
+   TENDENCIAS (importante UX)
+   --------------------------
+   • totalDelta  = estimado_hoy - último_pesaje   (acumulado desde báscula)
+   • recentDelta = suma deltaKg de los últimos N días limpios/activos
+   Nunca etiquetar solo con totalDelta si recentTrend discrepa.
+
+   ESTADO (state.meta)
+   -------------------
+   catCorrections {full, 'full+alcohol', partial, off, empty, bias},
+   calibratedAt, calibratedN, calibratedMAE, calibratedSummary, learnLog[]
+
+   CÓMO MEJORAR (guía para otras IAs)
+   ---------------------------------
+   • Con más pesajes reales, recalibrar (btnRecalibrate) para afinar categorías
+   • Añadir features nuevas si se registran (ciclo menstrual, viajes, cenas
+     fuera) como categorías adicionales en CAT_KEYS + computeDayEnergy
+   • Validación leave-one-interval-out y reportar MAE en gramos
+   • No relajar los límites de corrección sin evidencia; priorizar estabilidad
+   ============================================================================= */
+
+
+const KCAL_PER_KG = 7200;
+const PRED_DEFAULTS = {
+  // === Perfil calibrado con datos reales de Ana ===
+  // Día plan (comida+cena+sin alcohol): 1300-1400 kcal
+  intakeOnPlan: 1350,
+  // Solo una comida marcada (suele fallar más la comida): ~2000
+  intakePartial: 2000,
+  // Registro sin comida/cena: ~2450
+  intakeOffPlan: 2450,
+  // Día vacío total: 2800-3000
+  intakeEmpty: 2900,
+  // Alcohol: +550 kcal + retención de agua
+  alcoholKcal: 600,
+  alcoholWaterKg: 0.6,
+  // Deporte mixto: gym L-V (~450), pádel/correr (~300-350), andar (~200) → media ~380
+  deporte: 320,
+  beberAgua: 40,
+  dormirBien: 30,
+  // legacy / rachas vacías
+  emptyDaySurplus: 600,
+  emptyStreakExtra: 100,
+  emptyStreakCap: 7,
+  emptyMaxSurplus: 1200,
+  longGapGainBoost: 1.12,
+};
+
+/* ---------- Corrección aprendida por categoría de día ---------- */
+const CAT_KEYS = ['full', 'full+alcohol', 'partial', 'off', 'empty'];
+const CAT_LIMIT = 0.12;   // kg/día máx de corrección por categoría
+const BIAS_LIMIT = 0.03;  // kg/día máx de sesgo constante
+
+function getCatCorrections(){
+  const m = (state.meta && state.meta.catCorrections) || {};
+  const out = { bias: typeof m.bias === 'number' ? m.bias : 0 };
+  CAT_KEYS.forEach(k => { out[k] = typeof m[k] === 'number' ? m[k] : 0; });
+  return out;
+}
+function setCatCorrections(obj){
+  if(!state.meta) state.meta = {};
+  const clamped = { bias: Math.max(-BIAS_LIMIT, Math.min(BIAS_LIMIT, obj.bias || 0)) };
+  CAT_KEYS.forEach(k => { clamped[k] = Math.max(-CAT_LIMIT, Math.min(CAT_LIMIT, obj[k] || 0)); });
+  state.meta.catCorrections = clamped;
+  state.meta.updatedAt = Date.now();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  queueRemotePush();
+}
+
+/* =============================================================================
+   CAPA DE AGUA — desplazamiento de NIVEL el día que te pesas
+   -----------------------------------------------------------------------------
+   POR QUÉ EXISTE
+   El peso que marca la báscula = MASA (grasa/músculo, que se acumula día a día
+   por balance energético) + AGUA (un desplazamiento de nivel que depende sólo
+   de tu estado en las últimas ~72 h: alcohol reciente, sodio de comer fuera,
+   sueño…). Son cosas distintas y el modelo antiguo las mezclaba: metía el agua
+   dentro del delta diario, así que el agua se ACUMULABA como si fuera grasa.
+
+   Eso era un error estructural, no un ajuste fino: una retención que aparece y
+   desaparece DENTRO de un intervalo entre pesajes se cancela sola, así que la
+   regresión por intervalos era literalmente incapaz de verla. Medido sobre tus
+   pesajes reales, el efecto está y es grande (≈ +350 g la mañana siguiente a
+   beber). Separar masa y agua bajó el error real en huecos largos casi a la
+   mitad (ver CALIBRACIÓN).
+
+   CÓMO
+   waterOffset(fecha) devuelve los kg de agua que llevas encima ESE día. Se
+   descuenta del pesaje de partida y se vuelve a sumar el día que estimamos:
+     peso(hoy) = (último_pesaje − agua(día_pesaje)) + Σ masa + agua(hoy)
+   Así comparamos siempre "cuerpo seco contra cuerpo seco".
+
+   FEATURES (ajustadas por ridge sobre tu histórico, no inventadas)
+     alc0      bebiste HOY            → normalmente negativo: te pesas por la
+                                        mañana, ANTES de la copa de esa noche
+     alc1      bebiste AYER           → +, el pico real de hinchazón
+     alc2      bebiste anteayer       → +, cola que aún no se ha ido
+     offRec    días fuera de plan o
+               sin registrar en 72 h  → +, sodio/comida fuera/glucógeno
+     malSueno  dormiste mal           → cortisol/retención
+   ============================================================================= */
+const WATER_KEYS = ['alc0', 'alc1', 'alc2', 'offRec', 'malSueno'];
+const WATER_LIMIT = 0.35;   // kg máx de desplazamiento por feature
+
+/* Mezcla física ↔ tendencia y sesgo prudente. Todos estos números salen de
+   optimizar el error FUERA DE MUESTRA sobre tus 30 intervalos reales, no de
+   intuición. Ver el bloque CALIBRACIÓN al final del modelo. */
+const TREND_BLEND_PER_DAY = 0.03;   // peso de la tendencia por día sin pesarte
+const TREND_BLEND_MAX     = 0.80;   // tope
+const PESSIMISM_BASE      = 0.45;   // recargo mínimo (en sigmas)
+const PESSIMISM_UNLOGGED  = 0.40;   // extra si no registras: se asume lo peor
+
+function getWaterCorrections(){
+  const m = (state.meta && state.meta.waterCorrections) || {};
+  const out = {};
+  WATER_KEYS.forEach(k => { out[k] = typeof m[k] === 'number' ? m[k] : WATER_DEFAULTS[k]; });
+  return out;
+}
+function setWaterCorrections(obj){
+  if(!state.meta) state.meta = {};
+  const clamped = {};
+  WATER_KEYS.forEach(k => {
+    clamped[k] = Math.max(-WATER_LIMIT, Math.min(WATER_LIMIT, obj[k] || 0));
+  });
+  state.meta.waterCorrections = clamped;
+  state.meta.updatedAt = Date.now();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  queueRemotePush();
+}
+/* Valores de arranque medidos sobre el histórico (sept 2025 → ago 2026).
+   Sirven hasta que calibrateFromHistory() los reajuste con tus datos. */
+const WATER_DEFAULTS = { alc0: -0.35, alc1: 0.35, alc2: 0.11, offRec: 0.35, malSueno: -0.32 };
+
+/** Features de agua del día: estado en las últimas 72 h. */
+function waterFeats(dateStr){
+  const f = {};
+  const e = getEntry(dateStr) || {};
+  const y1 = getEntry(addDays(dateStr, -1)) || {};
+  const y2 = getEntry(addDays(dateStr, -2)) || {};
+  const drank = (x) => Object.keys(x).length > 0 && !(x.noAlcohol === true || x.noAlcohol === 1 || x.noAlcohol === 'true');
+  if(drank(e))  f.alc0 = 1;
+  if(drank(y1)) f.alc1 = 1;
+  if(drank(y2)) f.alc2 = 1;
+  if(Object.keys(e).length && !(e.dormirBien === true || e.dormirBien === 1 || e.dormirBien === 'true')) f.malSueno = 1;
+  // proporción de los últimos 3 días fuera de plan o sin registrar (sodio, comer fuera)
+  let off = 0;
+  for(let k = 0; k < 3; k++){
+    const plan = computeDayEnergy(addDays(dateStr, -k)).plan;
+    if(plan === 'off' || plan === 'empty' || plan === 'partial') off++;
+  }
+  f.offRec = off / 3;
+  return f;
+}
+/** kg de agua encima ese día (puede ser negativo = deshinchado). */
+function waterOffset(dateStr, corrOverride){
+  const c = corrOverride || getWaterCorrections();
+  const f = waterFeats(dateStr);
+  return WATER_KEYS.reduce((s, k) => s + (f[k] || 0) * (c[k] || 0), 0);
+}
+
+function getLastKnownWeight(){
+  const lc = lastComp();
+  let lastDaily = null, lastDailyDate = null;
+  const keys = Object.keys(state.registro || {}).sort();
+  for(let i = keys.length-1; i>=0; i--){
+    const d = keys[i];
+    const p = state.registro[d].peso;
+    if(typeof p === 'number' && !isNaN(p)){
+      lastDaily = p; lastDailyDate = d; break;
+    }
+  }
+  if(lc && lastDaily != null){
+    if(lastDailyDate >= lc.fecha) return {peso: lastDaily, fecha: lastDailyDate, source:'diario'};
+    return {peso: lc.peso, fecha: lc.fecha, source:'composicion'};
+  }
+  if(lastDaily != null) return {peso: lastDaily, fecha: lastDailyDate, source:'diario'};
+  if(lc) return {peso: lc.peso, fecha: lc.fecha, source:'composicion'};
+  return null;
+}
+
+function estimateTDEE(){
+  // TDEE FIJO (no depende del selector de actividad).
+  // Media ponderada de una semana típica: L–V gym + S–D más suaves.
+  const lc = lastComp();
+  const mb = (lc && lc.metabBasal > 1000) ? lc.metabBasal : 1800;
+  const base = mb * 1.25;           // mantenimiento sin entrenar fuerte
+  const gymWeekly = 320 * (5 / 7);  // 5 días de gym repartidos en 7
+  return Math.round(base + gymWeekly);
+}
+
+function isDayEmpty(dateStr){
+  const entry = getEntry(dateStr);
+  const marked = HABITS.filter(h => !!entry[h.key]).length;
+  return marked === 0 && entry.peso == null && !entry.notas;
+}
+
+function emptyStreakEnding(dateStr){
+  if(!isDayEmpty(dateStr)) return 0;
+  let n = 0, d = dateStr;
+  while(d >= START && isDayEmpty(d)){
+    n++;
+    d = addDays(d, -1);
+    if(n > 60) break;
+  }
+  return n;
+}
+
+/** Fuente única: energía del día (ingesta, gasto, déficit) */
+function computeDayEnergy(dateStr){
+  const entry = getEntry(dateStr) || {};
+  const comidaOk = entry.comida === true || entry.comida === 1 || entry.comida === 'true';
+  const cenaOk = entry.cena === true || entry.cena === 1 || entry.cena === 'true';
+  const noAlc = entry.noAlcohol === true || entry.noAlcohol === 1 || entry.noAlcohol === 'true';
+  const hasDeporte = entry.deporte === true || entry.deporte === 1 || entry.deporte === 'true';
+  const hasAgua = entry.beberAgua === true || entry.beberAgua === 1 || entry.beberAgua === 'true';
+  const hasSueno = entry.dormirBien === true || entry.dormirBien === 1 || entry.dormirBien === 'true';
+  const marked = HABITS.filter(h => {
+    const v = entry[h.key];
+    return v === true || v === 1 || v === 'true';
+  }).length;
+  const hasAny = marked > 0 || (typeof entry.peso === 'number') || !!(entry.notas && String(entry.notas).trim());
+
+  let kcalObj = getKcalObjetivo();
+  if(typeof kcalObj !== 'number' || kcalObj < 1100 || kcalObj > 1800) kcalObj = 1350;
+
+  let plan, intakeKcal;
+  if(comidaOk && cenaOk){
+    intakeKcal = kcalObj; // 1300-1400
+    if(!noAlc){
+      intakeKcal += 550;
+      plan = 'full+alcohol';
+    } else {
+      plan = 'full';
+    }
+  } else if(comidaOk || cenaOk){
+    intakeKcal = 2000;
+    if(cenaOk && !comidaOk) intakeKcal = 2100;
+    if(comidaOk && !cenaOk) intakeKcal = 1950;
+    if(!noAlc) intakeKcal += 400;
+    plan = 'partial';
+  } else if(hasAny){
+    intakeKcal = 2450;
+    if(!noAlc) intakeKcal += 300;
+    plan = 'off';
+  } else {
+    intakeKcal = 2900;
+    plan = 'empty';
+  }
+
+  let expenditure = estimateTDEE();
+  if(!(expenditure > 1500)) expenditure = 2450;
+  if(hasDeporte) expenditure += 60;
+  else expenditure -= 45;
+  
+  let deficitKcal = expenditure - intakeKcal;
+
+  if(plan === 'full'){
+    if(deficitKcal < 500) deficitKcal = Math.max(500, expenditure - 1450);
+  }
+
+  return {
+    plan, intakeKcal, expenditure, deficitKcal,
+    comidaOk, cenaOk, noAlc, hasDeporte, marked, hasAny,
+    kcalObj, isEmpty: plan === 'empty'
+  };
+}
+
+/* ---------- Adaptación metabólica / defensa del set-point ----------
+   POR QUÉ EXISTE ESTA CAPA
+   La capa física convierte déficit kcal en kg de forma ~lineal, y la
+   corrección por categoría es una CONSTANTE por tipo de día. Ninguna de las
+   dos puede capturar un hecho fisiológico real y medido en el histórico: la
+   pérdida se FRENA a medida que te acercas a tu suelo reciente (termogénesis
+   adaptativa: el TDEE cae por debajo de lo que predice la masa perdida, el
+   cuerpo defiende su set-point). Sin esto, el modelo sobreestima la pérdida en
+   los tramos de plateau — justo el error sistemático observado.
+
+   CÓMO
+   No usamos "distancia a un suelo" (durante una bajada franca hoy ES el nuevo
+   mínimo, y eso frenaría justo cuando NO debe). Usamos la PENDIENTE REALIZADA:
+   suavizamos los pesajes (EMA τ≈9 d) y medimos su pendiente en los últimos
+   ~28 días. Si sigues bajando a buen ritmo → déficit pleno (factor 1). Si el
+   peso lleva semanas plano pese al déficit → el cuerpo se ha adaptado y la
+   pérdida futura se reduce hacia ADAPT_MIN. Es auto-correctivo: si rompes el
+   plateau y vuelves a bajar, el freno se suelta solo. Solo afecta a la PÉRDIDA
+   (delta<0); nunca amortigua subidas. Sin histórico suficiente devuelve 1. */
+const ADAPT_MIN = 0.35;            // pérdida mínima que queda en pleno plateau
+const ADAPT_EXPECTED_RATE = 0.06;  // kg/día de pérdida "esperada" con adherencia
+const ADAPT_WINDOW = 28;           // días para medir la pendiente realizada
+function metabAdaptFactor(dateStr){
+  const s = allWeighIns().filter(w => w.fecha <= dateStr);
+  if(s.length < 4) return 1;
+  const TAU = 9;
+  let smooth = s[0].peso, prev = s[0].fecha;
+  const sm = [{ f: s[0].fecha, v: smooth }];
+  for(let i = 1; i < s.length; i++){
+    const dt = Math.max(1, daysBetween(prev, s[i].fecha));
+    const a = 1 - Math.exp(-dt / TAU);
+    smooth = smooth + a * (s[i].peso - smooth);
+    sm.push({ f: s[i].fecha, v: smooth });
+    prev = s[i].fecha;
+  }
+  const last = sm[sm.length - 1];
+  const win = sm.filter(p => daysBetween(p.f, last.f) <= ADAPT_WINDOW);
+  if(win.length < 3) return 1;
+  const x = win.map(p => daysBetween(win[0].f, p.f));
+  const y = win.map(p => p.v);
+  const n = x.length, sx = x.reduce((a,b)=>a+b,0), sy = y.reduce((a,b)=>a+b,0);
+  const sxy = x.reduce((a,_,i)=>a+x[i]*y[i],0), sxx = x.reduce((a,b)=>a+b*b,0);
+  const den = n*sxx - sx*sx;
+  if(!den) return 1;
+  const slope = (n*sxy - sx*sy) / den;              // kg/día (negativo = bajando)
+  const realized = Math.max(0, -slope);             // ritmo de pérdida realizado
+  const t = Math.max(0, Math.min(1, realized / ADAPT_EXPECTED_RATE));
+  return ADAPT_MIN + (1 - ADAPT_MIN) * t;           // ADAPT_MIN … 1
+}
+
+/** Modelo físico "crudo" (sin corrección aprendida). Usado también como
+ *  línea base ciega durante la calibración. */
+function estimateDayDeltaKgRaw(dateStr){
+  const energy = computeDayEnergy(dateStr);
+  const streak = energy.isEmpty ? emptyStreakEnding(dateStr) : 0;
+
+  let deficitKcal = energy.deficitKcal;
+  if(energy.plan === 'empty' && streak >= 5){
+    deficitKcal -= 50 * Math.min(streak - 4, 4);
+  }
+
+  let deltaKg = -(deficitKcal / KCAL_PER_KG);
+
+  // NOTA: aquí ya NO se toca el agua por alcohol. Antes se sumaba retención el
+  // día de beber y se restaba al siguiente, lo cual (a) acumulaba agua como si
+  // fuera grasa y (b) tenía el signo al revés respecto a lo medido en tus
+  // pesajes: el pico de hinchazón es la MAÑANA SIGUIENTE, no el mismo día.
+  // Todo el agua vive ahora en waterOffset() como desplazamiento de nivel.
+
+  if(energy.plan === 'full' && deltaKg > -0.03){
+    deltaKg = -(Math.max(deficitKcal, 400) / KCAL_PER_KG);
+  }
+
+  // Adaptación metabólica: frena SOLO la pérdida al acercarse al suelo reciente.
+  const adapt = metabAdaptFactor(dateStr);
+  if(deltaKg < 0) deltaKg *= adapt;
+
+  const maxGain = energy.plan === 'empty' && streak >= 7 ? 0.18 : 0.25;
+  deltaKg = Math.max(-0.28, Math.min(maxGain, deltaKg));
+
+  return {
+    deltaKg, deficitKcal, plan: energy.plan, streak, adapt,
+    marked: energy.marked, isEmpty: energy.isEmpty,
+    comidaOk: energy.comidaOk, cenaOk: energy.cenaOk,
+    intakeKcal: energy.intakeKcal, expenditure: energy.expenditure,
+    kcalObj: energy.kcalObj, hasDeporte: energy.hasDeporte, hasAny: energy.hasAny
+  };
+}
+
+/** Modelo final: crudo + corrección aprendida por categoría, con un
+ *  margen algo más amplio para que la corrección pueda notarse. */
+function estimateDayDeltaKg(dateStr){
+  const raw = estimateDayDeltaKgRaw(dateStr);
+  const corr = getCatCorrections();
+  const catCorrection = (corr[raw.plan] || 0) + corr.bias;
+  let deltaKg = raw.deltaKg + catCorrection;
+
+  const maxGain = raw.plan === 'empty' && raw.streak >= 7 ? 0.22 : 0.30;
+  deltaKg = Math.max(-0.32, Math.min(maxGain, deltaKg));
+
+  return Object.assign({}, raw, { deltaKg, rawDeltaKg: raw.deltaKg, catCorrection });
+}
+
+function predictWeightSeries(fromDate, toDate){
+  const last = getLastKnownWeight();
+  if(!last) return null;
+  const start = last.fecha < fromDate ? fromDate : last.fecha;
+  const days = rangeArray(start, toDate);
+  let w = last.peso;
+  const series = [];
+  let confSum = 0, confN = 0;
+  days.forEach((d)=>{
+    if(d === last.fecha){
+      series.push({fecha:d, peso:w, delta:0, source:last.source, confidence:1});
+      return;
+    }
+    const entry = getEntry(d);
+    if(typeof entry.peso === 'number' && !isNaN(entry.peso)){
+      w = entry.peso;
+      series.push({fecha:d, peso:w, delta:0, source:'diario', confidence:1});
+      return;
+    }
+    const est = estimateDayDeltaKg(d);
+    w = w + est.deltaKg;
+    let conf = est.isEmpty ? 0.25 : (0.4 + 0.1 * est.marked);
+    if(est.marked >= 4) conf = Math.min(0.95, conf + 0.15);
+    confSum += conf; confN++;
+    series.push({fecha:d, peso: Math.round(w*100)/100, delta: est.deltaKg, source:'pred', confidence: conf, deficitKcal: est.deficitKcal});
+  });
+  const avgConf = confN ? confSum/confN : 0.5;
+  return {last, series, avgConfidence: avgConf};
+}
+
+function predictToday(){
+  const last = getLastKnownWeight();
+  if(!last) return {status:'no-data'};
+  const today = todayStr();
+  if(last.fecha > today) return {status:'future-data'};
+  const pred = predictWeightSeries(last.fecha, today);
+  if(!pred || !pred.series.length) return {status:'no-data'};
+  const todayPt = pred.series[pred.series.length-1];
+  const daysSince = daysBetween(last.fecha, today);
+  const totalDelta = todayPt.peso - last.peso;
+
+  let accumKcal = 0;
+  let recentDelta = 0, recentDays = 0, recentClean = 0, recentDeficitSum = 0;
+  const recentN = Math.min(7, Math.max(1, daysSince));
+
+  pred.series.forEach((pt) => {
+    if(pt.fecha === last.fecha) return;
+    const est = estimateDayDeltaKg(pt.fecha);
+    accumKcal += est.deficitKcal;
+  });
+  for(let k = 0; k < recentN; k++){
+    const d = addDays(today, -k);
+    if(d < last.fecha) break;
+    if(d === last.fecha) continue;
+    const est = estimateDayDeltaKg(d);
+    recentDelta += est.deltaKg;
+    recentDays++;
+    if(!est.isEmpty && est.marked >= 3) recentClean++;
+    recentDeficitSum += est.deficitKcal;
+  }
+  const recentWeekly = recentDays > 0 ? (recentDelta / recentDays) * 7 : null;
+  let recentKcal = 0;
+  for(let k = 0; k < recentN; k++){
+    const d = addDays(today, -k);
+    if(d < last.fecha || d === last.fecha) continue;
+    recentKcal += estimateDayDeltaKg(d).deficitKcal;
+  }
+
+  let recentLabel, recentColor;
+  if(recentDays >= 2 && recentDelta <= -0.04){ recentLabel = 'bajando'; recentColor = 'var(--good)'; }
+  else if(recentDays >= 2 && recentDelta >= 0.04){ recentLabel = 'subiendo'; recentColor = 'var(--brick)'; }
+  else { recentLabel = 'estable'; recentColor = 'var(--gold)'; }
+
+  if(recentClean >= 3 && recentDeficitSum > 0){
+    recentLabel = 'bajando';
+    recentColor = 'var(--good)';
+  }
+
+  let accumLabel, accumColor;
+  if(totalDelta <= -0.15){ accumLabel = 'por debajo del último pesaje'; accumColor = 'var(--good)'; }
+  else if(totalDelta >= 0.15){ accumLabel = 'por encima del último pesaje'; accumColor = 'var(--brick)'; }
+  else { accumLabel = 'cerca del último pesaje'; accumColor = 'var(--gold)'; }
+
+  const band = predictionBand(daysSince, pred.avgConfidence, recentClean);
+  const tw = trendWeight();
+
+  /* --- Corrección de agua: comparamos cuerpo seco contra cuerpo seco ---
+     El último pesaje pudo cogerte hinchado (resaca, cena fuera) o deshinchado.
+     Descontamos el agua de ESE día y le sumamos la de HOY. */
+  const waterLast = waterOffset(last.fecha);
+  const waterToday = waterOffset(today);
+  let waterShift = waterToday - waterLast;
+  /* Prudencia: si el ajuste de agua te FAVORECE (te haría parecer más ligero),
+     se aplica sólo a la mitad. Algunas features de agua se apoyan en pocos días
+     del histórico y no queremos que un coeficiente frágil regale kilos.
+     Si el agua te perjudica, se aplica entera. */
+  if(waterShift < 0) waterShift *= 0.5;
+
+  // Estimación física (masa acumulada) ya corregida de agua.
+  const physicsEstimate = todayPt.peso + waterShift;
+
+  // Estimación de tendencia (de-ruido) proyectada a hoy, también en cuerpo seco.
+  let trendEstimate = null;
+  if(tw){
+    trendEstimate = tw.last + tw.slope * daysBetween(tw.fecha, today) + waterShift;
+  }
+
+  /* Mezcla física ↔ tendencia. Calibrado por validación cruzada sobre tu
+     histórico: 0.03/día hasta un máximo de 0.8. Cuanto más tiempo llevas sin
+     pesarte, más manda la tendencia (la física acumula error y sobrestima los
+     días sin registrar); recién pesado, manda la física. */
+  let median = physicsEstimate;
+  if(trendEstimate != null){
+    const wTrend = Math.max(0, Math.min(TREND_BLEND_MAX, daysSince * TREND_BLEND_PER_DAY));
+    median = physicsEstimate * (1 - wTrend) + trendEstimate * wTrend;
+  }
+
+  /* --- SESGO PRUDENTE (a tu contra) ---
+     Petición explícita: ante la duda, que el número te perjudique, para que no
+     te confíes. No falseamos el modelo (la mediana de arriba sigue siendo la
+     estimación honesta y es la que se valida): añadimos un recargo que crece
+     con la INCERTIDUMBRE, de modo que:
+       · te pesas a menudo y registras → el recargo casi desaparece
+       · dejas de registrar / de pesarte → el recargo crece y te penaliza
+     Los días sin registrar cuentan doble aquí: si no sabemos qué hiciste, se
+     asume lo peor. */
+  const gapDays = Math.max(1, daysSince);
+  let unlogged = 0;
+  for(let k = 0; k < gapDays; k++){
+    const d = addDays(today, -k);
+    if(d <= last.fecha) break;
+    if(isDayEmpty(d)) unlogged++;
+  }
+  const unloggedFrac = Math.min(1, unlogged / gapDays);
+  const pessimismZ = PESSIMISM_BASE + PESSIMISM_UNLOGGED * unloggedFrac;
+  const penalty = pessimismZ * band;
+
+  const shown = Math.round((median + penalty) * 100) / 100;
+  median = Math.round(median * 100) / 100;
+
+  return {
+    status: 'ok', last, predicted: shown, median, penalty,
+    pessimismZ, unlogged, unloggedFrac,
+    predictedPhysics: physicsEstimate,
+    waterLast, waterToday, waterShift,
+    adapt: metabAdaptFactor(today),
+    trendEstimate, trendWeight: tw, band, daysSince, totalDelta: shown - last.peso,
+    medianDelta: median - last.peso,
+    accumKcal, recentKcal, recentDelta, recentDays, recentClean, recentWeekly,
+    recentLabel, recentColor, accumLabel, accumColor,
+    confidence: todayPt.confidence, avgConfidence: pred.avgConfidence,
+    trendLabel: recentLabel, trendColor: recentColor, weeklyRate: recentWeekly,
+    series: pred.series
+  };
+}
+
+/* ---------- Solucionador lineal genérico (Gauss-Jordan con pivote) ----------
+   Resuelve A·x = b para matrices pequeñas (n≤8). Usado por la regresión ridge
+   de calibración. Devuelve null si el sistema es (casi) singular. */
+function solveLinearSystem(A, b){
+  const n = b.length;
+  const M = A.map((row, i) => row.concat([b[i]]));
+  for(let col = 0; col < n; col++){
+    let piv = col;
+    for(let r = col+1; r < n; r++){ if(Math.abs(M[r][col]) > Math.abs(M[piv][col])) piv = r; }
+    if(Math.abs(M[piv][col]) < 1e-9) return null;
+    if(piv !== col){ const tmp = M[piv]; M[piv] = M[col]; M[col] = tmp; }
+    const pv = M[col][col];
+    for(let c = col; c <= n; c++) M[col][c] /= pv;
+    for(let r = 0; r < n; r++){
+      if(r === col) continue;
+      const factor = M[r][col];
+      if(factor === 0) continue;
+      for(let c = col; c <= n; c++) M[r][c] -= factor * M[col][c];
+    }
+  }
+  return M.map(row => row[n]);
+}
+
+function learnFromWeighIn(actualPeso, fecha){
+  // Aprendizaje online: SOLO ajusta el sesgo global (bias), con paso muy
+  // pequeño. Un único pesaje nuevo no tiene información suficiente para
+  // reajustar con fiabilidad las 5 correcciones por categoría — eso se
+  // reserva a calibrateFromHistory(), que usa todo el histórico a la vez.
+  const map = {};
+  sortedComp().forEach(c => { if(c.peso != null) map[c.fecha] = c.peso; });
+  Object.keys(state.registro || {}).sort().forEach(d => {
+    const p = state.registro[d].peso;
+    if(typeof p === 'number' && !isNaN(p) && d !== fecha) map[d] = p;
+  });
+  const prevDates = Object.keys(map).filter(d => d < fecha).sort();
+  if(!prevDates.length) return;
+  const prevFecha = prevDates[prevDates.length - 1];
+  const prevPeso = map[prevFecha];
+  const days = daysBetween(prevFecha, fecha);
+  if(days < 1 || days > 45) return;
+
+  // Comparamos cuerpo seco contra cuerpo seco: si te pesaste hinchado (resaca,
+  // cena fuera), ese agua NO debe entrar en el sesgo aprendido, que representa
+  // deriva de MASA. Sin esto, una resaca puntual enseñaba al modelo que engordas.
+  let predicted = prevPeso - waterOffset(prevFecha);
+  let d = addDays(prevFecha, 1);
+  while(d < fecha){
+    predicted += estimateDayDeltaKg(d).deltaKg;
+    d = addDays(d, 1);
+  }
+  predicted += estimateDayDeltaKg(fecha).deltaKg * 0.25;
+  predicted += waterOffset(fecha);
+
+  const error = actualPeso - predicted;
+  const errPerDay = error / days;
+
+  const alpha = Math.min(0.10, 0.03 + Math.abs(errPerDay) * 0.6);
+  const corr = getCatCorrections();
+  const newBias = Math.max(-BIAS_LIMIT, Math.min(BIAS_LIMIT, corr.bias * (1 - alpha) + errPerDay * alpha));
+  corr.bias = newBias;
+  setCatCorrections(corr);
+
+  if(!state.meta.learnLog) state.meta.learnLog = [];
+  state.meta.learnLog.push({
+    fecha, prevFecha, days,
+    predicted: Math.round(predicted * 1000) / 1000,
+    actual: actualPeso,
+    error: Math.round(error * 1000) / 1000,
+    errorG: Math.round(error * 1000),
+    bias: newBias
+  });
+  if(state.meta.learnLog.length > 40) state.meta.learnLog = state.meta.learnLog.slice(-40);
+  state.meta.updatedAt = Date.now();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  queueRemotePush();
+
+  // Auto-aprendizaje: cada 3 pesajes nuevos, reentrena las 5 categorías con
+  // TODO el histórico (no solo el sesgo). Así el modelo mejora solo con el uso.
+  state.meta.weighInsSinceCalib = (state.meta.weighInsSinceCalib || 0) + 1;
+  if(state.meta.weighInsSinceCalib >= 3){
+    state.meta.weighInsSinceCalib = 0;
+    try{ calibrateFromHistory(); }catch(e){ /* nunca romper por recalibrar */ }
+  }
+}
+
+/* =============================================================================
+   CALIBRACIÓN — ajuste alterno MASA ↔ AGUA
+   -----------------------------------------------------------------------------
+   El peso leído = masa (se acumula) + agua (nivel del día). Ajustar las dos a
+   la vez es un problema mal condicionado, así que se alterna:
+
+     1) MASA: para cada intervalo entre pesajes, se descuenta el agua estimada
+        de los dos extremos y se ajusta por ridge cuánto se equivocó la física
+        en cada categoría de día (full, alcohol, parcial, off, vacío) + sesgo.
+     2) AGUA: con esa masa fija, el residuo que queda EN EL EXTREMO de cada
+        intervalo se atribuye al agua y se ajusta por ridge sobre las features
+        de las últimas 72 h.
+     3) Repetir 3 veces (converge rápido).
+
+   Por qué alternar y no una sola regresión gigante: masa y agua tienen
+   estructuras distintas (una se acumula con los días, la otra no depende de la
+   longitud del intervalo). Mezclarlas en un único diseño las hace colineales y
+   los coeficientes se disparan. Alternando, cada etapa ve un problema limpio.
+
+   Regularización ridge en ambas etapas, más fuerte cuanta menos evidencia
+   tenga esa feature, y límites duros (CAT_LIMIT, WATER_LIMIT) para que nada se
+   desboque con un histórico corto.
+   ============================================================================= */
+
+/* Construye los intervalos entre pesajes consecutivos con: recuento de días por
+   categoría, predicción física cruda acumulada y peso real en ambos extremos. */
+function buildCalibrationIntervals(){
+  const map = {};
+  sortedComp().forEach(c => { if(c.peso != null) map[c.fecha] = c.peso; });
+  Object.keys(state.registro || {}).sort().forEach(d => {
+    const p = state.registro[d].peso;
+    if(typeof p === 'number' && !isNaN(p)) map[d] = p;
+  });
+  const series = Object.keys(map).sort().map(f => ({ fecha: f, peso: map[f] }));
+  const out = [];
+  for(let i = 1; i < series.length; i++){
+    const a = series[i-1], b = series[i];
+    const days = daysBetween(a.fecha, b.fecha);
+    if(days < 2 || days > 35) continue;
+    const counts = {}; CAT_KEYS.forEach(k => counts[k] = 0);
+    let predRaw = 0, markedCount = 0, d = addDays(a.fecha, 1);
+    while(d < b.fecha){
+      const raw = estimateDayDeltaKgRaw(d);
+      counts[raw.plan] = (counts[raw.plan] || 0) + 1;
+      predRaw += raw.deltaKg;
+      if(raw.marked > 0) markedCount++;
+      d = addDays(d, 1);
+    }
+    // el día del pesaje cuenta 0.25 (te pesas a media jornada)
+    const rawB = estimateDayDeltaKgRaw(b.fecha);
+    counts[rawB.plan] = (counts[rawB.plan] || 0) + 0.25;
+    predRaw += rawB.deltaKg * 0.25;
+    const effDays = days - 0.75;
+    const conf = 0.35 + 0.65 * (markedCount / days);
+    const lengthW = days >= 5 && days <= 21 ? 1.2 : (days < 5 ? 0.7 : 0.85);
+    out.push({
+      from: a.fecha, to: b.fecha, days, counts, effDays,
+      pesoA: a.peso, pesoB: b.peso,
+      predRawDelta: predRaw,
+      featsA: waterFeats(a.fecha), featsB: waterFeats(b.fecha),
+      w: conf * lengthW * Math.sqrt(days)
+    });
+  }
+  return out;
+}
+
+/* Ridge genérico ponderado, con encogimiento hacia un PRIOR (no hacia 0).
+   rows = [{x:{clave:valor}, y, w}];  prior = {clave: valor esperado}
+
+   Por qué hacia un prior y no hacia cero: encoger hacia 0 equivale a decir "sin
+   datos, el efecto no existe". Para el agua eso es falso y además dañino — sin
+   datos suficientes el modelo se quedaba sin modelar el alcohol en absoluto, y
+   medido en backtest walk-forward eso empeoraba la predicción. Encogiendo hacia
+   los valores fisiológicos medidos (WATER_DEFAULTS), con pocos datos el modelo
+   usa lo que ya sabemos de tu histórico y sólo se aparta cuando tus datos lo
+   justifican. Resuelve (X'WX + λI)θ = X'Wy + λ·prior. */
+function ridgeFit(rows, keys, lambda, limit, limitFor, prior){
+  const n = keys.length;
+  const A = Array.from({length:n}, () => new Array(n).fill(0));
+  const B = new Array(n).fill(0);
+  const evidence = {}; keys.forEach(k => evidence[k] = 0);
+  rows.forEach(r => {
+    const x = keys.map(k => r.x[k] || 0);
+    for(let i = 0; i < n; i++){
+      B[i] += r.w * x[i] * r.y;
+      for(let j = 0; j < n; j++) A[i][j] += r.w * x[i] * x[j];
+    }
+    keys.forEach((k, i) => evidence[k] += Math.abs(x[i]));
+  });
+  for(let k = 0; k < n; k++){
+    const lam = lambda / (1 + evidence[keys[k]] / 4);
+    A[k][k] += lam;
+    B[k] += lam * ((prior && prior[keys[k]]) || 0);
+  }
+  const sol = solveLinearSystem(A, B);
+  const out = {};
+  keys.forEach((k, i) => {
+    const lim = limitFor ? limitFor(k) : limit;
+    const fallback = (prior && prior[k]) || 0;
+    out[k] = sol ? Math.max(-lim, Math.min(lim, sol[i])) : fallback;
+  });
+  return out;
+}
+
+const MASS_KEYS = CAT_KEYS.concat(['bias']);
+const LAMBDA_MASS = 90;
+const LAMBDA_WATER = 10;
+
+function waterFromFeats(feats, corr){
+  return WATER_KEYS.reduce((s, k) => s + (feats[k] || 0) * (corr[k] || 0), 0);
+}
+/** Delta de MASA predicho para un intervalo (sin agua). */
+function massIntervalDelta(it, mass){
+  return it.predRawDelta
+    + CAT_KEYS.reduce((s, k) => s + (it.counts[k] || 0) * (mass[k] || 0), 0)
+    + (mass.bias || 0) * it.effDays;
+}
+
+/** Ajuste alterno. Devuelve {mass, water}. Función PURA (no toca state). */
+function fitMassAndWater(intervals, iters){
+  let water = {}; WATER_KEYS.forEach(k => water[k] = 0);
+  let mass = {}; MASS_KEYS.forEach(k => mass[k] = 0);
+  const rounds = iters || 3;
+  for(let it = 0; it < rounds; it++){
+    // --- 1) MASA con los extremos descontados de agua ---
+    const rowsM = intervals.map(iv => {
+      const wA = waterFromFeats(iv.featsA, water);
+      const wB = waterFromFeats(iv.featsB, water);
+      const x = {}; CAT_KEYS.forEach(k => x[k] = iv.counts[k] || 0); x.bias = iv.effDays;
+      return { x, y: (iv.pesoB - wB) - (iv.pesoA - wA) - iv.predRawDelta, w: iv.w };
+    });
+    mass = ridgeFit(rowsM, MASS_KEYS, LAMBDA_MASS, CAT_LIMIT,
+      (k) => k === 'bias' ? BIAS_LIMIT : CAT_LIMIT);
+    // --- 2) AGUA sobre el residuo del extremo ---
+    const rowsW = intervals.map(iv => ({
+      x: iv.featsB,
+      y: iv.pesoB - (iv.pesoA + massIntervalDelta(iv, mass)),
+      w: iv.w
+    }));
+    water = ridgeFit(rowsW, WATER_KEYS, LAMBDA_WATER, WATER_LIMIT, null, WATER_DEFAULTS);
+  }
+  return { mass, water };
+}
+
+/** Predicción completa del peso final de un intervalo (masa + agua). */
+function predictIntervalWeight(it, mass, water){
+  const wA = waterFromFeats(it.featsA, water);
+  const wB = waterFromFeats(it.featsB, water);
+  return (it.pesoA - wA) + massIntervalDelta(it, mass) + wB;
+}
+/* Compatibilidad: delta predicho de un intervalo con las correcciones vigentes. */
+function predictIntervalDelta(it, corr){
+  return massIntervalDelta(it, corr || getCatCorrections());
+}
+
+function calibrateFromHistory(){
+  const intervals = buildCalibrationIntervals();
+  if(intervals.length < 4) return { ok: false, reason: 'pocos intervalos válidos (mín. 4)' };
+  if(!state.meta) state.meta = {};
+
+  const prevMass = getCatCorrections();
+  const prevWater = getWaterCorrections();
+  const fitted = fitMassAndWater(intervals, 3);
+
+  // Suavizado con la calibración anterior (evita saltos bruscos entre sesiones)
+  const mix = 0.55;
+  const nextMass = { bias: (prevMass.bias || 0) * (1-mix) + (fitted.mass.bias || 0) * mix };
+  CAT_KEYS.forEach(k => { nextMass[k] = (prevMass[k]||0)*(1-mix) + (fitted.mass[k]||0)*mix; });
+  const nextWater = {};
+  WATER_KEYS.forEach(k => { nextWater[k] = (prevWater[k]||0)*(1-mix) + (fitted.water[k]||0)*mix; });
+
+  setCatCorrections(nextMass);
+  setWaterCorrections(nextWater);
+
+  const mass = getCatCorrections(), water = getWaterCorrections();
+
+  // MAE en muestra (optimista: mismos datos con los que se entrenó)
+  let absSum = 0, maxAbs = 0, n2 = 0;
+  intervals.forEach(it => {
+    const err = Math.abs(it.pesoB - predictIntervalWeight(it, mass, water));
+    absSum += err; maxAbs = Math.max(maxAbs, err); n2++;
+  });
+  const mae = n2 ? absSum / n2 : 0;
+  const maeG = Math.round(mae * 1000);
+
+  // Error HONESTO fuera de muestra
+  const cv = crossValidateModel();
+
+  state.meta.calibratedAt = Date.now();
+  state.meta.calibratedN = intervals.length;
+  state.meta.calibratedMAE = mae;
+  state.meta.calibratedMaxErr = maxAbs;
+  state.meta.calibratedSummary = {
+    corrections: mass, water, intervals: intervals.length,
+    maeKg: mae, maeG, maxErrG: Math.round(maxAbs*1000),
+    oosMaeG: cv.ok ? cv.oosMaeG : null,
+    oosMedianG: cv.ok ? cv.oosMedianG : null,
+    oosMaxG: cv.ok ? cv.oosMaxG : null
+  };
+  state.meta.updatedAt = Date.now();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  queueRemotePush();
+
+  return {
+    ok: true, corrections: mass, water, n: intervals.length,
+    meanAbsErr: mae, maeG, maxErrG: Math.round(maxAbs*1000),
+    oosMaeG: cv.ok ? cv.oosMaeG : null,
+    oosMedianG: cv.ok ? cv.oosMedianG : null,
+    oosMaxG: cv.ok ? cv.oosMaxG : null
+  };
+}
+
+/* =============================================================================
+   VALIDACIÓN CRUZADA (leave-one-interval-out) — error HONESTO fuera de muestra
+   -----------------------------------------------------------------------------
+   Para cada intervalo: reentrena masa Y agua con TODOS los demás y predice ese.
+   Es el único número que responde a "¿cuánto me equivoco con datos que no he
+   visto?". Función PURA: no toca state.
+   ============================================================================= */
+function crossValidateModel(){
+  const intervals = buildCalibrationIntervals();
+  if(intervals.length < 6) return { ok:false, reason:'pocos intervalos' };
+  let absSum = 0, maxAbs = 0, n = 0; const all = [];
+  for(let i = 0; i < intervals.length; i++){
+    const train = intervals.filter((_, j) => j !== i);
+    const { mass, water } = fitMassAndWater(train, 3);
+    const err = Math.abs(intervals[i].pesoB - predictIntervalWeight(intervals[i], mass, water));
+    absSum += err; maxAbs = Math.max(maxAbs, err); all.push(err); n++;
+  }
+  all.sort((a,b)=>a-b);
+  return {
+    ok:true, n,
+    oosMae: absSum/n, oosMaeG: Math.round(absSum/n*1000),
+    oosMedianG: Math.round(all[Math.floor(all.length/2)]*1000),
+    oosMaxG: Math.round(maxAbs*1000)
+  };
+}
+function maybeCalibrate(){
+  if(state.meta && state.meta.calibratedAt && typeof state.meta.calibratedMAE === 'number'){
+    return;
+  }
+  const r = calibrateFromHistory();
+  if(r.ok) console.log('Calibración histórica', r.maeG + ' g MAE (en muestra),',
+    (r.oosMaeG!=null?r.oosMaeG+' g CV,':''), r.n, 'intervalos');
+}
+
+const CAT_LABELS = { 'full':'Plan completo', 'full+alcohol':'Completo+alcohol', 'partial':'Parcial', 'off':'Fuera de plan', 'empty':'Vacío' };
+const WATER_LABELS = { 'alc0':'Bebiste hoy', 'alc1':'Bebiste ayer', 'alc2':'Bebiste anteayer', 'offRec':'Fuera de plan 72h', 'malSueno':'Dormiste mal' };
+
+/* ---------- Serie única de pesajes reales (composición + registro) ---------- */
+function allWeighIns(){
+  const map = {};
+  sortedComp().forEach(c => { if(c.peso != null) map[c.fecha] = c.peso; });
+  Object.keys(state.registro || {}).forEach(d => {
+    const p = state.registro[d].peso;
+    if(typeof p === 'number' && !isNaN(p)) map[d] = p;
+  });
+  return Object.keys(map).sort().map(f => ({ fecha: f, peso: map[f] }));
+}
+
+/* ---------- Peso de tendencia (de-ruido) ----------
+   El peso real de un día no es la lectura de la báscula (que oscila ±0.4 kg
+   por agua/hidratación), sino la tendencia suave por debajo. Suavizamos la
+   serie de pesajes con una media exponencial de constante ~9 días (enfoque
+   tipo TrendWeight/Hacker's Diet). Devuelve el último valor suave y la
+   pendiente reciente en kg/día. */
+function trendWeight(){
+  const s = allWeighIns();
+  if(!s.length) return null;
+  const TAU = 9; // días
+  let smooth = s[0].peso, prevDate = s[0].fecha;
+  const smoothed = [{fecha:s[0].fecha, raw:s[0].peso, smooth}];
+  for(let i=1;i<s.length;i++){
+    const dt = Math.max(1, daysBetween(prevDate, s[i].fecha));
+    const alpha = 1 - Math.exp(-dt / TAU);
+    smooth = smooth + alpha * (s[i].peso - smooth);
+    smoothed.push({fecha:s[i].fecha, raw:s[i].peso, smooth});
+    prevDate = s[i].fecha;
+  }
+  // pendiente reciente: regresión sobre los puntos suaves de los últimos 42 días
+  const last = smoothed[smoothed.length-1];
+  const win = smoothed.filter(p => daysBetween(p.fecha, last.fecha) <= 42);
+  let slope = 0;
+  if(win.length >= 2){
+    const x = win.map(p => daysBetween(win[0].fecha, p.fecha));
+    const y = win.map(p => p.smooth);
+    const n = x.length, sx = x.reduce((a,b)=>a+b,0), sy = y.reduce((a,b)=>a+b,0);
+    const sxy = x.reduce((a,_,i)=>a+x[i]*y[i],0), sxx = x.reduce((a,b)=>a+b*b,0);
+    const den = n*sxx - sx*sx;
+    if(den) slope = (n*sxy - sx*sy)/den;
+    slope = Math.max(-0.06, Math.min(0.03, slope)); // banda fisiológica sensata
+  }
+  return { last: last.smooth, lastRaw: last.raw, fecha: last.fecha, slope, smoothed };
+}
+
+/* ---------- Banda de incertidumbre honesta (± kg) ----------
+   AJUSTADA, no inventada: se tomaron los errores reales del modelo en
+   validación cruzada (leave-one-interval-out) sobre tu histórico y se ajustó
+   por mínimos cuadrados la curva
+
+       sigma(d) = sqrt( BAND_FLOOR² + (BAND_DRIFT · d)² )
+
+   · BAND_FLOOR ≈ 0.60 kg — suelo irreducible. NO es un fallo del modelo: es lo
+     que oscila tu propia báscula de un día a otro (agua, hidratación, hora,
+     contenido intestinal). Ningún modelo puede bajar de aquí.
+   · BAND_DRIFT ≈ 0.030 kg/día — deriva que se acumula por cada día que pasas
+     sin pesarte.
+   Se suman en cuadratura porque son errores independientes.
+   Registrar bien tus hábitos estrecha la banda (sabemos qué hiciste). */
+const BAND_FLOOR = 0.60;
+const BAND_DRIFT = 0.030;
+function predictionBand(daysSince, avgConfidence, recentClean){
+  const conf = (typeof avgConfidence === 'number') ? avgConfidence : 0.5;
+  const d = Math.max(0, daysSince);
+  let band = Math.sqrt(BAND_FLOOR * BAND_FLOOR + Math.pow(BAND_DRIFT * d, 2));
+  // registro bueno = menos incertidumbre sobre qué hiciste (hasta −18%)
+  const cleanFactor = 1 - Math.min(0.18, (recentClean || 0) * 0.03) - Math.min(0.10, (conf - 0.5) * 0.2);
+  band *= Math.max(0.72, cleanFactor);
+  return Math.max(0.35, Math.min(2.2, band));
+}
+
+/* Sparkline SVG de la trayectoria estimada desde el último pesaje.
+   Se corrige linealmente para terminar en el peso mostrado (mezcla con la
+   tendencia de-ruido), de modo que el punto final coincide con el titular. */
+function predSparkline(p, dir){
+  const raw = (p.series || []).filter(pt => typeof pt.peso === 'number');
+  if(raw.length < 2) return '';
+  const nlast = raw.length - 1;
+  const physEnd = raw[nlast].peso;
+  const drift = physEnd - (p.predicted != null ? p.predicted : physEnd);
+  const s = raw.map((pt,i) => ({ peso: pt.peso - drift * (i/nlast) }));
+  const W = 320, H = 92, padL = 6, padR = 6, padT = 12, padB = 12;
+  const band = p.band || 0.4;
+  const ys = s.map(pt => pt.peso);
+  let minW = Math.min(...ys) - band - 0.2;
+  let maxW = Math.max(...ys) + band + 0.2;
+  if(maxW - minW < 1){ const mid=(maxW+minW)/2; minW=mid-0.6; maxW=mid+0.6; }
+  const x = i => padL + (i/(s.length-1)) * (W-padL-padR);
+  const y = w => padT + (1-(w-minW)/(maxW-minW)) * (H-padT-padB);
+  const line = s.map((pt,i)=> (i===0?'M':'L') + x(i).toFixed(1) + ',' + y(pt.peso).toFixed(1)).join(' ');
+  const area = line + ` L${x(s.length-1).toFixed(1)},${H-padB} L${x(0).toFixed(1)},${H-padB} Z`;
+  const lastX = x(s.length-1);
+  const ly = y(s[s.length-1].peso);
+  const bandTop = y(s[s.length-1].peso + band), bandBot = y(s[s.length-1].peso - band);
+  const stroke = dir === 'down' ? 'var(--green)' : dir === 'up' ? 'var(--red)' : 'var(--orange)';
+  return `<svg class="pred-spark-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Trayectoria estimada del peso">
+    <defs><linearGradient id="predFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${stroke}" stop-opacity="0.20"/>
+      <stop offset="1" stop-color="${stroke}" stop-opacity="0"/></linearGradient></defs>
+    <rect x="${(lastX-3).toFixed(1)}" y="${bandTop.toFixed(1)}" width="6" height="${(bandBot-bandTop).toFixed(1)}" rx="3" fill="${stroke}" opacity="0.18"/>
+    <path d="${area}" fill="url(#predFill)"/>
+    <path d="${line}" fill="none" stroke="${stroke}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${x(0).toFixed(1)}" cy="${y(s[0].peso).toFixed(1)}" r="3.4" fill="var(--surface)" stroke="var(--ink-3)" stroke-width="2"/>
+    <circle cx="${lastX.toFixed(1)}" cy="${ly.toFixed(1)}" r="4.2" fill="${stroke}"/>
+  </svg>`;
+}
+
+function renderWeightPrediction(){
+  const el = document.getElementById('weightPredictionCard');
+  if(!el) return;
+  const p = predictToday();
+  if(p.status !== 'ok'){
+    el.innerHTML = '<div class="pred-panel"><div class="empty" style="padding:20px 0;">Añade un pesaje en «Hoy» o en «Composición» para activar la predicción.</div></div>';
+    return;
+  }
+
+  const t = estimateDayDeltaKg(todayStr());
+  const energy = computeDayEnergy(todayStr());
+  const intake = Math.round(energy.intakeKcal);
+  const exp = Math.round(energy.expenditure);
+  const bal = Math.round(energy.deficitKcal);
+  const balAbs = Math.abs(bal);
+  const isDef = bal > 0;
+  const dG = Math.round(t.deltaKg * 1000);
+  // El cambio desde el pesaje es una AFIRMACIÓN de hecho: usa la estimación
+  // neutra, no la prudente (el recargo es una decisión de producto, no un kg real).
+  const totalG = Math.round((p.medianDelta != null ? p.medianDelta : p.totalDelta || 0) * 1000);
+  const accumK = Math.round(p.accumKcal || 0);
+  const recentK = Math.round(p.recentKcal || 0);
+  const bandG = Math.round((p.band || 0) * 1000);
+  const bandKg = fmt1(p.band || 0);
+  const maeG = state.meta && state.meta.calibratedSummary && state.meta.calibratedSummary.maeG;
+  const oosMaeG = state.meta && state.meta.calibratedSummary && state.meta.calibratedSummary.oosMaeG;
+  const nInt = state.meta && state.meta.calibratedSummary && state.meta.calibratedSummary.intervals;
+  const twKg = p.trendWeight ? fmt1(p.trendWeight.last) : null;
+
+  let planTag = 'Sin registro hoy';
+  if(energy.plan === 'full') planTag = 'Plan completo';
+  else if(energy.plan === 'full+alcohol') planTag = 'Comidas OK · con alcohol';
+  else if(energy.plan === 'partial') planTag = 'Plan parcial';
+  else if(energy.plan === 'off') planTag = 'Fuera de plan';
+  if(energy.hasDeporte) planTag += ' · deporte';
+
+  const daysTxt = p.daysSince === 0 ? 'hoy mismo' : (p.daysSince === 1 ? 'hace 1 día' : 'hace ' + p.daysSince + ' días');
+
+  let note = '';
+  if(p.daysSince >= 14 && Math.abs(p.totalDelta) > 0.4){
+    note = 'Llevas ' + p.daysSince + ' días sin pesarte: la estimación se apoya cada vez más en tu tendencia. Pésate para reajustar el ancla.';
+  } else if(p.recentLabel === 'bajando' && p.totalDelta > 0.15){
+    note = 'Tu tendencia reciente es a la baja; el acumulado desde el pesaje aún arrastra días previos más flojos.';
+  } else if(t.isEmpty){
+    note = 'Hoy sin hábitos marcados: se asume ingesta alta (~' + intake + ' kcal). Marca tus hábitos para afinar la estimación.';
+  }
+
+  const col = (v) => v >= 0 ? 'var(--good)' : 'var(--brick)';
+  // Tendencia = dirección REAL de tu peso (pendiente de-ruido de tus pesajes),
+  // no la extrapolación física sobre días sin registrar (que engaña al alza).
+  const twSlope = p.trendWeight ? p.trendWeight.slope : (p.recentWeekly != null ? p.recentWeekly/7 : 0);
+  const weeklyReal = twSlope * 7;
+  let trendLabel, trendCol, trendDir;
+  if(twSlope <= -0.004){ trendLabel = 'bajando'; trendCol = 'var(--green)'; trendDir = 'down'; }
+  else if(twSlope >= 0.004){ trendLabel = 'subiendo'; trendCol = 'var(--red)'; trendDir = 'up'; }
+  else { trendLabel = 'estable'; trendCol = 'var(--orange)'; trendDir = 'flat'; }
+  const trendArrow = trendDir === 'down' ? '↓' : (trendDir === 'up' ? '↑' : '→');
+  const weeklyTxt = Math.abs(weeklyReal) < 0.05 ? 'plano' : (weeklyReal<=0?'−':'+') + fmt1(Math.abs(weeklyReal)) + ' kg/sem';
+
+  el.innerHTML = `
+    <div class="pred-hero">
+      <div class="pred-hero-main">
+        <div class="pred-hero-label">Peso estimado hoy · estimación prudente</div>
+        <div class="pred-hero-num">${fmt1(p.predicted)}<span class="u">kg</span><span class="pred-band">± ${bandKg}</span></div>
+        <div class="pred-hero-refs">
+          <span class="pill" title="Estimación central del modelo, sin recargo de prudencia. Es la que se valida contra tu histórico."><b>${fmt1(p.median)}</b> estimación neutra</span>
+          ${twKg ? `<span class="pill"><b>${twKg}</b> tendencia</span>` : ''}
+          <span class="pill"><b>${fmt1(p.last.peso)}</b> último pesaje · ${daysTxt}</span>
+        </div>
+      </div>
+      <div class="pred-spark">${predSparkline(p, trendDir)}</div>
+    </div>
+
+    <div class="pred-chips">
+      <div class="pred-chipbox">
+        <div class="pc-label">Tendencia real</div>
+        <div class="pc-value" style="color:${trendCol};">${trendArrow} <span style="text-transform:capitalize;">${trendLabel}</span></div>
+        <div class="pc-sub">${weeklyTxt} · pesajes recientes</div>
+      </div>
+      <div class="pred-chipbox">
+        <div class="pc-label">Cambio desde pesaje</div>
+        <div class="pc-value" style="color:${totalG<=0?'var(--green)':'var(--red)'};">${totalG>0?'+':''}${(totalG/1000).toFixed(1)}<span class="u">kg</span></div>
+        <div class="pc-sub">${p.daysSince} días · ${totalG>=0?'+':''}${totalG} g</div>
+      </div>
+      <div class="pred-chipbox">
+        <div class="pc-label">Balance de hoy</div>
+        <div class="pc-value" style="color:${isDef?'var(--green)':'var(--red)'};">${isDef?'−':'+'}${balAbs}<span class="u">kcal</span></div>
+        <div class="pc-sub">${planTag}</div>
+      </div>
+    </div>
+
+    <div class="pred-panel">
+      <div class="pp-row"><span>Ingesta estimada hoy</span><span class="mono">${intake} kcal</span></div>
+      <div class="pp-row"><span>Gasto estimado (TDEE)</span><span class="mono">${exp} kcal</span></div>
+      <div class="pp-sep"></div>
+      <div class="pp-row"><span>Energía últimos días</span><span class="mono" style="color:${col(recentK)};">${recentK>=0?'−':'+'}${Math.abs(recentK)} kcal</span></div>
+      <div class="pp-row"><span>Energía desde el pesaje</span><span class="mono" style="color:${col(accumK)};">${accumK>=0?'−':'+'}${Math.abs(accumK)} kcal</span></div>
+      ${(p.adapt!=null && p.adapt < 0.95) ? '<div class="pp-sep"></div><div class="pp-row" title="Tu peso lleva semanas plano pese al déficit: el cuerpo se ha adaptado (defiende su set-point), así que el modelo modera la pérdida prevista hasta que la báscula vuelva a moverse."><span>Freno de set-point</span><span class="mono" style="color:var(--gold);">×'+p.adapt.toFixed(2)+' pérdida</span></div>' : ''}
+      <div class="pp-sep"></div>
+      <div class="pp-row" title="Agua, no grasa. Depende de tu estado en las últimas 72 h: alcohol reciente (el pico es la mañana SIGUIENTE, no el mismo día), sodio de comer fuera y sueño. Si el ajuste te favorece se aplica sólo a la mitad."><span>Agua / hinchazón hoy</span><span class="mono" style="color:${(p.waterShift||0)>0?'var(--red)':'var(--green)'};">${(p.waterShift||0)>=0?'+':'−'}${Math.abs(Math.round((p.waterShift||0)*1000))} g</span></div>
+      <div class="pp-row" title="Recargo de prudencia: crece con la incertidumbre y con los días que no registras. Si te pesas a menudo y marcas hábitos, casi desaparece."><span>Recargo de prudencia</span><span class="mono" style="color:var(--gold);">+${Math.round((p.penalty||0)*1000)} g</span></div>
+      <div class="pp-row" title="Días del hueco sin ningún registro. Cuando no sabemos qué hiciste, el modelo asume lo peor."><span>Días sin registrar</span><span class="mono">${p.unlogged||0} de ${p.daysSince}</span></div>
+    </div>
+
+    ${note ? '<p class="pred-note">'+note+'</p>' : ''}
+
+    <div class="pred-foot">
+      <div class="pred-reliability" title="Error medio en validación cruzada (leave-one-out): cuánto se equivoca el modelo con pesajes que NO ha usado para entrenar. Es la fiabilidad honesta.">
+        <span class="dot-ok"></span>
+        <span>Modelo entrenado con tu histórico${nInt?' · '+nInt+' intervalos':''}${oosMaeG!=null?' · error real ±'+oosMaeG+' g (validación cruzada)':(maeG!=null?' · error medio ≈ '+maeG+' g':'')}</span>
+      </div>
+      <button type="button" class="btn ghost" id="btnRecalibrateDash">Reentrenar</button>
+    </div>
+    <p class="pred-fineprint">El número grande es <b>prudente a propósito</b>: lleva +${Math.round((p.penalty||0)*1000)} g de recargo sobre la estimación neutra (${fmt1(p.median)} kg), así que lo normal es que la báscula te dé <b>menos</b>, no más. Rango honesto al 68%: ${fmt1(p.median - p.band)}–${fmt1(p.median + p.band)} kg. El suelo de ±600 g no es fallo del modelo: es lo que oscila tu propia báscula por agua. Pésate y marca hábitos y el recargo se encoge solo.</p>
+  `;
+
+  const btn = document.getElementById('btnRecalibrateDash');
+  if(btn){
+    btn.addEventListener('click', ()=>{
+      if(state.meta){ delete state.meta.calibratedAt; delete state.meta.calibratedMAE; }
+      const r = calibrateFromHistory();
+      if(r.ok){
+        const lines = CAT_KEYS.map(k => '  '+(CAT_LABELS[k]||k)+': '+(r.corrections[k]>=0?'+':'')+Math.round(r.corrections[k]*1000)+' g/día').join('\\n');
+        const wl = WATER_KEYS.map(k => '  '+(WATER_LABELS[k]||k)+': '+(r.water[k]>=0?'+':'')+Math.round(r.water[k]*1000)+' g').join('\\n');
+        alert('Modelo reentrenado con '+r.n+' intervalos de tu histórico\\n\\nError REAL (validación cruzada): ±'+r.oosMaeG+' g  ·  mediana '+r.oosMedianG+' g\\nError en muestra: '+r.maeG+' g\\n\\nMASA — ajuste por tipo de día:\\n'+lines+'\\n  Sesgo: '+(r.corrections.bias>=0?'+':'')+Math.round(r.corrections.bias*1000)+' g/día\\n\\nAGUA — hinchazón el día que te pesas:\\n'+wl);
+        renderDashboard();
+      } else alert('No se pudo reentrenar: '+(r.reason||''));
+    });
+  }
+}
+
+
+
+function weeklyInsight(){
+  const today = todayStr();
+  // Semana natural LUNES→DOMINGO: contamos solo los días transcurridos de la
+  // semana en curso (lunes..hoy). Al entrar una semana nueva, se reinicia solo.
+  const td = toDate(today), dw = td.getDay();
+  const mondayOffset = (dw===0 ? -6 : 1-dw);
+  const mondayDate = new Date(td); mondayDate.setDate(td.getDate()+mondayOffset);
+  let weekStart = toStr(mondayDate);
+  if(weekStart < START) weekStart = START;
+  const days = rangeArray(weekStart, clampMax(today, END));
+  if(days.length===0) return 'Aún no hay datos suficientes esta semana.';
+  const done = days.reduce((n,d)=>n+dayTotal(getEntry(d)),0);
+  const possible = days.length*6;
+  const pct = possible? done/possible : 0;
+  let complArr = HABITS.map(h=>({label:h.label, val:0, count:0}));
+  days.forEach(d=>{ const e = getEntry(d); HABITS.forEach((h,i)=>{ if(e[h.key]) complArr[i].count++; }); });
+  complArr.forEach(c=> c.val = c.count/days.length);
+  const weakest = complArr.slice().sort((a,b)=>a.val-b.val)[0];
+
+  const compInWeek = sortedComp().filter(c=>c.fecha>=weekStart && c.fecha<=today);
+  let weightPhrase = '';
+  const allComp = sortedComp();
+  const before = allComp.filter(c=>c.fecha<weekStart).slice(-1)[0];
+  const latest = lastComp();
+  if(before && latest && latest.fecha>=weekStart){
+    const diff = latest.peso - before.peso;
+    weightPhrase = diff<0 ? ` Has perdido <strong>${fmt1(-diff)} kg</strong> respecto a la semana pasada.` : (diff>0 ? ` Has subido ${fmt1(diff)} kg respecto a la semana pasada.` : ' Tu peso se ha mantenido estable.');
+  }
+  return `Esta semana has cumplido el <strong>${fmtPct(pct)}</strong> de tus hábitos (${done}/${possible}).${weightPhrase} Tu punto a reforzar: <strong style="color:var(--brick)">${weakest.label}</strong>.`;
+}
+
+function goToView(v){
+  const target = document.getElementById('view-' + v);
+  if(!target) return;
+  document.querySelectorAll('nav.bottom-nav button, nav.tabs button').forEach(b=>{
+    b.classList.toggle('active', b.dataset.view===v);
+  });
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  target.classList.add('active');
+  window.scrollTo(0,0);
+  // El render va DESPUÉS de mostrar la vista y protegido: un error al pintar
+  // nunca debe impedir el cambio de pestaña.
+  try{
+    if(v==='dashboard') renderDashboard();
+    else if(v==='registro') renderRegistro();
+    else if(v==='composicion') renderComposicion();
+  }catch(err){ console.error('Error al renderizar la vista', v, err); }
+}
+// Delegación de eventos en el propio nav: robusto en iOS y sobrevive a re-renders.
+document.querySelector('nav.bottom-nav').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-view]');
+  if(btn) goToView(btn.dataset.view);
+});
+
+function renderDashboard(){
+  const dd = document.getElementById('dashDate');
+  if(dd){
+    const t = toDate(todayStr());
+    const txt = DOW_NAMES[t.getDay()] + ', ' + t.getDate() + ' de ' + MONTH_NAMES[t.getMonth()].toLowerCase();
+    dd.textContent = txt.charAt(0).toUpperCase() + txt.slice(1);
+  }
+  renderQuickLog();
+  document.getElementById('insightCard').innerHTML = weeklyInsight();
+  renderWeightPrediction();
+
+  // KPIs condensados (4): estado de hoy de un vistazo
+  const lc = lastComp();
+  const pesoActual = lc ? lc.peso : null;
+  const falta = pesoActual!=null ? Math.max(0, pesoActual-getObjetivo()) : null;
+  const cumplimiento = globalCompliance(todayStr());
+  const racha = currentStreak(STREAK_THRESHOLD);
+
+  const kpis = document.getElementById('kpiCards');
+  if(kpis) kpis.innerHTML = `
+    <div class="card kpi">
+      <div class="label">Peso actual</div>
+      <div class="value">${pesoActual!=null?fmt1(pesoActual):'—'}<small>kg</small></div>
+      <div class="sub">según báscula</div>
+    </div>
+    <div class="card kpi ${falta===0?'good':'warn'}">
+      <div class="label">Falta objetivo</div>
+      <div class="value">${falta!=null?fmt1(falta):'—'}<small>kg</small></div>
+      <div class="sub">camino a ${getObjetivo()} kg</div>
+    </div>
+    <div class="card kpi ${racha>0?'gold':''}">
+      <div class="label">Racha actual</div>
+      <div class="value">${racha}<small>días</small></div>
+      <div class="sub">con ${STREAK_THRESHOLD}+ hábitos</div>
+    </div>
+    <div class="card kpi">
+      <div class="label">Cumplimiento</div>
+      <div class="value">${fmtPct(cumplimiento)}</div>
+      <div class="sub">de hábitos, en total</div>
+    </div>
+  `;
+}
+
+/* Peso y objetivo + gráfica de evolución (vive en «Composición») */
+function renderWeightGoal(){
+  const objInput = document.getElementById('objetivoInput');
+  if(objInput && document.activeElement!==objInput) objInput.value = getObjetivo();
+
+  const fc = firstComp(), lc = lastComp();
+  const pesoInicial = fc ? fc.peso : null;
+  const pesoActual = lc ? lc.peso : null;
+  const perdido = (pesoInicial!=null && pesoActual!=null) ? pesoInicial-pesoActual : null;
+  const objetivoTotal = (pesoInicial!=null) ? pesoInicial-getObjetivo() : null;
+  const progreso = (perdido!=null && objetivoTotal) ? Math.max(0,Math.min(1, perdido/objetivoTotal)) : 0;
+
+  const fill = document.getElementById('weightFill'); if(fill) fill.style.width = (progreso*100)+'%';
+  const marks = document.getElementById('weightMarks');
+  if(marks) marks.innerHTML = `<span>${pesoInicial!=null?fmt1(pesoInicial)+' kg inicial':''}</span><span>${getObjetivo()} kg objetivo</span>`;
+  const extra = document.getElementById('weightExtra');
+  if(extra) extra.innerHTML = objetivoTotal ?
+    `Perdido: <strong>${perdido!=null?fmt1(perdido):'—'} kg</strong> · Progreso hacia el objetivo: <strong>${fmtPct(progreso)}</strong>` :
+    'Añade una medición para calcular el progreso.';
+
+  const proj = weightProjection();
+  const projEl = document.getElementById('weightProjection');
+  if(projEl){
+    if(proj.status==='ok'){
+      const d = toDate(proj.goalDate);
+      projEl.innerHTML = `A tu ritmo actual (~${fmt1(proj.weeklyRate)} kg/semana), estimas alcanzar tu objetivo sobre el <strong>${d.getDate()} de ${MONTH_NAMES[d.getMonth()].toLowerCase()} de ${d.getFullYear()}</strong>. <span style="color:var(--ink-faint);">(estimación según tu tendencia reciente)</span>`;
+    } else if(proj.status==='reached'){
+      projEl.innerHTML = `<strong style="color:var(--good);">¡Ya estás en tu objetivo o muy cerca!</strong>`;
+    } else if(proj.status==='flat'){
+      projEl.innerHTML = `Aún no se aprecia una tendencia de pérdida clara en tus últimas mediciones.`;
+    } else { projEl.innerHTML = ''; }
+  }
+  renderWeightChart('weightChart');
+}
+
+/* Analíticas de hábitos (viven en «Registro») */
+function renderHabitStats(){
+  const hb = document.getElementById('habitBars');
+  if(hb){
+    const complArr = HABITS.map(h=>({label:h.label, val: habitCompliance(h.key, todayStr())}));
+    hb.innerHTML = complArr.map(c=>`
+      <div class="pbar-row">
+        <div class="lbl">${c.label}</div>
+        <div class="pbar-track"><div class="pbar-fill" style="width:${c.val*100}%"></div></div>
+        <div class="pbar-pct">${fmtPct(c.val)}</div>
+      </div>`).join('');
+    const weakest = complArr.slice().sort((a,b)=>a.val-b.val)[0];
+    const strongest = complArr.slice().sort((a,b)=>b.val-a.val)[0];
+    hb.innerHTML += `<div style="margin-top:10px;font-size:12px;color:var(--ink-soft);">
+      Punto débil: <strong style="color:var(--brick)">${weakest.label}</strong> &middot;
+      Punto fuerte: <strong style="color:var(--good)">${strongest.label}</strong>
+    </div>`;
+  }
+  const dow = document.getElementById('dowBars');
+  if(dow){
+    const order = [1,2,3,4,5,6,0];
+    dow.innerHTML = order.map(i=>{
+      const val = dowCompliance(i, todayStr());
+      return `<div class="pbar-row">
+        <div class="lbl" style="text-transform:capitalize;">${DOW_NAMES[i]}</div>
+        <div class="pbar-track"><div class="pbar-fill" style="width:${val*100}%"></div></div>
+        <div class="pbar-pct">${fmtPct(val)}</div>
+      </div>`;
+    }).join('');
+  }
+  renderWeekDots();
+
+  const table = document.getElementById('monthlyTable');
+  if(table){
+    const head = `<tr><th>Mes</th>${HABITS.map(h=>`<th>${h.code}</th>`).join('')}<th>Global</th></tr>`;
+    const rows = monthsList().map(({year,month})=>{
+      const row = monthlyRow(year,month);
+      if(!row) return `<tr><td>${monthLabel(year,month)}</td>${HABITS.map(()=>'<td>—</td>').join('')}<td class="global">—</td></tr>`;
+      return `<tr><td>${row.label}</td>${HABITS.map(h=>`<td>${fmtPct(row[h.key])}</td>`).join('')}<td class="global">${fmtPct(row.global)}</td></tr>`;
+    }).join('');
+    table.innerHTML = '<thead>' + head + '</thead><tbody>' + rows + '</tbody>';
+  }
+}
+
+function renderQuickLog(){
+  const t = todayStr();
+  const entry = getEntry(t);
+  const total = dayTotal(entry);
+  const dateLabel = dowName(t) + ', ' + toDate(t).getDate() + ' de ' + MONTH_NAMES[toDate(t).getMonth()].toLowerCase();
+  const container = document.getElementById('quicklog');
+  container.innerHTML = `
+    <div class="qhead">
+      <div class="qdate">Hábitos de hoy</div>
+      <div class="qtotal">${total}/6</div>
+    </div>
+    <div class="qchips">${HABITS.map(h=>chipHtml(t,h)).join('')}</div>
+    <div class="qweight">
+      <label>Peso hoy</label>
+      <input type="number" inputmode="decimal" step="0.1" id="qweightInput" value="${entry.peso??''}" placeholder="kg">
+    </div>
+  `;
+  container.querySelectorAll('.chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      toggleHabit(chip.dataset.date, chip.dataset.habit);
+      renderDashboard();
+    });
+  });
+  document.getElementById('qweightInput').addEventListener('change', (e)=>{
+    if(!state.registro[t]) state.registro[t] = {};
+    const pw = parseFloat(String(e.target.value).replace(',', '.'));
+    if(e.target.value.trim()==='' || isNaN(pw) || pw <= 0){
+      delete state.registro[t].peso;
+      e.target.value = '';               // descarta entradas no válidas
+    } else {
+      state.registro[t].peso = pw;
+      learnFromWeighIn(pw, t);
+    }
+    cleanupEmpty(t);
+    saveState();
+    renderWeightPrediction();
+  });
+}
+
+function renderWeekDots(){
+  const t = new Date();
+  const dow = t.getDay();
+  const mondayOffset = (dow===0? -6 : 1-dow);
+  const monday = new Date(t); monday.setDate(t.getDate()+mondayOffset);
+  const days = [];
+  for(let i=0;i<7;i++){ const d = new Date(monday); d.setDate(monday.getDate()+i); days.push(toStr(d)); }
+  const grid = document.getElementById('weekDots');
+  let html = `<div></div>${HABITS.map(h=>`<div class="colhead">${h.code}</div>`).join('')}`;
+  days.forEach(d=>{
+    const entry = getEntry(d);
+    const isToday = d===todayStr();
+    html += `<div class="rowhead">${dowName(d).slice(0,3)}</div>`;
+    HABITS.forEach(h=>{
+      html += `<div class="dot ${entry[h.key]?'on':''} ${isToday?'today':''}"></div>`;
+    });
+  });
+  grid.innerHTML = html;
+}
+
+/* Lee una variable CSS del tema en tiempo de render (se adapta a claro/oscuro) */
+function cssVar(name, fallback){
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return v || fallback;
+}
+
+/* =============================================================================
+   GRÁFICO DE PESO INTERACTIVO (SVG, sin librerías)
+   - Eje temporal real (por fecha, no por índice)
+   - Rejilla + etiquetas kg
+   - Área con degradado + línea real con animación de dibujado
+   - Tendencia suave (EMA) superpuesta
+   - Proyección futura con banda de incertidumbre honesta
+   - Línea de objetivo
+   - Hover: crosshair vertical + punto de foco + tooltip flotante
+   ============================================================================= */
+function renderWeightChart(containerId){
+  const data = sortedComp().filter(d=>typeof d.peso==='number');
+  const container = document.getElementById(containerId);
+  if(!container) return;
+  if(data.length<2){ container.innerHTML = '<div class="empty">Añade al menos dos mediciones para ver la evolución.</div>'; return; }
+
+  const W = Math.max(300, Math.floor(container.clientWidth || 600));
+  const H = W < 480 ? 230 : 280, padL=42, padR=16, padT=22, padB=34;
+  const mono = 'var(--font-mono)';
+  const cLine = cssVar('--accent', cssVar('--blue','#1552F0'));
+  const cGoal = cssVar('--gold', '#F59E0B');
+  const cTrend = cssVar('--ink-2', '#334155');
+  const cTxt  = cssVar('--ink-3', '#64748B');
+  const cGrid = cssVar('--sep', 'rgba(100,116,139,.16)');
+  const cBand = cssVar('--accent', '#1552F0');
+
+  // --- Escala temporal (días desde el primer pesaje) ---
+  const t0 = data[0].fecha;
+  const px = data.map(d=>({t:daysBetween(t0,d.fecha), w:d.peso, fecha:d.fecha}));
+  const lastT = px[px.length-1].t;
+
+  // --- Tendencia suave (EMA) para superponer + proyección ---
+  const tw = trendWeight();
+  const smooth = (tw && tw.smoothed) ? tw.smoothed
+        .filter(p=>p.fecha>=t0)
+        .map(p=>({t:daysBetween(t0,p.fecha), w:p.smooth})) : [];
+  const goal = getObjetivo();
+
+  // Proyección futura: continúa la tendencia suave slope días adelante
+  const projDays = 30;
+  let proj = [], bandUp = [], bandDn = [];
+  if(tw){
+    const startW = tw.last, startT = daysBetween(t0, tw.fecha);
+    for(let k=0;k<=projDays;k+=3){
+      const w = startW + tw.slope*k;
+      const band = predictionBand(k, 0.7, 3);
+      proj.push({t:startT+k, w});
+      bandUp.push({t:startT+k, w:w+band});
+      bandDn.push({t:startT+k, w:w-band});
+    }
+  }
+
+  const maxT = Math.max(lastT, proj.length?proj[proj.length-1].t:lastT);
+  const allW = px.map(p=>p.w)
+    .concat(bandUp.map(p=>p.w), bandDn.map(p=>p.w), [goal]);
+  let minW = Math.min(...allW) - 0.8, maxW = Math.max(...allW) + 0.8;
+  if(maxW-minW<2){ const m=(maxW+minW)/2; minW=m-1.2; maxW=m+1.2; }
+
+  const X = t => padL + (maxT? t/maxT : 0) * (W-padL-padR);
+  const Y = w => padT + (1-(w-minW)/(maxW-minW)) * (H-padT-padB);
+  const P = (arr) => arr.map((p,i)=>(i?'L':'M')+X(p.t).toFixed(1)+','+Y(p.w).toFixed(1)).join(' ');
+
+  // Rejilla horizontal (~4 líneas) con etiqueta kg
+  const ticks = 4; let grid='';
+  for(let i=0;i<=ticks;i++){
+    const wv = minW + (maxW-minW)*i/ticks;
+    const yy = Y(wv);
+    grid += `<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}" stroke="${cGrid}" stroke-width="1"/>`;
+    grid += `<text x="${padL-8}" y="${(yy+3).toFixed(1)}" font-size="9.5" fill="${cTxt}" text-anchor="end" style="font-family:${mono}">${wv.toFixed(0)}</text>`;
+  }
+  // Etiquetas de fecha en eje X
+  const maxLabels = Math.max(4, Math.floor(W/90));
+  const step = Math.max(1, Math.ceil(px.length/maxLabels));
+  let xlabels='';
+  px.forEach((p,i)=>{ if(i%step===0||i===px.length-1)
+    xlabels += `<text x="${X(p.t).toFixed(1)}" y="${H-10}" font-size="9.5" fill="${cTxt}" text-anchor="middle" style="font-family:${mono}">${p.fecha.slice(5)}</text>`; });
+
+  const line = P(px);
+  const area = line + ` L${X(px[px.length-1].t).toFixed(1)},${(H-padB)} L${X(px[0].t).toFixed(1)},${(H-padB)} Z`;
+  const goalY = Y(goal);
+  const bandPath = (bandUp.length? P(bandUp)+' '+bandDn.slice().reverse().map(p=>'L'+X(p.t).toFixed(1)+','+Y(p.w).toFixed(1)).join(' ')+' Z' : '');
+  const projPath = proj.length? P(proj) : '';
+  const dots = px.map((p,i)=>`<circle class="wch-dot" data-i="${i}" cx="${X(p.t).toFixed(1)}" cy="${Y(p.w).toFixed(1)}" r="${W<480?2.6:3.2}" fill="${cLine}"/>`).join('');
+
+  const uid = 'wch'+Math.random().toString(36).slice(2,7);
+  container.style.position='relative';
+  container.innerHTML = `
+  <svg id="${uid}" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="max-width:100%;display:block;touch-action:pan-y;">
+    <defs>
+      <linearGradient id="${uid}f" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="${cLine}" stop-opacity="0.20"/>
+        <stop offset="1" stop-color="${cLine}" stop-opacity="0"/></linearGradient>
+    </defs>
+    ${grid}
+    ${bandPath?`<path d="${bandPath}" fill="${cBand}" opacity="0.10"/>`:''}
+    <path d="${area}" fill="url(#${uid}f)" opacity="0" style="transition:opacity .8s ease .2s"/>
+    <line x1="${padL}" y1="${goalY.toFixed(1)}" x2="${W-padR}" y2="${goalY.toFixed(1)}" stroke="${cGoal}" stroke-width="1.4" stroke-dasharray="5 4"/>
+    <text x="${W-padR}" y="${(goalY-6).toFixed(1)}" font-size="10" fill="${cGoal}" text-anchor="end" style="font-family:${mono};font-weight:700">OBJETIVO ${goal}</text>
+    ${smooth.length?`<path d="${P(smooth)}" fill="none" stroke="${cTrend}" stroke-width="1.4" stroke-dasharray="2 3" opacity="0.55"/>`:''}
+    ${projPath?`<path d="${projPath}" fill="none" stroke="${cLine}" stroke-width="1.8" stroke-dasharray="1 4" stroke-linecap="round" opacity="0.7"/>`:''}
+    <path class="wch-line" pathLength="1" d="${line}" fill="none" stroke="${cLine}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" style="stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset 1.1s cubic-bezier(.4,0,.2,1)"/>
+    ${dots}
+    ${xlabels}
+    <line class="wch-cross" x1="0" y1="${padT}" x2="0" y2="${H-padB}" stroke="${cLine}" stroke-width="1" opacity="0"/>
+    <circle class="wch-focus" r="5" fill="var(--surface)" stroke="${cLine}" stroke-width="2.5" opacity="0"/>
+    <rect class="wch-hit" x="${padL}" y="${padT}" width="${W-padL-padR}" height="${H-padT-padB}" fill="transparent" style="cursor:crosshair"/>
+  </svg>
+  <div class="chart-tip" style="opacity:0"></div>`;
+
+  // --- Animación de dibujado ---
+  const svg = document.getElementById(uid);
+  const path = svg.querySelector('.wch-line');
+  const areaEl = svg.querySelector('path[fill^="url"]');
+  requestAnimationFrame(()=>{ path.style.strokeDashoffset='0'; if(areaEl) areaEl.style.opacity='1'; });
+
+  // --- Interacción hover ---
+  const cross = svg.querySelector('.wch-cross');
+  const focus = svg.querySelector('.wch-focus');
+  const hit = svg.querySelector('.wch-hit');
+  const tip = container.querySelector('.chart-tip');
+  function onMove(ev){
+    const rect = svg.getBoundingClientRect();
+    const cx = (ev.touches?ev.touches[0].clientX:ev.clientX) - rect.left;
+    const svgX = cx * (W/rect.width);
+    // punto más cercano
+    let best=0, bd=1e9;
+    px.forEach((p,i)=>{ const d=Math.abs(X(p.t)-svgX); if(d<bd){bd=d;best=i;} });
+    const p = px[best];
+    const gx = X(p.t), gy = Y(p.w);
+    cross.setAttribute('x1',gx); cross.setAttribute('x2',gx); cross.setAttribute('opacity','0.35');
+    focus.setAttribute('cx',gx); focus.setAttribute('cy',gy); focus.setAttribute('opacity','1');
+    const prev = best>0? px[best-1].w : null;
+    const dlt = prev!=null ? p.w-prev : null;
+    const dltTxt = dlt!=null ? `<span style="color:${dlt<=0?'var(--green)':'var(--red)'}">${dlt>0?'+':''}${fmt1(dlt)} kg</span>` : '';
+    const dd = toDate(p.fecha);
+    tip.innerHTML = `<b>${fmt1(p.w)} kg</b> ${dltTxt}<span class="ct-date">${dd.getDate()} ${MONTH_NAMES[dd.getMonth()].slice(0,3).toLowerCase()}</span>`;
+    tip.style.opacity='1';
+    const tw2 = tip.offsetWidth;
+    let left = (gx/W)*rect.width - tw2/2;
+    left = Math.max(4, Math.min(rect.width-tw2-4, left));
+    tip.style.left = left+'px';
+    tip.style.top = Math.max(0,(gy/H)*rect.height - 46)+'px';
+  }
+  function onLeave(){ cross.setAttribute('opacity','0'); focus.setAttribute('opacity','0'); tip.style.opacity='0'; }
+  hit.addEventListener('mousemove', onMove);
+  hit.addEventListener('mouseleave', onLeave);
+  hit.addEventListener('touchstart', onMove, {passive:true});
+  hit.addEventListener('touchmove', onMove, {passive:true});
+  hit.addEventListener('touchend', onLeave);
+}
+
+const MINI_CHART_METRICS = [
+  {key:'grasa', label:'Grasa corporal (%)', varName:'--orange', fallback:'#FF9500'},
+  {key:'masaMuscular', label:'Masa muscular (kg)', varName:'--blue', fallback:'#007AFF'},
+  {key:'agua', label:'Agua corporal (%)', varName:'--green', fallback:'#34C759'},
+];
+function renderMiniChart(containerId){
+  const data = sortedComp();
+  const container = document.getElementById(containerId);
+  if(data.length<2){ container.innerHTML = '<div class="card empty" style="grid-column:1/-1;">Añade al menos dos mediciones para ver las gráficas de evolución.</div>'; return; }
+  container.innerHTML = MINI_CHART_METRICS.map(m=>{
+    const color = cssVar(m.varName, m.fallback);
+    const pts = data.filter(d=>d[m.key]!=null);
+    if(pts.length<2) return `<div class="card mini-chart-card"><div class="mc-title">${m.label}</div><div class="empty" style="padding:10px 0;">Sin datos suficientes</div></div>`;
+    const W=260, H=100, padL=8, padR=8, padT=10, padB=10;
+    const vals = pts.map(d=>d[m.key]);
+    const minV = Math.min(...vals), maxV = Math.max(...vals);
+    const range = (maxV-minV) || 1;
+    const x = i => padL + (i/(pts.length-1)) * (W-padL-padR);
+    const y = v => padT + (1 - (v-minV)/range) * (H-padT-padB);
+    const line = pts.map((d,i)=> (i===0?'M':'L') + x(i).toFixed(1) + ',' + y(d[m.key]).toFixed(1)).join(' ');
+    const area = line + ` L${x(pts.length-1).toFixed(1)},${H-padB} L${x(0).toFixed(1)},${H-padB} Z`;
+    const last = pts[pts.length-1][m.key], first = pts[0][m.key];
+    const gid = 'mcf_'+m.key;
+    const dotsData = pts.map((d,i)=>({x:+x(i).toFixed(1),y:+y(d[m.key]).toFixed(1),v:d[m.key],f:d.fecha}));
+    return `<div class="card mini-chart-card">
+      <div class="mc-title">${m.label}</div>
+      <svg class="mc-svg" data-key="${m.key}" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="max-width:100%;display:block;" data-dots='${JSON.stringify(dotsData)}'>
+        <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="${color}" stop-opacity="0.16"/>
+          <stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
+        <path d="${area}" fill="url(#${gid})" opacity="0" style="transition:opacity .7s ease .15s"/>
+        <path class="mc-line" pathLength="1" d="${line}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" style="stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .9s cubic-bezier(.4,0,.2,1)"/>
+        <circle class="mc-focus" r="3.4" fill="${color}" cx="${x(pts.length-1).toFixed(1)}" cy="${y(last).toFixed(1)}"/>
+      </svg>
+      <div class="mc-read" style="font-family:var(--font-mono);font-size:12px;color:var(--ink-3);margin-top:4px;">${fmt1(first)} → <strong style="color:var(--ink);">${fmt1(last)}</strong></div>
+    </div>`;
+  }).join('');
+
+  // Animación + hover
+  container.querySelectorAll('.mc-svg').forEach(svg=>{
+    const line = svg.querySelector('.mc-line');
+    const areaEl = svg.querySelector('path[fill^="url"]');
+    const focus = svg.querySelector('.mc-focus');
+    const read = svg.parentElement.querySelector('.mc-read');
+    const dots = JSON.parse(svg.getAttribute('data-dots'));
+    const vb = svg.viewBox.baseVal.width;
+    requestAnimationFrame(()=>{ line.style.strokeDashoffset='0'; if(areaEl) areaEl.style.opacity='1'; });
+    const baseHTML = read.innerHTML;
+    function move(ev){
+      const r = svg.getBoundingClientRect();
+      const sx = ((ev.touches?ev.touches[0].clientX:ev.clientX)-r.left)*(vb/r.width);
+      let best=dots[0], bd=1e9;
+      dots.forEach(d=>{const dd=Math.abs(d.x-sx); if(dd<bd){bd=dd;best=d;}});
+      focus.setAttribute('cx',best.x); focus.setAttribute('cy',best.y);
+      read.innerHTML = `<strong style="color:var(--ink);">${fmt1(best.v)}</strong> <span style="color:var(--ink-3)">· ${best.f.slice(5)}</span>`;
+    }
+    function leave(){ read.innerHTML = baseHTML; const l=dots[dots.length-1]; focus.setAttribute('cx',l.x); focus.setAttribute('cy',l.y); }
+    svg.addEventListener('mousemove',move);
+    svg.addEventListener('mouseleave',leave);
+    svg.addEventListener('touchmove',move,{passive:true});
+  });
+}
+
+let currentMonthIdx = null;
+
+function initMonthSelect(){
+  const sel = document.getElementById('monthSelect');
+  sel.innerHTML = monthsList().map((m,i)=>`<option value="${i}">${monthLabel(m.year,m.month)}</option>`).join('');
+  sel.addEventListener('change', ()=>{ currentMonthIdx = parseInt(sel.value); renderRegistro(); });
+  document.getElementById('gotoToday').addEventListener('click', ()=>{
+    currentMonthIdx = monthIndexForToday();
+    sel.value = currentMonthIdx;
+    renderRegistro();
+  });
+}
+function monthIndexForToday(){
+  const t = todayStr();
+  const list = monthsList();
+  for(let i=0;i<list.length;i++){
+    const {first,last} = monthBounds(list[i].year, list[i].month);
+    if(t>=first && t<=last) return i;
+  }
+  return 0;
+}
+
+function renderRegistro(){
+  if(currentMonthIdx===null) currentMonthIdx = monthIndexForToday();
+  document.getElementById('monthSelect').value = currentMonthIdx;
+  const {year,month} = monthsList()[currentMonthIdx];
+  const {first,last} = monthBounds(year,month);
+  const s = first < START ? START : first;
+  const e = last > END ? END : last;
+  const days = rangeArray(s,e);
+  const today = todayStr();
+
+  const list = document.getElementById('regList');
+  list.innerHTML = days.map(d=>{
+    const entry = getEntry(d);
+    const isToday = d===today;
+    const dw = dowIndex(d);
+    const weekendClass = (dw===0||dw===6) ? 'weekend':'';
+    const chips = HABITS.map(h=>chipHtml(d,h,{compact:true})).join('');
+    return `<div class="day-card ${isToday?'today':weekendClass}">
+      <div class="datebox"><div class="num">${toDate(d).getDate()}</div><div class="dow">${dowName(d).slice(0,3)}</div></div>
+      <div class="chips">${chips}</div>
+      <div class="total-badge">${dayTotal(entry)}/6</div>
+      <div class="meta">
+        <label>Peso</label><input type="number" inputmode="decimal" step="0.1" class="wk" data-date="${d}" value="${entry.peso??''}" placeholder="kg">
+        <input type="text" class="notek" data-date="${d}" value="${entry.notas? escapeHtml(entry.notas):''}" placeholder="Notas del día…">
+      </div>
+    </div>`;
+  }).join('');
+
+  list.querySelectorAll('.chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      toggleHabit(chip.dataset.date, chip.dataset.habit);
+      renderRegistro();
+    });
+  });
+  list.querySelectorAll('input.wk').forEach(inp=>{
+    inp.addEventListener('change', ()=>{
+      const d = inp.dataset.date;
+      if(!state.registro[d]) state.registro[d] = {};
+      const pw = parseFloat(String(inp.value).replace(',', '.'));
+      if(inp.value.trim()==='' || isNaN(pw) || pw <= 0){
+        delete state.registro[d].peso;
+        inp.value = '';
+      } else {
+        state.registro[d].peso = pw;
+        learnFromWeighIn(pw, d);
+      }
+      cleanupEmpty(d);
+      saveState();
+    });
+  });
+  list.querySelectorAll('input.notek').forEach(inp=>{
+    inp.addEventListener('change', ()=>{
+      const d = inp.dataset.date;
+      if(!state.registro[d]) state.registro[d] = {};
+      if(inp.value.trim()==='') delete state.registro[d].notas; else state.registro[d].notas = inp.value;
+      cleanupEmpty(d);
+      saveState();
+    });
+  });
+
+  const totalDays = days.length;
+  const doneSum = days.reduce((n,d)=>n+dayTotal(getEntry(d)),0);
+  document.getElementById('monthSummary').textContent = `${doneSum} de ${totalDays*6} hábitos cumplidos este mes (${fmtPct(totalDays?doneSum/(totalDays*6):0)})`;
+
+  renderHabitStats();
+}
+
+const COMP_METRICS = [
+  {key:'grasa', label:'Grasa corporal', unit:'%', lowerIsBetter:true},
+  {key:'masaMuscular', label:'Masa muscular', unit:'kg', lowerIsBetter:false},
+  {key:'imc', label:'IMC', unit:'', lowerIsBetter:true},
+  {key:'grasaVisceral', label:'Grasa visceral', unit:'', lowerIsBetter:true},
+];
+
+function renderComposicion(){
+  renderWeightGoal();
+  const fc = firstComp(), lc = lastComp();
+  const cards = document.getElementById('compChangeCards');
+  if(!fc || !lc){
+    cards.innerHTML = '<div class="card empty">Añade tu primera medición para ver los cambios.</div>';
+  } else {
+    cards.innerHTML = COMP_METRICS.map(m=>{
+      const ini = fc[m.key], act = lc[m.key];
+      if(ini==null || act==null) return '';
+      const delta = act-ini;
+      const goodDir = m.lowerIsBetter ? delta<=0 : delta>=0;
+      const cat = m.key==='imc' ? bmiCategory(act) : null;
+      return `<div class="card change-card">
+        <div class="m">${m.label}</div>
+        <div class="change-row"><span>Inicial</span><span>${fmt1(ini)}${m.unit}</span></div>
+        <div class="change-row"><span>Actual</span><span>${fmt1(act)}${m.unit}</span></div>
+        <div class="change-row"><span>Cambio</span><span class="delta ${goodDir?'down':'up'}">${delta>=0?'+':''}${fmt1(delta)}${m.unit}</span></div>
+        ${cat?`<div class="change-row"><span>Categoría</span><span style="color:${cat.color};font-weight:700;text-transform:capitalize;">${cat.label}</span></div>`:''}
+      </div>`;
+    }).join('');
+  }
+
+  renderMiniChart('compCharts');
+  renderKcalCard();
+
+  const table = document.getElementById('compTable');
+  let head = `<tr><th>Fecha</th><th>Peso</th><th>% Grasa</th><th>M. muscular</th><th>IMC</th><th>G. visceral</th><th>Metab. basal</th><th>Gasto diario</th><th>M. ósea</th><th>% Agua</th><th></th></tr>`;
+  let rows = sortedComp().map(c=>`<tr>
+    <td data-label="Fecha">${c.fecha}</td>
+    <td data-label="Peso">${c.peso??''} kg</td>
+    <td data-label="% Grasa">${c.grasa??''}%</td>
+    <td data-label="M. muscular">${c.masaMuscular??''} kg</td>
+    <td data-label="IMC">${c.imc??''}</td>
+    <td data-label="G. visceral">${c.grasaVisceral??''}</td>
+    <td data-label="Metab. basal">${c.metabBasal??''} kcal</td>
+    <td data-label="Gasto diario">${c.gastoDiario??''} kcal</td>
+    <td data-label="M. ósea">${c.masaOsea??''} kg</td>
+    <td data-label="% Agua">${c.agua??''}%</td>
+    <td data-label=""><button class="del-btn" data-fecha="${c.fecha}" title="Eliminar">✕</button></td>
+  </tr>`).join('');
+  table.innerHTML = '<thead>' + head + '</thead><tbody>' + rows + '</tbody>';
+  table.querySelectorAll('.del-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(!confirm('¿Eliminar esta medición?')) return;
+      state.composicion = state.composicion.filter(c=>c.fecha!==btn.dataset.fecha);
+      saveState();
+      renderComposicion();
+    });
+  });
+}
+
+const KCAL_TIERS = [
+  {key:'conservador', label:'Conservador', pct:0.15, desc:'-15% del TDEE'},
+  {key:'moderado', label:'Moderado', pct:0.20, desc:'-20% del TDEE'},
+  {key:'agresivo', label:'Agresivo', pct:0.25, desc:'-25% del TDEE'},
+];
+const KCAL_SAFETY_FLOOR = 1200;
+const ACTIVITY_LEVELS = [
+  {key:'sedentario', label:'Sedentario · poco o ningún ejercicio', mult:1.20},
+  {key:'ligero', label:'Ligero · ejercicio 1-3 días/semana', mult:1.25},
+  {key:'moderado', label:'Moderado · gym L-V (tu caso: circuito + cardio 20-30 min)', mult:1.28},
+  {key:'alto', label:'Alto · ejercicio intenso 6-7 días/semana', mult:1.40},
+];
+function getActivityLevel(){ return (state.meta && state.meta.activityLevel) || 'moderado'; }
+function setActivityLevel(k){ if(!state.meta) state.meta = {}; state.meta.activityLevel = k; saveState(); }
+
+function renderKcalCard(){
+  const lc = lastComp();
+  const container = document.getElementById('kcalCard');
+  if(!lc || lc.metabBasal==null){
+    container.innerHTML = '<div class="empty">Añade una medición con metabolismo basal para calcular tu objetivo calórico.</div>';
+    return;
+  }
+  const mb = lc.metabBasal;
+  const activityKey = getActivityLevel();
+  const activity = ACTIVITY_LEVELS.find(a=>a.key===activityKey) || ACTIVITY_LEVELS[2];
+  const tdeeEstimado = estimateTDEE(); // media ponderada fija, no el selector
+  const custom = getKcalObjetivo();
+
+  container.innerHTML = `
+    <div class="kcal-basics">
+      <div class="kb"><div class="n">${mb}</div><div class="l">MB (kcal/día)</div></div>
+      <div class="kb"><div class="n">${tdeeEstimado}</div><div class="l">TDEE estimado</div></div>
+      ${lc.gastoDiario!=null ? `<div class="kb"><div class="n" style="color:var(--ink-faint);">${lc.gastoDiario}</div><div class="l">TDEE báscula*</div></div>` : ''}
+    </div>
+    <div style="margin-bottom:14px;">
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);display:block;margin-bottom:6px;">Nivel de actividad (solo informativo; la predicción usa un TDEE medio fijo)</label>
+      <select id="activitySelect" style="width:100%;">
+        ${ACTIVITY_LEVELS.map(a=>`<option value="${a.key}" ${a.key===activityKey?'selected':''}>${a.label}</option>`).join('')}
+      </select>
+      ${lc.gastoDiario!=null ? `<div style="font-size:11px;color:var(--ink-faint);margin-top:6px;">*El TDEE de la báscula suele sobrestimar; se usa tu MB real × tu nivel de actividad para los cálculos de abajo.</div>` : ''}
+    </div>
+    <div class="kcal-tiers">
+      ${KCAL_TIERS.map(t=>{
+        const val = Math.round(tdeeEstimado*(1-t.pct));
+        return `<div class="kcal-tier" data-kcal="${val}">
+          <div class="tt">${t.label}</div>
+          <div class="tv">${val} <span style="font-size:12px;font-weight:600;color:var(--ink-faint);">kcal</span></div>
+          <div class="td">${t.desc}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="kcal-custom">
+      <label style="font-size:12.5px;font-weight:600;color:var(--ink-soft);">Tu objetivo</label>
+      <input type="number" inputmode="numeric" step="10" id="kcalCustomInput" value="${custom??''}" placeholder="kcal/día">
+      <span style="font-size:12px;color:var(--ink-faint);">kcal/día</span>
+    </div>
+    <div class="kcal-warn" id="kcalWarn"></div>
+  `;
+
+  document.getElementById('activitySelect').addEventListener('change', (e)=>{
+    setActivityLevel(e.target.value);
+    renderKcalCard();
+  });
+  container.querySelectorAll('.kcal-tier').forEach(tier=>{
+    tier.addEventListener('click', ()=>{
+      const v = parseInt(tier.dataset.kcal);
+      setKcalObjetivo(v);
+      renderKcalCard();
+      if(document.getElementById('view-dashboard') && document.getElementById('view-dashboard').classList.contains('active')) renderDashboard();
+    });
+  });
+  document.getElementById('kcalCustomInput').addEventListener('change', (e)=>{
+    const v = parseInt(e.target.value);
+    if(!isNaN(v) && v>0) setKcalObjetivo(v); else setKcalObjetivo(null);
+    renderKcalCard();
+    if(document.getElementById('view-dashboard') && document.getElementById('view-dashboard').classList.contains('active')) renderDashboard();
+  });
+
+  container.querySelectorAll('.kcal-tier').forEach(tier=>{
+    if(custom!=null && parseInt(tier.dataset.kcal)===custom) tier.classList.add('selected');
+  });
+
+  const warn = document.getElementById('kcalWarn');
+  if(custom!=null && (custom<mb || custom<KCAL_SAFETY_FLOOR)){
+    warn.classList.add('show');
+    warn.innerHTML = `⚠ ${custom} kcal está por debajo de ${custom<mb?'tu metabolismo basal':'el mínimo orientativo de '+KCAL_SAFETY_FLOOR+' kcal'}. Un déficit tan grande sostenido en el tiempo suele recomendarse solo con supervisión médica o de un/a nutricionista.`;
+  }
+}
+
+document.getElementById('compForm').addEventListener('submit', (ev)=>{
+  ev.preventDefault();
+  const fd = new FormData(ev.target);
+  const entry = {fecha: fd.get('fecha')};
+  ['peso','grasa','masaMuscular','imc','grasaVisceral','metabBasal','gastoDiario','masaOsea','agua'].forEach(k=>{
+    const v = fd.get(k);
+    if(v!==null && v!==''){ const n = parseFloat(String(v).replace(',', '.')); if(!isNaN(n)) entry[k] = n; }
+  });
+  if(!entry.fecha || typeof entry.peso !== 'number'){
+    alert('Introduce al menos la fecha y un peso válido.');
+    return;
+  }
+  state.composicion = state.composicion.filter(c=>c.fecha!==entry.fecha);
+  state.composicion.push(entry);
+  if(typeof entry.peso === 'number') learnFromWeighIn(entry.peso, entry.fecha);
+  saveState();
+  ev.target.reset();
+  renderComposicion();
+  if(document.getElementById('view-dashboard').classList.contains('active')) renderDashboard();
+});
+
+document.getElementById('btnExport').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `dieta-backup-${todayStr()}.json`;
+  a.click(); URL.revokeObjectURL(url);
+});
+document.getElementById('btnImport').addEventListener('click', ()=> document.getElementById('fileImport').click());
+document.getElementById('fileImport').addEventListener('change', (ev)=>{
+  const file = ev.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const parsed = JSON.parse(reader.result);
+      if(!parsed.registro || !parsed.composicion) throw new Error('formato inválido');
+      state = parsed;
+      saveState();
+      renderDashboard(); renderRegistro(); renderComposicion();
+      alert('Datos importados correctamente.');
+    }catch(e){ alert('No se pudo leer el archivo: ' + e.message); }
+  };
+  reader.readAsText(file);
+  ev.target.value = '';
+});
+document.getElementById('btnRecalibrate').addEventListener('click', ()=>{
+  if(state.meta){ delete state.meta.calibratedAt; delete state.meta.calibratedN; }
+  const r = calibrateFromHistory();
+  if(r.ok){
+    const lines = CAT_KEYS.map(k => '  '+(CAT_LABELS[k]||k)+': '+(r.corrections[k]>=0?'+':'')+Math.round(r.corrections[k]*1000)+' g/día').join('\n')
+      + '\n\nAGUA — hinchazón el día que te pesas:\n'
+      + WATER_KEYS.map(k => '  '+(WATER_LABELS[k]||k)+': '+(r.water[k]>=0?'+':'')+Math.round(r.water[k]*1000)+' g').join('\n');
+    alert('Calibración profesional ('+r.n+' intervalos)\n\nError REAL (validación cruzada): ±'+r.oosMaeG+' g\nMediana CV: '+r.oosMedianG+' g · máx CV: '+r.oosMaxG+' g\nError en muestra: '+r.maeG+' g\n\nCorrecciones aprendidas:\n'+lines+'\nSesgo: '+(r.corrections.bias>=0?'+':'')+Math.round(r.corrections.bias*1000)+' g/día');
+    renderDashboard();
+  } else {
+    alert('No se pudo calibrar: '+(r.reason||'datos insuficientes'));
+  }
+});
+document.getElementById('btnReset').addEventListener('click', ()=>{
+  if(!confirm('Se restaurará el histórico del cuaderno (sept\'25–jun\'26) y los valores por defecto (80 kg, 1350 kcal).\n\nNO se borrará lo que hayas registrado desde julio 2026 en adelante (hábitos, pesos, mediciones).\n\n¿Continuar?')) return;
+  const prev = state || {};
+  const seed = seedState();
+  // Conservar registro desde julio 2026 (app activa)
+  const keptReg = {};
+  Object.keys(prev.registro || {}).forEach(d => {
+    if(d >= START) keptReg[d] = prev.registro[d];
+  });
+  seed.registro = Object.assign({}, seed.registro, keptReg);
+  // Conservar mediciones de composición desde julio 2026
+  const seedComp = seed.composicion || [];
+  const keptComp = (prev.composicion || []).filter(c => c.fecha >= START);
+  const byF = {};
+  seedComp.forEach(c => { byF[c.fecha] = c; });
+  keptComp.forEach(c => { byF[c.fecha] = Object.assign({}, byF[c.fecha]||{}, c); });
+  seed.composicion = Object.keys(byF).sort().map(f => byF[f]);
+  // Meta: defaults del seed, pero no tirar calibración si ya había
+  seed.meta = Object.assign({}, seed.meta || {}, {
+    objetivo: (prev.meta && prev.meta.objetivo) || 80,
+    kcalObjetivo: (prev.meta && prev.meta.kcalObjetivo) || 1350,
+    activityLevel: (prev.meta && prev.meta.activityLevel) || 'moderado'
+  });
+  state = seed;
+  saveState();
+  maybeCalibrate();
+  renderDashboard(); renderRegistro(); renderComposicion();
+  alert('Histórico restaurado. Julio 2026 en adelante se ha conservado.');
+});
+
+document.getElementById('objetivoInput').addEventListener('change', (e)=>{
+  const v = parseFloat(String(e.target.value).replace(',', '.'));
+  if(!isNaN(v) && v>0) setObjetivo(v);
+  renderWeightGoal();   // progreso + gráfica (Composición)
+  renderDashboard();    // KPI «falta objetivo»
+});
+
+initMonthSelect();
+maybeCalibrate();
+renderDashboard();
+renderRegistro();
+renderComposicion();
+startRealtimeSync();
+
+// Re-dibuja las gráficas de ancho responsive al cambiar tamaño/orientación
+let _chartResizeT = null;
+window.addEventListener('resize', ()=>{
+  clearTimeout(_chartResizeT);
+  _chartResizeT = setTimeout(()=>{
+    if(document.getElementById('view-composicion').classList.contains('active')){
+      renderWeightChart('weightChart');
+      renderMiniChart('compCharts');
+    }
+  }, 180);
+});
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+}
+</script>
+</body>
+</html>

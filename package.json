@@ -1,0 +1,11 @@
+{
+  "name": "composicion",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Registro de hábitos, control de peso y análisis de composición corporal.",
+  "scripts": {
+    "test": "node tests/run.js",
+    "dev": "python3 -m http.server 5173"
+  }
+}
