@@ -29,14 +29,36 @@ export default function AjustesPage() {
   if (cargando) return <div className="flex flex-col gap-6"><Skeleton className="h-8 w-40" /><Skeleton className="h-64 w-full rounded-xl" /></div>;
 
   async function guardarPerfil() {
+    const edad = Number(form.edad);
+    const altura = Number(form.alturaCm);
+    const pesoObj = form.pesoObjetivo ? Number(form.pesoObjetivo) : undefined;
+    const kcal = Number(form.kcalObjetivo);
+
+    if (!edad || edad < 13 || edad > 120) {
+      toast.error("Edad: entre 13 y 120 años");
+      return;
+    }
+    if (!altura || altura < 100 || altura > 250) {
+      toast.error("Altura: entre 100 y 250 cm");
+      return;
+    }
+    if (pesoObj && (pesoObj < 30 || pesoObj > 300)) {
+      toast.error("Peso objetivo: entre 30 y 300 kg");
+      return;
+    }
+    if (!kcal || kcal < 800 || kcal > 5000) {
+      toast.error("Calorías objetivo: entre 800 y 5000");
+      return;
+    }
+
     await actualizarPerfil({
       nombre: form.nombre,
       sexo: form.sexo,
-      edad: Number(form.edad),
-      alturaCm: Number(form.alturaCm),
+      edad,
+      alturaCm: altura,
       objetivo: form.objetivo,
-      pesoObjetivo: form.pesoObjetivo ? Number(form.pesoObjetivo) : undefined,
-      kcalObjetivo: Number(form.kcalObjetivo),
+      pesoObjetivo: pesoObj,
+      kcalObjetivo: kcal,
       factorActividad: Number(form.factorActividad),
     });
     toast.success("Perfil guardado");
@@ -70,16 +92,32 @@ export default function AjustesPage() {
     URL.revokeObjectURL(url);
   }
 
-  async function subir(e: React.ChangeEvent<HTMLInputElement>) {
+  const [importando, setImportando] = React.useState(false);
+  const [previewDatos, setPreviewDatos] = React.useState<any>(null);
+
+  async function subirArchivo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
       const datos = JSON.parse(await file.text());
-      await importar(datos);
+      setPreviewDatos(datos);
     } catch {
       toast.error("Archivo no válido.");
     }
     e.target.value = "";
+  }
+
+  async function confirmarImportacion() {
+    if (!previewDatos) return;
+    setImportando(true);
+    try {
+      await importar(previewDatos);
+      toast.success("Datos importados");
+      setPreviewDatos(null);
+    } catch (err) {
+      toast.error("Error al importar");
+    }
+    setImportando(false);
   }
 
   return (
@@ -90,8 +128,8 @@ export default function AjustesPage() {
       <section>
         <SectionLabel>Perfil</SectionLabel>
         <Card className="flex flex-col gap-4 p-5">
-          <Row label="Nombre">
-            <Input value={form.nombre ?? ""} onChange={(e) => set("nombre", e.target.value)} className="max-w-48" />
+          <Row label="Nombre" htmlFor="nombre">
+            <Input id="nombre" value={form.nombre ?? ""} onChange={(e) => set("nombre", e.target.value)} className="max-w-48 h-11" />
           </Row>
           <Row label="Sexo biológico">
             <div className="flex gap-1.5">
@@ -100,11 +138,11 @@ export default function AjustesPage() {
               ))}
             </div>
           </Row>
-          <Row label="Edad">
-            <Input inputMode="numeric" value={String(form.edad ?? "")} onChange={(e) => set("edad", Number(e.target.value) as never)} className="max-w-24 tabular" />
+          <Row label="Edad" htmlFor="edad">
+            <Input id="edad" inputMode="numeric" value={String(form.edad ?? "")} onChange={(e) => set("edad", Number(e.target.value) as never)} className="max-w-24 tabular h-11" />
           </Row>
-          <Row label="Altura (cm)">
-            <Input inputMode="numeric" value={String(form.alturaCm ?? "")} onChange={(e) => set("alturaCm", Number(e.target.value) as never)} className="max-w-24 tabular" />
+          <Row label="Altura (cm)" htmlFor="altura">
+            <Input id="altura" inputMode="numeric" value={String(form.alturaCm ?? "")} onChange={(e) => set("alturaCm", Number(e.target.value) as never)} className="max-w-24 tabular h-11" />
           </Row>
         </Card>
       </section>
@@ -122,11 +160,11 @@ export default function AjustesPage() {
               ))}
             </div>
           </Row>
-          <Row label="Peso objetivo (kg)">
-            <Input inputMode="decimal" value={String(form.pesoObjetivo ?? "")} onChange={(e) => set("pesoObjetivo", Number(e.target.value) as never)} className="max-w-24 tabular" />
+          <Row label="Peso objetivo (kg)" htmlFor="pesoObjetivo">
+            <Input id="pesoObjetivo" inputMode="decimal" value={String(form.pesoObjetivo ?? "")} onChange={(e) => set("pesoObjetivo", Number(e.target.value) as never)} className="max-w-24 tabular h-11" />
           </Row>
-          <Row label="Calorías objetivo">
-            <Input inputMode="numeric" value={String(form.kcalObjetivo ?? "")} onChange={(e) => set("kcalObjetivo", Number(e.target.value) as never)} className="max-w-28 tabular" />
+          <Row label="Calorías objetivo" htmlFor="kcalObjetivo">
+            <Input id="kcalObjetivo" inputMode="numeric" value={String(form.kcalObjetivo ?? "")} onChange={(e) => set("kcalObjetivo", Number(e.target.value) as never)} className="max-w-28 tabular h-11" />
           </Row>
           <div>
             <Label className="mb-2 block">Nivel de actividad</Label>
@@ -155,6 +193,7 @@ export default function AjustesPage() {
             <Switch
               checked={form.imputarActiva !== false}
               onCheckedChange={(v) => { set("imputarActiva", v); actualizarPerfil({ imputarActiva: v }); }}
+              aria-label="Contar huecos como días malos"
             />
           </Row>
           <p className="text-xs text-muted-foreground">
@@ -190,11 +229,45 @@ export default function AjustesPage() {
             <Button variant="secondary" onClick={descargar} className="gap-2"><Download className="size-4" /> Exportar JSON</Button>
             <Button variant="secondary" onClick={descargarCSV} className="gap-2"><FileSpreadsheet className="size-4" /> Exportar CSV</Button>
             <Button variant="secondary" onClick={() => fileRef.current?.click()} className="gap-2"><Upload className="size-4" /> Importar</Button>
-            <input ref={fileRef} type="file" accept="application/json" hidden onChange={subir} />
+            <input ref={fileRef} type="file" accept="application/json" hidden onChange={subirArchivo} />
           </div>
           <p className="text-xs text-muted-foreground">La exportación incluye tu perfil, todos los días y las mediciones. La importación fusiona sin borrar lo que el archivo no contenga.</p>
         </Card>
       </section>
+
+      {/* Diálogo de confirmación de importación */}
+      {previewDatos && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
+          <Card className="w-full max-w-sm rounded-t-2xl border-t p-5 sm:rounded-2xl">
+            <div className="mb-4">
+              <h2 className="font-display text-lg font-bold">Confirmar importación</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Se fusionarán los datos del archivo con tu cuenta.</p>
+            </div>
+            <div className="mb-5 space-y-2 rounded-lg bg-secondary/50 p-3 text-xs">
+              {previewDatos.perfil?.nombre && <div>👤 {previewDatos.perfil.nombre}</div>}
+              {previewDatos.dias && <div>📅 {Object.keys(previewDatos.dias || {}).length} días</div>}
+              {previewDatos.cuerpo && Object.keys(previewDatos.cuerpo || {}).length > 0 && <div>📏 Mediciones de cuerpo</div>}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => setPreviewDatos(null)}
+                disabled={importando}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={confirmarImportacion}
+                disabled={importando}
+                className="flex-1"
+              >
+                {importando ? "Importando..." : "Importar"}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* Cuenta */}
       <section>
@@ -213,10 +286,10 @@ export default function AjustesPage() {
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({ label, children, htmlFor }: { label: string; children: React.ReactNode; htmlFor?: string }) {
   return (
     <div className="flex items-center justify-between gap-4">
-      <Label className="text-sm">{label}</Label>
+      <Label htmlFor={htmlFor} className="text-sm">{label}</Label>
       {children}
     </div>
   );
@@ -226,7 +299,7 @@ function Pill({ children, activo, onClick }: { children: React.ReactNode; activo
   return (
     <button
       onClick={onClick}
-      className={cn("rounded-full border px-3 py-1 text-sm transition-colors", activo ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}
+      className={cn("h-11 rounded-full border px-3 text-sm font-medium transition-colors", activo ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}
     >
       {children}
     </button>

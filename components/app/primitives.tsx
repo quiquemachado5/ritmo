@@ -72,6 +72,7 @@ export function Ring({
   trackVar = "--secondary",
   children,
   className,
+  ariaLabel,
 }: {
   value: number;
   max: number;
@@ -81,14 +82,23 @@ export function Ring({
   trackVar?: string;
   children?: React.ReactNode;
   className?: string;
+  ariaLabel?: string;
 }) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const pct = max > 0 ? Math.min(1, Math.max(0, value / max)) : 0;
   const dash = c * pct;
   return (
-    <div className={cn("relative inline-grid place-items-center", className)} style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
+    <div
+      className={cn("relative inline-grid place-items-center", className)}
+      style={{ width: size, height: size }}
+      role="progressbar"
+      aria-label={ariaLabel}
+      aria-valuenow={Math.round(pct * 100)}
+      aria-valuemin={0}
+      aria-valuemax={100}
+    >
+      <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={`var(${trackVar})`} strokeWidth={stroke} />
         <circle
           cx={size / 2}

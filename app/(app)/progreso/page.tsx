@@ -142,7 +142,7 @@ export default function ProgresoPage() {
                     key={x.id}
                     onClick={() => setRango(x.id)}
                     className={cn(
-                      "rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
+                      "h-9 rounded-full px-3 text-xs font-medium transition-colors",
                       rango === x.id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
                     )}
                   >
@@ -155,7 +155,7 @@ export default function ProgresoPage() {
             <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 rounded bg-weight" /> Real (báscula)</span>
               <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 rounded border-b-2 border-dashed border-weight" /> Estimado (diario)</span>
-              {estado.perfil.pesoObjetivo && <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 rounded border-b-2 border-dashed border-weight opacity-60" /> Objetivo</span>}
+              {estado.perfil.pesoObjetivo && <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 rounded border-b-2 border-dotted border-weight" /> Objetivo</span>}
             </div>
           </Card>
 

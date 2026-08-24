@@ -221,7 +221,7 @@ export default function CuerpoPage() {
                       </Button>
                     </div>
                   ) : (
-                    <Button variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-destructive" onClick={() => setConfirmBorrar(h.fecha)} aria-label="Eliminar pesaje">
+                    <Button variant="ghost" size="icon" className="size-11 text-muted-foreground hover:text-destructive" onClick={() => setConfirmBorrar(h.fecha)} aria-label="Eliminar pesaje">
                       <Trash2 className="size-4" />
                     </Button>
                   )}

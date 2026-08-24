@@ -84,7 +84,14 @@ export default function HoyPage() {
         </SectionLabel>
         <Card className="p-5">
           <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center sm:gap-7">
-            <Ring value={consumidas} max={objetivoKcal} colorVar="--energy" size={140} stroke={13}>
+            <Ring
+              value={consumidas}
+              max={objetivoKcal}
+              colorVar="--energy"
+              size={140}
+              stroke={13}
+              ariaLabel={`Energía de hoy: ${fmtKcal(consumidas)} de ${fmtKcal(objetivoKcal)} kcal`}
+            >
               <div>
                 <span className="block font-display text-3xl font-bold leading-none tabular">
                   {fmtKcal(Math.abs(restanteKcal))}
@@ -196,8 +203,9 @@ export default function HoyPage() {
                 <button
                   key={h.clave}
                   onClick={() => alternarHabito(hoyISO, h.clave)}
+                  aria-pressed={hecho}
                   className={cn(
-                    "flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors",
+                    "h-11 flex items-center gap-2 rounded-xl border px-3 text-sm font-medium transition-colors",
                     hecho ? "border-primary/40 bg-primary/8 text-foreground" : "border-border text-muted-foreground hover:bg-secondary",
                   )}
                 >
