@@ -146,6 +146,78 @@ export function BalanceChart({ data }: { data: PuntoBalance[] }) {
   );
 }
 
+/** Evolución de composición corporal (grasa % y masa muscular kg). */
+export function CompositionChart({
+  data,
+}: {
+  data: { label: string; grasa: number; muscular: number | null }[];
+}) {
+  const grasas = data.map((d) => d.grasa);
+  const musculares = data.map((d) => d.muscular).filter((v): v is number => v != null);
+  const gMin = Math.floor(Math.min(...grasas) - 2);
+  const gMax = Math.ceil(Math.max(...grasas) + 2);
+
+  return (
+    <div className="h-56 w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+          <XAxis dataKey="label" tick={ejeStyle} tickLine={false} axisLine={false} minTickGap={28} />
+          <YAxis yAxisId="grasa" domain={[gMin, gMax]} tick={ejeStyle} tickLine={false} axisLine={false} width={42} />
+          {musculares.length > 0 && (
+            <YAxis
+              yAxisId="muscular"
+              orientation="right"
+              domain={[Math.floor(Math.min(...musculares) - 2), Math.ceil(Math.max(...musculares) + 2)]}
+              tick={ejeStyle}
+              tickLine={false}
+              axisLine={false}
+              width={42}
+            />
+          )}
+          <Line
+            yAxisId="grasa"
+            type="monotone"
+            dataKey="grasa"
+            stroke="var(--body)"
+            strokeWidth={2.5}
+            dot={{ r: 3, fill: "var(--body)", strokeWidth: 0 }}
+            isAnimationActive={false}
+            connectNulls
+          />
+          {musculares.length > 0 && (
+            <Line
+              yAxisId="muscular"
+              type="monotone"
+              dataKey="muscular"
+              stroke="var(--weight)"
+              strokeWidth={2}
+              strokeDasharray="5 4"
+              dot={{ r: 2.5, fill: "var(--weight)", strokeWidth: 0 }}
+              isAnimationActive={false}
+              connectNulls
+            />
+          )}
+          <Tooltip
+            content={({ active, payload, label }) => {
+              if (!active || !payload?.length) return null;
+              const g = payload.find((p) => p.dataKey === "grasa")?.value as number | undefined;
+              const m = payload.find((p) => p.dataKey === "muscular")?.value as number | undefined;
+              return (
+                <CajaTooltip>
+                  <p className="mb-1 font-medium text-foreground">{label}</p>
+                  {g != null && <p className="tabular" style={{ color: "var(--body)" }}>Grasa: {g}%</p>}
+                  {m != null && <p className="tabular" style={{ color: "var(--weight)" }}>Muscular: {m} kg</p>}
+                </CajaTooltip>
+              );
+            }}
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 /** Serie genérica de medidas/composición. */
 export function LineSeries({
   data,

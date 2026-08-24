@@ -3,12 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -22,7 +21,6 @@ export default function LoginPage() {
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const configurado = isSupabaseConfigured();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [cargando, setCargando] = React.useState(false);
@@ -39,23 +37,12 @@ function LoginForm() {
       router.push(params.get("next") || "/");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo iniciar sesión.");
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("Invalid login")) setError("Correo o contraseña incorrectos. Revísalos e inténtalo de nuevo.");
+      else if (msg.includes("Email not confirmed")) setError("Tu correo aún no está confirmado. Revisa tu bandeja de entrada.");
+      else setError(msg || "No se pudo iniciar sesión. Inténtalo de nuevo.");
       setCargando(false);
     }
-  }
-
-  if (!configurado) {
-    return (
-      <Card className="p-6 text-center">
-        <h1 className="font-display text-xl font-bold">Modo demo</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          RITMO funciona en local con datos de ejemplo. Configura Supabase para crear cuentas y sincronizar entre dispositivos.
-        </p>
-        <Button asChild className="mt-5 w-full">
-          <Link href="/">Entrar a la demo</Link>
-        </Button>
-      </Card>
-    );
   }
 
   return (
@@ -71,7 +58,12 @@ function LoginForm() {
           <Label htmlFor="password">Contraseña</Label>
           <Input id="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
         </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && (
+          <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive" role="alert">
+            <Shield className="mt-0.5 size-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
         <Button type="submit" disabled={cargando} className="gap-2">
           {cargando && <Loader2 className="size-4 animate-spin" />}
           Entrar
@@ -82,6 +74,9 @@ function LoginForm() {
         <Link href="/registro" className="font-medium text-primary hover:underline">
           Crear una
         </Link>
+      </p>
+      <p className="mt-3 text-center text-[0.65rem] text-muted-foreground/50">
+        Tus datos se guardan cifrados en Supabase. RITMO no comparte información con terceros.
       </p>
     </Card>
   );

@@ -35,8 +35,6 @@ export const PERFIL_DEFECTO: Perfil = {
   proteinaObjetivo: undefined,
   factorActividad: 1.375,
   umbralRacha: 4,
-  aguaObjetivoMl: 2500,
-  pasosObjetivo: 8000,
   imputarActiva: true,
   imputarDesde: "2026-07-01",
   imputarSuperavitKcal: 500,

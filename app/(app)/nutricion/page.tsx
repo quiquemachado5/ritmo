@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
 import { macrosObjetivo } from "@/lib/model/metrics";
@@ -25,6 +25,7 @@ export default function NutricionPage() {
   const { estado, cargando, dia, borrarComida } = useRitmo();
   const { abrir } = useQuickLog();
   const [fecha, setFecha] = React.useState(hoy());
+  const [confirmBorrar, setConfirmBorrar] = React.useState<string | null>(null);
   const r = React.useMemo(() => resumen(estado), [estado]);
 
   if (cargando) return <div className="flex flex-col gap-6"><Skeleton className="h-8 w-40" /><Skeleton className="h-56 w-full rounded-xl" /></div>;
@@ -105,9 +106,20 @@ export default function NutricionPage() {
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
                         <span className="font-display font-bold tabular text-energy">{fmtKcal(c.kcal)}</span>
-                        <Button variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-destructive" onClick={() => borrarComida(fecha, c.id)} aria-label="Eliminar">
-                          <Trash2 className="size-4" />
-                        </Button>
+                        {confirmBorrar === c.id ? (
+                          <div className="flex items-center gap-1">
+                            <Button variant="destructive" size="sm" className="h-7 gap-1 px-2 text-xs" onClick={() => { borrarComida(fecha, c.id); setConfirmBorrar(null); }}>
+                              <AlertTriangle className="size-3" /> Borrar
+                            </Button>
+                            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setConfirmBorrar(null)}>
+                              No
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-destructive" onClick={() => setConfirmBorrar(c.id)} aria-label="Eliminar">
+                            <Trash2 className="size-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}

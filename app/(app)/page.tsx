@@ -2,10 +2,10 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowRight, Droplets, Flame, Footprints, Plus, TrendingDown, TrendingUp } from "lucide-react";
+import { Award, Flame, Plus, Target, TrendingDown, TrendingUp } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
-import { resumen } from "@/lib/model/analytics";
+import { resumen, adherenciaPorHabito } from "@/lib/model/analytics";
 import { macrosObjetivo } from "@/lib/model/metrics";
 import { HABITOS } from "@/lib/model/config";
 import { hoy } from "@/lib/model/dates";
@@ -54,11 +54,6 @@ export default function HoyPage() {
     objetivo: estado.perfil.objetivo,
     proteinaGkg: estado.perfil.proteinaObjetivo,
   });
-
-  const agua = diaHoy.aguaMl ?? 0;
-  const aguaObj = estado.perfil.aguaObjetivoMl ?? 2500;
-  const pasos = diaHoy.pasos ?? 0;
-  const pasosObj = estado.perfil.pasosObjetivo ?? 8000;
 
   const habitosHechos = HABITOS.filter((h) => diaHoy.habitos?.[h.clave]).length;
   const tendKg = r.prediccion.modelo?.kgSemana ?? r.tendencia?.kgSemana ?? null;
@@ -109,24 +104,6 @@ export default function HoyPage() {
               <MacroBar label="Carbohidratos" value={macros.c} max={objMacros.carbohidratos} colorVar="--habit" />
               <MacroBar label="Grasas" value={macros.g} max={objMacros.grasas} colorVar="--energy" />
             </div>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-3 border-t border-border pt-4">
-            <MiniStat
-              icon={<Droplets className="size-4 text-water" />}
-              label="Agua"
-              value={`${(agua / 1000).toFixed(1)} / ${(aguaObj / 1000).toFixed(1)} L`}
-              pct={Math.min(100, (agua / aguaObj) * 100)}
-              colorVar="--water"
-              onClick={() => abrir("agua")}
-            />
-            <MiniStat
-              icon={<Footprints className="size-4 text-habit" />}
-              label="Pasos"
-              value={`${fmtKcal(pasos)} / ${fmtKcal(pasosObj)}`}
-              pct={Math.min(100, (pasos / pasosObj) * 100)}
-              colorVar="--habit"
-              onClick={() => abrir("ejercicio")}
-            />
           </div>
         </Card>
       </section>
@@ -258,35 +235,49 @@ export default function HoyPage() {
           )}
         </Card>
       </section>
+
+      {/* Insights semanales */}
+      <WeeklyInsights r={r} estado={estado} />
     </div>
   );
 }
 
-function MiniStat({
-  icon,
-  label,
-  value,
-  pct,
-  colorVar,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  pct: number;
-  colorVar: string;
-  onClick: () => void;
-}) {
+function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: typeof r extends never ? never : Parameters<typeof resumen>[0] }) {
+  const porHabito = React.useMemo(() => adherenciaPorHabito(estado, HABITOS, 7), [estado]);
+  const mejor = porHabito[0];
+  const peor = porHabito[porHabito.length - 1];
+  const insights: { icon: React.ReactNode; text: string; tone: string }[] = [];
+
+  if (r.habitos.rachaActual >= 7) {
+    insights.push({ icon: <Award className="size-4 text-streak" />, text: `Llevas ${r.habitos.rachaActual} días de racha. ¡Sigue así!`, tone: "streak" });
+  }
+  if (r.habitos.adherencia7 >= 80) {
+    insights.push({ icon: <Target className="size-4 text-primary" />, text: `${r.habitos.adherencia7}% de adherencia esta semana. Gran constancia.`, tone: "primary" });
+  } else if (r.habitos.adherencia7 < 50 && r.habitos.diasRegistrados > 7) {
+    insights.push({ icon: <Target className="size-4 text-warning" />, text: `${r.habitos.adherencia7}% de adherencia esta semana. ¿Puedes mejorar hoy?`, tone: "warning" });
+  }
+  if (mejor && mejor.pct >= 70 && peor && peor.pct < 30) {
+    insights.push({ icon: <TrendingUp className="size-4 text-habit" />, text: `Tu mejor hábito: ${mejor.etiqueta} (${mejor.pct}%). Intenta mejorar ${peor.etiqueta}.`, tone: "habit" });
+  }
+  const tendKg = r.prediccion.modelo?.kgSemana;
+  if (tendKg != null && tendKg <= -0.3) {
+    insights.push({ icon: <TrendingDown className="size-4 text-weight" />, text: `Pierdes ~${Math.abs(tendKg).toFixed(1)} kg/semana. Buen ritmo.`, tone: "weight" });
+  }
+
+  if (insights.length === 0) return null;
+
   return (
-    <button onClick={onClick} className="flex flex-col gap-1.5 rounded-xl bg-secondary/50 p-3 text-left transition-colors hover:bg-secondary">
-      <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-        {icon} {label}
-      </div>
-      <span className="text-sm font-semibold tabular">{value}</span>
-      <div className="h-1.5 overflow-hidden rounded-full bg-background">
-        <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: `var(${colorVar})` }} />
-      </div>
-    </button>
+    <section>
+      <SectionLabel>Resumen semanal</SectionLabel>
+      <Card className="flex flex-col gap-2.5 p-4">
+        {insights.map((ins, i) => (
+          <div key={i} className="flex items-start gap-3 text-sm">
+            {ins.icon}
+            <span className="text-muted-foreground">{ins.text}</span>
+          </div>
+        ))}
+      </Card>
+    </section>
   );
 }
 

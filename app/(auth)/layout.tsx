@@ -13,6 +13,12 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <p className="mt-8 max-w-xs text-center text-xs text-muted-foreground">
         Constancia sobre perfección.
       </p>
+      <p className="mt-3 text-center text-[0.65rem] text-muted-foreground/60">
+        hecho por{" "}
+        <a href="https://github.com/quiquemachado5" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground hover:underline">
+          quiquemachado5
+        </a>
+      </p>
     </div>
   );
 }

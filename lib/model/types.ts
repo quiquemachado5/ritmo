@@ -32,8 +32,6 @@ export interface Dia {
   notas?: string;
   /* Extensiones RITMO */
   comidas?: Comida[];
-  aguaMl?: number;
-  pasos?: number;
 }
 
 export interface Composicion {
@@ -67,8 +65,6 @@ export interface Perfil {
   proteinaObjetivo?: number;
   factorActividad: number;
   umbralRacha: number;
-  aguaObjetivoMl?: number;
-  pasosObjetivo?: number;
   /* Imputación de días sin registro */
   imputarActiva?: boolean;
   imputarDesde?: string;

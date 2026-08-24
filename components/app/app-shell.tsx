@@ -113,12 +113,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           ))}
         </nav>
-        <div className="mt-2 flex items-center justify-between border-t border-border pt-3">
-          <SyncDot />
-          <div className="flex items-center gap-1">
-            <ThemeToggle />
-            <UserMenu />
+        <div className="mt-2 flex flex-col gap-2 border-t border-border pt-3">
+          <div className="flex items-center justify-between">
+            <SyncDot />
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <UserMenu />
+            </div>
           </div>
+          <p className="text-[0.6rem] text-muted-foreground/50">
+            hecho por{" "}
+            <a href="https://github.com/quiquemachado5" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground hover:underline">
+              quiquemachado5
+            </a>
+          </p>
         </div>
       </aside>
 

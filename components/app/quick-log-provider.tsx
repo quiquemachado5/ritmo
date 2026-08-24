@@ -3,7 +3,7 @@
 import * as React from "react";
 import { hoy } from "@/lib/model/dates";
 
-export type QuickTab = "comida" | "peso" | "agua" | "ejercicio" | "habitos" | "medidas";
+export type QuickTab = "comida" | "peso" | "ejercicio" | "habitos" | "medidas";
 
 interface QuickLogState {
   abierto: boolean;

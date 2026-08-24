@@ -3,17 +3,15 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, MailCheck } from "lucide-react";
+import { Loader2, MailCheck, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/client";
 
 export default function RegistroPage() {
   const router = useRouter();
-  const configurado = isSupabaseConfigured();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [cargando, setCargando] = React.useState(false);
@@ -44,23 +42,12 @@ export default function RegistroPage() {
         setCargando(false);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo crear la cuenta.");
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("already registered")) setError("Ya existe una cuenta con ese correo. ¿Quizás quieres iniciar sesión?");
+      else if (msg.includes("weak_password") || msg.includes("password")) setError("La contraseña es demasiado débil. Usa al menos 6 caracteres.");
+      else setError(msg || "No se pudo crear la cuenta. Inténtalo de nuevo.");
       setCargando(false);
     }
-  }
-
-  if (!configurado) {
-    return (
-      <Card className="p-6 text-center">
-        <h1 className="font-display text-xl font-bold">Modo demo</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          El registro requiere Supabase. Mientras tanto, prueba RITMO con datos de ejemplo.
-        </p>
-        <Button asChild className="mt-5 w-full">
-          <Link href="/">Entrar a la demo</Link>
-        </Button>
-      </Card>
-    );
   }
 
   if (confirmar) {
@@ -88,7 +75,12 @@ export default function RegistroPage() {
           <Label htmlFor="password">Contraseña</Label>
           <Input id="password" type="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" />
         </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && (
+          <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive" role="alert">
+            <Shield className="mt-0.5 size-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
         <Button type="submit" disabled={cargando} className="gap-2">
           {cargando && <Loader2 className="size-4 animate-spin" />}
           Crear cuenta

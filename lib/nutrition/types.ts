@@ -13,6 +13,6 @@ export interface AnalisisNutricional {
   carbohidratos: number;
   grasas: number;
   items: ItemNutricional[];
-  fuente: "claude" | "offline";
+  fuente: "claude" | "offline" | "edamam";
   aviso?: string;
 }

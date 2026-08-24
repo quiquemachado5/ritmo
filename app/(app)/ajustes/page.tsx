@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
-import { Download, LogOut, Monitor, Moon, Sun, Upload } from "lucide-react";
+import { Download, FileSpreadsheet, LogOut, Monitor, Moon, Sun, Upload } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { FACTORES_ACTIVIDAD } from "@/lib/model/metrics";
 import { Card } from "@/components/ui/card";
@@ -37,8 +37,6 @@ export default function AjustesPage() {
       objetivo: form.objetivo,
       pesoObjetivo: form.pesoObjetivo ? Number(form.pesoObjetivo) : undefined,
       kcalObjetivo: Number(form.kcalObjetivo),
-      aguaObjetivoMl: form.aguaObjetivoMl ? Number(form.aguaObjetivoMl) : undefined,
-      pasosObjetivo: form.pasosObjetivo ? Number(form.pasosObjetivo) : undefined,
       factorActividad: Number(form.factorActividad),
     });
     toast.success("Perfil guardado");
@@ -50,6 +48,24 @@ export default function AjustesPage() {
     const a = document.createElement("a");
     a.href = url;
     a.download = `ritmo-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function descargarCSV() {
+    const dias = Object.values(estado.dias).sort((a, b) => (a.fecha < b.fecha ? -1 : 1));
+    const cabecera = "fecha,peso,kcal_consumidas,kcal_quemadas,habitos_cumplidos,comidas";
+    const filas = dias.map((d) => {
+      const habs = Object.values(d.habitos || {}).filter(Boolean).length;
+      const nComidas = d.comidas?.length ?? 0;
+      return [d.fecha, d.peso ?? "", d.kcalConsumidas ?? "", d.kcalQuemadas ?? "", habs, nComidas].join(",");
+    });
+    const csv = [cabecera, ...filas].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `ritmo-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -112,12 +128,6 @@ export default function AjustesPage() {
           <Row label="Calorías objetivo">
             <Input inputMode="numeric" value={String(form.kcalObjetivo ?? "")} onChange={(e) => set("kcalObjetivo", Number(e.target.value) as never)} className="max-w-28 tabular" />
           </Row>
-          <Row label="Agua objetivo (ml)">
-            <Input inputMode="numeric" value={String(form.aguaObjetivoMl ?? "")} onChange={(e) => set("aguaObjetivoMl", Number(e.target.value) as never)} className="max-w-28 tabular" />
-          </Row>
-          <Row label="Pasos objetivo">
-            <Input inputMode="numeric" value={String(form.pasosObjetivo ?? "")} onChange={(e) => set("pasosObjetivo", Number(e.target.value) as never)} className="max-w-28 tabular" />
-          </Row>
           <div>
             <Label className="mb-2 block">Nivel de actividad</Label>
             <div className="flex flex-col gap-1.5">
@@ -178,6 +188,7 @@ export default function AjustesPage() {
         <Card className="flex flex-col gap-3 p-5">
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" onClick={descargar} className="gap-2"><Download className="size-4" /> Exportar JSON</Button>
+            <Button variant="secondary" onClick={descargarCSV} className="gap-2"><FileSpreadsheet className="size-4" /> Exportar CSV</Button>
             <Button variant="secondary" onClick={() => fileRef.current?.click()} className="gap-2"><Upload className="size-4" /> Importar</Button>
             <input ref={fileRef} type="file" accept="application/json" hidden onChange={subir} />
           </div>

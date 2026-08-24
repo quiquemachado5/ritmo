@@ -221,6 +221,17 @@
   ::selection {
     background: color-mix(in oklab, var(--primary) 22%, transparent);
   }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
 
 /* Utilidad de superficie base para tarjetas de la app (sombra cálida RITMO). */

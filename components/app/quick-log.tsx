@@ -188,8 +188,8 @@ function PanelComida({ fecha, onDone }: { fecha: string; onDone: () => void }) {
               {analisis.kcal}
               <span className="ml-1 text-sm font-medium text-muted-foreground">kcal</span>
             </span>
-            <Chip tone={analisis.fuente === "claude" ? "weight" : "warning"}>
-              {analisis.fuente === "claude" ? "IA" : "aprox."}
+            <Chip tone={analisis.fuente === "offline" ? "warning" : "weight"}>
+              {analisis.fuente === "edamam" ? "Edamam" : analisis.fuente === "claude" ? "IA" : "aprox."}
             </Chip>
           </div>
           <div className="grid grid-cols-3 gap-3">

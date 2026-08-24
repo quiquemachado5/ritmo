@@ -16,7 +16,7 @@ function clonar<T>(v: T): T {
 function diaVacio(dia: Dia | undefined): boolean {
   if (!dia) return true;
   const sinHabitos = !Object.values(dia.habitos || {}).some((v) => v === true);
-  const sinNumeros = (["peso", "kcalConsumidas", "kcalQuemadas", "grasaPct", "aguaMl", "pasos"] as const).every(
+  const sinNumeros = (["peso", "kcalConsumidas", "kcalQuemadas", "grasaPct"] as const).every(
     (k) => dia[k] === undefined || dia[k] === null,
   );
   const sinComidas = !dia.comidas || dia.comidas.length === 0;
@@ -41,8 +41,6 @@ export interface RitmoContextValue {
   actualizarDia: (fecha: string, campos: Partial<Dia>) => Promise<void>;
   registrarComida: (fecha: string, comida: Comida) => Promise<void>;
   borrarComida: (fecha: string, id: string) => Promise<void>;
-  registrarAgua: (fecha: string, ml: number) => Promise<void>;
-  registrarPasos: (fecha: string, pasos: number) => Promise<void>;
   guardarMedicion: (m: Composicion) => Promise<void>;
   borrarMedicion: (fecha: string) => Promise<void>;
   actualizarPerfil: (campos: Partial<Perfil>) => Promise<void>;
@@ -240,20 +238,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     [actualizarDia],
   );
 
-  const registrarAgua = React.useCallback(
-    async (fecha: string, ml: number) => {
-      await actualizarDia(fecha, { aguaMl: Math.max(0, Math.round(ml)) });
-    },
-    [actualizarDia],
-  );
-
-  const registrarPasos = React.useCallback(
-    async (fecha: string, pasos: number) => {
-      await actualizarDia(fecha, { pasos: Math.max(0, Math.round(pasos)) });
-    },
-    [actualizarDia],
-  );
-
   const guardarMedicion = React.useCallback(
     async (m: Composicion) => {
       const existente = dataRef.current.composicion.find((x) => x.fecha === m.fecha);
@@ -344,10 +328,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   );
 
   const cerrarSesion = React.useCallback(async () => {
-    if (isSupabaseConfigured()) {
-      const client = createClient();
-      await client.auth.signOut();
-    }
+    const client = createClient();
+    await client.auth.signOut();
     window.location.href = "/login";
   }, []);
 
@@ -369,8 +351,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       actualizarDia,
       registrarComida,
       borrarComida,
-      registrarAgua,
-      registrarPasos,
       guardarMedicion,
       borrarMedicion,
       actualizarPerfil,
@@ -379,7 +359,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       recargar,
       cerrarSesion,
     }),
-    [estado, modo, cargando, sincronizando, userEmail, dia, medicion, alternarHabito, actualizarDia, registrarComida, borrarComida, registrarAgua, registrarPasos, guardarMedicion, borrarMedicion, actualizarPerfil, exportar, importar, recargar, cerrarSesion],
+    [estado, modo, cargando, sincronizando, userEmail, dia, medicion, alternarHabito, actualizarDia, registrarComida, borrarComida, guardarMedicion, borrarMedicion, actualizarPerfil, exportar, importar, recargar, cerrarSesion],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

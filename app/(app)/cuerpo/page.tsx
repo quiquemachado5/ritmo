@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowDownRight, ArrowUpRight, Minus, Plus, Scale, Trash2 } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Minus, Plus, Scale, Trash2, AlertTriangle } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
 import { pesajes as getPesajes, resumen } from "@/lib/model/analytics";
@@ -10,7 +10,7 @@ import { hoy, sumarDias } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LineSeries } from "@/components/app/charts";
+import { LineSeries, CompositionChart } from "@/components/app/charts";
 import { Metric, SectionLabel, Chip, EmptyState } from "@/components/app/primitives";
 import { fmtPeso, fmtNum, fmtSigno, fmtFechaCorta, relativo } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -40,10 +40,24 @@ export default function CuerpoPage() {
     return historial.map((h, i) => ({ label: fmtFechaCorta(h.fecha), valor: suav[i] ?? h.peso }));
   }, [historial]);
 
+  const [confirmBorrar, setConfirmBorrar] = React.useState<string | null>(null);
+
   async function borrarPesaje(fecha: string) {
     if (medicion(fecha)) await borrarMedicion(fecha);
-    await actualizarDia(fecha, { peso: null });
+    await actualizarDia(fecha, { peso: undefined });
+    setConfirmBorrar(null);
   }
+
+  const compSerie = React.useMemo(() => {
+    return estado.composicion
+      .filter((c) => c.grasaPct != null)
+      .sort((a, b) => (a.fecha < b.fecha ? -1 : 1))
+      .map((c) => ({
+        label: fmtFechaCorta(c.fecha),
+        grasa: c.grasaPct!,
+        muscular: c.masaMuscularKg ?? null,
+      }));
+  }, [estado]);
 
   if (cargando) return <div className="flex flex-col gap-6"><Skeleton className="h-8 w-40" /><Skeleton className="h-40 w-full rounded-xl" /></div>;
 
@@ -134,6 +148,19 @@ export default function CuerpoPage() {
         </section>
       )}
 
+      {/* Evolución composición */}
+      {compSerie.length >= 2 && (
+        <section>
+          <SectionLabel>Evolución de composición</SectionLabel>
+          <Card className="p-5">
+            <CompositionChart data={compSerie} />
+            <p className="mt-2 text-center text-xs text-muted-foreground">
+              {compSerie.length} mediciones con % grasa
+            </p>
+          </Card>
+        </section>
+      )}
+
       {/* Medidas */}
       {ultima && (ultima.cintura || ultima.cadera || ultima.pecho || ultima.brazo || ultima.muslo) && (
         <section>
@@ -163,9 +190,20 @@ export default function CuerpoPage() {
                   {h.grasaPct != null && <Chip tone="body">{fmtNum(h.grasaPct, 1)}% grasa</Chip>}
                   <DeltaTag delta={h.delta} />
                   <span className="w-16 text-right font-display font-bold tabular text-weight">{fmtPeso(h.peso)}<span className="ml-0.5 text-xs font-normal text-muted-foreground">kg</span></span>
-                  <Button variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-destructive" onClick={() => borrarPesaje(h.fecha)} aria-label="Eliminar pesaje">
-                    <Trash2 className="size-4" />
-                  </Button>
+                  {confirmBorrar === h.fecha ? (
+                    <div className="flex items-center gap-1">
+                      <Button variant="destructive" size="sm" className="h-7 gap-1 px-2 text-xs" onClick={() => borrarPesaje(h.fecha)}>
+                        <AlertTriangle className="size-3" /> Borrar
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setConfirmBorrar(null)}>
+                        No
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-destructive" onClick={() => setConfirmBorrar(h.fecha)} aria-label="Eliminar pesaje">
+                      <Trash2 className="size-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}

@@ -154,14 +154,23 @@ export default function ProgresoPage() {
                 <PredCell etiqueta="En 15 días" iv={r.prediccion.quincena} />
                 <PredCell etiqueta="En 1 mes" iv={r.prediccion.mes} />
               </div>
-              <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4 text-sm text-muted-foreground">
-                <Chip tone="weight">confianza {r.prediccion.modelo?.calidad}</Chip>
-                {r.prediccion.diasSinPesaje != null && (
-                  <span>{r.prediccion.diasSinPesaje === 0 ? "pesaje reciente" : `${r.prediccion.diasSinPesaje} días desde el último pesaje`}</span>
-                )}
-                {r.prediccion.fechaObjetivo && (
-                  <span>· objetivo hacia <span className="font-medium text-foreground">{fmtFechaCorta(r.prediccion.fechaObjetivo)}</span></span>
-                )}
+              <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 text-sm text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Chip tone="weight">confianza {r.prediccion.modelo?.calidad}</Chip>
+                  {r.prediccion.diasSinPesaje != null && (
+                    <span>{r.prediccion.diasSinPesaje === 0 ? "pesaje reciente" : `${r.prediccion.diasSinPesaje} días desde el último pesaje`}</span>
+                  )}
+                  {r.prediccion.fechaObjetivo && (
+                    <span>· objetivo hacia <span className="font-medium text-foreground">{fmtFechaCorta(r.prediccion.fechaObjetivo)}</span></span>
+                  )}
+                </div>
+                <p className="text-xs leading-relaxed">
+                  {r.prediccion.modelo?.calidad === "inicial"
+                    ? "Predicción inicial: con más pesajes y registro de comidas, el rango se irá estrechando."
+                    : r.prediccion.modelo?.calidad === "media"
+                      ? "La predicción usa tu historial de balance calórico. Más datos = rangos más precisos."
+                      : "Predicción calibrada con tu TDEE observado. La banda refleja un 80% de confianza."}
+                </p>
               </div>
             </Card>
           )}

@@ -17,8 +17,6 @@ const diaAFila = (d: Dia, userId: string) => ({
   grasa_pct: d.grasaPct ?? null,
   notas: d.notas ?? null,
   comidas: d.comidas ?? [],
-  agua_ml: d.aguaMl ?? null,
-  pasos: d.pasos ?? null,
 });
 
 interface DiaFila {
@@ -30,8 +28,6 @@ interface DiaFila {
   grasa_pct: number | null;
   notas: string | null;
   comidas: Comida[] | null;
-  agua_ml: number | null;
-  pasos: number | null;
 }
 
 const diaDesdeFila = (f: DiaFila): Dia => {
@@ -42,8 +38,6 @@ const diaDesdeFila = (f: DiaFila): Dia => {
   if (f.grasa_pct !== null) d.grasaPct = Number(f.grasa_pct);
   if (f.notas) d.notas = f.notas;
   if (Array.isArray(f.comidas) && f.comidas.length) d.comidas = f.comidas;
-  if (f.agua_ml !== null) d.aguaMl = Number(f.agua_ml);
-  if (f.pasos !== null) d.pasos = Number(f.pasos);
   return d;
 };
 
@@ -90,8 +84,6 @@ const PERFIL_COLS: Record<string, string> = {
   proteinaObjetivo: "proteina_objetivo",
   factorActividad: "factor_actividad",
   umbralRacha: "umbral_racha",
-  aguaObjetivoMl: "agua_objetivo_ml",
-  pasosObjetivo: "pasos_objetivo",
   onboardingCompleto: "onboarding_completo",
 };
 
