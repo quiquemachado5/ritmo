@@ -368,6 +368,13 @@ function PanelMedidas({ fecha, onDone }: { fecha: string; onDone: () => void }) 
   const [campos, setCampos] = React.useState({
     peso: m?.peso != null ? String(m.peso) : "",
     grasaPct: m?.grasaPct != null ? String(m.grasaPct) : "",
+    masaMuscularKg: m?.masaMuscularKg != null ? String(m.masaMuscularKg) : "",
+    imc: m?.imc != null ? String(m.imc) : "",
+    grasaVisceral: m?.grasaVisceral != null ? String(m.grasaVisceral) : "",
+    metabBasalKcal: m?.metabBasalKcal != null ? String(m.metabBasalKcal) : "",
+    gastoDiarioKcal: m?.gastoDiarioKcal != null ? String(m.gastoDiarioKcal) : "",
+    masaOseaKg: m?.masaOseaKg != null ? String(m.masaOseaKg) : "",
+    aguaPct: m?.aguaPct != null ? String(m.aguaPct) : "",
     cintura: m?.cintura != null ? String(m.cintura) : "",
     cadera: m?.cadera != null ? String(m.cadera) : "",
   });
@@ -387,6 +394,13 @@ function PanelMedidas({ fecha, onDone }: { fecha: string; onDone: () => void }) 
       fecha,
       peso: Math.round(peso * 10) / 10,
       grasaPct: num(campos.grasaPct),
+      masaMuscularKg: num(campos.masaMuscularKg),
+      imc: num(campos.imc),
+      grasaVisceral: num(campos.grasaVisceral),
+      metabBasalKcal: num(campos.metabBasalKcal),
+      gastoDiarioKcal: num(campos.gastoDiarioKcal),
+      masaOseaKg: num(campos.masaOseaKg),
+      aguaPct: num(campos.aguaPct),
       cintura: num(campos.cintura),
       cadera: num(campos.cadera),
     });
@@ -395,14 +409,43 @@ function PanelMedidas({ fecha, onDone }: { fecha: string; onDone: () => void }) 
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Peso (kg)" value={campos.peso} onChange={(v) => set("peso", v)} placeholder="88,5" />
-        <Field label="Grasa (%)" value={campos.grasaPct} onChange={(v) => set("grasaPct", v)} placeholder="16,7" />
-        <Field label="Cintura (cm)" value={campos.cintura} onChange={(v) => set("cintura", v)} placeholder="86" />
-        <Field label="Cadera (cm)" value={campos.cadera} onChange={(v) => set("cadera", v)} placeholder="98" />
+    <div className="flex flex-col gap-4 max-h-[70vh] overflow-y-auto pr-2">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Básico</p>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Peso (kg)" value={campos.peso} onChange={(v) => set("peso", v)} placeholder="88,5" />
+          <Field label="IMC" value={campos.imc} onChange={(v) => set("imc", v)} placeholder="25,8" />
+        </div>
       </div>
-      <Button onClick={guardar} className="mt-1 gap-2">
+
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Composición corporal</p>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Grasa (%)" value={campos.grasaPct} onChange={(v) => set("grasaPct", v)} placeholder="16,7" />
+          <Field label="Masa muscular (kg)" value={campos.masaMuscularKg} onChange={(v) => set("masaMuscularKg", v)} placeholder="70,1" />
+          <Field label="Grasa visceral" value={campos.grasaVisceral} onChange={(v) => set("grasaVisceral", v)} placeholder="3" />
+          <Field label="Masa ósea (kg)" value={campos.masaOseaKg} onChange={(v) => set("masaOseaKg", v)} placeholder="3,6" />
+          <Field label="Agua (%)" value={campos.aguaPct} onChange={(v) => set("aguaPct", v)} placeholder="57" />
+        </div>
+      </div>
+
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Metabolismo</p>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Metab. basal (kcal)" value={campos.metabBasalKcal} onChange={(v) => set("metabBasalKcal", v)} placeholder="1806" />
+          <Field label="Gasto diario (kcal)" value={campos.gastoDiarioKcal} onChange={(v) => set("gastoDiarioKcal", v)} placeholder="3288" />
+        </div>
+      </div>
+
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Medidas</p>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Cintura (cm)" value={campos.cintura} onChange={(v) => set("cintura", v)} placeholder="86" />
+          <Field label="Cadera (cm)" value={campos.cadera} onChange={(v) => set("cadera", v)} placeholder="98" />
+        </div>
+      </div>
+
+      <Button onClick={guardar} className="mt-1 gap-2 sticky bottom-0">
         <Check className="size-4" /> Guardar medición
       </Button>
     </div>
