@@ -1,38 +1,75 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Minus, Plus, Scale, Trash2 } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
-import { resumen } from "@/lib/model/analytics";
+import { pesajes as getPesajes, resumen } from "@/lib/model/analytics";
+import { mediaMovil } from "@/lib/model/metrics";
+import { hoy, sumarDias } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LineSeries } from "@/components/app/charts";
 import { Metric, SectionLabel, Chip, EmptyState } from "@/components/app/primitives";
-import { fmtPeso, fmtNum, fmtFechaCorta, relativo } from "@/lib/format";
-import { hoy } from "@/lib/model/dates";
+import { fmtPeso, fmtNum, fmtSigno, fmtFechaCorta, relativo } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const TONO: Record<string, "weight" | "warning" | "energy"> = { good: "weight", warn: "warning", bad: "energy" };
 
 export default function CuerpoPage() {
-  const { estado, cargando, borrarMedicion } = useRitmo();
+  const { estado, cargando, medicion, actualizarDia, borrarMedicion } = useRitmo();
   const { abrir } = useQuickLog();
+  const hoyISO = hoy();
   const r = React.useMemo(() => resumen(estado), [estado]);
+
+  // Historial COMPLETO de pesajes (todos los días con peso, no solo composición).
+  const historial = React.useMemo(() => {
+    const p = getPesajes(estado); // ascendente
+    const compFechas = new Map(estado.composicion.filter((c) => c.grasaPct != null).map((c) => [c.fecha, c.grasaPct!]));
+    return p.map((punto, i) => ({
+      fecha: punto.fecha,
+      peso: punto.peso,
+      delta: i > 0 ? Math.round((punto.peso - p[i - 1].peso) * 10) / 10 : null,
+      grasaPct: compFechas.get(punto.fecha) ?? null,
+    }));
+  }, [estado]);
+
+  const serie = React.useMemo(() => {
+    const suav = mediaMovil(historial.map((h) => h.peso), 5);
+    return historial.map((h, i) => ({ label: fmtFechaCorta(h.fecha), valor: suav[i] ?? h.peso }));
+  }, [historial]);
+
+  async function borrarPesaje(fecha: string) {
+    if (medicion(fecha)) await borrarMedicion(fecha);
+    await actualizarDia(fecha, { peso: null });
+  }
 
   if (cargando) return <div className="flex flex-col gap-6"><Skeleton className="h-8 w-40" /><Skeleton className="h-40 w-full rounded-xl" /></div>;
 
   const comp = r.composicion;
-  const mediciones = [...estado.composicion].sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
-  const ultima = mediciones[0];
+  const ultima = [...estado.composicion].sort((a, b) => (a.fecha < b.fecha ? 1 : -1))[0];
+  const primero = historial[0];
+  const actualPeso = historial.length ? historial[historial.length - 1] : null;
+  const totalCambio = primero && actualPeso ? Math.round((actualPeso.peso - primero.peso) * 10) / 10 : null;
+
+  // Media de peso de los últimos 30 días con pesaje.
+  const desde30 = sumarDias(hoyISO, -30);
+  const ult30 = historial.filter((h) => h.fecha >= desde30).map((h) => h.peso);
+  const media30 = ult30.length ? Math.round((ult30.reduce((a, b) => a + b, 0) / ult30.length) * 10) / 10 : null;
 
   return (
     <div className="flex flex-col gap-6">
       <header className="flex items-center justify-between">
         <h1 className="font-display text-2xl font-bold tracking-tight">Cuerpo</h1>
-        <Button onClick={() => abrir("medidas")} size="sm" className="gap-1.5">
-          <Plus className="size-4" /> Medir
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => abrir("peso")} size="sm" variant="secondary" className="gap-1.5">
+            <Scale className="size-4" /> Pesarme
+          </Button>
+          <Button onClick={() => abrir("medidas")} size="sm" className="gap-1.5">
+            <Plus className="size-4" /> Medir
+          </Button>
+        </div>
       </header>
 
       {/* Estado actual */}
@@ -44,11 +81,7 @@ export default function CuerpoPage() {
           </Card>
           <Card className="p-4">
             {r.imc ? (
-              <Metric
-                label="IMC"
-                value={fmtNum(r.imc.valor, 1)}
-                hint={<Chip tone={r.imc.categoria ? TONO[r.imc.categoria.tono] : "muted"}>{r.imc.categoria?.etiqueta}</Chip>}
-              />
+              <Metric label="IMC" value={fmtNum(r.imc.valor, 1)} hint={<Chip tone={r.imc.categoria ? TONO[r.imc.categoria.tono] : "muted"}>{r.imc.categoria?.etiqueta}</Chip>} />
             ) : (
               <Metric label="IMC" value="—" />
             )}
@@ -56,10 +89,32 @@ export default function CuerpoPage() {
         </div>
       </section>
 
+      {/* Evolución del peso */}
+      {historial.length > 0 ? (
+        <section>
+          <SectionLabel>Evolución del peso</SectionLabel>
+          <Card className="p-5">
+            <div className="mb-4 grid grid-cols-3 gap-3">
+              <Metric label="Inicial" value={fmtPeso(primero?.peso)} unit="kg" />
+              <Metric label="Cambio total" value={totalCambio != null ? fmtSigno(totalCambio) : "—"} unit="kg" tone={totalCambio != null && totalCambio <= 0 ? "weight" : "energy"} />
+              <Metric label="Media 30 d" value={fmtPeso(media30)} unit="kg" />
+            </div>
+            {serie.length >= 2 && <LineSeries data={serie} colorVar="--weight" unidad="kg" />}
+            <p className="mt-2 text-center text-xs text-muted-foreground">
+              {historial.length} pesajes · media móvil de 5
+            </p>
+          </Card>
+        </section>
+      ) : (
+        <EmptyState icon={<Scale className="size-8" />} title="Aún no hay pesajes" action={<Button onClick={() => abrir("peso")} className="mt-1 gap-2"><Scale className="size-4" /> Registrar peso</Button>}>
+          Pésate con regularidad para ver tu evolución y activar la predicción.
+        </EmptyState>
+      )}
+
       {/* Composición */}
-      <section>
-        <SectionLabel>Composición corporal</SectionLabel>
-        {comp ? (
+      {comp && (
+        <section>
+          <SectionLabel>Composición corporal</SectionLabel>
           <Card className="p-5">
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <Metric label="Grasa" value={fmtNum(comp.grasaPct, 1)} unit="%" tone="body" />
@@ -74,14 +129,10 @@ export default function CuerpoPage() {
               </div>
               <RangoGrasa valor={comp.grasaPct} rango={comp.rango} />
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">Medición del {fmtFechaCorta(comp.fecha)} · {relativo(comp.fecha, hoy())}</p>
+            <p className="mt-3 text-xs text-muted-foreground">Medición del {fmtFechaCorta(comp.fecha)} · {relativo(comp.fecha, hoyISO)}</p>
           </Card>
-        ) : (
-          <EmptyState title="Sin mediciones de composición" action={<Button onClick={() => abrir("medidas")} className="mt-1 gap-2"><Plus className="size-4" /> Añadir medición</Button>}>
-            Registra grasa corporal y medidas para ver tu composición. El peso solo no basta.
-          </EmptyState>
-        )}
-      </section>
+        </section>
+      )}
 
       {/* Medidas */}
       {ultima && (ultima.cintura || ultima.cadera || ultima.pecho || ultima.brazo || ultima.muslo) && (
@@ -90,34 +141,55 @@ export default function CuerpoPage() {
           <Card className="grid grid-cols-3 gap-4 p-5 sm:grid-cols-5">
             {([["Cintura", ultima.cintura], ["Cadera", ultima.cadera], ["Pecho", ultima.pecho], ["Brazo", ultima.brazo], ["Muslo", ultima.muslo]] as const)
               .filter(([, v]) => v != null)
-              .map(([label, v]) => (
-                <Metric key={label} label={label} value={fmtNum(v!, 0)} />
-              ))}
+              .map(([label, v]) => <Metric key={label} label={label} value={fmtNum(v!, 0)} />)}
           </Card>
         </section>
       )}
 
-      {/* Histórico */}
-      {mediciones.length > 0 && (
+      {/* Historial de pesajes — completo */}
+      {historial.length > 0 && (
         <section>
-          <SectionLabel>Histórico de mediciones</SectionLabel>
-          <Card className="divide-y divide-border p-0">
-            {mediciones.slice(0, 24).map((m) => (
-              <div key={m.fecha} className="flex items-center justify-between gap-3 px-4 py-3">
-                <div className="flex items-baseline gap-3">
-                  <span className="text-sm font-medium tabular">{fmtFechaCorta(m.fecha)}</span>
-                  <span className="text-sm tabular text-weight">{fmtPeso(m.peso)} kg</span>
-                  {m.grasaPct != null && <span className="text-sm tabular text-body">{fmtNum(m.grasaPct, 1)}%</span>}
+          <SectionLabel action={<span className="text-xs text-muted-foreground">{historial.length} registros</span>}>
+            Historial de pesajes
+          </SectionLabel>
+          <Card className="max-h-[26rem] divide-y divide-border overflow-y-auto p-0">
+            {[...historial].reverse().map((h) => (
+              <div key={h.fecha} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                <div className="flex min-w-0 flex-col">
+                  <span className="text-sm font-medium tabular">{fmtFechaCorta(h.fecha)}</span>
+                  <span className="text-[0.7rem] text-muted-foreground">{relativo(h.fecha, hoyISO)}</span>
                 </div>
-                <Button variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-destructive" onClick={() => borrarMedicion(m.fecha)} aria-label="Eliminar">
-                  <Trash2 className="size-4" />
-                </Button>
+                <div className="flex items-center gap-3">
+                  {h.grasaPct != null && <Chip tone="body">{fmtNum(h.grasaPct, 1)}% grasa</Chip>}
+                  <DeltaTag delta={h.delta} />
+                  <span className="w-16 text-right font-display font-bold tabular text-weight">{fmtPeso(h.peso)}<span className="ml-0.5 text-xs font-normal text-muted-foreground">kg</span></span>
+                  <Button variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-destructive" onClick={() => borrarPesaje(h.fecha)} aria-label="Eliminar pesaje">
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
               </div>
             ))}
           </Card>
         </section>
       )}
     </div>
+  );
+}
+
+function DeltaTag({ delta }: { delta: number | null }) {
+  if (delta == null) return <span className="flex w-14 items-center justify-end text-xs text-muted-foreground">—</span>;
+  const cero = Math.abs(delta) < 0.05;
+  const baja = delta < 0;
+  return (
+    <span
+      className={cn(
+        "flex w-14 items-center justify-end gap-0.5 text-xs font-medium tabular",
+        cero ? "text-muted-foreground" : baja ? "text-weight" : "text-energy",
+      )}
+    >
+      {cero ? <Minus className="size-3" /> : baja ? <ArrowDownRight className="size-3" /> : <ArrowUpRight className="size-3" />}
+      {cero ? "0" : fmtSigno(delta, 1)}
+    </span>
   );
 }
 
@@ -129,7 +201,7 @@ function RangoGrasa({ valor, rango }: { valor: number; rango: { min: number; max
   return (
     <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-secondary">
       <div className="absolute inset-y-0 rounded-full bg-weight/30" style={{ left: `${zonaMin}%`, width: `${zonaMax - zonaMin}%` }} />
-      <div className={cn("absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-card bg-body")} style={{ left: `${pos}%` }} />
+      <div className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-card bg-body" style={{ left: `${pos}%` }} />
     </div>
   );
 }

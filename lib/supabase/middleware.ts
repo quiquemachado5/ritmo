@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from "./env";
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./env";
 
 /** Rutas accesibles sin sesión. */
 const PUBLIC_PATHS = ["/login", "/registro", "/auth", "/bienvenida"];
@@ -9,12 +9,9 @@ function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
-/**
- * Refresca la sesión de Supabase y protege las rutas privadas.
- * En modo demo (sin credenciales) deja pasar todo: la app funciona en local.
- */
+/** Refresca la sesión de Supabase y protege las rutas privadas. */
 export async function updateSession(request: NextRequest) {
-  if (!isSupabaseConfigured()) return NextResponse.next({ request });
+  // RITMO requiere Supabase para todo; la validación ocurre en env.ts
 
   let response = NextResponse.next({ request });
 

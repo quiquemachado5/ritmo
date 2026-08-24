@@ -4,10 +4,8 @@ import * as React from "react";
 import { toast } from "sonner";
 import { PERFIL_DEFECTO } from "@/lib/model/config";
 import type { Comida, Composicion, Dia, Estado, Perfil } from "@/lib/model/types";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/client";
 import { CloudAdapter } from "./cloud";
-import { LocalAdapter } from "./local";
 import type { Adapter, Modo, StoreData } from "./types";
 
 function clonar<T>(v: T): T {
@@ -96,25 +94,23 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     (async () => {
       let adapter: Adapter;
-      let modoDetectado: Modo = "local";
+      let modoDetectado: Modo = "nube";
       let email: string | null = null;
 
-      if (isSupabaseConfigured()) {
-        try {
-          const client = createClient();
-          const { data: sesion } = await client.auth.getUser();
-          if (sesion.user) {
-            adapter = new CloudAdapter(client, sesion.user.id);
-            modoDetectado = "nube";
-            email = sesion.user.email ?? null;
-          } else {
-            adapter = new LocalAdapter();
-          }
-        } catch {
-          adapter = new LocalAdapter();
+      // RITMO requiere Supabase y sesión activa (la redirección a login ocurre en middleware.ts)
+      try {
+        const client = createClient();
+        const { data: sesion } = await client.auth.getUser();
+        if (!sesion.user) {
+          throw new Error("Sesión de Supabase requerida");
         }
-      } else {
-        adapter = new LocalAdapter();
+        adapter = new CloudAdapter(client, sesion.user.id);
+        email = sesion.user.email ?? null;
+      } catch (e) {
+        console.error("Fallo al inicializar Supabase", e);
+        toast.error("Error de autenticación. Por favor, inicia sesión de nuevo.");
+        // Fallback seguro: mostrar pantalla de error sin usar localStorage
+        throw e;
       }
 
       adapterRef.current = adapter;

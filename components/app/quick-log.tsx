@@ -4,7 +4,6 @@ import * as React from "react";
 import { toast } from "sonner";
 import {
   Check,
-  Droplets,
   Dumbbell,
   ListChecks,
   Loader2,
@@ -39,7 +38,6 @@ import { useQuickLog, type QuickTab } from "./quick-log-provider";
 const TABS: { id: QuickTab; label: string; icon: typeof Scale }[] = [
   { id: "comida", label: "Comida", icon: UtensilsCrossed },
   { id: "peso", label: "Peso", icon: Scale },
-  { id: "agua", label: "Agua", icon: Droplets },
   { id: "ejercicio", label: "Ejercicio", icon: Dumbbell },
   { id: "habitos", label: "Hábitos", icon: ListChecks },
   { id: "medidas", label: "Medidas", icon: Ruler },
@@ -71,7 +69,6 @@ export function QuickLog() {
       <div className="min-h-[16rem]">
         {tab === "comida" && <PanelComida fecha={fecha} onDone={cerrar} />}
         {tab === "peso" && <PanelPeso fecha={fecha} onDone={cerrar} />}
-        {tab === "agua" && <PanelAgua fecha={fecha} />}
         {tab === "ejercicio" && <PanelEjercicio fecha={fecha} onDone={cerrar} />}
         {tab === "habitos" && <PanelHabitos fecha={fecha} />}
         {tab === "medidas" && <PanelMedidas fecha={fecha} onDone={cerrar} />}
@@ -85,12 +82,12 @@ export function QuickLog() {
   if (isDesktop) {
     return (
       <Dialog open={abierto} onOpenChange={(o) => !o && cerrar()}>
-        <DialogContent className="max-h-[88vh] max-w-lg overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto px-6 py-5">
           <DialogHeader>
             <DialogTitle className="font-display text-xl">{titulo}</DialogTitle>
             <DialogDescription>{sub}</DialogDescription>
           </DialogHeader>
-          {cuerpo}
+          <div className="pr-4">{cuerpo}</div>
         </DialogContent>
       </Dialog>
     );
@@ -270,42 +267,6 @@ function PanelPeso({ fecha, onDone }: { fecha: string; onDone: () => void }) {
 }
 
 /* ----------------------------------------------------------------- AGUA */
-
-function PanelAgua({ fecha }: { fecha: string }) {
-  const { dia, estado, registrarAgua } = useRitmo();
-  const actual = dia(fecha).aguaMl ?? 0;
-  const objetivo = estado.perfil.aguaObjetivoMl ?? 2500;
-
-  return (
-    <div className="flex flex-col items-center gap-5 py-2">
-      <div className="text-center">
-        <span className="font-display text-4xl font-bold tabular text-water">{(actual / 1000).toFixed(2)}</span>
-        <span className="ml-1 text-muted-foreground">/ {(objetivo / 1000).toFixed(1)} L</span>
-      </div>
-      <div className="h-3 w-full overflow-hidden rounded-full bg-secondary">
-        <div
-          className="h-full rounded-full bg-water transition-[width] duration-500"
-          style={{ width: `${Math.min(100, (actual / objetivo) * 100)}%` }}
-        />
-      </div>
-      <div className="grid w-full grid-cols-3 gap-2">
-        {[250, 330, 500].map((ml) => (
-          <Button key={ml} variant="secondary" onClick={() => registrarAgua(fecha, actual + ml)} className="gap-1">
-            <Droplets className="size-4 text-water" />+{ml}
-          </Button>
-        ))}
-      </div>
-      <div className="flex w-full gap-2">
-        <Button variant="ghost" className="flex-1" onClick={() => registrarAgua(fecha, Math.max(0, actual - 250))}>
-          Quitar 250 ml
-        </Button>
-        <Button variant="ghost" className="flex-1 text-muted-foreground" onClick={() => registrarAgua(fecha, 0)}>
-          Reiniciar
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 /* ------------------------------------------------------------- EJERCICIO */
 
