@@ -31,6 +31,10 @@ export async function POST(request: Request) {
   // Intentar primero Edamam (API profesional con bases de datos reales)
   resultado = await analizarConEdamam(texto);
 
+  // Guarda de cordura: una comida por encima de 4000 kcal casi siempre es un
+  // fallo de parseo de cantidades, no una comida real. Mejor la estimación local.
+  if (resultado && (resultado.kcal <= 0 || resultado.kcal > 4000)) resultado = null;
+
   // Si Edamam no funciona (sin credenciales, límite alcanzado, error), usar offline
   if (!resultado) {
     resultado = estimarOffline(texto);

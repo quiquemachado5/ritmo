@@ -323,11 +323,14 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
   const errorDiario = evaluablesRecientes.length
     ? evaluablesRecientes.reduce((suma, d) => suma + incertidumbreEnergia(d.energia), 0) / evaluablesRecientes.length
     : 700;
-  // Calidad basada en pesajes + hábitos registrados
-  const habitosRecientes = diasEvaluables(estado, sumarDias(hoy(), -28), hoy());
-  const adherenciaHabitos = habitosRecientes.length > 0
-    ? habitosRecientes.filter(d => Object.values(d.habitos || {}).some(Boolean)).length / habitosRecientes.length
-    : 0;
+  // Marcar los 6 hábitos ya es un registro válido: un día con hábitos anotados
+  // aporta casi tanta señal como uno con kcal, así que cuenta para la calidad.
+  let diasConHabitos = 0;
+  for (let f = sumarDias(hoy(), -27); f <= hoy(); f = sumarDias(f, 1)) {
+    const d = (estado.dias || {})[f];
+    if (d && Object.values(d.habitos || {}).some((v) => v === true)) diasConHabitos++;
+  }
+  const adherenciaHabitos = diasConHabitos / 28;
 
   const calidad: M.CalidadModelo =
     calibracion && diasSinPesaje <= 14 && diasDesconocidos === 0

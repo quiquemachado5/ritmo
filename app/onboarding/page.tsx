@@ -129,7 +129,7 @@ export default function OnboardingPage() {
                 <Input inputMode="numeric" value={d.alturaCm} onChange={(e) => set("alturaCm", e.target.value)} placeholder="185" className="tabular" autoFocus />
               </Campo>
               <div className="grid grid-cols-2 gap-3">
-                <Campo label="Peso actual (kg)">
+                <Campo label="Peso de HOY (kg)" ayuda="Se guarda como pesaje de hoy. Si tu última báscula es de otro día, impórtala o regístrala luego con su fecha.">
                   <Input inputMode="decimal" value={d.pesoActual} onChange={(e) => set("pesoActual", e.target.value)} placeholder="88,5" className="tabular" />
                 </Campo>
                 <Campo label="Peso objetivo (kg)">
@@ -199,11 +199,12 @@ function Step({ titulo, sub, children }: { titulo: string; sub: string; children
   );
 }
 
-function Campo({ label, children }: { label: string; children: React.ReactNode }) {
+function Campo({ label, ayuda, children }: { label: string; ayuda?: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-2">
       <Label>{label}</Label>
       {children}
+      {ayuda && <p className="text-[0.7rem] leading-snug text-muted-foreground">{ayuda}</p>}
     </div>
   );
 }

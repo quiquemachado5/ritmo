@@ -37,14 +37,24 @@ export async function analizarConEdamam(texto: string): Promise<AnalisisNutricio
   }
 
   try {
-    const respuesta = await fetch("https://api.edamam.com/api/nutrition-details", {
+    // Edamam autentica por query string, no por cabecera.
+    const url = `https://api.edamam.com/api/nutrition-details?app_id=${encodeURIComponent(APP_ID)}&app_key=${encodeURIComponent(APP_KEY)}`;
+
+    // Un ingrediente por línea: si se manda todo junto, el parser lo interpreta
+    // como un único alimento y las cantidades salen disparatadas.
+    const ingredientes = texto
+      .split(/\s*(?:,|\by\b|\bcon\b|\+|\n|;)\s*/)
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+    const respuesta = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         title: texto,
-        ingr: [texto], // Edamam espera un array de ingredientes
+        ingr: ingredientes.length ? ingredientes : [texto],
       }),
       signal: AbortSignal.timeout(8000),
     });
