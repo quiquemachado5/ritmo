@@ -1,28 +1,41 @@
-# Composición
+# RITMO
 
-Registro de hábitos alimenticios, control de peso y análisis de composición corporal.
+**Constancia sobre perfección.** Seguimiento de nutrición, peso, hábitos, actividad y progreso personal, con una predicción de peso honesta que se calibra con tus datos reales.
 
-Aplicación de página única en módulos ES nativos, sin *framework* y **sin paso de
-compilación**: lo que hay en el repositorio es exactamente lo que se sirve. La
-persistencia funciona con dos adaptadores intercambiables —`localStorage` y
-PostgreSQL sobre Supabase— tras una única fachada, así que la interfaz no sabe ni
-le importa dónde acaban los datos.
+RITMO es un rediseño integral construido **sobre** el modelo de la aplicación anterior (`legacy/composicion`): conserva su matemática —la parte más valiosa— y la lleva a una arquitectura moderna con su propia identidad.
+
+- **Stack:** Next.js 16 (App Router) · TypeScript · Tailwind v4 · shadcn/ui · Supabase · Recharts · Claude API.
+- **Diseño:** sistema propio de RITMO —verde pino sobre neutros de papel cálido, tipografía Bricolage Grotesque + Hanken Grotesk, claro/oscuro coherente.
 
 ---
 
-## Arranque rápido
+## 1. Qué se reutilizó del proyecto anterior
 
-Los módulos ES exigen servirse por HTTP; abrir `index.html` con doble clic no
-funciona (el navegador bloquea los `import` bajo el protocolo `file://`).
+La app anterior (vanilla JS, en `legacy/composicion/`) tenía un modelo de cálculo excelente. Se **portó íntegro a TypeScript**, con sus pruebas, sin reescribir la matemática:
+
+| Origen (legacy) | Destino (RITMO) | Qué es |
+|---|---|---|
+| `core/metrics.js` | [`lib/model/metrics.ts`](lib/model/metrics.ts) | Balance, **Theil–Sen robusto**, intervalos de confianza, TDEE, composición, IMC/FFMI, rachas |
+| `core/analytics.js` | [`lib/model/analytics.ts`](lib/model/analytics.ts) | Arrastre acumulado, TDEE observado, proyección calibrada, resumen |
+| `core/dates.js` | [`lib/model/dates.ts`](lib/model/dates.ts) | Fechas ISO locales sin bugs de huso |
+| `tests/run.js` (134 comprobaciones) | [`lib/model/__tests__/model.test.ts`](lib/model/__tests__/model.test.ts) | Verifican que el port es fiel — `npm test` |
+| `seed.js` (263 días, 34 mediciones) | [`lib/model/seed.ts`](lib/model/seed.ts) | Histórico real, usado como datos de la demo |
+| `supabase/schema.sql` | [`supabase/schema.sql`](supabase/schema.sql) | Esquema ampliado (comidas, agua, pasos, medidas, onboarding) |
+
+**El modelo es la joya:** no predice con `peso + kcal/7700` ingenuo. Usa la pendiente mediana de **Theil–Sen** (robusta al ruido de báscula), calibra el gasto con tu **TDEE observado** real, y abre un **intervalo de confianza** que crece cuanto más tiempo llevas sin pesarte. Se personaliza por usuario y se recalibra con cada registro nuevo.
+
+---
+
+## 2. Arranque rápido (modo demo)
 
 ```bash
+npm install
 npm run dev
 ```
 
-Y abre <http://localhost:5173>. La aplicación arranca en modo local y se siembra
-con el histórico incluido en `assets/js/seed.js`.
+Abre <http://localhost:3000>. **Sin configurar nada**, RITMO arranca en modo demo con el histórico real de ejemplo: puedes explorar todas las pantallas, registrar comidas, pesos y hábitos (se guardan en el navegador).
 
-Para ejecutar las pruebas de la capa de cálculo:
+Pruebas del modelo:
 
 ```bash
 npm test
@@ -30,261 +43,76 @@ npm test
 
 ---
 
-## Estructura
+## 3. Activar cuentas y sincronización (Supabase)
 
-```
-.
-├── index.html                  Esqueleto: cabecera, contenedores de vista, nada más
-├── netlify.toml                Publicación estática y cabeceras de seguridad
-├── package.json                Solo scripts; sin dependencias de ejecución
-│
-├── assets/
-│   ├── css/
-│   │   ├── tokens.css          Variables: color, tipografía, espaciado, movimiento
-│   │   ├── base.css            Reset, tipografía y rejilla (mobile-first)
-│   │   └── components.css      Tarjetas, botones, campos, calendario, gráficos
-│   │
-│   └── js/
-│       ├── main.js             Arranque, enrutado por hash, ciclo de render
-│       ├── config.js           Credenciales de Supabase, hábitos, perfil por defecto
-│       ├── seed.js             Histórico migrado (263 días, 34 mediciones)
-│       │
-│       ├── core/               Lógica pura, sin DOM — es lo que se testea
-│       │   ├── metrics.js      Balance, predicción, composición, IMC, TDEE, rachas
-│       │   ├── analytics.js    Derivaciones sobre el estado completo
-│       │   ├── dates.js        Fechas ISO locales sin sorpresas de huso horario
-│       │   ├── format.js       Presentación en español
-│       │   └── store.js        Estado reactivo con escritura optimista
-│       │
-│       ├── data/               Persistencia intercambiable
-│       │   ├── repository.js   Fachada: elige adaptador y siembra si hace falta
-│       │   ├── local-adapter.js      localStorage + sincronía entre pestañas
-│       │   └── supabase-adapter.js   PostgreSQL + Auth + Realtime
-│       │
-│       └── ui/                 Vistas: reciben estado, devuelven HTML
-│           ├── dashboard.js  registro.js  composicion.js  ajustes.js
-│           ├── charts.js       Gráficos SVG escritos a mano, sin librerías
-│           └── toast.js
-│
-├── supabase/schema.sql         Tablas, restricciones, índices, RLS y vistas
-├── tests/run.js                134 comprobaciones sobre los cálculos
-└── legacy/                     La versión anterior, intacta, por si acaso
+1. **Crea un proyecto** en [supabase.com](https://supabase.com) (plan gratuito; región cercana).
+2. **Crea el esquema:** en *SQL Editor*, pega y ejecuta [`supabase/schema.sql`](supabase/schema.sql). Es idempotente.
+3. **Habilita email + contraseña:** *Authentication → Providers → Email*. Para confirmación por correo, deja *Confirm email* activo; añade tu dominio en *URL Configuration → Redirect URLs* (incluye `/auth/callback`).
+4. **Copia las credenciales** de *Project Settings → API* a un archivo `.env.local`:
+
+```bash
+cp .env.example .env.local
 ```
 
-La regla que mantiene esto ordenado: **`core/` no puede importar nada de `ui/` ni
-tocar el DOM**. Por eso `tests/run.js` puede ejecutarse en Node sin navegador.
-
----
-
-## Las matemáticas
-
-Todo sale de `assets/js/core/metrics.js`, y cada fórmula tiene su comprobación en
-`tests/run.js`.
-
-| Magnitud | Fórmula |
-|---|---|
-| Balance calórico neto | `consumidas − quemadas` (negativo = déficit) |
-| Estimación de peso hoy | `último peso + Σ(balance diario) / 7700` |
-| Proyección a N días | `estimación hoy + (balance medio × N) / 7700` |
-| Masa grasa | `peso × grasa% / 100` |
-| Masa magra | `peso − masa grasa` |
-| IMC | `peso / (altura_m)²` |
-| FFMI | `masa magra / (altura_m)²` |
-| Metabolismo basal | Mifflin-St Jeor |
-| TDEE teórico | `basal × factor de actividad` |
-| TDEE observado | `media consumida − (Δpeso × 7700) / días` |
-| Tendencia robusta | Pendiente mediana de Theil–Sen × 7 |
-| Arrastre acumulado | `Σ balance(último pesaje → hoy) / 7700` |
-| Rango de predicción | Variación de báscula + incertidumbre acumulada de cada día |
-
-Las 7700 kcal/kg son la regla de Wishnofsky. Es una aproximación lineal: describe
-bien periodos de semanas y se queda corta en pérdidas muy grandes o muy rápidas,
-donde el gasto se adapta a la baja. Por eso la aplicación **prefiere siempre el
-TDEE observado a partir de tu historial real** cuando hay datos suficientes
-(≥ 21 días de separación entre pesajes y ≥ 60 % de los días anotados), y solo
-recurre a la fórmula teórica mientras no los haya.
-
-La predicción no presenta el resultado como una medición. Cada día explícito,
-estimado o imputado aporta una incertidumbre distinta; el rango mostrado es
-orientativo y se abre conforme pasan los días sin pesarte. Un pesaje nuevo
-recalibra el TDEE observado y vuelve a anclar la estimación. Con un pesaje cada dos
-semanas, el modelo podrá corregir el desvío acumulado en cada ciclo.
-
-### Tres decisiones que afectan a los números
-
-**Los días sin anotar pueden contarse como días malos.** A partir de la fecha
-configurada en Ajustes (por defecto el 1 de julio de 2026), un día que no aparece
-en el historial puede recibir un superávit fijo (500 kcal ≈ 0,065 kg). Es una
-regla configurable, no una certeza: por eso estos días ensanchan más el rango de
-la predicción que un día anotado.
-
-La regla se puede desactivar o reajustar entera desde *Ajustes → Días sin
-registro*, y en pantalla los días imputados van siempre marcados: rayados en el
-calendario y en el gráfico de balance, y etiquetados en las tarjetas.
-
-**Los huecos anteriores a esa fecha siguen siendo desconocidos** y se excluyen de
-las medias. Aplicar la regla a todo el histórico falsearía los datos antiguos,
-donde un hueco podía ser simplemente que la aplicación aún no se usaba.
-
-**El peso estimado se diferencia del último pesaje.** Entre la última vez que te
-pesaste y hoy hay días cuyo balance ya ha ocurrido. El modelo suma ese arrastre al
-último peso medido y comunica el rango resultante; la báscula, su fecha y la
-calidad de la estimación permanecen siempre visibles. La composición corporal no
-se extrapola: solo se muestra a partir de mediciones reales.
-
-**Las calorías estimadas se señalan como tales.** Los días históricos anteriores
-al registro numérico no tienen calorías anotadas, así que se estiman a partir de
-los hábitos marcados. En la interfaz aparecen con asterisco o con la etiqueta
-*estimadas*: un número inferido nunca se presenta como si lo hubieras medido.
-
----
-
-## Publicar en Netlify
-
-Sitio estático sin compilación. Arrastra la carpeta a Netlify, o conecta el
-repositorio y deja lo que ya trae `netlify.toml`:
-
-- **Build command:** vacío
-- **Publish directory:** `.`
-
-Con eso ya funciona, guardando en el navegador de cada dispositivo. Para
-sincronizar entre ellos, sigue el paso siguiente.
-
----
-
-## Activar la nube (Supabase)
-
-Sin este paso los datos viven solo en el navegador. Si lo borras o cambias de
-dispositivo, los pierdes. Son cinco minutos.
-
-**1. Crea el proyecto.** En <https://supabase.com>, plan gratuito. Elige la región
-más cercana (Frankfurt o París desde España).
-
-**2. Crea el esquema.** En el *SQL Editor*, pega el contenido íntegro de
-`supabase/schema.sql` y ejecútalo. Crea las tablas `perfiles`, `dias` y
-`composicion`, sus restricciones e índices, las políticas RLS y la vista
-`resumen_mensual`. Es idempotente: puedes volver a lanzarlo sin romper nada.
-
-**3. Habilita el acceso por enlace mágico.** En *Authentication → Providers*,
-activa **Email** y marca *Confirm email*. No hace falta nada más: la aplicación no
-usa contraseñas.
-
-**4. Añade la URL de tu sitio.** En *Authentication → URL Configuration*, pon tu
-dominio de Netlify en *Site URL* y en *Redirect URLs*. Sin esto, el enlace del
-correo no sabrá a dónde volver.
-
-**5. Pega las credenciales.** En *Project Settings → API*, copia la *Project URL*
-y la clave *anon public* en `assets/js/config.js`:
-
-```js
-export const SUPABASE = {
-  url: 'https://xxxxxxxxxxxx.supabase.co',
-  anonKey: 'eyJhbGciOi...',
-};
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOi...
 ```
 
-**6. Sube tus datos.** Abre la aplicación, entra con tu correo y, en
-*Ajustes → Sincronización*, pulsa **Subir datos de este navegador**. A partir de
-ahí todo se guarda en PostgreSQL y aparece al instante en tus otros dispositivos.
-
-### Sobre la clave `anon`
-
-Es pública por diseño y va en el HTML: no es un secreto que se te haya escapado.
-Lo que protege tus datos es la política RLS, que compara `auth.uid()` con la
-columna `user_id` de cada fila y se aplica dentro del motor de PostgreSQL. Con
-esa clave y sin tu sesión no se puede leer ni escribir ninguna fila tuya, ni
-siquiera saltándose por completo el código de la aplicación.
-
-> **Nota sobre la versión anterior.** El `firebaseConfig` de `legacy/index.html`
-> apuntaba a un documento fijo **sin autenticación**: cualquiera que abriese el
-> código fuente podía leer y modificar el historial. Conviene borrar ese proyecto
-> de Firebase, o al menos cerrar sus reglas de Firestore, una vez migrado.
+Con esto, la app pide registro/login, ejecuta el **onboarding obligatorio** y sincroniza en PostgreSQL con RLS.
 
 ---
 
-## Copias de seguridad
+## 4. Contador de calorías inteligente (Claude)
 
-*Ajustes → Exportar JSON* descarga absolutamente todo en un archivo legible que no
-depende de esta aplicación. *Importar* fusiona: los días que coincidan se
-sobrescriben con los del archivo y el resto se conserva, así que nunca borra algo
-que el archivo no contenga.
+El registro de comidas en lenguaje natural (“2 huevos revueltos, tostada y café con leche” → kcal + macros) usa la **API de Claude** desde una ruta de servidor ([`app/api/nutricion/route.ts`](app/api/nutricion/route.ts)).
 
----
+Añade tu clave en `.env.local`:
 
-## Añadir un hábito
-
-Un solo sitio. En `assets/js/config.js`:
-
-```js
-export const HABITOS = [
-  // …
-  { clave: 'meditar', etiqueta: 'Meditar', codigo: 'MED' },
-];
+```env
+ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-El formulario, el calendario, las rachas, la adherencia y el desglose por hábito
-se ajustan solos. En Supabase no hay que tocar nada: los hábitos viven en una
-columna `jsonb`, que es justo el tipo de dato que sí conviene tener sin esquema
-rígido.
+Sin la clave, la nutrición sigue funcionando con un **estimador offline** aproximado (base de alimentos local). El modelo por defecto es `claude-opus-5`; puedes cambiarlo con `RITMO_NUTRITION_MODEL`.
 
 ---
 
-## Diseño
+## 5. Despliegue
 
-La interfaz usa una **paleta por tipo de dato**, no un único azul. Cada color se
-acompaña de una etiqueta, un signo o una leyenda para que siga siendo comprensible
-sin depender del color.
+**Vercel (recomendado para Next.js):**
+1. Importa el repositorio en [vercel.com](https://vercel.com).
+2. Añade las variables de entorno (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `ANTHROPIC_API_KEY`).
+3. Deploy. Añade la URL resultante a *Redirect URLs* en Supabase.
 
-| Familia | Uso |
-|---|---|
-| Índigo | Peso, tendencia y acciones principales |
-| Verde azulado | Hábitos, adherencia y déficit |
-| Coral | Energía, balance y atención al registro diario |
-| Violeta | Composición corporal y revisión quincenal |
-| Ámbar | Incertidumbre, datos pendientes y avisos |
+**Netlify:** funciona con el plugin oficial `@netlify/plugin-nextjs` (build `next build`). Configura las mismas variables de entorno.
 
-La lectura del panel sigue el orden de uso: **estado actual → próxima revisión →
-hoy → evolución**. Las otras vistas conservan la misma estructura de sección,
-tarjeta y zonas internas para que los datos relacionados vivan juntos sin crear
-una sopa de cajas.
+---
 
-### Arquitectura de la información
+## 6. Estructura
 
-Cada vista se organiza en secciones con título, y cada sección es una tarjeta con
-zonas separadas por una línea fina. No hay tarjetas sueltas flotando: si dos datos
-se explican mutuamente, viven en la misma tarjeta.
+```
+app/
+  (app)/            Panel protegido: hoy, nutricion, habitos, progreso, cuerpo, calendario, ajustes
+  (auth)/           login, registro
+  onboarding/       Alta obligatoria por pasos
+  api/nutricion/    Ruta de servidor con Claude (+ fallback offline)
+  auth/callback/    Intercambio del enlace de correo por sesión
+components/
+  app/              Shell, navegación, registro rápido, gráficas, heatmap, primitivos
+  ui/               Componentes shadcn/ui
+lib/
+  model/            EL MODELO portado (metrics, analytics, dates, seed) + tests
+  store/            Estado en cliente: adaptadores local/nube, provider optimista
+  supabase/         Clientes browser/server + proxy de sesión
+  nutrition/        Tipos, estimador offline y cliente de la API
+proxy.ts            Refresco de sesión y protección de rutas (Next 16)
+legacy/             La app anterior, intacta
+```
 
-| Vista | Secciones |
-|---|---|
-| Panel | Estado actual · Próxima revisión · Hoy · Evolución |
-| Registro | Día · Constancia · Últimos días |
-| Cuerpo | Actual · Progreso · Medición · Histórico |
-| Ajustes | Perfil · Días sin registro · Datos |
+Regla que mantiene el orden: **`lib/model/` es puro** (sin React, sin DOM), por eso se testea en aislamiento.
 
-El panel pasó de 13 tarjetas dispersas a **4 secciones y 6 tarjetas**.
+---
 
-**Show, don't tell.** Las cifras van con una micro-etiqueta en versalitas y sin
-frase explicativa: `MASA MAGRA / 74,2 kg`, no "tu masa magra estimada es de…".
-El texto corrido se reserva para decisiones de configuración, donde el usuario
-necesita saber qué está eligiendo.
+## 7. Diseño
 
-### Responsive
-
-Mobile-first de verdad: los estilos por defecto son los del móvil y las media
-queries solo añaden desde 768 px.
-
-- Navegación en **barra inferior fija** al alcance del pulgar; control segmentado
-  en la cabecera a partir de 768 px.
-- Objetivos táctiles de **44 px** mínimo (`--touch`), y campos a 16 px para que
-  iOS no haga zoom al enfocarlos.
-- Los gráficos son SVG con `viewBox`: escalan con el contenedor sin recalcular
-  nada. Las tablas anchas scrollean **dentro de su tarjeta** (`.table-wrap`), de
-  modo que la página nunca desplaza en horizontal.
-
-Cambiar la identidad visual entera se hace en `tokens.css`: el resto del CSS solo
-consume variables.
-
-> **Nota técnica.** `.topbar` usa fondo sólido y no `backdrop-filter` a propósito:
-> ese filtro convierte al elemento en bloque contenedor de sus descendientes
-> `position: fixed`, y la barra de pestañas inferior quedaba anclada dentro de la
-> cabecera en lugar de al borde de la ventana.
+Todo el color, tipografía, radios y sombras viven como tokens en [`app/globals.css`](app/globals.css). El verde de RITMO identifica peso, acción y progreso; cada familia de datos tiene su tono joya (oro para hábitos, terracota para energía, ciruela para composición, azul para agua). El color nunca es el único indicador: acompaña siempre a una etiqueta.

@@ -1,0 +1,125 @@
+"use client";
+
+import * as React from "react";
+import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { useRitmo } from "@/lib/store/provider";
+import { useQuickLog } from "@/components/app/quick-log-provider";
+import { macrosObjetivo } from "@/lib/model/metrics";
+import { resumen } from "@/lib/model/analytics";
+import { hoy, sumarDias, diasEntre } from "@/lib/model/dates";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Ring, MacroBar, SectionLabel, Chip, EmptyState } from "@/components/app/primitives";
+import { fmtKcal, fmtFechaLarga, capitalizar } from "@/lib/format";
+import type { TipoComida } from "@/lib/model/types";
+
+const ORDEN: { id: TipoComida; label: string }[] = [
+  { id: "desayuno", label: "Desayuno" },
+  { id: "comida", label: "Comida" },
+  { id: "cena", label: "Cena" },
+  { id: "snack", label: "Snacks" },
+];
+
+export default function NutricionPage() {
+  const { estado, cargando, dia, borrarComida } = useRitmo();
+  const { abrir } = useQuickLog();
+  const [fecha, setFecha] = React.useState(hoy());
+  const r = React.useMemo(() => resumen(estado), [estado]);
+
+  if (cargando) return <div className="flex flex-col gap-6"><Skeleton className="h-8 w-40" /><Skeleton className="h-56 w-full rounded-xl" /></div>;
+
+  const d = dia(fecha);
+  const comidas = d.comidas ?? [];
+  const objetivoKcal = estado.perfil.kcalObjetivo ?? 2000;
+  const consumidas = comidas.reduce((a, c) => a + c.kcal, 0);
+  const macros = comidas.reduce(
+    (a, c) => ({ p: a.p + c.proteinas, c: a.c + c.carbohidratos, g: a.g + c.grasas }),
+    { p: 0, c: 0, g: 0 },
+  );
+  const obj = macrosObjetivo({ kcal: objetivoKcal, pesoKg: r.peso.estimadoHoy, objetivo: estado.perfil.objetivo, proteinaGkg: estado.perfil.proteinaObjetivo });
+  const esFuturo = diasEntre(fecha, hoy()) < 0;
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Cabecera con navegación de día */}
+      <header className="flex items-center justify-between">
+        <h1 className="font-display text-2xl font-bold tracking-tight">Nutrición</h1>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" onClick={() => setFecha((f) => sumarDias(f, -1))} aria-label="Día anterior">
+            <ChevronLeft className="size-5" />
+          </Button>
+          <button onClick={() => setFecha(hoy())} className="min-w-28 text-center text-sm font-medium">
+            {fecha === hoy() ? "Hoy" : capitalizar(fmtFechaLarga(fecha))}
+          </button>
+          <Button variant="ghost" size="icon" onClick={() => setFecha((f) => sumarDias(f, 1))} disabled={esFuturo} aria-label="Día siguiente">
+            <ChevronRight className="size-5" />
+          </Button>
+        </div>
+      </header>
+
+      {/* Resumen del día */}
+      <Card className="p-5">
+        <div className="flex flex-col items-center gap-5 sm:flex-row sm:gap-7">
+          <Ring value={consumidas} max={objetivoKcal} colorVar="--energy" size={140} stroke={13}>
+            <div>
+              <span className="block font-display text-3xl font-bold leading-none tabular text-energy">{fmtKcal(consumidas)}</span>
+              <span className="text-xs text-muted-foreground">de {fmtKcal(objetivoKcal)} kcal</span>
+            </div>
+          </Ring>
+          <div className="grid w-full flex-1 gap-3">
+            <MacroBar label="Proteínas" value={macros.p} max={obj.proteinas} colorVar="--weight" />
+            <MacroBar label="Carbohidratos" value={macros.c} max={obj.carbohidratos} colorVar="--habit" />
+            <MacroBar label="Grasas" value={macros.g} max={obj.grasas} colorVar="--energy" />
+          </div>
+        </div>
+      </Card>
+
+      {/* Comidas por tipo */}
+      {comidas.length === 0 ? (
+        <EmptyState title="Sin comidas registradas" action={<Button onClick={() => abrir("comida", fecha)} className="mt-1 gap-2"><Plus className="size-4" /> Añadir comida</Button>}>
+          Escribe lo que comes en lenguaje natural y RITMO calcula kcal y macros por ti.
+        </EmptyState>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {ORDEN.map((tipo) => {
+            const items = comidas.filter((c) => c.tipo === tipo.id);
+            if (items.length === 0) return null;
+            const kcalTipo = items.reduce((a, c) => a + c.kcal, 0);
+            return (
+              <section key={tipo.id}>
+                <SectionLabel action={<span className="text-xs font-semibold tabular text-energy">{fmtKcal(kcalTipo)} kcal</span>}>
+                  {tipo.label}
+                </SectionLabel>
+                <Card className="divide-y divide-border p-0">
+                  {items.map((c) => (
+                    <div key={c.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{c.texto}</p>
+                        <p className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground tabular">
+                          <span>P {c.proteinas}g</span>
+                          <span>C {c.carbohidratos}g</span>
+                          <span>G {c.grasas}g</span>
+                          {c.estimado && <Chip tone="warning">aprox.</Chip>}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span className="font-display font-bold tabular text-energy">{fmtKcal(c.kcal)}</span>
+                        <Button variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-destructive" onClick={() => borrarComida(fecha, c.id)} aria-label="Eliminar">
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </Card>
+              </section>
+            );
+          })}
+          <Button onClick={() => abrir("comida", fecha)} variant="secondary" className="gap-2">
+            <Plus className="size-4" /> Añadir comida
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}

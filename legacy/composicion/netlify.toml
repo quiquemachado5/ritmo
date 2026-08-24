@@ -1,0 +1,27 @@
+# Despliegue en Netlify: sitio estático puro, sin paso de build.
+[build]
+  publish = "."
+  command = ""
+
+# La aplicación es una SPA con enrutado por hash, así que no necesita
+# reescrituras: cualquier ruta sirve index.html y el hash hace el resto.
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+
+# Los módulos se sirven sin caché agresiva para que un despliegue nuevo
+# se vea de inmediato; los tipos de letra sí se cachean.
+[[headers]]
+  for = "/assets/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/assets/css/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"

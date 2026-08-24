@@ -1,0 +1,186 @@
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { LogOut, MoreHorizontal, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { RitmoBadge, RitmoLogo } from "@/components/ritmo-mark";
+import { ThemeToggle } from "./theme-toggle";
+import { NAV_ITEMS } from "./nav-items";
+import { useQuickLog } from "./quick-log-provider";
+import { useRitmo } from "@/lib/store/provider";
+import { QuickLog } from "./quick-log";
+
+function SyncDot() {
+  const { modo, sincronizando } = useRitmo();
+  return (
+    <span className="inline-flex items-center gap-1.5 text-[0.7rem] font-medium text-muted-foreground">
+      <span
+        className={cn(
+          "size-2 rounded-full",
+          sincronizando ? "animate-pulse bg-warning" : modo === "nube" ? "bg-success" : "bg-muted-foreground/50",
+        )}
+      />
+      <span className="hidden sm:inline">
+        {sincronizando ? "Guardando…" : modo === "nube" ? "Sincronizado" : "Este dispositivo"}
+      </span>
+    </span>
+  );
+}
+
+function UserMenu() {
+  const { userEmail, cerrarSesion } = useRitmo();
+  const inicial = (userEmail?.[0] ?? "R").toUpperCase();
+  const secundarios = NAV_ITEMS.filter((i) => !i.primary);
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="rounded-full" aria-label="Menú">
+          <span className="grid size-8 place-items-center rounded-full bg-primary/12 text-sm font-bold text-primary">
+            {inicial}
+          </span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-52">
+        <DropdownMenuLabel className="truncate">{userEmail ?? "Modo demo"}</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {secundarios.map((item) => (
+          <DropdownMenuItem key={item.href} asChild>
+            <Link href={item.href}>
+              <item.icon className="size-4" />
+              {item.label}
+            </Link>
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => void cerrarSesion()}>
+          <LogOut className="size-4" />
+          Cerrar sesión
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const { abrir } = useQuickLog();
+
+  const activo = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+  const primarios = NAV_ITEMS.filter((i) => i.primary);
+
+  return (
+    <div className="min-h-dvh bg-background">
+      {/* Sidebar — escritorio */}
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-border bg-card px-3 py-5 md:flex">
+        <div className="px-2">
+          <Link href="/" aria-label="RITMO — inicio">
+            <RitmoLogo />
+          </Link>
+        </div>
+        <Button
+          onClick={() => abrir()}
+          className="mt-6 h-11 justify-start gap-2 rounded-xl text-[0.95rem] shadow-sm"
+        >
+          <Plus className="size-5" />
+          Registrar
+        </Button>
+        <nav className="mt-4 flex flex-1 flex-col gap-1">
+          {NAV_ITEMS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-[0.92rem] font-medium transition-colors",
+                activo(item.href)
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+              )}
+            >
+              <item.icon className="size-[1.15rem]" />
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="mt-2 flex items-center justify-between border-t border-border pt-3">
+          <SyncDot />
+          <div className="flex items-center gap-1">
+            <ThemeToggle />
+            <UserMenu />
+          </div>
+        </div>
+      </aside>
+
+      {/* Cabecera — móvil */}
+      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/85 px-4 backdrop-blur-md md:hidden">
+        <Link href="/" aria-label="RITMO — inicio">
+          <RitmoLogo />
+        </Link>
+        <div className="flex items-center gap-1">
+          <SyncDot />
+          <ThemeToggle />
+          <UserMenu />
+        </div>
+      </header>
+
+      {/* Contenido */}
+      <div className="md:pl-60">
+        <main className="mx-auto w-full max-w-3xl px-4 pb-28 pt-5 md:pb-14 md:pt-9">{children}</main>
+      </div>
+
+      {/* Barra inferior + FAB — móvil */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur-md md:hidden">
+        <div className="mx-auto flex h-[4.2rem] max-w-lg items-stretch justify-around px-2 pb-[env(safe-area-inset-bottom)]">
+          {primarios.slice(0, 2).map((item) => (
+            <NavTab key={item.href} item={item} active={activo(item.href)} />
+          ))}
+          <div className="flex items-center">
+            <button
+              onClick={() => abrir()}
+              aria-label="Registrar"
+              className="grid size-14 -translate-y-4 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-transform active:scale-95"
+            >
+              <Plus className="size-7" />
+            </button>
+          </div>
+          {primarios.slice(2, 4).map((item) => (
+            <NavTab key={item.href} item={item} active={activo(item.href)} />
+          ))}
+        </div>
+      </nav>
+
+      <QuickLog />
+    </div>
+  );
+}
+
+function NavTab({ item, active }: { item: (typeof NAV_ITEMS)[number]; active: boolean }) {
+  return (
+    <Link
+      href={item.href}
+      className={cn(
+        "flex flex-1 flex-col items-center justify-center gap-1 text-[0.62rem] font-medium transition-colors",
+        active ? "text-primary" : "text-muted-foreground",
+      )}
+    >
+      <item.icon className={cn("size-[1.35rem]", active && "fill-primary/10")} />
+      {item.label}
+    </Link>
+  );
+}
+
+/* Enlace de "más" reservado para futuras entradas de navegación. */
+export function MoreLink() {
+  return <MoreHorizontal className="size-5" />;
+}

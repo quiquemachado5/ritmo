@@ -1,8 +1,29 @@
-.DS_Store
+# dependencias
 node_modules/
+.pnp
+.pnp.*
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# producción / despliegue
+/build
+.vercel
 .netlify/
-.claude/
+
+# entorno
+.env
+.env*.local
+
+# varios
+.DS_Store
 *.log
+*.pem
+.claude/
+
+# impeccable (proyecto anterior)
 .impeccable/decision-world.json
 .impeccable/mocks/
 .impeccable/questions/

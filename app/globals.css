@@ -1,0 +1,232 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* ============================================================================
+   RITMO — sistema de diseño
+   Constancia > perfección. Verde propio (pino/esmeralda profundo, no el verde
+   genérico fitness) sobre neutros cálidos de papel. El color identifica el tipo
+   de dato; nunca es decoración. Claro y oscuro coherentes.
+   ========================================================================= */
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --radius: 0.9rem;
+
+  /* --- Superficies (papel cálido, no clínico) --------------------------- */
+  --background: #f7f5ef;          /* papel cálido: fondo de la app */
+  --foreground: #201e18;          /* tinta casi negra cálida */
+  --card: #fffefb;                /* marfil, un paso más claro que el fondo */
+  --card-foreground: #201e18;
+  --popover: #fffefb;
+  --popover-foreground: #201e18;
+
+  --primary: #1f6b53;             /* RITMO — verde pino profundo (acción/marca) */
+  --primary-foreground: #f5f8f4;
+  --secondary: #ece9df;           /* piedra cálida */
+  --secondary-foreground: #33302a;
+  --muted: #efece3;
+  --muted-foreground: #6f695b;
+  --accent: #e6f0ea;              /* lavado verde */
+  --accent-foreground: #17463a;
+  --destructive: #b3452c;         /* rojo terracota */
+  --destructive-foreground: #fdf3ef;
+
+  --border: #e5e0d4;
+  --input: #e5e0d4;
+  --ring: #2f8462;
+
+  /* --- Familias de datos (tonos joya sobre papel) ----------------------- */
+  --weight: #1f6b53;   --weight-foreground: #ffffff;
+  --weight-soft: #8dbfa9; --weight-wash: #e7f1eb; --weight-border: #c4ddcf; --weight-ink: #1a5642;
+  --habit: #9a6b16;    --habit-foreground: #ffffff;
+  --habit-soft: #dcbd7f; --habit-wash: #f6efdc; --habit-border: #e6d5a6; --habit-ink: #6f4c10;
+  --energy: #b3542f;   --energy-foreground: #ffffff;
+  --energy-soft: #e5ac97; --energy-wash: #f8ebe4; --energy-border: #eec7b6; --energy-ink: #8f3f1f;
+  --body: #7d4f74;     --body-foreground: #ffffff;
+  --body-soft: #c3a6bd; --body-wash: #f3ecf1; --body-border: #ddc9d7; --body-ink: #613b59;
+  --water: #2f6f8a;    --water-foreground: #ffffff;
+  --water-soft: #9dc3d1; --water-wash: #e6f0f4; --water-border: #c2dbe4; --water-ink: #245570;
+  --warning: #a86a1c;  --warning-foreground: #ffffff;
+  --warning-wash: #f6ecd6; --warning-border: #e8d3a3; --warning-ink: #7f4f14;
+  --streak: #d1662a;   /* ember para la racha 🔥 */
+  --success: #1f6b53;
+
+  /* --- Gráficos --------------------------------------------------------- */
+  --chart-1: #1f6b53;  /* peso — verde */
+  --chart-2: #9a6b16;  /* hábitos — oro */
+  --chart-3: #b3542f;  /* energía — terracota */
+  --chart-4: #7d4f74;  /* composición — ciruela */
+  --chart-5: #2f6f8a;  /* agua/pasos — azul acero */
+
+  /* --- Sombra (cálida, suave) ------------------------------------------- */
+  --shadow-color: 42 33 16;
+  --shadow-sm: 0 1px 2px rgb(var(--shadow-color) / 0.06);
+  --shadow-md: 0 2px 4px rgb(var(--shadow-color) / 0.04), 0 12px 28px -18px rgb(var(--shadow-color) / 0.22);
+  --shadow-lg: 0 20px 48px -24px rgb(var(--shadow-color) / 0.30), 0 8px 18px -14px rgb(var(--shadow-color) / 0.14);
+}
+
+.dark {
+  --background: #0f120f;          /* carbón cálido con matiz verde */
+  --foreground: #eae7dd;
+  --card: #171b16;
+  --card-foreground: #eae7dd;
+  --popover: #1a1f18;
+  --popover-foreground: #eae7dd;
+
+  --primary: #37a978;            /* verde vivo legible sobre oscuro */
+  --primary-foreground: #06140d;
+  --secondary: #23281f;
+  --secondary-foreground: #d9d5c8;
+  --muted: #1d221b;
+  --muted-foreground: #9b988b;
+  --accent: #1c2a22;
+  --accent-foreground: #a9e4ca;
+  --destructive: #e0674a;
+  --destructive-foreground: #1a0b07;
+
+  --border: #2a2f27;
+  --input: #30352c;
+  --ring: #37a978;
+
+  --weight: #37a978;   --weight-foreground: #06140d;
+  --weight-soft: #2e6b53; --weight-wash: #16241e; --weight-border: #2c4a3c; --weight-ink: #7fd3b0;
+  --habit: #d3a24e;    --habit-foreground: #1c1405;
+  --habit-soft: #7a5f2c; --habit-wash: #241f13; --habit-border: #48401f; --habit-ink: #e8c988;
+  --energy: #e07a52;   --energy-foreground: #1c0d06;
+  --energy-soft: #85472f; --energy-wash: #251611; --energy-border: #4d2d1f; --energy-ink: #f0ab8c;
+  --body: #bd8fb2;     --body-foreground: #1c0f19;
+  --body-soft: #6e4a67; --body-wash: #221a20; --body-border: #443341; --body-ink: #d8bcd2;
+  --water: #64a8c4;    --water-foreground: #06171e;
+  --water-soft: #3a6577; --water-wash: #142127; --water-border: #2c4652; --water-ink: #a6d2e2;
+  --warning: #d4a250;  --warning-foreground: #1c1405;
+  --warning-wash: #241f13; --warning-border: #48401f; --warning-ink: #e8c988;
+  --streak: #f0854a;
+  --success: #37a978;
+
+  --chart-1: #37a978;
+  --chart-2: #d3a24e;
+  --chart-3: #e07a52;
+  --chart-4: #bd8fb2;
+  --chart-5: #64a8c4;
+
+  --shadow-color: 0 0 0;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.30);
+  --shadow-md: 0 2px 4px rgb(0 0 0 / 0.24), 0 12px 28px -18px rgb(0 0 0 / 0.55);
+  --shadow-lg: 0 20px 48px -24px rgb(0 0 0 / 0.65), 0 8px 18px -14px rgb(0 0 0 / 0.40);
+}
+
+/* --- Puente a Tailwind: expone tokens como utilidades --------------------- */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-weight: var(--weight);
+  --color-weight-foreground: var(--weight-foreground);
+  --color-weight-soft: var(--weight-soft);
+  --color-weight-wash: var(--weight-wash);
+  --color-weight-border: var(--weight-border);
+  --color-weight-ink: var(--weight-ink);
+  --color-habit: var(--habit);
+  --color-habit-foreground: var(--habit-foreground);
+  --color-habit-soft: var(--habit-soft);
+  --color-habit-wash: var(--habit-wash);
+  --color-habit-border: var(--habit-border);
+  --color-habit-ink: var(--habit-ink);
+  --color-energy: var(--energy);
+  --color-energy-foreground: var(--energy-foreground);
+  --color-energy-soft: var(--energy-soft);
+  --color-energy-wash: var(--energy-wash);
+  --color-energy-border: var(--energy-border);
+  --color-energy-ink: var(--energy-ink);
+  --color-body: var(--body);
+  --color-body-foreground: var(--body-foreground);
+  --color-body-soft: var(--body-soft);
+  --color-body-wash: var(--body-wash);
+  --color-body-border: var(--body-border);
+  --color-body-ink: var(--body-ink);
+  --color-water: var(--water);
+  --color-water-foreground: var(--water-foreground);
+  --color-water-soft: var(--water-soft);
+  --color-water-wash: var(--water-wash);
+  --color-water-border: var(--water-border);
+  --color-water-ink: var(--water-ink);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-wash: var(--warning-wash);
+  --color-warning-border: var(--warning-border);
+  --color-warning-ink: var(--warning-ink);
+  --color-streak: var(--streak);
+  --color-success: var(--success);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 3px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 10px);
+
+  --font-sans: var(--font-hanken), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-bricolage), var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
+
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  /* Cifras alineadas: imprescindible en una app de datos. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 22%, transparent);
+  }
+}
+
+/* Utilidad de superficie base para tarjetas de la app (sombra cálida RITMO). */
+@utility card-ritmo {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}

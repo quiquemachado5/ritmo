@@ -1,0 +1,145 @@
+/* ============================================================================
+   TOKENS — panel de salud cálido y sofisticado.
+
+   Neutro tipo hueso/papel cálido como fondo de lectura; cada familia de datos
+   es un tono joya sereno. El color identifica el tipo de dato y su estado,
+   nunca convierte la pantalla en decoración. Vara de acabado: Apple Health.
+   ========================================================================= */
+
+:root {
+  /* --- Superficies (neutro cálido, no clínico) --------------------------- */
+  --canvas:      #f4efe6;   /* hueso cálido: el fondo de la página */
+  --surface:     #fdfbf6;   /* marfil: el plano de las tarjetas, algo más claro */
+  --surface-2:   #f0e9dc;   /* apoyo tranquilo */
+  --surface-3:   #e7dfce;   /* apoyo un paso más marcado */
+
+  /* --- Bordes (cálidos, finos) ------------------------------------------ */
+  --border:        #e6ddcc;
+  --border-strong: #d3c6ae;
+  --line:          1px solid var(--border);
+
+  /* --- Tinta: la escala con la que se escribe --------------------------- */
+  --ink:    #2a2419;   /* casi negro cálido */
+  --ink-2:  #4c4335;
+  --ink-3:  #746a58;
+  --ink-4:  #9a8e78;
+  --overlay: rgba(35, 29, 20, .46);
+
+  /* --- Familias de datos (tonos joya sobre neutro cálido) --------------- */
+  /* PESO · acción · marca — verde pino */
+  --weight:        #276a54;
+  --weight-hover:  #215c49;
+  --weight-active: #1a4b3b;
+  --weight-soft:   #8fbfab;
+  --weight-wash:   #e8f1eb;
+  --weight-border: #c6ddd0;
+  --weight-ink:    #216049;
+
+  /* HÁBITOS · constancia — oro/ocre */
+  --habit:         #8a6318;   /* sólido: pasa AA con texto blanco */
+  --habit-hover:   #74520f;
+  --habit-soft:    #e0c489;
+  --habit-wash:    #f6efda;
+  --habit-border:  #e7d6a8;
+  --habit-ink:     #785312;
+
+  /* ENERGÍA · ingesta/gasto/balance — terracota */
+  --energy:        #b8543a;
+  --energy-soft:   #e9b1a0;
+  --energy-wash:   #f9ece6;
+  --energy-border: #eecabb;
+  --energy-ink:    #9d4229;
+
+  /* CUERPO · composición · estimación — ciruela */
+  --body:          #835079;
+  --body-soft:     #cbaec4;
+  --body-wash:     #f4ecf1;
+  --body-border:   #e2ceda;
+  --body-ink:      #6d3f61;
+
+  /* ATENCIÓN · incertidumbre/pendiente — ámbar caramelo */
+  --warning:       #a2691c;
+  --warning-soft:  #e5c68a;
+  --warning-wash:  #f6ecd6;
+  --warning-border:#e8d3a3;
+  --warning-ink:   #855314;
+
+  /* El acento general sigue el hilo del peso y la acción principal. */
+  --accent:        var(--weight);
+  --accent-hover:  var(--weight-hover);
+  --accent-active: var(--weight-active);
+  --accent-soft:   var(--weight-soft);
+  --accent-faint:  var(--weight-wash);
+  --accent-wash:   var(--weight-wash);
+  --accent-border: var(--weight-border);
+  --accent-ink:    #fdfbf6;
+
+  --data-1: var(--weight);
+  --data-2: var(--habit);
+  --data-3: var(--body);
+  --data-flat: var(--energy);
+
+  /* --- Tipografía -------------------------------------------------------- */
+  --font: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+          Roboto, Helvetica, Arial, sans-serif;
+
+  --fs-display: clamp(1.9rem, 3.2vw, 2.6rem);
+  --fs-xl:      clamp(1.375rem, 4vw, 1.55rem);
+  --fs-lg:      1.0625rem;
+  --fs-md:      0.9375rem;
+  --fs-sm:      0.875rem;
+  --fs-xs:      0.8125rem;
+  --fs-micro:   0.6875rem;
+  --fs-input:   1rem;
+
+  --fs-metric:      clamp(1.55rem, 4vw, 2.05rem);
+  --fs-metric-hero: clamp(2.5rem, 6vw, 3.6rem);
+
+  --track-tight: -0.02em;
+  --track-label:  0.04em;
+
+  /* --- Geometría (esquina generosa, más premium) ------------------------ */
+  --r-sm:  10px;
+  --r-md:  14px;
+  --r-lg:  18px;
+  --r-xl:  24px;
+  --r-pill: 999px;
+
+  --gap:      12px;
+  --pad-card: 16px;
+  --touch:    44px;
+
+  /* --- Elevación (sombra cálida, con desplazamiento y desenfoque) -------- */
+  --shadow-sm: 0 1px 2px rgba(58, 42, 20, .05);
+  --shadow-md: 0 2px 4px rgba(58, 42, 20, .04), 0 12px 28px -18px rgba(58, 42, 20, .22);
+  --shadow-lg: 0 20px 48px -24px rgba(45, 33, 16, .34), 0 8px 18px -14px rgba(45, 33, 16, .14);
+  --shadow-hero: 0 24px 50px -28px rgba(24, 66, 52, .55), 0 10px 22px -16px rgba(24, 45, 36, .28);
+  --shadow-focus: 0 0 0 4px rgba(39, 106, 84, .18);
+
+  /* --- Movimiento ------------------------------------------------------- */
+  --ease:   cubic-bezier(0.2, 0, 0, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --t-fast: 130ms;
+  --t-mid:  240ms;
+
+  --header-h: 58px;
+  --tabbar-h: 62px;
+}
+
+@media (min-width: 960px) {
+  :root {
+    --gap: 16px;
+    --pad-card: 20px;
+    --header-h: 66px;
+    --tabbar-h: 0px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --t-fast: 0ms; --t-mid: 0ms; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
