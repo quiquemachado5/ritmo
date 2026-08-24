@@ -146,9 +146,14 @@ export default function HoyPage() {
               </div>
 
               {/* Franja báscula → hoy → revisión */}
-              <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-secondary/50 p-3 text-center">
-                <RevItem etiqueta="Último pesaje" valor={fmtPeso(r.peso.actual)} sub={r.peso.fecha ? relativo(r.peso.fecha, hoyISO) : "—"} />
-                <RevItem etiqueta="Hoy (est.)" valor={fmtPeso(r.peso.estimadoHoy)} sub="estimado" destacado />
+              <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-secondary/50 p-3 text-center sm:grid-cols-4">
+                <RevItem etiqueta="Peso real" valor={fmtPeso(r.peso.actual)} sub={r.peso.fecha ? `báscula · ${relativo(r.peso.fecha, hoyISO)}` : "—"} />
+                <RevItem etiqueta="Peso estimado" valor={fmtPeso(r.peso.estimadoHoy)} sub="hoy, según el modelo" destacado />
+                <RevItem
+                  etiqueta="Objetivo"
+                  valor={fmtPeso(r.peso.objetivo)}
+                  sub={r.peso.restante != null ? `faltan ${fmtPeso(Math.abs(r.peso.restante))} kg` : "sin fijar"}
+                />
                 <RevItem
                   etiqueta="Próx. revisión"
                   valor={r.prediccion.proximoPesaje ? fmtFechaCorta(r.prediccion.proximoPesaje) : "—"}
@@ -242,40 +247,122 @@ export default function HoyPage() {
   );
 }
 
+/** Veredicto de la semana: de enhorabuena a toque de atención. */
+type Veredicto = "excelente" | "bien" | "flojea" | "mal";
+
+const VEREDICTO: Record<Veredicto, { titulo: string; clase: string; punto: string }> = {
+  excelente: { titulo: "Semana excelente", clase: "text-primary", punto: "bg-primary" },
+  bien: { titulo: "Buena semana", clase: "text-habit", punto: "bg-habit" },
+  flojea: { titulo: "Semana irregular", clase: "text-warning", punto: "bg-warning" },
+  mal: { titulo: "Semana floja", clase: "text-energy", punto: "bg-energy" },
+};
+
 function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: typeof r extends never ? never : Parameters<typeof resumen>[0] }) {
-  const porHabito = React.useMemo(() => adherenciaPorHabito(estado, HABITOS, 7), [estado]);
-  const mejor = porHabito[0];
+  const porHabito = React.useMemo(
+    () => [...adherenciaPorHabito(estado, HABITOS, 7)].sort((a, b) => b.pct - a.pct),
+    [estado],
+  );
+
+  const adh = r.habitos.adherencia7;
+  const racha = r.habitos.rachaActual.longitud;
+  const tendKg = r.prediccion.modelo?.kgSemana ?? null;
+  const quiere = estado.perfil.objetivo ?? "perder";
+
+  // El veredicto sale de la constancia, pero baja un escalón si el peso va en
+  // dirección contraria al objetivo: cumplir a medias y engordar no es "bien".
+  let veredicto: Veredicto = adh >= 85 ? "excelente" : adh >= 70 ? "bien" : adh >= 50 ? "flojea" : "mal";
+  const enContra =
+    tendKg != null && ((quiere === "perder" && tendKg > 0.15) || (quiere === "ganar" && tendKg < -0.15));
+  if (enContra && veredicto !== "mal") {
+    veredicto = veredicto === "excelente" ? "bien" : veredicto === "bien" ? "flojea" : "mal";
+  }
+  const v = VEREDICTO[veredicto];
+
+  // Frase de cabecera: reconocer o apretar, según toque.
+  const cabecera =
+    veredicto === "excelente"
+      ? `${adh}% de constancia. Enhorabuena, así se construye.`
+      : veredicto === "bien"
+        ? `${adh}% de constancia. Vas bien; afina un detalle y es redonda.`
+        : veredicto === "flojea"
+          ? `${adh}% de constancia. Ni mal ni bien: te falta rematar los días.`
+          : `${adh}% de constancia. Esta semana se te ha escapado. Recupérala hoy.`;
+
+  const lineas: { icon: React.ReactNode; text: string }[] = [];
+
+  // Dónde incidir: el hábito más flojo de los últimos 7 días.
   const peor = porHabito[porHabito.length - 1];
-  const insights: { icon: React.ReactNode; text: string; tone: string }[] = [];
-
-  if (r.habitos.rachaActual.longitud >= 7) {
-    insights.push({ icon: <Award className="size-4 text-streak" />, text: `Llevas ${r.habitos.rachaActual.longitud} días de racha. ¡Sigue así!`, tone: "streak" });
-  }
-  if (r.habitos.adherencia7 >= 80) {
-    insights.push({ icon: <Target className="size-4 text-primary" />, text: `${r.habitos.adherencia7}% de adherencia esta semana. Gran constancia.`, tone: "primary" });
-  } else if (r.habitos.adherencia7 < 50 && r.habitos.diasRegistrados > 7) {
-    insights.push({ icon: <Target className="size-4 text-warning" />, text: `${r.habitos.adherencia7}% de adherencia esta semana. ¿Puedes mejorar hoy?`, tone: "warning" });
-  }
-  if (mejor && mejor.pct >= 70 && peor && peor.pct < 30) {
-    insights.push({ icon: <TrendingUp className="size-4 text-habit" />, text: `Tu mejor hábito: ${mejor.etiqueta} (${mejor.pct}%). Intenta mejorar ${peor.etiqueta}.`, tone: "habit" });
-  }
-  const tendKg = r.prediccion.modelo?.kgSemana;
-  if (tendKg != null && tendKg <= -0.3) {
-    insights.push({ icon: <TrendingDown className="size-4 text-weight" />, text: `Pierdes ~${Math.abs(tendKg).toFixed(1)} kg/semana. Buen ritmo.`, tone: "weight" });
+  if (peor && peor.pct < 100) {
+    lineas.push({
+      icon: <Target className="size-4 shrink-0 text-warning" />,
+      text: `Incide en ${peor.etiqueta.toLowerCase()}: ${peor.hechos} de ${peor.total} días. Es lo que más te suma ahora.`,
+    });
   }
 
-  if (insights.length === 0) return null;
+  // Reconocer lo que sí sostiene.
+  const mejor = porHabito[0];
+  if (mejor && mejor.pct >= 70 && mejor.clave !== peor?.clave) {
+    lineas.push({
+      icon: <TrendingUp className="size-4 shrink-0 text-habit" />,
+      text: `${mejor.etiqueta} lo tienes dominado (${mejor.pct}%). Esa base no la sueltes.`,
+    });
+  }
+
+  // Racha.
+  if (racha >= 3) {
+    lineas.push({
+      icon: <Award className="size-4 shrink-0 text-streak" />,
+      text: `${racha} días seguidos con los 6 hábitos. No rompas la cadena.`,
+    });
+  } else if (racha === 0 && r.habitos.mejorRacha.longitud >= 3) {
+    lineas.push({
+      icon: <Award className="size-4 shrink-0 text-muted-foreground" />,
+      text: `Sin racha viva. Tu récord son ${r.habitos.mejorRacha.longitud} días: hoy puede ser el 1.`,
+    });
+  }
+
+  // Lectura del peso, siempre encuadrada con el objetivo.
+  if (tendKg != null && Math.abs(tendKg) >= 0.1) {
+    const baja = tendKg < 0;
+    lineas.push({
+      icon: baja
+        ? <TrendingDown className="size-4 shrink-0 text-weight" />
+        : <TrendingUp className="size-4 shrink-0 text-energy" />,
+      text: enContra
+        ? `El peso sube ~${Math.abs(tendKg).toFixed(1)} kg/semana y tu objetivo es ${quiere}. Ahí está el desajuste.`
+        : `${baja ? "Pierdes" : "Ganas"} ~${Math.abs(tendKg).toFixed(1)} kg/semana, en línea con tu objetivo.`,
+    });
+  }
+
+  // Aviso si el modelo lleva mucho a ciegas.
+  if ((r.prediccion.diasSinPesaje ?? 0) >= 14) {
+    lineas.push({
+      icon: <Target className="size-4 shrink-0 text-muted-foreground" />,
+      text: `Llevas ${r.prediccion.diasSinPesaje} días sin pesarte: la estimación se va abriendo. Una báscula la reajusta.`,
+    });
+  }
 
   return (
     <section>
       <SectionLabel>Resumen semanal</SectionLabel>
-      <Card className="flex flex-col gap-2.5 p-4">
-        {insights.map((ins, i) => (
-          <div key={i} className="flex items-start gap-3 text-sm">
-            {ins.icon}
-            <span className="text-muted-foreground">{ins.text}</span>
+      <Card className="flex flex-col gap-3 p-4">
+        <div className="flex items-start gap-2.5">
+          <span className={cn("mt-1.5 size-2 shrink-0 rounded-full", v.punto)} />
+          <div>
+            <p className={cn("font-display text-sm font-bold", v.clase)}>{v.titulo}</p>
+            <p className="text-sm text-muted-foreground">{cabecera}</p>
           </div>
-        ))}
+        </div>
+        {lineas.length > 0 && (
+          <div className="flex flex-col gap-2.5 border-t border-border pt-3">
+            {lineas.map((l, i) => (
+              <div key={i} className="flex items-start gap-3 text-sm">
+                {l.icon}
+                <span className="text-muted-foreground">{l.text}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
     </section>
   );

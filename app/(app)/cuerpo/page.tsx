@@ -84,9 +84,35 @@ export default function CuerpoPage() {
       {/* Estado actual */}
       <section>
         <SectionLabel>Estado actual</SectionLabel>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Card className="p-4">
-            <Metric label="Peso estimado" value={fmtPeso(r.peso.estimadoHoy)} unit="kg" tone="weight" />
+            <Metric
+              label="Último peso real"
+              value={fmtPeso(r.peso.actual)}
+              unit="kg"
+              hint={r.peso.fecha ? <span className="text-[0.7rem] text-muted-foreground">báscula · {fmtFechaCorta(r.peso.fecha)}</span> : undefined}
+            />
+          </Card>
+          <Card className="p-4">
+            <Metric
+              label="Peso estimado hoy"
+              value={fmtPeso(r.peso.estimadoHoy)}
+              unit="kg"
+              tone="weight"
+              hint={
+                r.prediccion.diasSinPesaje
+                  ? <span className="text-[0.7rem] text-muted-foreground">{r.prediccion.diasSinPesaje} d sin pesarte</span>
+                  : <span className="text-[0.7rem] text-muted-foreground">pesaje de hoy</span>
+              }
+            />
+          </Card>
+          <Card className="p-4">
+            <Metric
+              label="Objetivo"
+              value={fmtPeso(r.peso.objetivo)}
+              unit="kg"
+              hint={r.peso.restante != null ? <span className="text-[0.7rem] text-muted-foreground">faltan {fmtPeso(Math.abs(r.peso.restante))} kg</span> : undefined}
+            />
           </Card>
           <Card className="p-4">
             {r.imc ? (

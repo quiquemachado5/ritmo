@@ -2,11 +2,24 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { TOTAL_HABITOS } from "@/lib/model/config";
+import { HABITOS, TOTAL_HABITOS } from "@/lib/model/config";
 import { nivelDia } from "@/lib/model/metrics";
-import { diaSemanaLunes, hoy, sumarDias } from "@/lib/model/dates";
-import { fmtFechaCorta } from "@/lib/format";
+import { DIAS_SEMANA, diaSemanaLunes, hoy, sumarDias } from "@/lib/model/dates";
+import { capitalizar, fmtFechaLarga } from "@/lib/format";
 import type { Estado } from "@/lib/model/types";
+
+interface Celda {
+  fecha: string;
+  nivel: number;
+  futuro: boolean;
+  cumplidos: number;
+  hechos: string[];
+}
+
+function etiquetaDia(c: Celda): string {
+  const base = `${c.fecha} · ${c.cumplidos}/${TOTAL_HABITOS} hábitos`;
+  return c.hechos.length ? `${base}: ${c.hechos.join(", ")}` : `${base} (ninguno)`;
+}
 
 const NIVEL_COLOR = [
   "bg-secondary",
@@ -28,6 +41,7 @@ export function Heatmap({
   semanasMinimas?: number;
 }) {
   const scroller = React.useRef<HTMLDivElement>(null);
+  const [activo, setActivo] = React.useState<Celda | null>(null);
 
   const { columnas, meses, totalSemanas } = React.useMemo(() => {
     const hoyISO = hoy();
@@ -48,19 +62,18 @@ export function Heatmap({
     const diasAtras = (nSemanas - 1) * 7 + diaSemanaLunes(hoyISO);
     const inicio = sumarDias(hoyISO, -diasAtras);
 
-    const cols: Array<Array<{ fecha: string; nivel: number; futuro: boolean; cumplidos: number } | null>> = [];
+    const cols: Array<Array<Celda | null>> = [];
     const etiquetasMes: Array<{ col: number; label: string }> = [];
     let cursor = inicio;
     for (let s = 0; s < nSemanas; s++) {
-      const col: Array<{ fecha: string; nivel: number; futuro: boolean; cumplidos: number } | null> = [];
+      const col: Array<Celda | null> = [];
       for (let dow = 0; dow < 7; dow++) {
         const fecha = cursor;
         const dia = estado.dias[fecha];
         const futuro = fecha > hoyISO;
-        const cumplidos = Object.values(dia?.habitos || {}).filter((v) => v === true).length;
-        col.push({ fecha, nivel: nivelDia(dia?.habitos, TOTAL_HABITOS), futuro, cumplidos });
+        const hechos = HABITOS.filter((h) => dia?.habitos?.[h.clave] === true).map((h) => h.etiqueta);
+        col.push({ fecha, nivel: nivelDia(dia?.habitos, TOTAL_HABITOS), futuro, cumplidos: hechos.length, hechos });
         if (dow === 0) {
-          const mes = new Date(fecha).getMonth();
           const prev = etiquetasMes[etiquetasMes.length - 1];
           const label = new Intl.DateTimeFormat("es-ES", { month: "short" }).format(new Date(fecha));
           if (!prev || prev.label !== label) etiquetasMes.push({ col: s, label });
@@ -84,7 +97,8 @@ export function Heatmap({
       className="overflow-x-auto pb-2 [scrollbar-color:var(--border)_transparent] [scrollbar-width:thin]"
     >
       <div className="inline-flex flex-col gap-1">
-        <div className="flex gap-[3px] pl-0 text-[0.6rem] text-muted-foreground">
+        <div className="flex gap-[3px] text-[0.6rem] text-muted-foreground">
+          <div className="mr-1 w-4 shrink-0" />
           {columnas.map((_, i) => {
             const m = meses.find((x) => x.col === i);
             return (
@@ -95,14 +109,31 @@ export function Heatmap({
           })}
         </div>
         <div className="flex gap-[3px]">
+          {/* Inicial del día de la semana, para orientarse en la cuadrícula. */}
+          <div className="mr-1 flex w-4 shrink-0 flex-col gap-[3px] text-[0.6rem] leading-[13px] text-muted-foreground">
+            {DIAS_SEMANA.map((d, j) => (
+              <span key={j} className="h-[13px]">{j % 2 === 1 ? d.slice(0, 1) : ""}</span>
+            ))}
+          </div>
           {columnas.map((col, i) => (
             <div key={i} className="flex flex-col gap-[3px]">
               {col.map((cell, j) =>
                 cell && !cell.futuro ? (
                   <div
                     key={j}
-                    title={`${fmtFechaCorta(cell.fecha)} · ${cell.cumplidos}/${TOTAL_HABITOS} hábitos`}
-                    className={cn("size-[13px] rounded-[3px]", NIVEL_COLOR[cell.nivel])}
+                    tabIndex={0}
+                    role="img"
+                    aria-label={etiquetaDia(cell)}
+                    title={etiquetaDia(cell)}
+                    onMouseEnter={() => setActivo(cell)}
+                    onFocus={() => setActivo(cell)}
+                    onMouseLeave={() => setActivo(null)}
+                    onBlur={() => setActivo(null)}
+                    className={cn(
+                      "size-[13px] cursor-default rounded-[3px] outline-none transition-shadow",
+                      NIVEL_COLOR[cell.nivel],
+                      activo?.fecha === cell.fecha && "ring-2 ring-foreground/50",
+                    )}
                   />
                 ) : (
                   <div key={j} className="size-[13px] rounded-[3px] bg-transparent" />
@@ -110,6 +141,22 @@ export function Heatmap({
               )}
             </div>
           ))}
+        </div>
+
+        {/* Detalle del día señalado: el `title` nativo tarda y se pierde. */}
+        <div className="min-h-[1.5rem] pt-1 text-xs">
+          {activo ? (
+            <span>
+              <span className="font-medium text-foreground">{capitalizar(fmtFechaLarga(activo.fecha))}</span>
+              <span className="text-muted-foreground">
+                {" · "}
+                {activo.cumplidos}/{TOTAL_HABITOS} hábitos
+                {activo.hechos.length > 0 && ` · ${activo.hechos.join(", ")}`}
+              </span>
+            </span>
+          ) : (
+            <span className="text-muted-foreground">Pasa el ratón por un día para ver su detalle.</span>
+          )}
         </div>
         <div className="mt-1 flex items-center justify-end gap-1.5 text-[0.65rem] text-muted-foreground">
           <span>menos</span>

@@ -153,24 +153,50 @@ export function arrastre(estado: Estado): Arrastre | null {
   };
 }
 
+export interface PuntoPesoDiario {
+  fecha: string;
+  /** Peso de báscula, sólo los días que lo hay. */
+  real: number | null;
+  /** Estimación del modelo para ese día, todos los días. */
+  estimado: number;
+}
+
 /**
- * Peso estimado en `fecha` partiendo de un pesaje ancla y acumulando el balance
- * energético de los días intermedios.
+ * Serie DIARIA de peso: real donde hay báscula, estimado siempre.
  *
- * Es la estimación "honesta" del modelo: no una recta global, sino lo que
- * predecía desde la última báscula conocida. Comparar esto con el pesaje real
- * siguiente es exactamente medir si el modelo iba bien encaminado.
+ * El estimado arranca en el primer pesaje y va acumulando el balance energético
+ * de cada día. Cuando aparece una báscula nueva, la serie se re-ancla en ella:
+ * ese salto es justo lo que el modelo aprende. Al ser diaria, la línea llega
+ * hasta hoy en vez de pararse en el último pesaje.
  */
-export function estimarPesoDesde(estado: Estado, ancla: Pesaje, fecha: string): number {
-  let balance = 0;
-  let cursor = sumarDias(ancla.fecha, 1);
+export function seriePesoDiaria(estado: Estado, desde: string, hasta: string): PuntoPesoDiario[] {
+  const p = pesajes(estado);
+  if (!p.length) return [];
+
+  const porFecha = new Map(p.map((x) => [x.fecha, x.peso]));
+  const salida: PuntoPesoDiario[] = [];
+  let ancla = p[0].peso;
+  let cursor = p[0].fecha;
   let guarda = 0;
-  while (cursor <= fecha && guarda++ < 5000) {
-    const e = energiaDe(estado, cursor);
-    if (!e.sinRegistro || e.imputado) balance += e.balance;
+
+  while (cursor <= hasta && guarda++ < 20_000) {
+    const real = porFecha.get(cursor) ?? null;
+
+    // El primer día es el propio pesaje inicial: no hay nada que acumular.
+    if (salida.length > 0) {
+      const e = energiaDe(estado, cursor);
+      if (!e.sinRegistro || e.imputado) ancla += e.balance / M.KCAL_POR_KG;
+    }
+
+    const estimado = Math.round(ancla * 100) / 100;
+    if (cursor >= desde) salida.push({ fecha: cursor, real, estimado });
+
+    // Una báscula real manda sobre la estimación a partir de aquí.
+    if (real !== null) ancla = real;
     cursor = sumarDias(cursor, 1);
   }
-  return Math.round((ancla.peso + balance / M.KCAL_POR_KG) * 100) / 100;
+
+  return salida;
 }
 
 /* Caché del TDEE por versión de estado (evita recomputar en el arrastre). */

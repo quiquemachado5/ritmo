@@ -3,7 +3,7 @@
 import * as React from "react";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
-import { pesajes as getPesajes, resumen, serieBalance, estimarPesoDesde } from "@/lib/model/analytics";
+import { pesajes as getPesajes, resumen, serieBalance, seriePesoDiaria } from "@/lib/model/analytics";
 import { hoy, sumarDias } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,35 +32,21 @@ export default function ProgresoPage() {
     const desde = dias === Infinity ? "0000-01-01" : sumarDias(hoy(), -dias);
     const win = todos.filter((p) => p.fecha >= desde);
 
-    // El estimado de cada pesaje es lo que el modelo predecía DESDE el pesaje
-    // anterior: así la línea se re-ancla en cada báscula en vez de extrapolar
-    // una recta global (que a un año vista se desviaba varios kilos).
-    const pesoData: PuntoPeso[] = win.map((p) => {
-      const i = todos.findIndex((x) => x.fecha === p.fecha);
-      const ancla = i > 0 ? todos[i - 1] : null;
-      return {
-        label: fmtFechaCorta(p.fecha),
-        real: p.peso,
-        pred: ancla ? estimarPesoDesde(estado, ancla, p.fecha) : null,
-        banda: null,
-      };
-    });
+    // Serie DIARIA: el estimado avanza cada día con el balance energético y se
+    // re-ancla en cada báscula. Antes sólo había un punto por pesaje, así que
+    // la línea se quedaba en el último peso real y nunca reflejaba el de hoy.
+    const pesoData: PuntoPeso[] = seriePesoDiaria(estado, desde, hoy()).map((d) => ({
+      label: fmtFechaCorta(d.fecha),
+      real: d.real,
+      pred: d.estimado,
+      banda: null,
+    }));
 
-    // Hoy y proyección futura, ancladas al último pesaje real.
-    const ultimo = todos.length ? todos[todos.length - 1] : null;
-    if (ultimo && hoy() > ultimo.fecha) {
-      pesoData.push({
-        label: fmtFechaCorta(hoy()),
-        real: null,
-        pred: estimarPesoDesde(estado, ultimo, hoy()),
-        banda: null,
-      });
-    }
+    // Proyección futura, con la banda de confianza del modelo.
     for (const [dias, iv] of [[14, r.prediccion.quincena], [30, r.prediccion.mes]] as const) {
       if (!iv) continue;
-      const fechaFut = sumarDias(hoy(), dias);
       pesoData.push({
-        label: fmtFechaCorta(fechaFut),
+        label: fmtFechaCorta(sumarDias(hoy(), dias)),
         real: null,
         pred: iv.peso,
         banda: [iv.minimo, iv.maximo],
@@ -104,17 +90,35 @@ export default function ProgresoPage() {
         </EmptyState>
       ) : (
         <>
-          {/* Resumen */}
-          <div className="grid grid-cols-3 gap-3">
+          {/* Resumen — real, estimado y objetivo siempre diferenciados */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Card className="p-4">
-              <Metric label="Peso actual" value={fmtPeso(r.peso.estimadoHoy)} unit="kg" tone="weight" />
+              <Metric
+                label="Último peso real"
+                value={fmtPeso(r.peso.actual)}
+                unit="kg"
+                hint={r.peso.fecha ? <span className="text-[0.7rem] text-muted-foreground">báscula · {fmtFechaCorta(r.peso.fecha)}</span> : undefined}
+              />
             </Card>
             <Card className="p-4">
               <Metric
-                label={`Cambio ${rango}`}
-                value={statsWin.cambio != null ? fmtSigno(statsWin.cambio) : "—"}
+                label="Peso estimado hoy"
+                value={fmtPeso(r.peso.estimadoHoy)}
                 unit="kg"
-                tone={statsWin.cambio != null && statsWin.cambio <= 0 ? "weight" : "energy"}
+                tone="weight"
+                hint={
+                  r.prediccion.diasSinPesaje
+                    ? <span className="text-[0.7rem] text-muted-foreground">{r.prediccion.diasSinPesaje} d sin pesarte</span>
+                    : <span className="text-[0.7rem] text-muted-foreground">pesaje de hoy</span>
+                }
+              />
+            </Card>
+            <Card className="p-4">
+              <Metric
+                label="Objetivo"
+                value={fmtPeso(r.peso.objetivo)}
+                unit="kg"
+                hint={r.peso.restante != null ? <span className="text-[0.7rem] text-muted-foreground">faltan {fmtPeso(Math.abs(r.peso.restante))} kg</span> : undefined}
               />
             </Card>
             <Card className="p-4">
@@ -123,6 +127,7 @@ export default function ProgresoPage() {
                 value={tendKg != null ? fmtSigno(tendKg, 2) : "—"}
                 unit="kg/sem"
                 tone={tendKg != null && tendKg <= 0 ? "weight" : "energy"}
+                hint={statsWin.cambio != null ? <span className="text-[0.7rem] text-muted-foreground">{fmtSigno(statsWin.cambio)} kg en {rango}</span> : undefined}
               />
             </Card>
           </div>
@@ -148,8 +153,8 @@ export default function ProgresoPage() {
             </div>
             <WeightChart data={datosPeso} objetivo={estado.perfil.pesoObjetivo} />
             <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 rounded bg-weight" /> Real</span>
-              <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 rounded border-b-2 border-dashed border-weight" /> Estimado</span>
+              <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 rounded bg-weight" /> Real (báscula)</span>
+              <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 rounded border-b-2 border-dashed border-weight" /> Estimado (diario)</span>
               {estado.perfil.pesoObjetivo && <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 rounded border-b-2 border-dashed border-weight opacity-60" /> Objetivo</span>}
             </div>
           </Card>
