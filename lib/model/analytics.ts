@@ -323,10 +323,16 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
   const errorDiario = evaluablesRecientes.length
     ? evaluablesRecientes.reduce((suma, d) => suma + incertidumbreEnergia(d.energia), 0) / evaluablesRecientes.length
     : 700;
+  // Calidad basada en pesajes + hábitos registrados
+  const habitosRecientes = diasEvaluables(estado, sumarDias(hoy(), -28), hoy());
+  const adherenciaHabitos = habitosRecientes.length > 0
+    ? habitosRecientes.filter(d => Object.values(d.habitos || {}).some(Boolean)).length / habitosRecientes.length
+    : 0;
+
   const calidad: M.CalidadModelo =
     calibracion && diasSinPesaje <= 14 && diasDesconocidos === 0
       ? "alta"
-      : calibracion && diasSinPesaje <= 42
+      : calibracion && (diasSinPesaje <= 42 || (diasSinPesaje <= 56 && adherenciaHabitos >= 0.7))
         ? "media"
         : "inicial";
 
