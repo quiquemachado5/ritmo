@@ -10,6 +10,7 @@
      balance < 0  → déficit    → el peso tiende a bajar
    ========================================================================= */
 
+import { TOTAL_HABITOS } from "./config";
 import type { EnergiaDia, Habitos, Pesaje, PesoIntervalo, Sexo } from "./types";
 
 /** Equivalente energético de 1 kg de tejido adiposo (regla de Wishnofsky). */
@@ -426,30 +427,68 @@ export function nivelDia(habitos: Habitos | undefined, totalHabitos: number): nu
 }
 
 /** Racha actual: días consecutivos hacia atrás que alcanzan el umbral. */
-export function rachaActual(dias: Array<{ fecha: string; cumplidos: number }>, umbral = 4): number {
-  if (!Array.isArray(dias) || dias.length === 0) return 0;
-  let racha = 0;
-  for (let i = dias.length - 1; i >= 0; i--) {
-    if (dias[i].cumplidos >= umbral) racha++;
-    else break;
-  }
-  return racha;
+export interface Racha {
+  longitud: number;
+  desde: string | null;
+  hasta: string | null;
 }
 
-/** Racha más larga registrada en todo el historial. */
-export function mejorRacha(dias: Array<{ fecha: string; cumplidos: number }>, umbral = 4): number {
-  if (!Array.isArray(dias)) return 0;
-  let mejor = 0;
-  let actual = 0;
-  for (const d of dias) {
-    if (d.cumplidos >= umbral) {
-      actual++;
-      if (actual > mejor) mejor = actual;
+const RACHA_VACIA: Racha = { longitud: 0, desde: null, hasta: null };
+
+/** Días de diferencia entre dos fechas ISO (b − a). */
+function distanciaDias(a: string, b: string): number {
+  return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
+}
+
+/**
+ * Tramos de días CONSECUTIVOS en el calendario que alcanzan el umbral.
+ *
+ * Recorrer el array de días registrados no basta: un hueco sin registrar rompe
+ * la racha aunque los días de alrededor sí cuenten, y antes se saltaba porque
+ * simplemente no estaba en la lista.
+ */
+function tramos(dias: Array<{ fecha: string; cumplidos: number }>, umbral: number): Racha[] {
+  const validos = (Array.isArray(dias) ? dias : [])
+    .filter((d) => d.cumplidos >= umbral)
+    .sort((a, b) => (a.fecha < b.fecha ? -1 : 1));
+
+  const salida: Racha[] = [];
+  for (const d of validos) {
+    const ultimo = salida[salida.length - 1];
+    if (ultimo && distanciaDias(ultimo.hasta as string, d.fecha) === 1) {
+      ultimo.hasta = d.fecha;
+      ultimo.longitud++;
     } else {
-      actual = 0;
+      salida.push({ longitud: 1, desde: d.fecha, hasta: d.fecha });
     }
   }
-  return mejor;
+  return salida;
+}
+
+/**
+ * Racha en curso: días consecutivos que llegan hasta hoy (o hasta ayer, para no
+ * darla por rota mientras el día todavía se está registrando).
+ */
+export function rachaActual(
+  dias: Array<{ fecha: string; cumplidos: number }>,
+  umbral = TOTAL_HABITOS,
+  hoyISO?: string,
+): Racha {
+  const hoy = hoyISO ?? new Date().toISOString().slice(0, 10);
+  const ultimo = tramos(dias, umbral).pop();
+  if (!ultimo) return RACHA_VACIA;
+  return distanciaDias(ultimo.hasta as string, hoy) <= 1 ? ultimo : RACHA_VACIA;
+}
+
+/**
+ * Racha más larga registrada en todo el historial, con sus fechas.
+ * En caso de empate gana la más reciente: es la que resulta útil enseñar.
+ */
+export function mejorRacha(
+  dias: Array<{ fecha: string; cumplidos: number }>,
+  umbral = TOTAL_HABITOS,
+): Racha {
+  return tramos(dias, umbral).reduce((mejor, t) => (t.longitud >= mejor.longitud ? t : mejor), RACHA_VACIA);
 }
 
 /* ------------------------------------------------------- ESTIMACIÓN KCAL */

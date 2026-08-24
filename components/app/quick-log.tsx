@@ -4,10 +4,8 @@ import * as React from "react";
 import { toast } from "sonner";
 import {
   Check,
-  Dumbbell,
   ListChecks,
   Loader2,
-  Ruler,
   Scale,
   Sparkles,
   UtensilsCrossed,
@@ -38,42 +36,39 @@ import { useQuickLog, type QuickTab } from "./quick-log-provider";
 const TABS: { id: QuickTab; label: string; icon: typeof Scale }[] = [
   { id: "comida", label: "Comida", icon: UtensilsCrossed },
   { id: "peso", label: "Peso", icon: Scale },
-  { id: "ejercicio", label: "Ejercicio", icon: Dumbbell },
   { id: "habitos", label: "Hábitos", icon: ListChecks },
-  { id: "medidas", label: "Medidas", icon: Ruler },
 ];
 
 export function QuickLog() {
   const { abierto, cerrar, tab, setTab, fecha } = useQuickLog();
   const isDesktop = useIsDesktop();
 
-  const cuerpo = (
-    <div className="flex flex-col gap-4">
-      <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={cn(
-              "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
-              tab === t.id
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary text-secondary-foreground hover:bg-secondary/70",
-            )}
-          >
-            <t.icon className="size-4" />
-            {t.label}
-          </button>
-        ))}
-      </div>
-      <div className="min-h-[16rem]">
-        {tab === "comida" && <PanelComida fecha={fecha} onDone={cerrar} />}
-        {tab === "peso" && <PanelPeso fecha={fecha} onDone={cerrar} />}
-        {tab === "ejercicio" && <PanelEjercicio fecha={fecha} onDone={cerrar} />}
-        {tab === "habitos" && <PanelHabitos fecha={fecha} />}
-        {tab === "medidas" && <PanelMedidas fecha={fecha} onDone={cerrar} />}
-      </div>
+  const pestanas = (
+    <div className="flex gap-1.5">
+      {TABS.map((t) => (
+        <button
+          key={t.id}
+          onClick={() => setTab(t.id)}
+          className={cn(
+            "flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium transition-colors",
+            tab === t.id
+              ? "bg-primary text-primary-foreground"
+              : "bg-secondary text-secondary-foreground hover:bg-secondary/70",
+          )}
+        >
+          <t.icon className="size-4" />
+          {t.label}
+        </button>
+      ))}
     </div>
+  );
+
+  const panel = (
+    <>
+      {tab === "comida" && <PanelComida fecha={fecha} onDone={cerrar} />}
+      {tab === "peso" && <PanelPeso fecha={fecha} onDone={cerrar} />}
+      {tab === "habitos" && <PanelHabitos fecha={fecha} />}
+    </>
   );
 
   const titulo = "Registrar";
@@ -82,12 +77,16 @@ export function QuickLog() {
   if (isDesktop) {
     return (
       <Dialog open={abierto} onOpenChange={(o) => !o && cerrar()}>
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto px-6 py-5">
-          <DialogHeader>
+        {/* `sm:max-w-*` debe fijarse aquí: el DialogContent base trae
+            `sm:max-w-lg` y tailwind-merge no lo tumba con un `max-w-*` sin
+            variante, así que en escritorio se quedaba clavado en 512 px. */}
+        <DialogContent className="flex max-h-[88vh] w-[calc(100%-2rem)] max-w-3xl flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
+          <DialogHeader className="shrink-0 border-b border-border px-6 pt-5 pb-4">
             <DialogTitle className="font-display text-xl">{titulo}</DialogTitle>
             <DialogDescription>{sub}</DialogDescription>
+            <div className="pt-3">{pestanas}</div>
           </DialogHeader>
-          <div className="pr-4">{cuerpo}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-6 py-5">{panel}</div>
         </DialogContent>
       </Dialog>
     );
@@ -95,12 +94,13 @@ export function QuickLog() {
 
   return (
     <Drawer open={abierto} onOpenChange={(o) => !o && cerrar()}>
-      <DrawerContent>
+      <DrawerContent className="max-h-[92vh]">
         <DrawerHeader className="shrink-0 text-left">
           <DrawerTitle className="font-display text-xl">{titulo}</DrawerTitle>
           <DrawerDescription>{sub}</DrawerDescription>
+          <div className="pt-3">{pestanas}</div>
         </DrawerHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-8">{cuerpo}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-8">{panel}</div>
       </DrawerContent>
     </Drawer>
   );
@@ -217,112 +217,6 @@ function PanelComida({ fecha, onDone }: { fecha: string; onDone: () => void }) {
   );
 }
 
-/* ----------------------------------------------------------------- PESO */
-
-function PanelPeso({ fecha, onDone }: { fecha: string; onDone: () => void }) {
-  const { dia, actualizarDia } = useRitmo();
-  const actual = dia(fecha).peso;
-  const [valor, setValor] = React.useState(actual != null ? String(actual) : "");
-  const [guardando, setGuardando] = React.useState(false);
-
-  async function guardar() {
-    const n = parseFloat(valor.replace(",", "."));
-    if (!Number.isFinite(n) || n < 25 || n > 400) {
-      toast.error("Introduce un peso válido (kg).");
-      return;
-    }
-    setGuardando(true);
-    await actualizarDia(fecha, { peso: Math.round(n * 10) / 10 });
-    toast.success("Peso guardado");
-    setGuardando(false);
-    onDone();
-  }
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <Label htmlFor="peso-input">Peso de hoy</Label>
-        <div className="mt-1.5 flex items-center gap-2">
-          <Input
-            id="peso-input"
-            inputMode="decimal"
-            value={valor}
-            onChange={(e) => setValor(e.target.value)}
-            placeholder="88,5"
-            className="text-lg tabular"
-            autoFocus
-          />
-          <span className="text-lg font-medium text-muted-foreground">kg</span>
-        </div>
-      </div>
-      <p className="text-sm text-muted-foreground">
-        Pésate a la misma hora, preferiblemente en ayunas. Un pesaje nuevo recalibra tu predicción.
-      </p>
-      <Button onClick={guardar} disabled={guardando} className="gap-2">
-        {guardando ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
-        Guardar peso
-      </Button>
-    </div>
-  );
-}
-
-/* ----------------------------------------------------------------- AGUA */
-
-/* ------------------------------------------------------------- EJERCICIO */
-
-function PanelEjercicio({ fecha, onDone }: { fecha: string; onDone: () => void }) {
-  const { dia, actualizarDia, alternarHabito } = useRitmo();
-  const d = dia(fecha);
-  const [valor, setValor] = React.useState(d.kcalQuemadas != null ? String(d.kcalQuemadas) : "");
-
-  async function guardar() {
-    const n = parseFloat(valor.replace(",", "."));
-    if (!Number.isFinite(n) || n < 0) {
-      toast.error("Introduce las calorías quemadas.");
-      return;
-    }
-    await actualizarDia(fecha, { kcalQuemadas: Math.round(n) });
-    if (!d.habitos?.deporte) await alternarHabito(fecha, "deporte");
-    toast.success("Ejercicio registrado");
-    onDone();
-  }
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <Label htmlFor="ex-input">Calorías quemadas (entreno)</Label>
-        <div className="mt-1.5 flex items-center gap-2">
-          <Input
-            id="ex-input"
-            inputMode="numeric"
-            value={valor}
-            onChange={(e) => setValor(e.target.value)}
-            placeholder="450"
-            className="text-lg tabular"
-            autoFocus
-          />
-          <span className="text-lg font-medium text-muted-foreground">kcal</span>
-        </div>
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {[200, 300, 450, 600].map((k) => (
-          <button
-            key={k}
-            onClick={() => setValor(String(k))}
-            className="rounded-full border border-border px-3 py-1 text-sm text-muted-foreground hover:border-primary hover:text-primary"
-          >
-            {k} kcal
-          </button>
-        ))}
-      </div>
-      <p className="text-sm text-muted-foreground">Marcaremos también el hábito de deporte del día.</p>
-      <Button onClick={guardar} className="gap-2">
-        <Check className="size-4" /> Guardar ejercicio
-      </Button>
-    </div>
-  );
-}
-
 /* -------------------------------------------------------------- HÁBITOS */
 
 function PanelHabitos({ fecha }: { fecha: string }) {
@@ -360,9 +254,9 @@ function PanelHabitos({ fecha }: { fecha: string }) {
   );
 }
 
-/* -------------------------------------------------------------- MEDIDAS */
+/* ----------------------------------------------------------------- PESO */
 
-function PanelMedidas({ fecha, onDone }: { fecha: string; onDone: () => void }) {
+function PanelPeso({ fecha, onDone }: { fecha: string; onDone: () => void }) {
   const { medicion, guardarMedicion } = useRitmo();
   const m = medicion(fecha);
   const [campos, setCampos] = React.useState({
@@ -409,7 +303,7 @@ function PanelMedidas({ fecha, onDone }: { fecha: string; onDone: () => void }) 
   }
 
   return (
-    <div className="flex flex-col gap-4 max-h-[70vh] overflow-y-auto pr-2">
+    <div className="flex flex-col gap-5">
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Básico</p>
         <div className="grid grid-cols-2 gap-3">
@@ -445,7 +339,7 @@ function PanelMedidas({ fecha, onDone }: { fecha: string; onDone: () => void }) 
         </div>
       </div>
 
-      <Button onClick={guardar} className="mt-1 gap-2 sticky bottom-0">
+      <Button onClick={guardar} className="mt-1 gap-2">
         <Check className="size-4" /> Guardar medición
       </Button>
     </div>

@@ -68,10 +68,10 @@ export default function HoyPage() {
             {saludo()}{nombre ? `, ${nombre}` : ""}.
           </h1>
         </div>
-        {r.habitos.rachaActual > 0 && (
+        {r.habitos.rachaActual.longitud > 0 && (
           <div className="flex items-center gap-1.5 rounded-full bg-streak/12 px-3 py-1.5">
             <Flame className="size-4 text-streak" />
-            <span className="font-display font-bold tabular text-streak">{r.habitos.rachaActual}</span>
+            <span className="font-display font-bold tabular text-streak">{r.habitos.rachaActual.longitud}</span>
             <span className="text-xs font-medium text-streak/90">días</span>
           </div>
         )}
@@ -248,8 +248,8 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
   const peor = porHabito[porHabito.length - 1];
   const insights: { icon: React.ReactNode; text: string; tone: string }[] = [];
 
-  if (r.habitos.rachaActual >= 7) {
-    insights.push({ icon: <Award className="size-4 text-streak" />, text: `Llevas ${r.habitos.rachaActual} días de racha. ¡Sigue así!`, tone: "streak" });
+  if (r.habitos.rachaActual.longitud >= 7) {
+    insights.push({ icon: <Award className="size-4 text-streak" />, text: `Llevas ${r.habitos.rachaActual.longitud} días de racha. ¡Sigue así!`, tone: "streak" });
   }
   if (r.habitos.adherencia7 >= 80) {
     insights.push({ icon: <Target className="size-4 text-primary" />, text: `${r.habitos.adherencia7}% de adherencia esta semana. Gran constancia.`, tone: "primary" });

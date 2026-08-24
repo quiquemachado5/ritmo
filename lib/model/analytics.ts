@@ -25,9 +25,20 @@ export function diasOrdenados(estado: Estado): Dia[] {
 
 /** Solo los días con peso registrado, ordenados. */
 export function pesajes(estado: Estado): Pesaje[] {
-  return diasOrdenados(estado)
-    .filter((d) => M.num(d.peso) !== null)
-    .map((d) => ({ fecha: d.fecha, peso: d.peso as number, dia: diaAbsoluto(d.fecha) }));
+  // Un pesaje puede vivir en `dias` (registro rápido) o en `composicion`
+  // (medición completa). El historial es la unión de ambos: si sólo se mirara
+  // uno, las básculas registradas por el otro camino desaparecerían del
+  // historial y de la tendencia.
+  const porFecha = new Map<string, number>();
+  for (const c of estado.composicion || []) {
+    if (M.num(c.peso) !== null) porFecha.set(c.fecha, c.peso);
+  }
+  for (const d of diasOrdenados(estado)) {
+    if (M.num(d.peso) !== null) porFecha.set(d.fecha, d.peso as number);
+  }
+  return [...porFecha.entries()]
+    .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+    .map(([fecha, peso]) => ({ fecha, peso, dia: diaAbsoluto(fecha) }));
 }
 
 /** Último peso conocido, sea de un día de registro o de una medición. */
@@ -140,6 +151,26 @@ export function arrastre(estado: Estado): Arrastre | null {
     fechaBase: ultimo.fecha,
     pesoEstimado: Math.round((ultimo.peso + deltaKg) * 100) / 100,
   };
+}
+
+/**
+ * Peso estimado en `fecha` partiendo de un pesaje ancla y acumulando el balance
+ * energético de los días intermedios.
+ *
+ * Es la estimación "honesta" del modelo: no una recta global, sino lo que
+ * predecía desde la última báscula conocida. Comparar esto con el pesaje real
+ * siguiente es exactamente medir si el modelo iba bien encaminado.
+ */
+export function estimarPesoDesde(estado: Estado, ancla: Pesaje, fecha: string): number {
+  let balance = 0;
+  let cursor = sumarDias(ancla.fecha, 1);
+  let guarda = 0;
+  while (cursor <= fecha && guarda++ < 5000) {
+    const e = energiaDe(estado, cursor);
+    if (!e.sinRegistro || e.imputado) balance += e.balance;
+    cursor = sumarDias(cursor, 1);
+  }
+  return Math.round((ancla.peso + balance / M.KCAL_POR_KG) * 100) / 100;
 }
 
 /* Caché del TDEE por versión de estado (evita recomputar en el arrastre). */
@@ -523,8 +554,9 @@ export function resumen(estado: Estado) {
     habitos: {
       adherencia30: adherencia(estado, 30),
       adherencia7: adherencia(estado, 7),
-      rachaActual: M.rachaActual(cumplidos, perfil.umbralRacha ?? 4),
-      mejorRacha: M.mejorRacha(cumplidos, perfil.umbralRacha ?? 4),
+      // La racha exige los 6 hábitos del día: es el compromiso, no una media.
+      rachaActual: M.rachaActual(cumplidos, TOTAL_HABITOS, hoy()),
+      mejorRacha: M.mejorRacha(cumplidos, TOTAL_HABITOS),
       diasRegistrados: cumplidos.length,
     },
   };

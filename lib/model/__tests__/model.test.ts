@@ -145,10 +145,27 @@ describe("Adherencia, niveles y rachas", () => {
       { fecha: "2026-01-04", cumplidos: 4 },
       { fecha: "2026-01-05", cumplidos: 6 },
     ];
-    igual(M.rachaActual(historial, 4), 2);
-    igual(M.mejorRacha(historial, 4), 2);
-    igual(M.rachaActual([], 4), 0);
-    igual(M.rachaActual(historial, 7), 0);
+    // La racha en curso solo cuenta si llega hasta hoy (o ayer).
+    igual(M.rachaActual(historial, 4, "2026-01-05").longitud, 2);
+    igual(M.rachaActual(historial, 4, "2026-01-06").longitud, 2);
+    igual(M.rachaActual(historial, 4, "2026-02-01").longitud, 0);
+
+    const mejor = M.mejorRacha(historial, 4);
+    igual(mejor.longitud, 2);
+    igual(mejor.desde, "2026-01-04");
+    igual(mejor.hasta, "2026-01-05");
+
+    igual(M.rachaActual([], 4, "2026-01-05").longitud, 0);
+    igual(M.rachaActual(historial, 7, "2026-01-05").longitud, 0);
+
+    // Un hueco sin registrar parte la racha aunque los días sí cumplan.
+    const conHueco = [
+      { fecha: "2026-03-01", cumplidos: 6 },
+      { fecha: "2026-03-02", cumplidos: 6 },
+      { fecha: "2026-03-05", cumplidos: 6 },
+    ];
+    igual(M.mejorRacha(conHueco, 6).longitud, 2);
+    igual(M.rachaActual(conHueco, 6, "2026-03-05").longitud, 1);
   });
 });
 

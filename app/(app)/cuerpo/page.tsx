@@ -76,14 +76,9 @@ export default function CuerpoPage() {
     <div className="flex flex-col gap-6">
       <header className="flex items-center justify-between">
         <h1 className="font-display text-2xl font-bold tracking-tight">Cuerpo</h1>
-        <div className="flex items-center gap-2">
-          <Button onClick={() => abrir("peso")} size="sm" variant="secondary" className="gap-1.5">
-            <Scale className="size-4" /> Pesarme
-          </Button>
-          <Button onClick={() => abrir("medidas")} size="sm" className="gap-1.5">
-            <Plus className="size-4" /> Medir
-          </Button>
-        </div>
+        <Button onClick={() => abrir("peso")} size="sm" className="gap-1.5">
+          <Scale className="size-4" /> Pesarme
+        </Button>
       </header>
 
       {/* Estado actual */}

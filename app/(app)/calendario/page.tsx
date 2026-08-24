@@ -11,7 +11,7 @@ import { claveMes, DIAS_SEMANA, diaSemanaLunes, hoy, limitesMes, sumarDias, suma
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SectionLabel, Chip } from "@/components/app/primitives";
-import { fmtPeso, fmtKcal, fmtFechaLarga, fmtMes, capitalizar, fmtSigno } from "@/lib/format";
+import { fmtPeso, fmtKcal, fmtFechaLarga, fmtMes, capitalizar, fmtSigno, fmtFechaCorta } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const NIVEL = ["bg-transparent", "bg-primary/25", "bg-primary/45", "bg-primary/70", "bg-primary"];
@@ -64,11 +64,25 @@ export default function CalendarioPage() {
             const e = energiaDe(estado, fecha);
             const esHoy = fecha === hoyISO;
             const activo = fecha === sel;
+            const cumplidos = HABITOS.filter((h) => dd.habitos?.[h.clave]).length;
+            const hechos = HABITOS.filter((h) => dd.habitos?.[h.clave]).map((h) => h.etiqueta);
+            const resumenDia = futuro
+              ? undefined
+              : [
+                  `${fmtFechaCorta(fecha)} · ${cumplidos}/${TOTAL_HABITOS} hábitos`,
+                  hechos.length ? hechos.join(", ") : "sin hábitos marcados",
+                  dd.peso != null ? `Peso: ${dd.peso} kg` : null,
+                  e.imputado ? "Día sin registro (imputado)" : null,
+                ]
+                  .filter(Boolean)
+                  .join("\n");
             return (
               <button
                 key={fecha}
                 onClick={() => setSel(fecha)}
                 disabled={futuro}
+                title={resumenDia}
+                aria-label={resumenDia}
                 className={cn(
                   "relative flex aspect-square flex-col items-center justify-center rounded-lg text-sm transition-all",
                   futuro ? "text-muted-foreground/30" : "hover:ring-2 hover:ring-primary/30",

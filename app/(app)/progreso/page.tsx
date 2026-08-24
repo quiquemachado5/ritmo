@@ -3,9 +3,8 @@
 import * as React from "react";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
-import { pesajes as getPesajes, resumen, serieBalance } from "@/lib/model/analytics";
-import { tendenciaRobustaPeso, prediccionTendenciaPeso } from "@/lib/model/metrics";
-import { diaAbsoluto, hoy, sumarDias } from "@/lib/model/dates";
+import { pesajes as getPesajes, resumen, serieBalance, estimarPesoDesde } from "@/lib/model/analytics";
+import { hoy, sumarDias } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WeightChart, BalanceChart, type PuntoPeso } from "@/components/app/charts";
@@ -32,29 +31,40 @@ export default function ProgresoPage() {
     const dias = RANGOS.find((x) => x.id === rango)!.dias;
     const desde = dias === Infinity ? "0000-01-01" : sumarDias(hoy(), -dias);
     const win = todos.filter((p) => p.fecha >= desde);
-    const modelo = tendenciaRobustaPeso(todos);
 
-    const pesoData: PuntoPeso[] = win.map((p) => ({
-      label: fmtFechaCorta(p.fecha),
-      real: p.peso,
-      pred: modelo ? Math.round((modelo.intercepto + modelo.pendiente * p.dia) * 100) / 100 : null,
-      banda: null,
-    }));
+    // El estimado de cada pesaje es lo que el modelo predecía DESDE el pesaje
+    // anterior: así la línea se re-ancla en cada báscula en vez de extrapolar
+    // una recta global (que a un año vista se desviaba varios kilos).
+    const pesoData: PuntoPeso[] = win.map((p) => {
+      const i = todos.findIndex((x) => x.fecha === p.fecha);
+      const ancla = i > 0 ? todos[i - 1] : null;
+      return {
+        label: fmtFechaCorta(p.fecha),
+        real: p.peso,
+        pred: ancla ? estimarPesoDesde(estado, ancla, p.fecha) : null,
+        banda: null,
+      };
+    });
 
-    // Proyección futura (14 y 30 días) con banda de confianza.
-    if (modelo) {
-      for (const d of [14, 30]) {
-        const fechaFut = sumarDias(hoy(), d);
-        const pred = prediccionTendenciaPeso(todos, diaAbsoluto(fechaFut));
-        if (pred) {
-          pesoData.push({
-            label: fmtFechaCorta(fechaFut),
-            real: null,
-            pred: pred.peso,
-            banda: [pred.minimo, pred.maximo],
-          });
-        }
-      }
+    // Hoy y proyección futura, ancladas al último pesaje real.
+    const ultimo = todos.length ? todos[todos.length - 1] : null;
+    if (ultimo && hoy() > ultimo.fecha) {
+      pesoData.push({
+        label: fmtFechaCorta(hoy()),
+        real: null,
+        pred: estimarPesoDesde(estado, ultimo, hoy()),
+        banda: null,
+      });
+    }
+    for (const [dias, iv] of [[14, r.prediccion.quincena], [30, r.prediccion.mes]] as const) {
+      if (!iv) continue;
+      const fechaFut = sumarDias(hoy(), dias);
+      pesoData.push({
+        label: fmtFechaCorta(fechaFut),
+        real: null,
+        pred: iv.peso,
+        banda: [iv.minimo, iv.maximo],
+      });
     }
 
     const balDias = dias === Infinity ? 90 : Math.min(dias, 90);
@@ -75,7 +85,7 @@ export default function ProgresoPage() {
         cambio: inicialWin && actualWin ? Math.round((actualWin.peso - inicialWin.peso) * 10) / 10 : null,
       },
     };
-  }, [estado, rango]);
+  }, [estado, rango, r]);
 
   if (cargando) return <div className="flex flex-col gap-6"><Skeleton className="h-8 w-40" /><Skeleton className="h-72 w-full rounded-xl" /><Skeleton className="h-56 w-full rounded-xl" /></div>;
 

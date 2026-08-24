@@ -1,5 +1,7 @@
 "use client";
 
+import { fmtFechaCorta } from "@/lib/format";
+
 import * as React from "react";
 import { Check, Flame, Trophy } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
@@ -31,13 +33,21 @@ export default function HabitosPage() {
       <div className="grid grid-cols-3 gap-3">
         <Card className="flex flex-col items-center gap-1 p-4 text-center">
           <Flame className="size-5 text-streak" />
-          <span className="font-display text-2xl font-bold tabular text-streak">{r.habitos.rachaActual}</span>
+          <span className="font-display text-2xl font-bold tabular text-streak">{r.habitos.rachaActual.longitud}</span>
           <span className="text-[0.7rem] text-muted-foreground">racha actual</span>
+          <span className="text-[0.65rem] text-muted-foreground/70">
+            {r.habitos.rachaActual.longitud > 0 ? `desde el ${fmtFechaCorta(r.habitos.rachaActual.desde!)}` : "los 6 hábitos, sin fallar"}
+          </span>
         </Card>
         <Card className="flex flex-col items-center gap-1 p-4 text-center">
           <Trophy className="size-5 text-habit" />
-          <span className="font-display text-2xl font-bold tabular text-habit">{r.habitos.mejorRacha}</span>
+          <span className="font-display text-2xl font-bold tabular text-habit">{r.habitos.mejorRacha.longitud}</span>
           <span className="text-[0.7rem] text-muted-foreground">mejor racha</span>
+          <span className="text-[0.65rem] text-muted-foreground/70">
+            {r.habitos.mejorRacha.longitud > 0
+              ? `${fmtFechaCorta(r.habitos.mejorRacha.desde!)} – ${fmtFechaCorta(r.habitos.mejorRacha.hasta!)}`
+              : "aún sin racha"}
+          </span>
         </Card>
         <Card className="flex flex-col items-center gap-1 p-4 text-center">
           <span className="font-display text-2xl font-bold tabular text-primary">{r.habitos.adherencia7}%</span>
@@ -94,7 +104,10 @@ export default function HabitosPage() {
       <section>
         <SectionLabel>Constancia</SectionLabel>
         <Card className="p-5">
-          <Heatmap estado={estado} semanas={26} />
+          <Heatmap estado={estado} />
+          <p className="mt-2 text-xs text-muted-foreground">
+            Cada casilla es un día; cuanto más intensa, más hábitos cumpliste. Desplázate en horizontal para ver todo el histórico.
+          </p>
         </Card>
       </section>
     </div>
