@@ -29,18 +29,49 @@ function LoginForm() {
   async function entrar(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (!email) {
+      setError("Ingresa tu correo.");
+      return;
+    }
+    if (!password) {
+      setError("Ingresa tu contraseña.");
+      return;
+    }
+
     setCargando(true);
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      console.log("Intentando entrar:", email);
+
+      const { data, error: loginError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (loginError) {
+        console.error("Error login:", loginError);
+        throw loginError;
+      }
+
+      console.log("Login exitoso:", data);
       router.push(params.get("next") || "/");
       router.refresh();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "";
-      if (msg.includes("Invalid login")) setError("Correo o contraseña incorrectos. Revísalos e inténtalo de nuevo.");
-      else if (msg.includes("Email not confirmed")) setError("Tu correo aún no está confirmado. Revisa tu bandeja de entrada.");
-      else setError(msg || "No se pudo iniciar sesión. Inténtalo de nuevo.");
+      console.error("Error completo:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      console.log("Mensaje de error:", msg);
+
+      if (msg.includes("Invalid login") || msg.includes("Invalid credentials"))
+        setError("Correo o contraseña incorrectos.");
+      else if (msg.includes("Email not confirmed"))
+        setError("Tu correo aún no está confirmado. Revisa tu bandeja de entrada.");
+      else if (msg.includes("400") || msg.includes("unauthorized"))
+        setError("Error de conexión. Verifica las credenciales de Supabase.");
+      else if (msg.includes("User not found"))
+        setError("No existe una cuenta con ese correo.");
+      else
+        setError(msg || "No se pudo iniciar sesión. Inténtalo de nuevo.");
       setCargando(false);
     }
   }
@@ -52,11 +83,29 @@ function LoginForm() {
       <form onSubmit={entrar} className="mt-5 flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="email">Correo</Label>
-          <Input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@correo.com" />
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="tu@correo.com"
+            disabled={cargando}
+          />
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="password">Contraseña</Label>
-          <Input id="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+          <Input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            disabled={cargando}
+          />
         </div>
         {error && (
           <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive" role="alert">
@@ -66,7 +115,7 @@ function LoginForm() {
         )}
         <Button type="submit" disabled={cargando} className="gap-2">
           {cargando && <Loader2 className="size-4 animate-spin" />}
-          Entrar
+          {cargando ? "Entrando..." : "Entrar"}
         </Button>
       </form>
       <p className="mt-5 text-center text-sm text-muted-foreground">
