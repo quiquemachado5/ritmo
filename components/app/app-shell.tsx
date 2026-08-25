@@ -23,23 +23,6 @@ import { QuickLog } from "./quick-log";
 import { PageTransition } from "@/components/page-transition";
 import { UserCount } from "./user-count";
 
-function SyncDot() {
-  const { modo, sincronizando } = useRitmo();
-  return (
-    <span title={sincronizando ? "Guardando cambios" : modo === "nube" ? "Sincronizado" : "Este dispositivo"} className="inline-flex items-center gap-1.5 text-[0.7rem] font-medium text-muted-foreground">
-      <span
-        className={cn(
-          "size-2 rounded-full",
-          sincronizando ? "animate-pulse bg-warning" : modo === "nube" ? "bg-success" : "bg-muted-foreground/50",
-        )}
-      />
-      <span className="hidden xl:inline">
-        {sincronizando ? "Guardando…" : modo === "nube" ? "Sincronizado" : "Este dispositivo"}
-      </span>
-    </span>
-  );
-}
-
 function UserMenu() {
   const { userEmail, cerrarSesion } = useRitmo();
   const inicial = (userEmail?.[0] ?? "R").toUpperCase();
@@ -107,7 +90,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Link href="/" aria-label="RITMO — inicio" className="inline-flex">
             <RitmoLogo />
           </Link>
-          <SyncDot />
         </div>
         <Button
           onClick={() => abrir()}
@@ -156,7 +138,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <RitmoLogo />
         </Link>
         <div className="flex items-center gap-1">
-          <SyncDot />
           <ThemeToggle />
           <UserMenu />
         </div>
