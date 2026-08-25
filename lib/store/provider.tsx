@@ -40,6 +40,7 @@ export interface RitmoContextValue {
   alternarHabito: (fecha: string, clave: string) => Promise<void>;
   actualizarDia: (fecha: string, campos: Partial<Dia>) => Promise<void>;
   registrarComida: (fecha: string, comida: Comida) => Promise<void>;
+  editarComida: (fecha: string, comida: Comida) => Promise<void>;
   borrarComida: (fecha: string, id: string) => Promise<void>;
   guardarMedicion: (m: Composicion) => Promise<void>;
   borrarMedicion: (fecha: string) => Promise<void>;
@@ -229,6 +230,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     [actualizarDia],
   );
 
+  const editarComida = React.useCallback(
+    async (fecha: string, comida: Comida) => {
+      const base = clonar(dataRef.current.dias[fecha] || { fecha, habitos: {} });
+      const previas = base.comidas || [];
+      const existe = previas.some((c) => c.id === comida.id);
+      // Si existe, reemplaza en su sitio; si no (p. ej. día cambiado), añade.
+      const comidas = existe
+        ? previas.map((c) => (c.id === comida.id ? comida : c))
+        : [...previas, comida];
+      await actualizarDia(fecha, { comidas });
+    },
+    [actualizarDia],
+  );
+
   const borrarComida = React.useCallback(
     async (fecha: string, id: string) => {
       const base = dataRef.current.dias[fecha];
@@ -350,6 +365,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       alternarHabito,
       actualizarDia,
       registrarComida,
+      editarComida,
       borrarComida,
       guardarMedicion,
       borrarMedicion,
@@ -359,7 +375,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       recargar,
       cerrarSesion,
     }),
-    [estado, modo, cargando, sincronizando, userEmail, dia, medicion, alternarHabito, actualizarDia, registrarComida, borrarComida, guardarMedicion, borrarMedicion, actualizarPerfil, exportar, importar, recargar, cerrarSesion],
+    [estado, modo, cargando, sincronizando, userEmail, dia, medicion, alternarHabito, actualizarDia, registrarComida, editarComida, borrarComida, guardarMedicion, borrarMedicion, actualizarPerfil, exportar, importar, recargar, cerrarSesion],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

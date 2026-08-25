@@ -40,7 +40,7 @@ const TABS: { id: QuickTab; label: string; icon: typeof Scale }[] = [
 ];
 
 export function QuickLog() {
-  const { abierto, cerrar, tab, setTab, fecha } = useQuickLog();
+  const { abierto, cerrar, tab, setTab, fecha, comidaEdit } = useQuickLog();
   const isDesktop = useIsDesktop();
 
   const pestanas = (
@@ -65,13 +65,13 @@ export function QuickLog() {
 
   const panel = (
     <>
-      {tab === "comida" && <PanelComida fecha={fecha} onDone={cerrar} />}
+      {tab === "comida" && <PanelComida fecha={fecha} onDone={cerrar} comidaEdit={comidaEdit} />}
       {tab === "peso" && <PanelPeso fecha={fecha} onDone={cerrar} />}
       {tab === "habitos" && <PanelHabitos fecha={fecha} />}
     </>
   );
 
-  const titulo = "Registrar";
+  const titulo = comidaEdit ? "Editar comida" : "Registrar";
   const sub = capitalizar(fmtFechaLarga(fecha));
 
   if (isDesktop) {
@@ -115,19 +115,29 @@ const TIPOS: { id: TipoComida; label: string }[] = [
   { id: "snack", label: "Snack" },
 ];
 
-function PanelComida({ fecha, onDone }: { fecha: string; onDone: () => void }) {
-  const { registrarComida } = useRitmo();
-  const [texto, setTexto] = React.useState("");
-  const [tipo, setTipo] = React.useState<TipoComida>("comida");
+function PanelComida({ fecha, onDone, comidaEdit }: { fecha: string; onDone: () => void; comidaEdit?: Comida | null }) {
+  const { registrarComida, editarComida } = useRitmo();
+  const editando = comidaEdit != null;
+  const [texto, setTexto] = React.useState(comidaEdit?.texto ?? "");
+  const [tipo, setTipo] = React.useState<TipoComida>(comidaEdit?.tipo ?? "comida");
   const [analizando, setAnalizando] = React.useState(false);
   const [analisis, setAnalisis] = React.useState<AnalisisNutricional | null>(null);
+  // Valores editables a mano (fuente de verdad al guardar). Se rellenan al
+  // analizar o al abrir en modo edición.
+  const [manual, setManual] = React.useState<{ kcal: string; p: string; c: string; g: string } | null>(
+    comidaEdit
+      ? { kcal: String(comidaEdit.kcal), p: String(comidaEdit.proteinas), c: String(comidaEdit.carbohidratos), g: String(comidaEdit.grasas) }
+      : null,
+  );
 
   async function analizar() {
     if (!texto.trim()) return;
     setAnalizando(true);
     setAnalisis(null);
     try {
-      setAnalisis(await analizarComida(texto));
+      const res = await analizarComida(texto);
+      setAnalisis(res);
+      setManual({ kcal: String(res.kcal), p: String(res.proteinas), c: String(res.carbohidratos), g: String(res.grasas) });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "No se pudo analizar la comida.");
     } finally {
@@ -135,23 +145,31 @@ function PanelComida({ fecha, onDone }: { fecha: string; onDone: () => void }) {
     }
   }
 
-  async function anadir() {
-    if (!analisis) return;
+  async function guardar() {
+    if (!manual) return;
+    const n = (s: string) => Math.max(0, Math.round(Number(s.replace(",", ".")) || 0));
     const comida: Comida = {
-      id: crypto.randomUUID(),
+      id: comidaEdit?.id ?? crypto.randomUUID(),
       tipo,
-      texto: analisis.resumen || texto,
-      kcal: analisis.kcal,
-      proteinas: analisis.proteinas,
-      carbohidratos: analisis.carbohidratos,
-      grasas: analisis.grasas,
-      estimado: analisis.fuente === "offline",
-      creado: new Date().toISOString(),
+      texto: (analisis?.resumen || texto).trim() || comidaEdit?.texto || "Comida",
+      kcal: n(manual.kcal),
+      proteinas: n(manual.p),
+      carbohidratos: n(manual.c),
+      grasas: n(manual.g),
+      estimado: analisis ? analisis.fuente === "offline" : comidaEdit?.estimado,
+      creado: comidaEdit?.creado ?? new Date().toISOString(),
     };
-    await registrarComida(fecha, comida);
-    toast.success(`Comida añadida (${analisis.kcal} kcal)`);
+    if (editando) {
+      await editarComida(fecha, comida);
+      toast.success("Comida actualizada");
+    } else {
+      await registrarComida(fecha, comida);
+      toast.success(`Comida añadida (${comida.kcal} kcal)`);
+    }
     onDone();
   }
+
+  const setM = (k: "kcal" | "p" | "c" | "g", v: string) => setManual((m) => ({ ...(m ?? { kcal: "0", p: "0", c: "0", g: "0" }), [k]: v }));
 
   return (
     <div className="flex flex-col gap-3">
@@ -161,7 +179,7 @@ function PanelComida({ fecha, onDone }: { fecha: string; onDone: () => void }) {
             key={t.id}
             onClick={() => setTipo(t.id)}
             className={cn(
-              "rounded-full border px-3 py-1 text-sm transition-colors",
+              "h-9 rounded-full border px-3 text-sm font-medium transition-colors",
               tipo === t.id ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground",
             )}
           >
@@ -178,8 +196,24 @@ function PanelComida({ fecha, onDone }: { fecha: string; onDone: () => void }) {
       />
       <Button onClick={analizar} disabled={analizando || !texto.trim()} variant="secondary" className="gap-2">
         {analizando ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4 text-primary" />}
-        {analizando ? "Analizando…" : "Calcular calorías y macros"}
+        {analizando ? "Analizando…" : editando ? "Recalcular con IA" : "Calcular calorías y macros"}
       </Button>
+
+      {/* Modo edición sin análisis nuevo: campos numéricos directos */}
+      {editando && !analisis && manual && (
+        <div className="rounded-xl border border-border bg-secondary/40 p-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Valores</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Calorías (kcal)" value={manual.kcal} onChange={(v) => setM("kcal", v)} placeholder="450" />
+            <Field label="Proteínas (g)" value={manual.p} onChange={(v) => setM("p", v)} placeholder="30" />
+            <Field label="Carbohidratos (g)" value={manual.c} onChange={(v) => setM("c", v)} placeholder="40" />
+            <Field label="Grasas (g)" value={manual.g} onChange={(v) => setM("g", v)} placeholder="15" />
+          </div>
+          <Button onClick={guardar} className="mt-4 w-full gap-2">
+            <Check className="size-4" /> Guardar cambios
+          </Button>
+        </div>
+      )}
 
       {analisis && (
         <div className="rounded-xl border border-border bg-secondary/40 p-4">
@@ -208,8 +242,8 @@ function PanelComida({ fecha, onDone }: { fecha: string; onDone: () => void }) {
             </ul>
           )}
           {analisis.aviso && <p className="mt-3 text-xs text-warning-ink">{analisis.aviso}</p>}
-          <Button onClick={anadir} className="mt-4 w-full gap-2">
-            <Check className="size-4" /> Añadir a {TIPOS.find((t) => t.id === tipo)?.label.toLowerCase()}
+          <Button onClick={guardar} className="mt-4 w-full gap-2">
+            <Check className="size-4" /> {editando ? "Guardar cambios" : `Añadir a ${TIPOS.find((t) => t.id === tipo)?.label.toLowerCase()}`}
           </Button>
         </div>
       )}

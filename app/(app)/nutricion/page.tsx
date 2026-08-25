@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AlertTriangle, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
 import { macrosObjetivo } from "@/lib/model/metrics";
@@ -22,10 +22,16 @@ const ORDEN: { id: TipoComida; label: string }[] = [
 ];
 
 export default function NutricionPage() {
-  const { estado, cargando, dia, borrarComida } = useRitmo();
-  const { abrir } = useQuickLog();
+  const { estado, cargando, dia, borrarComida, registrarComida } = useRitmo();
+  const { abrir, editarComidaEn } = useQuickLog();
   const [fecha, setFecha] = React.useState(hoy());
   const [confirmBorrar, setConfirmBorrar] = React.useState<string | null>(null);
+
+  async function repetirHoy(c: import("@/lib/model/types").Comida) {
+    await registrarComida(hoy(), { ...c, id: crypto.randomUUID(), creado: new Date().toISOString() });
+    const { toast } = await import("sonner");
+    toast.success(fecha === hoy() ? "Comida duplicada" : "Añadida a hoy");
+  }
   const r = React.useMemo(() => resumen(estado), [estado]);
 
   if (cargando) return <div className="flex flex-col gap-6"><Skeleton className="h-8 w-40" /><Skeleton className="h-56 w-full rounded-xl" /></div>;
@@ -104,21 +110,29 @@ export default function NutricionPage() {
                           {c.estimado && <Chip tone="warning">aprox.</Chip>}
                         </p>
                       </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <span className="font-display font-bold tabular text-energy">{fmtKcal(c.kcal)}</span>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <span className="mr-1 font-display font-bold tabular text-energy">{fmtKcal(c.kcal)}</span>
                         {confirmBorrar === c.id ? (
                           <div className="flex items-center gap-1">
-                            <Button variant="destructive" size="sm" className="h-7 gap-1 px-2 text-xs" onClick={() => { borrarComida(fecha, c.id); setConfirmBorrar(null); }}>
+                            <Button variant="destructive" size="sm" className="h-8 gap-1 px-2 text-xs" onClick={() => { borrarComida(fecha, c.id); setConfirmBorrar(null); }}>
                               <AlertTriangle className="size-3" /> Borrar
                             </Button>
-                            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setConfirmBorrar(null)}>
+                            <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={() => setConfirmBorrar(null)}>
                               No
                             </Button>
                           </div>
                         ) : (
-                          <Button variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-destructive" onClick={() => setConfirmBorrar(c.id)} aria-label="Eliminar">
-                            <Trash2 className="size-4" />
-                          </Button>
+                          <>
+                            <Button variant="ghost" size="icon" className="size-9 text-muted-foreground hover:text-foreground" onClick={() => repetirHoy(c)} aria-label={fecha === hoy() ? "Duplicar comida" : "Repetir hoy"} title={fecha === hoy() ? "Duplicar" : "Repetir hoy"}>
+                              <RotateCcw className="size-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="size-9 text-muted-foreground hover:text-foreground" onClick={() => editarComidaEn(fecha, c)} aria-label="Editar comida" title="Editar">
+                              <Pencil className="size-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="size-9 text-muted-foreground hover:text-destructive" onClick={() => setConfirmBorrar(c.id)} aria-label="Eliminar">
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </>
                         )}
                       </div>
                     </div>

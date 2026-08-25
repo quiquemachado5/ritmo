@@ -75,10 +75,27 @@ function UserMenu() {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { abrir } = useQuickLog();
+  const { abrir, abierto } = useQuickLog();
 
   const activo = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
   const primarios = NAV_ITEMS.filter((i) => i.primary);
+
+  // Atajos de teclado globales. Se ignoran si el foco está en un campo de texto
+  // o si el panel de registro ya está abierto (para no capturar su escritura).
+  React.useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      const enCampo = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+      if (enCampo || abierto) return;
+      const k = e.key.toLowerCase();
+      if (k === "r" || k === "n") { e.preventDefault(); abrir("comida"); }
+      else if (k === "p") { e.preventDefault(); abrir("peso"); }
+      else if (k === "h") { e.preventDefault(); abrir("habitos"); }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [abrir, abierto]);
 
   return (
     <div className="min-h-dvh bg-background">
