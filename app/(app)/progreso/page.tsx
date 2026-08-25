@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Award, Flame, Gauge, Scale, TrendingDown, TrendingUp, Utensils } from "lucide-react";
+import { Award, Flame, Gauge, Minus, Scale, TrendingDown, TrendingUp, Utensils } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
-import { pesajes as getPesajes, recordsPersonales, resumen, resumenPorMes, serieBalance, seriePesoDiaria } from "@/lib/model/analytics";
+import { detectarMeseta, pesajes as getPesajes, recordsPersonales, resumen, resumenPorMes, serieBalance, seriePesoDiaria } from "@/lib/model/analytics";
 import { hoy, sumarDias } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,6 +30,7 @@ export default function ProgresoPage() {
   const [rango, setRango] = React.useState<(typeof RANGOS)[number]["id"]>("3M");
 
   const r = React.useMemo(() => resumen(estado), [estado]);
+  const meseta = React.useMemo(() => detectarMeseta(estado), [estado]);
 
   const { datosPeso, datosBalance, statsWin } = React.useMemo(() => {
     const todos = getPesajes(estado);
@@ -213,6 +214,21 @@ export default function ProgresoPage() {
                     <TrendingUp className="size-4 shrink-0 text-energy" />
                     <span className="text-muted-foreground">
                       Tiende a subir <span className="tabular font-medium text-foreground">{fmtSigno(r.prediccion.modelo.kgSemana, 2)}</span> kg/sem. Revisa tu balance energético.
+                    </span>
+                  </div>
+                )}
+
+                {meseta.enMeseta && (
+                  <div className="flex items-start gap-3">
+                    <Minus className="size-4 shrink-0 text-warning" />
+                    <span className="text-muted-foreground">
+                      Peso estancado <span className="tabular font-medium text-foreground">{meseta.dias}</span> días con un balance de{" "}
+                      <span className="tabular font-medium text-foreground">{fmtSigno(meseta.balanceDiario, 0)}</span> kcal/día.{" "}
+                      {meseta.sugerencia === "bajar-kcal"
+                        ? "Tu gasto real puede haber bajado: ajusta unas 100–150 kcal menos o súbete a la báscula más a menudo."
+                        : meseta.sugerencia === "subir-kcal"
+                          ? "Para seguir ganando, sube unas 100–150 kcal."
+                          : "Revisa que el registro de comidas esté completo."}
                     </span>
                   </div>
                 )}

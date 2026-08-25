@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AlertTriangle, ChevronLeft, ChevronRight, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { AlertTriangle, Beef, ChevronLeft, ChevronRight, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
 import { macrosObjetivo } from "@/lib/model/metrics";
@@ -48,6 +48,22 @@ export default function NutricionPage() {
   const obj = macrosObjetivo({ kcal: objetivoKcal, pesoKg: r.peso.estimadoHoy, objetivo: estado.perfil.objetivo, proteinaGkg: estado.perfil.proteinaObjetivo });
   const esFuturo = diasEntre(fecha, hoy()) < 0;
 
+  // Coach de proteína: la proteína protege la masa muscular en déficit. Avisa
+  // cuando el día ya lleva calorías pero la proteína va por detrás de su ritmo,
+  // o cuando el día está completo pero se ha quedado corta.
+  const avisoProteina = (() => {
+    if (obj.proteinas <= 0 || consumidas <= 0) return null;
+    const faltan = Math.round(obj.proteinas - macros.p);
+    if (faltan <= 0) return null;
+    const ritmoKcal = consumidas / objetivoKcal;      // % del día ya comido
+    const ritmoProt = macros.p / obj.proteinas;        // % de proteína cubierta
+    if (ritmoKcal >= 0.9 && ritmoProt < 0.85)
+      return `Día casi completo pero te faltan ${faltan} g de proteína. Añade una fuente proteica.`;
+    if (ritmoKcal >= 0.5 && ritmoProt < ritmoKcal - 0.2)
+      return `Vas justo de proteína: ${Math.round(macros.p)} de ${obj.proteinas} g. Prioriza proteína en lo que queda.`;
+    return null;
+  })();
+
   return (
     <div className="flex flex-col gap-6">
       {/* Cabecera con navegación de día */}
@@ -79,6 +95,12 @@ export default function NutricionPage() {
             <MacroBar label="Proteínas" value={macros.p} max={obj.proteinas} colorVar="--weight" />
             <MacroBar label="Carbohidratos" value={macros.c} max={obj.carbohidratos} colorVar="--habit" />
             <MacroBar label="Grasas" value={macros.g} max={obj.grasas} colorVar="--energy" />
+            {avisoProteina && (
+              <div className="mt-1 flex items-start gap-2 rounded-lg bg-weight-wash px-3 py-2 text-xs text-weight-ink">
+                <Beef className="size-4 shrink-0" />
+                <span>{avisoProteina}</span>
+              </div>
+            )}
           </div>
         </div>
       </Card>

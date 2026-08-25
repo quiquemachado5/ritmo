@@ -765,3 +765,46 @@ export function bibliotecaComidas(
   for (const k of Object.keys(salida)) salida[k].sort(cmp[orden]);
   return salida as Record<TipoComida, ComidaGuardada[]>;
 }
+
+export interface Meseta {
+  enMeseta: boolean;
+  dias: number;           // días cubiertos por el análisis
+  cambioKg: number;       // cambio de peso en la ventana
+  balanceDiario: number;  // kcal/día medio en la ventana
+  sugerencia: "bajar-kcal" | "subir-kcal" | "revisar-registro" | null;
+}
+
+/**
+ * Detecta un estancamiento: el peso lleva ~plano varias semanas pese a que el
+ * balance energético debería moverlo. Señal clásica de que el TDEE real ha
+ * cambiado (adaptación metabólica) o de que el registro se está quedando corto.
+ */
+export function detectarMeseta(estado: Estado, ventanaDias = 28): Meseta {
+  const vacio: Meseta = { enMeseta: false, dias: 0, cambioKg: 0, balanceDiario: 0, sugerencia: null };
+  const p = pesajes(estado);
+  if (p.length < 2) return vacio;
+
+  const limite = sumarDias(hoy(), -ventanaDias);
+  const win = p.filter((x) => x.fecha >= limite);
+  if (win.length < 2) return vacio;
+
+  const dias = win[win.length - 1].dia - win[0].dia;
+  if (dias < 18) return vacio; // hace falta al menos ~3 semanas para hablar de meseta
+
+  const cambioKg = Math.round((win[win.length - 1].peso - win[0].peso) * 10) / 10;
+  const balanceDiario = balanceMedio(estado, ventanaDias) ?? 0;
+
+  // Peso plano: menos de ~0,4 kg de variación en el periodo.
+  const plano = Math.abs(cambioKg) < 0.4;
+  // El balance "debería" haber movido el peso de forma perceptible.
+  const balanceRelevante = Math.abs(balanceDiario) >= 150;
+
+  if (!plano || !balanceRelevante) return vacio;
+
+  const objetivo = estado.perfil?.objetivo ?? "perder";
+  let sugerencia: Meseta["sugerencia"] = "revisar-registro";
+  if (balanceDiario < 0 && objetivo === "perder") sugerencia = "bajar-kcal";
+  else if (balanceDiario > 0 && objetivo === "ganar") sugerencia = "subir-kcal";
+
+  return { enMeseta: true, dias, cambioKg, balanceDiario: Math.round(balanceDiario), sugerencia };
+}
