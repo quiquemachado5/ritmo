@@ -111,12 +111,20 @@ function LoginForm() {
           {cargando ? "Entrando..." : "Entrar"}
         </Button>
       </form>
-      <p className="mt-5 text-center text-sm text-muted-foreground">
-        ¿No tienes cuenta?{" "}
-        <Link href="/registro" className="font-medium text-primary hover:underline">
-          Crear una
-        </Link>
-      </p>
+      <div className="mt-5 flex flex-col gap-2">
+        <p className="text-center text-sm text-muted-foreground">
+          ¿No tienes cuenta?{" "}
+          <Link href="/registro" className="font-medium text-primary hover:underline">
+            Crear una
+          </Link>
+        </p>
+        <p className="text-center text-sm text-muted-foreground">
+          ¿Olvidaste tu contraseña?{" "}
+          <Link href="/recuperar" className="font-medium text-primary hover:underline">
+            Recuperarla
+          </Link>
+        </p>
+      </div>
       <p className="mt-3 text-center text-[0.65rem] text-muted-foreground/50">
         Tus datos se guardan cifrados en Supabase. RITMO no comparte información con terceros.
       </p>
