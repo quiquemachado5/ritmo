@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Shield, CheckCircle2, Lock, Check, X } from "lucide-react";
+import { Loader2, Shield, CheckCircle2, Lock, Check, X, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,6 +27,8 @@ function ResetearForm() {
   const [exito, setExito] = React.useState(false);
   const [passwordErrors, setPasswordErrors] = React.useState<string[]>([]);
   const [shaking, setShaking] = React.useState(false);
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [showConfirm, setShowConfirm] = React.useState(false);
 
   const passwordStrength = getPasswordStrength(nuevaContrasena);
 
@@ -107,11 +109,19 @@ function ResetearForm() {
                 <Label htmlFor="password" className="text-sm font-semibold mb-1.5 block">Contraseña</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
-                  <Input id="password" type="password" autoComplete="new-password" required
+                  <Input id="password" type={showPassword ? "text" : "password"} autoComplete="new-password" required
                     value={nuevaContrasena} onChange={(e) => handlePasswordChange(e.target.value)}
                     placeholder="Mínimo 8 caracteres" disabled={cargando}
-                    className={`pl-9 h-10 text-sm rounded-lg border-2 transition-all focus:border-primary focus:ring-1 focus:ring-primary/20 ${passwordErrors.length > 0 ? "border-destructive" : ""}`}
+                    className={`pl-9 pr-10 h-10 text-sm rounded-lg border-2 transition-all focus:border-primary focus:ring-1 focus:ring-primary/20 ${passwordErrors.length > 0 ? "border-destructive" : ""}`}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    disabled={cargando}
+                    className="absolute right-3 top-2.5 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
                 </div>
                 {nuevaContrasena && (
                   <div className="flex items-center gap-2 mt-1">
@@ -129,11 +139,19 @@ function ResetearForm() {
                 <Label htmlFor="confirm" className="text-sm font-semibold mb-1.5 block">Confirmar</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
-                  <Input id="confirm" type="password" autoComplete="new-password" required
+                  <Input id="confirm" type={showConfirm ? "text" : "password"} autoComplete="new-password" required
                     value={confirmar} onChange={(e) => setConfirmar(e.target.value)}
                     placeholder="Repite contraseña" disabled={cargando}
-                    className={`pl-9 h-10 text-sm rounded-lg border-2 transition-all focus:border-primary focus:ring-1 focus:ring-primary/20 ${confirmar && nuevaContrasena !== confirmar ? "border-destructive" : ""}`}
+                    className={`pl-9 pr-10 h-10 text-sm rounded-lg border-2 transition-all focus:border-primary focus:ring-1 focus:ring-primary/20 ${confirmar && nuevaContrasena !== confirmar ? "border-destructive" : ""}`}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm(!showConfirm)}
+                    disabled={cargando}
+                    className="absolute right-3 top-2.5 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                  >
+                    {showConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
                 </div>
                 {confirmar && nuevaContrasena !== confirmar && (
                   <p className="text-[0.65rem] text-destructive mt-0.5">No coinciden.</p>

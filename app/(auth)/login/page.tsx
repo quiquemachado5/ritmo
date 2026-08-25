@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2, Shield, Mail, Lock, ArrowRight, Check } from "lucide-react";
+import { Loader2, Shield, Mail, Lock, ArrowRight, Check, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,6 +31,7 @@ function LoginForm() {
   const [focusedField, setFocusedField] = React.useState<string | null>(null);
   const [shaking, setShaking] = React.useState(false);
   const [validatedEmail, setValidatedEmail] = React.useState(false);
+  const [showPassword, setShowPassword] = React.useState(false);
 
   const handleEmailChange = (value: string) => {
     setEmail(value);
@@ -156,25 +157,33 @@ function LoginForm() {
                     focusedField === "password" ? "text-primary" : "text-muted-foreground"
                   }`} />
                   <Input
-                    id="password" type="password" autoComplete="current-password" required
+                    id="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required
                     value={password} onChange={(e) => setPassword(e.target.value)}
                     onFocus={() => setFocusedField("password")}
                     onBlur={() => setFocusedField(null)}
                     placeholder="••••••••" disabled={cargando}
-                    className="pl-9 h-10 text-sm rounded-lg border-2 transition-all focus:border-primary focus:ring-1 focus:ring-primary/20"
+                    className="pl-9 pr-10 h-10 text-sm rounded-lg border-2 transition-all focus:border-primary focus:ring-1 focus:ring-primary/20"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    disabled={cargando}
+                    className="absolute right-3 top-2.5 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
                 </div>
               </div>
 
               <div className="flex items-center justify-between" style={stagger(3)}>
-                <label className="flex items-center gap-1.5 cursor-pointer">
+                <label className="flex items-center gap-2 cursor-pointer group hover:bg-primary/5 px-2 py-1 rounded-lg transition-colors">
                   <input
                     type="checkbox" checked={recordarme}
                     onChange={(e) => setRecordarme(e.target.checked)}
                     disabled={cargando}
-                    className="size-3.5 rounded accent-primary cursor-pointer"
+                    className="size-4 rounded border-2 border-primary/30 accent-primary cursor-pointer transition-all group-hover:border-primary disabled:opacity-60"
                   />
-                  <span className="text-[0.7rem] text-muted-foreground">Recuérdame</span>
+                  <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">Recuérdame</span>
                 </label>
                 <Link href="/recuperar" className="text-[0.7rem] font-medium text-primary hover:text-primary/80 transition-colors">
                   ¿Olvidaste contraseña?
