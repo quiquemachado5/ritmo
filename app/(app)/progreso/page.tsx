@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { TrendingDown, TrendingUp } from "lucide-react";
+import { Gauge, Scale, TrendingDown, TrendingUp } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { pesajes as getPesajes, resumen, serieBalance, seriePesoDiaria } from "@/lib/model/analytics";
 import { hoy, sumarDias } from "@/lib/model/dates";
@@ -19,6 +19,11 @@ const RANGOS = [
   { id: "1A", dias: 365 },
   { id: "Todo", dias: Infinity },
 ] as const;
+
+// Calidad del modelo → lenguaje visual RITMO (color por dato, nunca decorativo).
+const CALIDAD_LABEL = { inicial: "inicial", media: "media", alta: "alta" } as const;
+const CALIDAD_TONE = { inicial: "muted", media: "habit", alta: "weight" } as const;
+const CALIDAD_ICON = { inicial: "text-muted-foreground", media: "text-habit", alta: "text-weight" } as const;
 
 export default function ProgresoPage() {
   const { estado, cargando } = useRitmo();
@@ -162,54 +167,55 @@ export default function ProgresoPage() {
           {/* Predicción */}
           {r.prediccion.disponible && (
             <Card className="p-5">
-              <SectionLabel>Predicción</SectionLabel>
-              
-              {/* Proyecciones */}
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <PredCell etiqueta="Mañana" iv={r.prediccion.manana} />
-                <PredCell etiqueta="1 semana" iv={r.prediccion.semana} />
-                <PredCell etiqueta="15 días" iv={r.prediccion.quincena} />
-                <PredCell etiqueta="1 mes" iv={r.prediccion.mes} />
+              <div className="mb-4 flex items-center justify-between gap-2">
+                <SectionLabel className="mb-0">Predicción</SectionLabel>
+                <Chip tone={CALIDAD_TONE[r.prediccion.modelo?.calidad ?? "inicial"]}>
+                  confianza {CALIDAD_LABEL[r.prediccion.modelo?.calidad ?? "inicial"]}
+                </Chip>
               </div>
 
-              {/* Metadata: calidad, TDEE, pesaje */}
-              <div className="mt-5 border-t border-border pt-3 text-xs text-muted-foreground">
-                <div className="flex flex-wrap items-center gap-3 mb-2">
-                  <span>
-                    <span className="font-medium text-foreground">Calidad:</span> {r.prediccion.modelo?.calidad === "inicial" ? "Inicial" : r.prediccion.modelo?.calidad === "media" ? "Media" : "Alta"}
+              {/* Proyecciones */}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-4">
+                <PredCell etiqueta="Mañana" iv={r.prediccion.manana} />
+                <PredCell etiqueta="En 1 semana" iv={r.prediccion.semana} />
+                <PredCell etiqueta="En 15 días" iv={r.prediccion.quincena} />
+                <PredCell etiqueta="En 1 mes" iv={r.prediccion.mes} />
+              </div>
+
+              {/* Lecturas: mismo patrón que el resumen semanal */}
+              <div className="mt-5 flex flex-col gap-2.5 border-t border-border pt-4 text-sm">
+                <div className="flex items-start gap-3">
+                  <Gauge className={cn("size-4 shrink-0", CALIDAD_ICON[r.prediccion.modelo?.calidad ?? "inicial"])} />
+                  <span className="text-muted-foreground">
+                    {r.prediccion.modelo?.calidad === "alta"
+                      ? <>Calibrada con tu TDEE observado{r.prediccion.modelo?.tdee ? <> (~<span className="tabular font-medium text-foreground">{r.prediccion.modelo.tdee}</span> kcal/día)</> : null}. Rango al 80% de confianza.</>
+                      : r.prediccion.modelo?.calidad === "media"
+                        ? "Basada en tu balance calórico. Registra más comidas para estrechar el rango."
+                        : <>Estimación inicial con <span className="tabular font-medium text-foreground">{r.prediccion.pesajes}</span> pesajes. Registra comidas para afinarla.</>}
                   </span>
-                  {r.prediccion.modelo?.tdee && (
-                    <span>
-                      <span className="font-medium text-foreground">TDEE:</span> ~{r.prediccion.modelo.tdee} kcal/día
-                    </span>
-                  )}
-                  {r.prediccion.pesajes && (
-                    <span>
-                      <span className="font-medium text-foreground">Datos:</span> {r.prediccion.pesajes} pesajes
-                    </span>
-                  )}
                 </div>
 
-                {/* Alertas sutiles */}
-                {r.prediccion.diasSinPesaje != null && r.prediccion.diasSinPesaje > 21 && (
-                  <p className="mt-2 text-warning-ink">
-                    ⚖️ No pesas desde hace {r.prediccion.diasSinPesaje} días. Próxima medición: {r.prediccion.proximoPesaje ? fmtFechaCorta(r.prediccion.proximoPesaje) : "pronto"}.
-                  </p>
-                )}
-                {r.prediccion.modelo?.kgSemana != null && r.peso.objetivo != null && r.prediccion.modelo.kgSemana > 0 && (
-                  <p className="mt-2 text-energy-ink">
-                    ⚠️ Tendencia: +{fmtSigno(r.prediccion.modelo.kgSemana, 2)} kg/sem. Revisa tu balance.
-                  </p>
+                {r.prediccion.diasSinPesaje != null && (
+                  <div className="flex items-start gap-3">
+                    <Scale className={cn("size-4 shrink-0", r.prediccion.diasSinPesaje > 21 ? "text-warning" : r.prediccion.diasSinPesaje === 0 ? "text-weight" : "text-muted-foreground")} />
+                    <span className="text-muted-foreground">
+                      {r.prediccion.diasSinPesaje === 0
+                        ? "Reanclada con el pesaje de hoy."
+                        : r.prediccion.diasSinPesaje > 21
+                          ? <>Llevas <span className="tabular font-medium text-foreground">{r.prediccion.diasSinPesaje}</span> días sin pesarte: la banda se abre.{r.prediccion.proximoPesaje ? <> Pésate hacia <span className="font-medium text-foreground">{fmtFechaCorta(r.prediccion.proximoPesaje)}</span>.</> : null}</>
+                          : <>Último pesaje hace <span className="tabular font-medium text-foreground">{r.prediccion.diasSinPesaje}</span> {r.prediccion.diasSinPesaje === 1 ? "día" : "días"}.</>}
+                    </span>
+                  </div>
                 )}
 
-                {/* Contexto */}
-                <p className="mt-2">
-                  {r.prediccion.modelo?.calidad === "inicial"
-                    ? "Registra comidas y más pesajes para mejorar la precisión."
-                    : r.prediccion.modelo?.calidad === "media"
-                      ? "Con más registros de comidas, el rango será más estrecho."
-                      : "Banda al 80% de confianza. Modelo calibrado con tu TDEE observado."}
-                </p>
+                {r.prediccion.modelo?.kgSemana != null && r.peso.objetivo != null && r.prediccion.modelo.kgSemana > 0.05 && (
+                  <div className="flex items-start gap-3">
+                    <TrendingUp className="size-4 shrink-0 text-energy" />
+                    <span className="text-muted-foreground">
+                      Tiende a subir <span className="tabular font-medium text-foreground">{fmtSigno(r.prediccion.modelo.kgSemana, 2)}</span> kg/sem. Revisa tu balance energético.
+                    </span>
+                  </div>
+                )}
               </div>
             </Card>
           )}
@@ -230,10 +236,17 @@ export default function ProgresoPage() {
 
 function PredCell({ etiqueta, iv }: { etiqueta: string; iv: { peso: number; minimo: number; maximo: number } | null }) {
   return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">{etiqueta}</span>
-      <span className="font-display text-lg font-bold tabular text-weight">{iv ? fmtPeso(iv.peso) : "—"}<span className="ml-0.5 text-xs font-normal text-muted-foreground">kg</span></span>
-      {iv && <span className="text-[0.65rem] text-muted-foreground tabular">{fmtPeso(iv.minimo)}–{fmtPeso(iv.maximo)}</span>}
+    <div className="flex flex-col gap-1">
+      <span className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{etiqueta}</span>
+      <span className="font-display text-xl font-bold leading-none tabular text-weight">
+        {iv ? fmtPeso(iv.peso) : "—"}
+        <span className="ml-0.5 text-xs font-medium text-muted-foreground">kg</span>
+      </span>
+      {iv && (
+        <span className="text-[0.68rem] text-muted-foreground tabular">
+          {fmtPeso(iv.minimo)}–{fmtPeso(iv.maximo)} kg
+        </span>
+      )}
     </div>
   );
 }
