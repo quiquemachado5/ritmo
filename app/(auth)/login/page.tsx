@@ -42,25 +42,18 @@ function LoginForm() {
     setCargando(true);
     try {
       const supabase = createClient();
-      console.log("Intentando entrar:", email);
 
-      const { data, error: loginError } = await supabase.auth.signInWithPassword({
+      const { error: loginError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (loginError) {
-        console.error("Error login:", loginError);
-        throw loginError;
-      }
+      if (loginError) throw loginError;
 
-      console.log("Login exitoso:", data);
       router.push(params.get("next") || "/");
       router.refresh();
     } catch (err) {
-      console.error("Error completo:", err);
       const msg = err instanceof Error ? err.message : String(err);
-      console.log("Mensaje de error:", msg);
 
       if (msg.includes("Invalid login") || msg.includes("Invalid credentials"))
         setError("Correo o contraseña incorrectos.");

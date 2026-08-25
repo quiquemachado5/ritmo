@@ -13,6 +13,8 @@ export const metadata: Metadata = {
     "Seguimiento de nutrición, peso, hábitos y progreso. RITMO convierte tu constancia diaria en una predicción honesta de tu evolución.",
   applicationName: "RITMO",
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://ritmo.app"),
+  // App personal: que ningún buscador la indexe.
+  robots: { index: false, follow: false },
   icons: {
     icon: [
       {

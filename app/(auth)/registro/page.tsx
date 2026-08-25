@@ -34,7 +34,6 @@ export default function RegistroPage() {
     setCargando(true);
     try {
       const supabase = createClient();
-      console.log("Intentando registrar:", email);
 
       const { data, error: signupError } = await supabase.auth.signUp({
         email,
@@ -44,29 +43,20 @@ export default function RegistroPage() {
         },
       });
 
-      if (signupError) {
-        console.error("Error signup:", signupError);
-        throw signupError;
-      }
-
-      console.log("Signup exitoso:", data);
+      if (signupError) throw signupError;
 
       // Si el usuario se creó sin requerir confirmación, entra directamente
       if (data.session) {
-        console.log("Sesión creada, entrando a la app");
         setEstado("exito");
         setTimeout(() => {
           router.push("/");
           router.refresh();
         }, 1500);
       } else {
-        console.log("Requiere confirmación de email");
         setEstado("confirmacion");
       }
     } catch (err) {
-      console.error("Error completo:", err);
       const msg = err instanceof Error ? err.message : String(err);
-      console.log("Mensaje de error:", msg);
 
       if (msg.includes("already registered") || msg.includes("User already exists"))
         setError("Ya existe una cuenta con ese correo. Ve a Inicia sesión.");
