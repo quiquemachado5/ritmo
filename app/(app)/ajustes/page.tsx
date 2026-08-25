@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
-import { Download, FileSpreadsheet, LogOut, Monitor, Moon, Sun, Upload } from "lucide-react";
+import { Download, FileSpreadsheet, HistoryIcon, LogOut, Monitor, Moon, ShieldCheck, Sun, Upload } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { FACTORES_ACTIVIDAD } from "@/lib/model/metrics";
 import { Card } from "@/components/ui/card";
@@ -13,6 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SectionLabel } from "@/components/app/primitives";
+import { marcarExportacion, diasDesdeExportacion, leerBackupLocal } from "@/lib/backup";
+import { fmtFechaCorta } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Objetivo, Sexo } from "@/lib/model/types";
 
@@ -72,6 +74,8 @@ export default function AjustesPage() {
     a.download = `ritmo-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    marcarExportacion();
+    setDiasSinExportar(0);
   }
 
   function descargarCSV() {
@@ -90,6 +94,25 @@ export default function AjustesPage() {
     a.download = `ritmo-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+    marcarExportacion();
+    setDiasSinExportar(0);
+  }
+
+  const [diasSinExportar, setDiasSinExportar] = React.useState<number | null>(null);
+  const [backupInfo, setBackupInfo] = React.useState<{ at: string } | null>(null);
+  React.useEffect(() => {
+    setDiasSinExportar(diasDesdeExportacion());
+    const b = leerBackupLocal();
+    setBackupInfo(b ? { at: b.at } : null);
+  }, []);
+
+  async function restaurarCopiaLocal() {
+    const b = leerBackupLocal();
+    if (!b) {
+      toast.error("No hay copia local guardada.");
+      return;
+    }
+    setPreviewDatos(b.data);
   }
 
   const [importando, setImportando] = React.useState(false);
@@ -225,6 +248,13 @@ export default function AjustesPage() {
       <section>
         <SectionLabel>Datos</SectionLabel>
         <Card className="flex flex-col gap-3 p-5">
+          {/* Aviso si hace mucho de la última exportación manual */}
+          {diasSinExportar != null && diasSinExportar >= 14 && (
+            <div className="flex items-start gap-2.5 rounded-lg bg-warning-wash px-3 py-2.5 text-xs text-warning-ink">
+              <ShieldCheck className="size-4 shrink-0" />
+              <span>Hace <span className="font-semibold">{diasSinExportar} días</span> que no exportas una copia. Descarga un respaldo para tenerlo a salvo fuera de la nube.</span>
+            </div>
+          )}
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" onClick={descargar} className="gap-2"><Download className="size-4" /> Exportar JSON</Button>
             <Button variant="secondary" onClick={descargarCSV} className="gap-2"><FileSpreadsheet className="size-4" /> Exportar CSV</Button>
@@ -232,6 +262,24 @@ export default function AjustesPage() {
             <input ref={fileRef} type="file" accept="application/json" hidden onChange={subirArchivo} />
           </div>
           <p className="text-xs text-muted-foreground">La exportación incluye tu perfil, todos los días y las mediciones. La importación fusiona sin borrar lo que el archivo no contenga.</p>
+
+          {/* Copia de seguridad local automática */}
+          <div className="mt-1 flex flex-col gap-2 border-t border-border pt-3">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <HistoryIcon className="size-4 shrink-0 text-weight" />
+              {backupInfo
+                ? <span>Copia local automática guardada · {fmtFechaCorta(backupInfo.at.slice(0, 10))}</span>
+                : <span>Aún no hay copia local automática.</span>}
+            </div>
+            {backupInfo && (
+              <Button variant="ghost" size="sm" onClick={restaurarCopiaLocal} className="w-fit gap-2 text-xs">
+                <HistoryIcon className="size-3.5" /> Restaurar copia local
+              </Button>
+            )}
+            <p className="text-[0.7rem] text-muted-foreground/80">
+              RITMO guarda automáticamente una copia en este dispositivo cada vez que cambian tus datos. Es tu red de seguridad si la nube fallara.
+            </p>
+          </div>
         </Card>
       </section>
 
