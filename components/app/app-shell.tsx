@@ -102,27 +102,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-dvh bg-background">
       {/* Sidebar — escritorio */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-border bg-card px-3 py-5 md:flex">
-        <div className="flex flex-col items-center gap-2 px-2">
-          <Link href="/" aria-label="RITMO — inicio">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-border bg-card px-4 py-5 md:flex">
+        <div className="border-b border-border pb-4">
+          <Link href="/" aria-label="RITMO — inicio" className="inline-flex">
             <RitmoLogo />
           </Link>
-          <UserCount />
+          <UserCount className="mt-3" />
         </div>
         <Button
           onClick={() => abrir()}
-          className="mt-7 h-11 justify-center gap-2 rounded-xl text-[0.95rem] shadow-sm"
+          className="mt-4 h-11 justify-start gap-2 rounded-xl px-4 text-[0.95rem] shadow-sm"
         >
           <Plus className="size-5" />
           Registrar
         </Button>
-        <nav className="mt-4 flex flex-1 flex-col gap-1">
+        <nav className="mt-5 flex flex-1 flex-col gap-1">
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-[0.92rem] font-medium transition-colors",
+                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[0.92rem] font-medium transition-colors",
                 activo(item.href)
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:bg-secondary hover:text-foreground",
@@ -133,7 +133,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           ))}
         </nav>
-        <div className="mt-2 flex flex-col gap-2 border-t border-border pt-3">
+        <div className="mt-2 flex flex-col gap-3 border-t border-border pt-4">
           <div className="flex items-center justify-between">
             <SyncDot />
             <div className="flex items-center gap-1">
@@ -141,7 +141,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <UserMenu />
             </div>
           </div>
-          <p className="text-center text-[0.6rem] text-muted-foreground/40">
+          <p className="text-left text-[0.6rem] text-muted-foreground/40">
             creado por{" "}
             <a href="https://github.com/quiquemachado5" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground hover:underline">
               quiquemachado5

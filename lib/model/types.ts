@@ -98,6 +98,8 @@ export interface EnergiaDia {
   quemadasEstimadas: boolean;
   /** Hay comidas registradas, pero falta la cena: no representa el día completo. */
   ingestaIncompleta: boolean;
+  /** Sin hábitos positivos no hay evidencia suficiente para clasificar un déficit. */
+  sinHabitosMarcados: boolean;
   sinRegistro: boolean;
   imputado: boolean;
 }

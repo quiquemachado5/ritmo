@@ -119,7 +119,7 @@ export default function CalendarioPage() {
           <div className="grid grid-cols-3 divide-x divide-border border-b border-border bg-secondary/25">
             <DiaMetric label="Hábitos" value={`${habHechos}`} unit={`/${TOTAL_HABITOS}`} />
             <DiaMetric label="Peso" value={d.peso != null ? fmtPeso(d.peso) : "—"} tone="weight" />
-            <DiaMetric label="Balance" value={energiaSel.sinRegistro || energiaSel.ingestaIncompleta ? "—" : fmtSigno(energiaSel.balance, 0)} tone={energiaSel.balance > 0 ? "energy" : "weight"} />
+            <DiaMetric label="Balance" value={energiaSel.sinRegistro || energiaSel.ingestaIncompleta || energiaSel.sinHabitosMarcados ? "—" : fmtSigno(energiaSel.balance, 0)} tone={energiaSel.balance > 0 ? "energy" : "weight"} />
           </div>
           <div className="flex flex-col gap-3 p-5">
           {d.comidas && d.comidas.length > 0 && (

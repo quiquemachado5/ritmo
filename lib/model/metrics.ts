@@ -553,6 +553,7 @@ export function energiaDia(
 
   const inExplicito = num(d.kcalConsumidas);
   const outExplicito = num(d.kcalQuemadas);
+  const sinHabitosMarcados = !Object.values(d.habitos || {}).some((valor) => valor === true);
   // Las kcal se derivan automáticamente de las comidas guardadas. Si falta la
   // cena, esa suma es solo un mínimo: usarla como total inventaría un déficit.
   const ingestaIncompleta = Boolean(d.comidas?.length) && !d.comidas!.some((comida) => comida.tipo === "cena");
@@ -576,6 +577,7 @@ export function energiaDia(
       consumidasEstimadas: true,
       quemadasEstimadas: true,
       ingestaIncompleta: false,
+      sinHabitosMarcados,
       sinRegistro: true,
       imputado: true,
     };
@@ -603,6 +605,7 @@ export function energiaDia(
     consumidasEstimadas: inn.estimado,
     quemadasEstimadas: out.estimado,
     ingestaIncompleta,
+    sinHabitosMarcados,
     sinRegistro,
     imputado: false,
   };

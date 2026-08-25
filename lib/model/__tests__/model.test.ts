@@ -208,6 +208,7 @@ describe("Energía de un día", () => {
       comidas: [{ tipo: "desayuno" }, { tipo: "comida" }],
     }, { tdeeBase: 2400 });
     igual(parcial.ingestaIncompleta, true);
+    igual(parcial.sinHabitosMarcados, true);
 
     const estadoParcial = estado({
       perfil: {},
@@ -215,6 +216,9 @@ describe("Energía de un día", () => {
       composicion: [],
     });
     igual(A.diasEvaluables(estadoParcial, "2026-08-25", "2026-08-25").length, 0);
+
+    const completoSinHabitos = M.energiaDia({ kcalConsumidas: 2600, habitos: {}, comidas: [{ tipo: "cena" }] });
+    igual(completoSinHabitos.sinHabitosMarcados, true);
   });
   it("detección de días sin registro", () => {
     igual(M.energiaDia({ habitos: {} }).sinRegistro, true);
