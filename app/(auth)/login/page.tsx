@@ -4,11 +4,11 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Shield, Mail, Lock, ArrowRight, Check, Eye, EyeOff } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { SocialLogin } from "@/components/social-login";
+import { ButtonRipple } from "@/components/button-ripple";
 import { loginRateLimiter, validateEmail } from "@/lib/validation";
 import { transitionCSS, springBezier, stagger } from "@/lib/transitions";
 
@@ -190,7 +190,7 @@ function LoginForm() {
                 </Link>
               </div>
 
-              <Button
+              <ButtonRipple
                 type="submit" disabled={cargando}
                 className="w-full h-10 text-sm font-semibold rounded-lg transition-all active:scale-95"
                 style={stagger(4)}
@@ -200,7 +200,7 @@ function LoginForm() {
                 ) : (
                   <>Iniciar sesión<ArrowRight className="size-3.5 ml-1.5" /></>
                 )}
-              </Button>
+              </ButtonRipple>
             </form>
 
             <div style={stagger(5)}>

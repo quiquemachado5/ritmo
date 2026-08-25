@@ -8,22 +8,28 @@ interface PageTransitionProps {
   children: React.ReactNode;
 }
 
+const pageTransitionStyles = `
+  @keyframes pageInCustom {
+    0% { opacity: 0; transform: translateY(16px); filter: blur(4px); }
+    100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+  }
+`;
+
 export function PageTransition({ children }: PageTransitionProps) {
   const pathname = usePathname();
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [key, setKey] = useState(0);
 
   useEffect(() => {
-    setIsAnimating(true);
-    const timer = setTimeout(() => setIsAnimating(false), 500);
-    return () => clearTimeout(timer);
+    setKey(k => k + 1);
   }, [pathname]);
 
   return (
     <>
-      <style>{transitionCSS}</style>
+      <style>{pageTransitionStyles}</style>
       <div
+        key={key}
         style={{
-          animation: `pageIn 0.5s ${springBezier} forwards`,
+          animation: `pageInCustom 0.4s ${springBezier} forwards`,
         }}
         className="w-full"
       >
