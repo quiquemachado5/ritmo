@@ -8,7 +8,7 @@ import { useQuickLog } from "@/components/app/quick-log-provider";
 import { resumen, adherenciaPorHabito, recordsPersonales, resumenPorMes } from "@/lib/model/analytics";
 import { macrosObjetivo } from "@/lib/model/metrics";
 import { HABITOS } from "@/lib/model/config";
-import { hoy } from "@/lib/model/dates";
+import { hoy, sumarDias } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -57,6 +57,8 @@ export default function HoyPage() {
 
   const habitosHechos = HABITOS.filter((h) => diaHoy.habitos?.[h.clave]).length;
   const tendKg = r.prediccion.modelo?.kgSemana ?? r.tendencia?.kgSemana ?? null;
+  const faltaCena = !comidas.some((comida) => comida.tipo === "cena");
+  const necesitaRevision = new Date().getHours() >= 18 && (faltaCena || habitosHechos === 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -146,6 +148,17 @@ export default function HoyPage() {
           })()}
         </Card>
       </section>
+
+      {necesitaRevision && (
+        <section aria-labelledby="revision-dia">
+          <Card className="overflow-hidden p-0">
+            <div className="flex flex-col gap-4 bg-secondary/35 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+              <div><h2 id="revision-dia" className="font-display text-xl font-bold">Antes de cerrar el día</h2><p className="mt-1 max-w-xl text-sm text-muted-foreground">{faltaCena ? "Falta registrar la cena; sin ella RITMO no usará el día para estimar tu balance." : "Revisa los hábitos de hoy para que el registro represente cómo fue el día."}</p></div>
+              <div className="flex shrink-0 flex-wrap gap-2"><Button variant="secondary" onClick={() => abrir("habitos")} className="gap-2"><Target className="size-4" /> Revisar hábitos</Button>{faltaCena && <Button onClick={() => abrir("comida")} className="gap-2"><Utensils className="size-4" /> Registrar cena</Button>}</div>
+            </div>
+          </Card>
+        </section>
+      )}
 
       {/* Último pesaje */}
       <section>
@@ -347,6 +360,9 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
   }
 
   const hayRecords = rec.mejorMesAdherencia || rec.mayorPerdidaMes || rec.totalDiasRegistrados > 0;
+  const estaSemana = resumenSemana(estado, hoy());
+  const semanaAnterior = resumenSemana(estado, sumarDias(hoy(), -7));
+  const deltaSemana = estaSemana.adherencia - semanaAnterior.adherencia;
 
   return (
     <section>
@@ -370,6 +386,15 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
                 ))}
               </div>
             ) : <p className="text-sm text-muted-foreground">Registra unos días más para que RITMO pueda darte una lectura de tu semana.</p>}
+          </div>
+        </div>
+
+        <div className="border-t border-border px-5 py-5 sm:px-7">
+          <div className="flex flex-wrap items-end justify-between gap-3"><div><h3 className="font-display text-xl font-bold">Frente a la semana anterior</h3><p className="mt-1 text-sm text-muted-foreground">Una comparación de tus últimos siete días.</p></div><span className={cn("font-display text-lg font-bold tabular", deltaSemana >= 0 ? "text-weight" : "text-energy")}>{deltaSemana >= 0 ? "+" : ""}{deltaSemana} pts</span></div>
+          <div className="mt-5 grid grid-cols-3 divide-x divide-border rounded-xl border border-border bg-secondary/25">
+            <SemanaMetric label="Constancia" actual={`${estaSemana.adherencia}%`} previo={`${semanaAnterior.adherencia}%`} />
+            <SemanaMetric label="Comidas" actual={`${estaSemana.comidas}`} previo={`${semanaAnterior.comidas}`} />
+            <SemanaMetric label="Días con registro" actual={`${estaSemana.diasConDatos}`} previo={`${semanaAnterior.diasConDatos}`} />
           </div>
         </div>
 
@@ -416,6 +441,21 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
       </Card>
     </section>
   );
+}
+
+function resumenSemana(estado: Parameters<typeof resumen>[0], hasta: string) {
+  let habitos = 0; let comidas = 0; let diasConDatos = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = estado.dias[sumarDias(hasta, -i)];
+    const hechos = Object.values(d?.habitos || {}).filter(Boolean).length;
+    habitos += hechos; comidas += d?.comidas?.length ?? 0;
+    if (hechos > 0 || (d?.comidas?.length ?? 0) > 0 || d?.peso != null) diasConDatos++;
+  }
+  return { adherencia: Math.round((habitos / (HABITOS.length * 7)) * 100), comidas, diasConDatos };
+}
+
+function SemanaMetric({ label, actual, previo }: { label: string; actual: string; previo: string }) {
+  return <div className="min-w-0 bg-card px-3 py-4 text-center sm:px-5"><p className="truncate text-xs text-muted-foreground">{label}</p><p className="mt-1 font-display text-2xl font-bold tabular">{actual}</p><p className="mt-1 text-[0.7rem] text-muted-foreground">antes {previo}</p></div>;
 }
 
 function RecordBadge({ icon, label, value, unit, sub }: { icon: React.ReactNode; label: string; value: string; unit?: string; sub?: string }) {

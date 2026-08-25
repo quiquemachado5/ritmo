@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { SectionLabel, Chip } from "@/components/app/primitives";
 import { fmtPeso, fmtKcal, fmtFechaLarga, fmtMes, capitalizar, fmtSigno, fmtFechaCorta } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import type { EnergiaDia } from "@/lib/model/types";
 
 const NIVEL = ["bg-transparent", "bg-primary/25", "bg-primary/45", "bg-primary/70", "bg-primary"];
 
@@ -33,6 +34,7 @@ export default function CalendarioPage() {
   const d = dia(sel);
   const energiaSel = energiaDe(estado, sel);
   const habHechos = HABITOS.filter((h) => d.habitos?.[h.clave]).length;
+  const calidad = calidadDia(energiaSel, habHechos);
   const diasConRegistroMes = Array.from({ length: dias }, (_, i) => dia(sumarDias(desde, i))).filter((registro) =>
     Object.values(registro.habitos || {}).some(Boolean) || (registro.comidas?.length ?? 0) > 0 || registro.peso != null,
   ).length;
@@ -122,6 +124,10 @@ export default function CalendarioPage() {
             <DiaMetric label="Balance" value={energiaSel.sinRegistro || energiaSel.ingestaIncompleta || energiaSel.sinHabitosMarcados ? "—" : fmtSigno(energiaSel.balance, 0)} tone={energiaSel.balance > 0 ? "energy" : "weight"} />
           </div>
           <div className="flex flex-col gap-3 p-5">
+          <div className={cn("flex items-start gap-3 rounded-xl px-3 py-3", calidad.bg)}>
+            <span className={cn("mt-1 size-2 shrink-0 rounded-full", calidad.dot)} />
+            <div><p className={cn("text-sm font-semibold", calidad.ink)}>{calidad.titulo}</p><p className="mt-0.5 text-xs text-muted-foreground">{calidad.detalle}</p></div>
+          </div>
           {d.comidas && d.comidas.length > 0 && (
             <div className="border-t border-border pt-3 text-sm text-muted-foreground">
               {d.comidas.length} comida{d.comidas.length > 1 ? "s" : ""} · {fmtKcal(d.kcalConsumidas ?? 0)} kcal
@@ -138,6 +144,14 @@ export default function CalendarioPage() {
       </section>
     </div>
   );
+}
+
+function calidadDia(energia: EnergiaDia, habitos: number) {
+  if (energia.imputado) return { titulo: "Día imputado", detalle: "No hubo registro; el modelo aplica la regla de huecos configurada.", bg: "bg-warning-wash", dot: "bg-warning", ink: "text-warning-ink" };
+  if (energia.sinRegistro) return { titulo: "Sin datos suficientes", detalle: "Añade comidas o hábitos para que este día empiece a contar.", bg: "bg-secondary", dot: "bg-muted-foreground", ink: "text-foreground" };
+  if (habitos === 0) return { titulo: "Registro sin validar", detalle: "Hay datos de comida, pero sin hábitos RITMO no calcula déficit ni superávit.", bg: "bg-warning-wash", dot: "bg-warning", ink: "text-warning-ink" };
+  if (energia.ingestaIncompleta) return { titulo: "Registro parcial", detalle: "Falta la cena; el balance queda fuera del modelo hasta completar el día.", bg: "bg-energy-wash", dot: "bg-energy", ink: "text-energy-ink" };
+  return { titulo: "Día válido para el modelo", detalle: "Los hábitos y la ingesta permiten usar este día en las tendencias.", bg: "bg-weight-wash", dot: "bg-weight", ink: "text-weight-ink" };
 }
 
 function DiaMetric({ label, value, unit, tone }: { label: string; value: string; unit?: string; tone?: "weight" | "energy" }) {

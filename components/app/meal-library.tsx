@@ -12,6 +12,7 @@ import { SectionLabel } from "./primitives";
 import type { Comida, TipoComida } from "@/lib/model/types";
 
 type ItemBiblioteca = ComidaGuardada & { esCatalogo?: boolean };
+type VistaBiblioteca = "todas" | "favoritas" | "frecuentes";
 
 const CATS: { id: TipoComida; label: string; icon: typeof Sun }[] = [
   { id: "desayuno", label: "Desayuno", icon: Sun },
@@ -37,6 +38,7 @@ export function MealLibrary({ fecha }: { fecha: string }) {
   const prefs = useMealPrefs();
   const [orden, setOrden] = React.useState<OrdenBiblioteca>("frecuencia");
   const [cat, setCat] = React.useState<TipoComida>("desayuno");
+  const [vista, setVista] = React.useState<VistaBiblioteca>("todas");
   const [q, setQ] = React.useState("");
   const [editando, setEditando] = React.useState<string | null>(null);
   const [creando, setCreando] = React.useState(false);
@@ -78,8 +80,12 @@ export function MealLibrary({ fecha }: { fecha: string }) {
   const filtradas = React.useMemo(() => {
     const itemsCat = porCat[cat] ?? [];
     const needle = q.trim().toLowerCase();
-    return needle ? itemsCat.filter((c) => c.texto.toLowerCase().includes(needle)) : itemsCat;
-  }, [porCat, cat, q]);
+    return itemsCat.filter((c) => {
+      const coincideTexto = !needle || c.texto.toLowerCase().includes(needle);
+      const coincideVista = vista === "todas" || vista === "favoritas" ? prefs.fav.includes(c.clave) : c.veces > 1;
+      return coincideTexto && coincideVista;
+    });
+  }, [porCat, cat, q, vista, prefs.fav]);
 
   async function usar(item: ComidaGuardada) {
     const comida: Comida = {
@@ -104,6 +110,12 @@ export function MealLibrary({ fecha }: { fecha: string }) {
       </SectionLabel>
 
       <div className="flex flex-col gap-4 overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-muted-foreground">Para añadir a <span className="font-semibold text-foreground">{CATS.find((c) => c.id === cat)?.label.toLowerCase()}</span> en un toque.</p>
+          <div className="flex rounded-full bg-secondary p-0.5">
+            {([['todas', 'Todas'], ['favoritas', 'Favoritas'], ['frecuentes', 'Frecuentes']] as const).map(([id, label]) => <button key={id} onClick={() => setVista(id)} className={cn("h-7 rounded-full px-2.5 text-xs font-medium transition-colors", vista === id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}>{label}</button>)}
+          </div>
+        </div>
         {/* Categorías */}
         <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
           {CATS.map((c) => {
