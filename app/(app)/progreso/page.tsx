@@ -162,41 +162,54 @@ export default function ProgresoPage() {
           {/* Predicción */}
           {r.prediccion.disponible && (
             <Card className="p-5">
-              <SectionLabel>Predicción (banda 80% confianza)</SectionLabel>
-              <div className="mb-4 rounded-lg bg-secondary/40 p-3 text-xs leading-relaxed text-muted-foreground">
-                {r.prediccion.modelo?.calidad === "inicial" ? (
-                  <p>📊 <strong>Calidad: Inicial</strong> — Basada en {r.prediccion.pesajes} pesajes. Con más datos (especialmente registros de comidas), la predicción será más precisa.</p>
-                ) : r.prediccion.modelo?.calidad === "media" ? (
-                  <p>📊 <strong>Calidad: Media</strong> — Tendencia clara pero con variabilidad. Registra comidas para mejorar el rango de predicción.</p>
-                ) : (
-                  <p>📊 <strong>Calidad: Alta</strong> — Modelo calibrado. Tu TDEE observado es ~{r.prediccion.modelo?.tdee} kcal/día. La banda es confiable.</p>
-                )}
-              </div>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <SectionLabel>Predicción</SectionLabel>
+              
+              {/* Proyecciones */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <PredCell etiqueta="Mañana" iv={r.prediccion.manana} />
-                <PredCell etiqueta="En 1 semana" iv={r.prediccion.semana} />
-                <PredCell etiqueta="En 15 días" iv={r.prediccion.quincena} />
-                <PredCell etiqueta="En 1 mes" iv={r.prediccion.mes} />
+                <PredCell etiqueta="1 semana" iv={r.prediccion.semana} />
+                <PredCell etiqueta="15 días" iv={r.prediccion.quincena} />
+                <PredCell etiqueta="1 mes" iv={r.prediccion.mes} />
               </div>
-              <div className="mt-4 space-y-2 border-t border-border pt-4">
+
+              {/* Metadata: calidad, TDEE, pesaje */}
+              <div className="mt-5 border-t border-border pt-3 text-xs text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-3 mb-2">
+                  <span>
+                    <span className="font-medium text-foreground">Calidad:</span> {r.prediccion.modelo?.calidad === "inicial" ? "Inicial" : r.prediccion.modelo?.calidad === "media" ? "Media" : "Alta"}
+                  </span>
+                  {r.prediccion.modelo?.tdee && (
+                    <span>
+                      <span className="font-medium text-foreground">TDEE:</span> ~{r.prediccion.modelo.tdee} kcal/día
+                    </span>
+                  )}
+                  {r.prediccion.pesajes && (
+                    <span>
+                      <span className="font-medium text-foreground">Datos:</span> {r.prediccion.pesajes} pesajes
+                    </span>
+                  )}
+                </div>
+
+                {/* Alertas sutiles */}
                 {r.prediccion.diasSinPesaje != null && r.prediccion.diasSinPesaje > 21 && (
-                  <div className="rounded-lg bg-warning/8 px-3 py-2 text-xs text-warning-ink">
-                    ⚖️ No pesas desde hace {r.prediccion.diasSinPesaje} días. Considera una medición para recalibrar.
-                  </div>
+                  <p className="mt-2 text-warning-ink">
+                    ⚖️ No pesas desde hace {r.prediccion.diasSinPesaje} días. Próxima medición: {r.prediccion.proximoPesaje ? fmtFechaCorta(r.prediccion.proximoPesaje) : "pronto"}.
+                  </p>
                 )}
                 {r.prediccion.modelo?.kgSemana != null && r.peso.objetivo != null && r.prediccion.modelo.kgSemana > 0 && (
-                  <div className="rounded-lg bg-energy/8 px-3 py-2 text-xs text-energy-ink">
-                    ⚠️ Tendencia a la alza ({fmtSigno(r.prediccion.modelo.kgSemana, 2)} kg/sem). Revisa tu balance energético.
-                  </div>
+                  <p className="mt-2 text-energy-ink">
+                    ⚠️ Tendencia: +{fmtSigno(r.prediccion.modelo.kgSemana, 2)} kg/sem. Revisa tu balance.
+                  </p>
                 )}
-              </div>
-              <div className="mt-3 flex flex-col gap-1 text-xs text-muted-foreground">
-                {r.prediccion.diasSinPesaje != null && (
-                  <p>{r.prediccion.diasSinPesaje === 0 ? "✓ Pesaje de hoy" : `Último pesaje: hace ${r.prediccion.diasSinPesaje} días`}</p>
-                )}
-                {r.prediccion.proximoPesaje && (
-                  <p>💡 Próxima medición sugerida: {fmtFechaCorta(r.prediccion.proximoPesaje)} (en ~14 días para mayor señal)</p>
-                )}
+
+                {/* Contexto */}
+                <p className="mt-2">
+                  {r.prediccion.modelo?.calidad === "inicial"
+                    ? "Registra comidas y más pesajes para mejorar la precisión."
+                    : r.prediccion.modelo?.calidad === "media"
+                      ? "Con más registros de comidas, el rango será más estrecho."
+                      : "Banda al 80% de confianza. Modelo calibrado con tu TDEE observado."}
+                </p>
               </div>
             </Card>
           )}
