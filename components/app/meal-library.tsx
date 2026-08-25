@@ -2,14 +2,16 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { ArrowDownAZ, Check, EyeOff, Flame, Pencil, Plus, Repeat2, Search, Star, X } from "lucide-react";
+import { ArrowDownAZ, Check, EyeOff, Flame, Pencil, Plus, Repeat2, Search, Star, Trash2, X } from "lucide-react";
 import { cn, uid } from "@/lib/utils";
 import { useRitmo } from "@/lib/store/provider";
 import { bibliotecaComidas, type ComidaGuardada, type OrdenBiblioteca } from "@/lib/model/analytics";
 import { fmtKcal, capitalizar } from "@/lib/format";
-import { useMealPrefs, toggleFavorito, toggleOculta, setOverride } from "@/lib/meal-prefs";
-import { SectionLabel, EmptyState } from "./primitives";
+import { useMealPrefs, toggleFavorito, toggleOculta, setOverride, agregarCatalogo, quitarCatalogo } from "@/lib/meal-prefs";
+import { SectionLabel } from "./primitives";
 import type { Comida, TipoComida } from "@/lib/model/types";
+
+type ItemBiblioteca = ComidaGuardada & { esCatalogo?: boolean };
 
 const CATS: { id: TipoComida; label: string; emoji: string }[] = [
   { id: "desayuno", label: "Desayuno", emoji: "🌅" },
@@ -37,27 +39,36 @@ export function MealLibrary({ fecha }: { fecha: string }) {
   const [cat, setCat] = React.useState<TipoComida>("desayuno");
   const [q, setQ] = React.useState("");
   const [editando, setEditando] = React.useState<string | null>(null);
+  const [creando, setCreando] = React.useState(false);
 
   const biblioteca = React.useMemo(() => bibliotecaComidas(estado, orden), [estado, orden]);
 
-  // Aplica overrides de edición y quita las ocultas; cuenta por categoría con
-  // esas reglas ya aplicadas para que los contadores cuadren.
+  // Combina lo derivado del histórico con el catálogo (comidas creadas a mano),
+  // aplica overrides de edición, quita las ocultas y fija las favoritas arriba.
   const porCat = React.useMemo(() => {
-    const out = {} as Record<TipoComida, ComidaGuardada[]>;
+    const out = {} as Record<TipoComida, ItemBiblioteca[]>;
     for (const c of CATS) {
-      const arr = (biblioteca[c.id] ?? [])
+      const derivadas = biblioteca[c.id] ?? [];
+      const clavesDer = new Set(derivadas.map((d) => d.clave));
+      const soloCatalogo: ItemBiblioteca[] = prefs.catalog
+        .filter((x) => x.tipo === c.id && !clavesDer.has(x.clave))
+        .map((x) => ({ ...x, tipo: c.id, veces: 0, ultima: x.creado, esCatalogo: true }));
+
+      const arr: ItemBiblioteca[] = [...derivadas, ...soloCatalogo]
         .filter((it) => !prefs.hidden.includes(it.clave))
         .map((it) => {
           const ov = prefs.overrides[it.clave];
           return ov ? { ...it, ...limpiarOverride(ov) } : it;
         });
-      // Favoritas primero, conservando el orden derivado dentro de cada grupo.
+
+      // Reordena según el criterio elegido (los catálogo tienen veces 0).
+      arr.sort(ordenar(orden));
       const fav = arr.filter((it) => prefs.fav.includes(it.clave));
       const resto = arr.filter((it) => !prefs.fav.includes(it.clave));
       out[c.id] = [...fav, ...resto];
     }
     return out;
-  }, [biblioteca, prefs]);
+  }, [biblioteca, prefs, orden]);
 
   const total = React.useMemo(
     () => Object.values(porCat).reduce((a, arr) => a + arr.length, 0),
@@ -84,18 +95,6 @@ export function MealLibrary({ fecha }: { fecha: string }) {
     };
     await registrarComida(fecha, comida);
     toast.success(`${capitalizar(item.texto)} · ${fmtKcal(item.kcal)} kcal`, { description: "Añadida al día" });
-  }
-
-  if (total === 0 && prefs.hidden.length === 0) {
-    return (
-      <section>
-        <SectionLabel>Mis comidas</SectionLabel>
-        <EmptyState title="Tu biblioteca está vacía">
-          Cada comida que registres se guardará aquí por categoría para reutilizarla
-          cualquier día con un toque.
-        </EmptyState>
-      </section>
-    );
   }
 
   return (
@@ -160,6 +159,22 @@ export function MealLibrary({ fecha }: { fecha: string }) {
           </div>
         </div>
 
+        {/* Crear comida sin registrarla en un día */}
+        {creando ? (
+          <NuevaComidaForm
+            tipo={cat}
+            onCancel={() => setCreando(false)}
+            onSave={(c) => { agregarCatalogo(c); setCreando(false); toast.success("Comida guardada en la biblioteca"); }}
+          />
+        ) : (
+          <button
+            onClick={() => setCreando(true)}
+            className="flex h-10 items-center justify-center gap-2 rounded-xl border border-dashed border-border text-sm font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+          >
+            <Plus className="size-4" /> Nueva comida en {CATS.find((c) => c.id === cat)?.label.toLowerCase()}
+          </button>
+        )}
+
         {/* Lista de comidas de la categoría */}
         {filtradas.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
@@ -184,7 +199,12 @@ export function MealLibrary({ fecha }: { fecha: string }) {
                     onUsar={() => usar(item)}
                     onFav={() => toggleFavorito(item.clave)}
                     onEdit={() => setEditando(item.clave)}
-                    onHide={() => { toggleOculta(item.clave); toast("Comida ocultada de la biblioteca"); }}
+                    onHide={() =>
+                      item.esCatalogo
+                        ? (quitarCatalogo(item.clave), toast("Comida quitada de la biblioteca"))
+                        : (toggleOculta(item.clave), toast("Comida ocultada de la biblioteca"))
+                    }
+                    hideTitle={item.esCatalogo ? "Quitar de la biblioteca" : "Ocultar de la biblioteca"}
                   />
                 </li>
               ),
@@ -212,13 +232,15 @@ function TarjetaComida({
   onFav,
   onEdit,
   onHide,
+  hideTitle,
 }: {
-  item: ComidaGuardada;
+  item: ItemBiblioteca;
   favorita: boolean;
   onUsar: () => void;
   onFav: () => void;
   onEdit: () => void;
   onHide: () => void;
+  hideTitle: string;
 }) {
   return (
     <div
@@ -258,8 +280,8 @@ function TarjetaComida({
         <IconBtn label="Editar comida" onClick={onEdit}>
           <Pencil className="size-4" />
         </IconBtn>
-        <IconBtn label="Ocultar de la biblioteca" onClick={onHide}>
-          <EyeOff className="size-4" />
+        <IconBtn label={hideTitle} onClick={onHide}>
+          {item.esCatalogo ? <Trash2 className="size-4" /> : <EyeOff className="size-4" />}
         </IconBtn>
       </div>
     </div>
@@ -346,4 +368,65 @@ function limpiarOverride(ov: Partial<ComidaGuardada>): Partial<ComidaGuardada> {
   const out: Partial<ComidaGuardada> = {};
   for (const [k, v] of Object.entries(ov)) if (v !== undefined) (out as Record<string, unknown>)[k] = v;
   return out;
+}
+
+/** Comparador según el criterio de orden elegido. */
+function ordenar(orden: OrdenBiblioteca) {
+  return (a: ItemBiblioteca, b: ItemBiblioteca) => {
+    if (orden === "kcal") return b.kcal - a.kcal;
+    if (orden === "alfabetico") return a.texto.localeCompare(b.texto, "es", { sensitivity: "base" });
+    return (b.veces - a.veces) || (a.ultima < b.ultima ? 1 : -1);
+  };
+}
+
+/** Formulario para crear una comida en la biblioteca sin registrarla en un día. */
+function NuevaComidaForm({
+  tipo,
+  onCancel,
+  onSave,
+}: {
+  tipo: TipoComida;
+  onCancel: () => void;
+  onSave: (c: { texto: string; tipo: TipoComida; kcal: number; proteinas: number; carbohidratos: number; grasas: number }) => void;
+}) {
+  const [texto, setTexto] = React.useState("");
+  const [kcal, setKcal] = React.useState("");
+  const [p, setP] = React.useState("");
+  const [c, setC] = React.useState("");
+  const [g, setG] = React.useState("");
+  const n = (s: string) => Math.max(0, Math.round(Number(s.replace(",", ".")) || 0));
+  const valido = texto.trim().length > 0 && n(kcal) > 0;
+
+  return (
+    <div className="rounded-xl border border-primary/40 bg-primary/[0.03] p-3">
+      <p className="mb-2 text-[0.7rem] font-semibold uppercase tracking-wide text-muted-foreground">
+        Nueva comida · {tipo}
+      </p>
+      <input
+        value={texto}
+        onChange={(e) => setTexto(e.target.value)}
+        placeholder="Nombre de la comida"
+        autoFocus
+        className="mb-2 h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-ring"
+      />
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <CampoNum label="kcal" value={kcal} onChange={setKcal} />
+        <CampoNum label="Proteínas" value={p} onChange={setP} />
+        <CampoNum label="Carbos" value={c} onChange={setC} />
+        <CampoNum label="Grasas" value={g} onChange={setG} />
+      </div>
+      <div className="mt-3 flex justify-end gap-2">
+        <button onClick={onCancel} className="flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-muted-foreground hover:bg-secondary">
+          <X className="size-4" /> Cancelar
+        </button>
+        <button
+          onClick={() => onSave({ texto: texto.trim(), tipo, kcal: n(kcal), proteinas: n(p), carbohidratos: n(c), grasas: n(g) })}
+          disabled={!valido}
+          className="flex h-9 items-center gap-1.5 rounded-full bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
+        >
+          <Check className="size-4" /> Guardar
+        </button>
+      </div>
+    </div>
+  );
 }

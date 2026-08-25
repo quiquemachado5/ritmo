@@ -195,3 +195,61 @@ from public.dias
 group by user_id, date_trunc('month', fecha);
 
 grant select on public.resumen_mensual to authenticated;
+
+-- ============================================================================
+-- PREFERENCIAS DE BIBLIOTECA (sync entre dispositivos)
+-- Favoritas, comidas ocultas, ediciones (overrides) y catálogo de comidas
+-- creadas a mano. Un blob JSON por usuario: pequeño y last-write-wins.
+-- ============================================================================
+create table if not exists public.user_prefs (
+  user_id        uuid primary key references auth.users (id) on delete cascade,
+  meal_prefs     jsonb       not null default '{}'::jsonb,
+  actualizado_en timestamptz not null default now()
+);
+
+comment on table public.user_prefs is
+  'Preferencias de cliente sincronizadas: biblioteca de comidas (favoritas, ocultas, ediciones, catálogo).';
+
+alter table public.user_prefs enable row level security;
+
+drop policy if exists user_prefs_propias on public.user_prefs;
+create policy user_prefs_propias on public.user_prefs
+  for all to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- ============================================================================
+-- BACKUPS EN STORAGE
+-- Bucket privado donde RITMO sube periódicamente una copia JSON del usuario.
+-- Cada usuario solo puede leer/escribir dentro de su carpeta {user_id}/...
+-- ============================================================================
+insert into storage.buckets (id, name, public)
+values ('backups', 'backups', false)
+on conflict (id) do nothing;
+
+do $$
+declare nombre text;
+begin
+  foreach nombre in array array[
+    'backups_leer', 'backups_subir', 'backups_actualizar', 'backups_borrar'
+  ] loop
+    execute format('drop policy if exists %I on storage.objects', nombre);
+  end loop;
+end;
+$$;
+
+create policy backups_leer on storage.objects
+  for select to authenticated
+  using (bucket_id = 'backups' and (storage.foldername(name))[1] = auth.uid()::text);
+
+create policy backups_subir on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'backups' and (storage.foldername(name))[1] = auth.uid()::text);
+
+create policy backups_actualizar on storage.objects
+  for update to authenticated
+  using (bucket_id = 'backups' and (storage.foldername(name))[1] = auth.uid()::text);
+
+create policy backups_borrar on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'backups' and (storage.foldername(name))[1] = auth.uid()::text);
