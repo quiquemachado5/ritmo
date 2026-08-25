@@ -33,29 +33,31 @@ export default function CalendarioPage() {
   const d = dia(sel);
   const energiaSel = energiaDe(estado, sel);
   const habHechos = HABITOS.filter((h) => d.habitos?.[h.clave]).length;
+  const diasConRegistroMes = Array.from({ length: dias }, (_, i) => dia(sumarDias(desde, i))).filter((registro) =>
+    Object.values(registro.habitos || {}).some(Boolean) || (registro.comidas?.length ?? 0) > 0 || registro.peso != null,
+  ).length;
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
+      <header>
         <h1 className="font-display text-2xl font-bold tracking-tight">Calendario</h1>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={() => setMes((m) => sumarMeses(m, -1))} aria-label="Mes anterior">
-            <ChevronLeft className="size-5" />
-          </Button>
-          <span className="min-w-36 text-center text-sm font-medium">{capitalizar(fmtMes(`${mes}-01`))}</span>
-          <Button variant="ghost" size="icon" onClick={() => setMes((m) => sumarMeses(m, 1))} aria-label="Mes siguiente">
-            <ChevronRight className="size-5" />
-          </Button>
-        </div>
       </header>
 
-      <Card className="p-4">
-        <div className="mb-2 grid grid-cols-7 gap-1 text-center text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
+      <Card className="overflow-hidden p-0">
+        <div className="flex items-center justify-between gap-4 border-b border-border bg-secondary/35 px-4 py-3.5 sm:px-5">
+          <div><p className="font-display text-lg font-bold">{capitalizar(fmtMes(`${mes}-01`))}</p><p className="text-xs text-muted-foreground">{diasConRegistroMes} de {dias} días con datos</p></div>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="size-9" onClick={() => setMes((m) => sumarMeses(m, -1))} aria-label="Mes anterior"><ChevronLeft className="size-4" /></Button>
+            <Button variant="ghost" size="icon" className="size-9" onClick={() => setMes((m) => sumarMeses(m, 1))} aria-label="Mes siguiente"><ChevronRight className="size-4" /></Button>
+          </div>
+        </div>
+        <div className="p-3 sm:p-4">
+        <div className="mb-2 grid grid-cols-7 gap-1.5 text-center text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground sm:gap-2">
           {DIAS_SEMANA.map((d) => (
             <span key={d}>{d}</span>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
           {celdas.map((fecha, i) => {
             if (!fecha) return <span key={i} />;
             const dd = dia(fecha);
@@ -84,16 +86,16 @@ export default function CalendarioPage() {
                 title={resumenDia}
                 aria-label={resumenDia}
                 className={cn(
-                  "relative flex aspect-square flex-col items-center justify-center rounded-lg text-sm transition-all",
-                  futuro ? "text-muted-foreground/30" : "hover:ring-2 hover:ring-primary/30",
+                  "relative flex aspect-square min-h-12 flex-col items-center justify-center rounded-xl text-sm transition-all sm:min-h-16",
+                  futuro ? "text-muted-foreground/30" : "hover:-translate-y-0.5 hover:shadow-sm",
                   nivel > 0 ? NIVEL[nivel] : "bg-secondary/50",
                   nivel >= 3 ? "text-primary-foreground" : "text-foreground",
-                  activo && "ring-2 ring-primary",
-                  esHoy && "font-bold",
+                  activo && "ring-2 ring-primary shadow-sm",
+                  esHoy && "font-bold ring-1 ring-primary/35",
                 )}
               >
                 <span className="tabular">{Number(fecha.slice(-2))}</span>
-                <span className="mt-0.5 flex h-1.5 gap-0.5">
+                <span className="mt-1 flex h-1.5 gap-1">
                   {dd.peso != null && <span className="size-1.5 rounded-full bg-weight" />}
                   {e.imputado && <span className="size-1.5 rounded-full bg-warning" />}
                 </span>
@@ -101,9 +103,10 @@ export default function CalendarioPage() {
             );
           })}
         </div>
-        <div className="mt-3 flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-[0.65rem] text-muted-foreground">
+        <div className="mt-4 flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-[0.65rem] text-muted-foreground">
           <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-weight" /> pesaje</span>
           <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-warning" /> imputado</span>
+        </div>
         </div>
       </Card>
 
@@ -112,23 +115,13 @@ export default function CalendarioPage() {
         <SectionLabel action={<Button size="sm" variant="secondary" className="h-7 gap-1.5" onClick={() => abrir(undefined, sel)}><Plus className="size-3.5" /> Registrar</Button>}>
           {sel === hoyISO ? "Hoy" : capitalizar(fmtFechaLarga(sel))}
         </SectionLabel>
-        <Card className="flex flex-col gap-3 p-5">
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <p className="text-[0.65rem] uppercase tracking-wide text-muted-foreground">Hábitos</p>
-              <p className="font-display text-xl font-bold tabular">{habHechos}<span className="text-sm font-normal text-muted-foreground">/{TOTAL_HABITOS}</span></p>
-            </div>
-            <div>
-              <p className="text-[0.65rem] uppercase tracking-wide text-muted-foreground">Peso</p>
-              <p className="font-display text-xl font-bold tabular text-weight">{d.peso != null ? fmtPeso(d.peso) : "—"}</p>
-            </div>
-            <div>
-              <p className="text-[0.65rem] uppercase tracking-wide text-muted-foreground">Balance</p>
-              <p className={cn("font-display text-xl font-bold tabular", energiaSel.balance > 0 ? "text-energy" : "text-weight")}>
-                {energiaSel.sinRegistro && !energiaSel.imputado ? "—" : fmtSigno(energiaSel.balance, 0)}
-              </p>
-            </div>
+        <Card className="overflow-hidden p-0">
+          <div className="grid grid-cols-3 divide-x divide-border border-b border-border bg-secondary/25">
+            <DiaMetric label="Hábitos" value={`${habHechos}`} unit={`/${TOTAL_HABITOS}`} />
+            <DiaMetric label="Peso" value={d.peso != null ? fmtPeso(d.peso) : "—"} tone="weight" />
+            <DiaMetric label="Balance" value={energiaSel.sinRegistro || energiaSel.ingestaIncompleta ? "—" : fmtSigno(energiaSel.balance, 0)} tone={energiaSel.balance > 0 ? "energy" : "weight"} />
           </div>
+          <div className="flex flex-col gap-3 p-5">
           {d.comidas && d.comidas.length > 0 && (
             <div className="border-t border-border pt-3 text-sm text-muted-foreground">
               {d.comidas.length} comida{d.comidas.length > 1 ? "s" : ""} · {fmtKcal(d.kcalConsumidas ?? 0)} kcal
@@ -140,8 +133,13 @@ export default function CalendarioPage() {
             ))}
             {energiaSel.imputado && <Chip tone="warning">día imputado</Chip>}
           </div>
+          </div>
         </Card>
       </section>
     </div>
   );
+}
+
+function DiaMetric({ label, value, unit, tone }: { label: string; value: string; unit?: string; tone?: "weight" | "energy" }) {
+  return <div className="min-w-0 px-3 py-4 text-center sm:px-5"><p className="truncate text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p><p className={cn("mt-1 font-display text-xl font-bold tabular", tone === "weight" ? "text-weight" : tone === "energy" ? "text-energy" : "text-foreground")}>{value}{unit && <span className="text-xs font-medium text-muted-foreground">{unit}</span>}</p></div>;
 }
