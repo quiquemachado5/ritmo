@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./env";
 
 /** Rutas accesibles sin sesión. */
-const PUBLIC_PATHS = ["/login", "/registro", "/auth", "/bienvenida"];
+const PUBLIC_PATHS = ["/login", "/registro", "/auth", "/bienvenida", "/recuperar", "/recuperar-contrasena"];
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
