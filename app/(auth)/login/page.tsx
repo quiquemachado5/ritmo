@@ -11,32 +11,26 @@ import { createClient } from "@/lib/supabase/client";
 import { SocialLogin } from "@/components/social-login";
 import { loginRateLimiter, validateEmail } from "@/lib/validation";
 
-const shakeKeyframes = `
+const animations = `
   @keyframes shake {
     0%, 100% { transform: translateX(0); }
-    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
-    20%, 40%, 60%, 80% { transform: translateX(4px); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
+    20%, 40%, 60%, 80% { transform: translateX(3px); }
   }
   
-  @keyframes revealText {
-    0% { opacity: 0; clip-path: inset(0 100% 0 0); }
-    100% { opacity: 1; clip-path: inset(0 0 0 0); }
+  @keyframes slideInLeft {
+    0% { opacity: 0; transform: translateX(-16px); }
+    100% { opacity: 1; transform: translateX(0); }
   }
   
-  @keyframes slideUp {
-    0% { opacity: 0; transform: translateY(8px); }
-    100% { opacity: 1; transform: translateY(0); }
+  @keyframes slideInRight {
+    0% { opacity: 0; transform: translateX(16px); }
+    100% { opacity: 1; transform: translateX(0); }
   }
   
-  @keyframes formFadeIn {
-    0% { opacity: 0; transform: scale(0.98); }
-    100% { opacity: 1; transform: scale(1); }
-  }
-  
-  @keyframes successPulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
+  @keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
   }
 `;
 
@@ -77,13 +71,13 @@ function LoginForm() {
 
     const emailValidation = validateEmail(email);
     if (!emailValidation.valid) {
-      setError("Ingresa un correo válido.");
+      setError("Correo inválido");
       setShaking(true);
       setTimeout(() => setShaking(false), 500);
       return;
     }
     if (!password) {
-      setError("Ingresa tu contraseña.");
+      setError("Ingresa contraseña");
       setShaking(true);
       setTimeout(() => setShaking(false), 500);
       return;
@@ -92,7 +86,7 @@ function LoginForm() {
     const rateLimitCheck = loginRateLimiter.check(email);
     if (!rateLimitCheck.allowed) {
       const minutes = Math.ceil(rateLimitCheck.resetIn / 1000 / 60);
-      setError(`Demasiados intentos. Intenta en ${minutes} minutos.`);
+      setError(`Intenta en ${minutes}m`);
       setShaking(true);
       setTimeout(() => setShaking(false), 500);
       return;
@@ -101,7 +95,6 @@ function LoginForm() {
     setCargando(true);
     try {
       const supabase = createClient();
-
       const { error: loginError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -119,19 +112,16 @@ function LoginForm() {
       router.refresh();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-
       if (msg.includes("Invalid login") || msg.includes("Invalid credentials"))
-        setError("Correo o contraseña incorrectos.");
+        setError("Correo o contraseña incorrectos");
       else if (msg.includes("Email not confirmed"))
-        setError("Tu correo aún no está confirmado.");
-      else if (msg.includes("400") || msg.includes("unauthorized"))
-        setError("Error de conexión.");
+        setError("Confirma tu correo");
       else if (msg.includes("User not found"))
-        setError("No existe una cuenta con ese correo.");
+        setError("Cuenta no encontrada");
       else if (msg.includes("Failed to fetch"))
-        setError("Error de conexión. Verifica tu internet.");
+        setError("Sin conexión");
       else
-        setError(msg || "No se pudo iniciar sesión.");
+        setError("Error al iniciar sesión");
       
       setShaking(true);
       setTimeout(() => setShaking(false), 500);
@@ -141,188 +131,175 @@ function LoginForm() {
 
   return (
     <>
-      <style>{shakeKeyframes}</style>
-      <div className="w-full max-w-md" style={{
-        animation: "formFadeIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards"
-      }}>
-        {/* Card Principal */}
-        <div className="bg-background border border-border/50 rounded-2xl shadow-lg overflow-hidden"
-          style={{
-            transform: shaking ? "translateX(-4px)" : "translateX(0)",
-            animation: shaking ? "shake 0.5s cubic-bezier(0.36, 0, 0.66, -0.56)" : "none"
-          }}
+      <style>{animations}</style>
+      
+      {/* Layout Horizontal */}
+      <div className="w-full max-w-5xl mx-auto">
+        <div 
+          className="grid grid-cols-2 gap-8 items-center bg-background rounded-2xl border border-border/50 shadow-xl overflow-hidden"
+          style={{ animation: "fadeIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)" }}
         >
-          {/* Header Gradient */}
-          <div className="h-1 bg-gradient-to-r from-primary via-primary/80 to-primary/60" />
-
-          <div className="p-8 space-y-6">
-            {/* Header con reveal text */}
-            <div className="space-y-2 overflow-hidden">
-              <h1 className="font-display text-3xl font-bold text-foreground" style={{
-                animation: "revealText 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards"
-              }}>
-                Bienvenido
-              </h1>
-              <p className="text-sm text-muted-foreground leading-relaxed" style={{
-                animation: "revealText 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s forwards",
-                opacity: 0
-              }}>
-                Inicia sesión para continuar.
+          {/* Left: Branding */}
+          <div 
+            className="p-8 bg-gradient-to-br from-primary/5 to-primary/10 flex flex-col justify-center"
+            style={{ animation: "slideInLeft 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)" }}
+          >
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <h2 className="text-3xl font-display font-bold text-foreground">RITMO</h2>
+                <p className="text-sm text-muted-foreground font-medium">Constancia sobre perfección</p>
+              </div>
+              
+              <p className="text-sm text-muted-foreground leading-relaxed mt-6">
+                Construye tu ritmo de salud con datos precisos y análisis inteligentes.
               </p>
-            </div>
-
-            {/* Error Alert con Toast Animation */}
-            {error && (
-              <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive overflow-hidden"
-                style={{
-                  animation: "slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)"
-                }}
-              >
-                <Shield className="mt-0.5 size-4 shrink-0 flex-shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            {/* Login Form */}
-            <form onSubmit={entrar} className="space-y-4">
-              {/* Email Input */}
-              <div className="space-y-2" style={{
-                animation: "slideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s both"
-              }}>
-                <Label htmlFor="email" className="text-sm font-semibold text-foreground">
-                  Correo electrónico
-                </Label>
-                <div className="relative group">
-                  <Mail className={`absolute left-3 top-3 size-5 transition-all duration-300 ${
-                    focusedField === "email" ? "text-primary scale-110" : "text-muted-foreground"
-                  } ${validatedEmail && !focusedField ? "text-green-500" : ""}`} />
-                  <Input
-                    id="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    onChange={(e) => handleEmailChange(e.target.value)}
-                    onFocus={() => setFocusedField("email")}
-                    onBlur={() => setFocusedField(null)}
-                    placeholder="tu@correo.com"
-                    disabled={cargando}
-                    className="pl-10 h-11 rounded-xl border-2 border-input transition-all duration-300 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:shadow-lg"
-                  />
-                  {validatedEmail && !focusedField && (
-                    <Check className="absolute right-3 top-3 size-5 text-green-500" style={{
-                      animation: "successPulse 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)"
-                    }} />
-                  )}
+              
+              <div className="pt-4 space-y-2 text-xs text-muted-foreground/70">
+                <div className="flex gap-2">
+                  <span className="text-primary">✓</span>
+                  <span>Datos cifrados en Supabase</span>
+                </div>
+                <div className="flex gap-2">
+                  <span className="text-primary">✓</span>
+                  <span>Sin compartir información</span>
+                </div>
+                <div className="flex gap-2">
+                  <span className="text-primary">✓</span>
+                  <span>Análisis predictivo</span>
                 </div>
               </div>
-
-              {/* Password Input */}
-              <div className="space-y-2" style={{
-                animation: "slideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both"
-              }}>
-                <Label htmlFor="password" className="text-sm font-semibold text-foreground">
-                  Contraseña
-                </Label>
-                <div className="relative group">
-                  <Lock className={`absolute left-3 top-3 size-5 transition-all duration-300 ${
-                    focusedField === "password" ? "text-primary scale-110" : "text-muted-foreground"
-                  }`} />
-                  <Input
-                    id="password"
-                    type="password"
-                    autoComplete="current-password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    onFocus={() => setFocusedField("password")}
-                    onBlur={() => setFocusedField(null)}
-                    placeholder="••••••••"
-                    disabled={cargando}
-                    className="pl-10 h-11 rounded-xl border-2 border-input transition-all duration-300 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:shadow-lg"
-                  />
-                </div>
-              </div>
-
-              {/* Remember Me & Forgot Password */}
-              <div className="flex items-center justify-between pt-1" style={{
-                animation: "slideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.25s both"
-              }}>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="recordarme"
-                    checked={recordarme}
-                    onChange={(e) => setRecordarme(e.target.checked)}
-                    disabled={cargando}
-                    className="rounded border-input cursor-pointer accent-primary size-4 transition-all hover:scale-110"
-                  />
-                  <Label htmlFor="recordarme" className="text-xs font-normal text-muted-foreground cursor-pointer">
-                    Recuérdame
-                  </Label>
-                </div>
-                <Link 
-                  href="/recuperar" 
-                  className="text-xs font-medium text-primary hover:text-primary/80 transition-all hover:scale-105"
-                >
-                  ¿Olvidaste contraseña?
-                </Link>
-              </div>
-
-              {/* Submit Button con Morph Animation */}
-              <Button
-                type="submit"
-                disabled={cargando}
-                className="w-full h-11 mt-2 font-semibold rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-300 active:scale-95 disabled:opacity-60"
-                style={{
-                  animation: "slideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both"
-                }}
-              >
-                {cargando ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin mr-2" />
-                    Iniciando...
-                  </>
-                ) : (
-                  <>
-                    Iniciar sesión
-                    <ArrowRight className="size-4 ml-2 transition-transform group-hover:translate-x-1" />
-                  </>
-                )}
-              </Button>
-            </form>
-
-            {/* Social Login */}
-            <div style={{
-              animation: "slideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.35s both"
-            }}>
-              <SocialLogin />
             </div>
-
-            {/* Sign Up Link */}
-            <div className="pt-2 text-center border-t border-border/50" style={{
-              animation: "slideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s both"
-            }}>
-              <p className="text-sm text-muted-foreground">
-                ¿No tienes cuenta?{" "}
-                <Link href="/registro" className="font-semibold text-primary hover:text-primary/80 transition-colors hover:scale-105 inline-block origin-center">
-                  Crea una
-                </Link>
-              </p>
-            </div>
-
-            {/* Footer */}
-            <p className="text-center text-[0.65rem] text-muted-foreground/60">
-              Tus datos se guardan cifrados en Supabase.
-            </p>
           </div>
-        </div>
 
-        {/* Decorative Element */}
-        <div className="mt-6 text-center text-xs text-muted-foreground/40" style={{
-          animation: "slideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.45s both"
-        }}>
-          <p>Constancia sobre perfección.</p>
+          {/* Right: Form */}
+          <div 
+            className="p-8"
+            style={{ animation: "slideInRight 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)" }}
+          >
+            <div className="space-y-4">
+              {/* Header */}
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">Inicia sesión</h1>
+              </div>
+
+              {/* Error */}
+              {error && (
+                <div 
+                  className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive"
+                  style={{ animation: "slideInRight 0.3s cubic-bezier(0.36, 0, 0.66, -0.56)" }}
+                >
+                  <Shield className="size-3 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              {/* Form */}
+              <form onSubmit={entrar} className="space-y-3">
+                {/* Email */}
+                <div>
+                  <Label htmlFor="email" className="text-xs font-semibold">Email</Label>
+                  <div className="relative mt-1">
+                    <Mail className={`absolute left-2.5 top-2.5 size-4 transition-colors ${
+                      focusedField === "email" ? "text-primary" : "text-muted-foreground"
+                    } ${validatedEmail && !focusedField ? "text-green-500" : ""}`} />
+                    <Input
+                      id="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      value={email}
+                      onChange={(e) => handleEmailChange(e.target.value)}
+                      onFocus={() => setFocusedField("email")}
+                      onBlur={() => setFocusedField(null)}
+                      placeholder="tu@correo.com"
+                      disabled={cargando}
+                      className="h-9 pl-9 text-sm rounded-lg border-2 border-input transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    />
+                    {validatedEmail && !focusedField && (
+                      <Check className="absolute right-2.5 top-2.5 size-4 text-green-500" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Password */}
+                <div>
+                  <Label htmlFor="password" className="text-xs font-semibold">Contraseña</Label>
+                  <div className="relative mt-1">
+                    <Lock className={`absolute left-2.5 top-2.5 size-4 transition-colors ${
+                      focusedField === "password" ? "text-primary" : "text-muted-foreground"
+                    }`} />
+                    <Input
+                      id="password"
+                      type="password"
+                      autoComplete="current-password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      onFocus={() => setFocusedField("password")}
+                      onBlur={() => setFocusedField(null)}
+                      placeholder="••••••••"
+                      disabled={cargando}
+                      className="h-9 pl-9 text-sm rounded-lg border-2 border-input transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                </div>
+
+                {/* Remember & Forgot */}
+                <div className="flex items-center justify-between pt-1">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="recordarme"
+                      checked={recordarme}
+                      onChange={(e) => setRecordarme(e.target.checked)}
+                      disabled={cargando}
+                      className="size-3.5 rounded cursor-pointer accent-primary"
+                    />
+                    <Label htmlFor="recordarme" className="text-xs cursor-pointer">Recuérdame</Label>
+                  </div>
+                  <Link href="/recuperar" className="text-xs font-medium text-primary hover:underline">
+                    ¿Olvidaste?
+                  </Link>
+                </div>
+
+                {/* Submit */}
+                <Button
+                  type="submit"
+                  disabled={cargando}
+                  className="w-full h-9 text-sm font-semibold rounded-lg transition-all active:scale-95"
+                  style={{
+                    transform: shaking ? "translateX(-4px)" : "translateX(0)",
+                    animation: shaking ? "shake 0.4s cubic-bezier(0.36, 0, 0.66, -0.56)" : "none"
+                  }}
+                >
+                  {cargando ? (
+                    <>
+                      <Loader2 className="size-3.5 animate-spin mr-1.5" />
+                      Iniciando...
+                    </>
+                  ) : (
+                    <>
+                      Iniciar
+                      <ArrowRight className="size-3.5 ml-1.5" />
+                    </>
+                  )}
+                </Button>
+              </form>
+
+              {/* Social */}
+              <div className="!mt-4">
+                <SocialLogin />
+              </div>
+
+              {/* Sign Up */}
+              <p className="text-center text-xs text-muted-foreground pt-2 border-t border-border/30">
+                ¿No tienes cuenta?{" "}
+                <Link href="/registro" className="font-semibold text-primary hover:underline">
+                  Crear una
+                </Link>
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </>
