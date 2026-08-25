@@ -201,6 +201,20 @@ describe("Energía de un día", () => {
     igual(mixto.consumidasEstimadas, false);
     igual(mixto.quemadasEstimadas, true);
     casi(mixto.quemadas, 2720);
+
+    const parcial = M.energiaDia({
+      kcalConsumidas: 1100,
+      habitos: {},
+      comidas: [{ tipo: "desayuno" }, { tipo: "comida" }],
+    }, { tdeeBase: 2400 });
+    igual(parcial.ingestaIncompleta, true);
+
+    const estadoParcial = estado({
+      perfil: {},
+      dias: { "2026-08-25": { fecha: "2026-08-25", habitos: {}, kcalConsumidas: 1100, comidas: [{ tipo: "desayuno" }, { tipo: "comida" }] } },
+      composicion: [],
+    });
+    igual(A.diasEvaluables(estadoParcial, "2026-08-25", "2026-08-25").length, 0);
   });
   it("detección de días sin registro", () => {
     igual(M.energiaDia({ habitos: {} }).sinRegistro, true);

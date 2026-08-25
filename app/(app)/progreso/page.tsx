@@ -255,7 +255,7 @@ export default function ProgresoPage() {
               <h2 id="balance" className="font-display text-xl font-bold">Balance calórico</h2>
               <p className="mt-1 text-sm text-muted-foreground">El contexto energético que utiliza el modelo; los días imputados siguen visibles.</p>
             </div>
-            <Card className="p-4 sm:p-6"><BalanceChart data={datosBalance} /><p className="mt-3 text-xs text-muted-foreground">Verde = déficit · terracota = superávit · translúcido = día imputado.</p></Card>
+            <Card className="p-4 sm:p-6"><BalanceChart data={datosBalance} /><p className="mt-3 text-xs text-muted-foreground">Verde = déficit · terracota = superávit · translúcido = día imputado. Si falta la cena, el día no se usa para calcular el balance.</p></Card>
           </section>
 
           {(composicion || compSerie.length > 1 || ultimaMedicion) && (

@@ -11,7 +11,7 @@
    ========================================================================= */
 
 import { TOTAL_HABITOS } from "./config";
-import type { EnergiaDia, Habitos, Pesaje, PesoIntervalo, Sexo } from "./types";
+import type { EnergiaDia, Habitos, PesoIntervalo, Sexo } from "./types";
 
 /** Equivalente energético de 1 kg de tejido adiposo (regla de Wishnofsky). */
 export const KCAL_POR_KG = 7700;
@@ -545,7 +545,7 @@ export interface OpcionesEnergia {
 
 /** Energía resuelta de un día: valores explícitos si existen; si no, estimación. */
 export function energiaDia(
-  dia: { fecha?: string; habitos?: Habitos; peso?: number; kcalConsumidas?: number; kcalQuemadas?: number },
+  dia: { fecha?: string; habitos?: Habitos; peso?: number; kcalConsumidas?: number; kcalQuemadas?: number; comidas?: Array<{ tipo?: string }> },
   opciones: OpcionesEnergia = {},
 ): EnergiaDia {
   const { kcalObjetivo = 1350, tdeeBase = 2450, imputacion = null } = opciones;
@@ -553,6 +553,9 @@ export function energiaDia(
 
   const inExplicito = num(d.kcalConsumidas);
   const outExplicito = num(d.kcalQuemadas);
+  // Las kcal se derivan automáticamente de las comidas guardadas. Si falta la
+  // cena, esa suma es solo un mínimo: usarla como total inventaría un déficit.
+  const ingestaIncompleta = Boolean(d.comidas?.length) && !d.comidas!.some((comida) => comida.tipo === "cena");
 
   const sinRegistro =
     inExplicito === null &&
@@ -572,6 +575,7 @@ export function energiaDia(
       estimado: true,
       consumidasEstimadas: true,
       quemadasEstimadas: true,
+      ingestaIncompleta: false,
       sinRegistro: true,
       imputado: true,
     };
@@ -598,6 +602,7 @@ export function energiaDia(
     estimado: inn.estimado || out.estimado,
     consumidasEstimadas: inn.estimado,
     quemadasEstimadas: out.estimado,
+    ingestaIncompleta,
     sinRegistro,
     imputado: false,
   };

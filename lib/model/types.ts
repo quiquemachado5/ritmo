@@ -96,6 +96,8 @@ export interface EnergiaDia {
   estimado: boolean;
   consumidasEstimadas: boolean;
   quemadasEstimadas: boolean;
+  /** Hay comidas registradas, pero falta la cena: no representa el día completo. */
+  ingestaIncompleta: boolean;
   sinRegistro: boolean;
   imputado: boolean;
 }
