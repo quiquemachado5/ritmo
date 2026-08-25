@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /auth/
+Disallow: /_next/
+Disallow: /private/
+
+Sitemap: /sitemap.xml
+
+# Crawl delay to respect server resources
+Crawl-delay: 1
