@@ -103,11 +103,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-dvh bg-background">
       {/* Sidebar — escritorio */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-border bg-card px-4 py-5 md:flex">
-        <div className="border-b border-border pb-4">
+        <div className="flex items-center justify-between gap-3 border-b border-border pb-4">
           <Link href="/" aria-label="RITMO — inicio" className="inline-flex">
             <RitmoLogo />
           </Link>
-          <UserCount className="mt-3" />
+          <SyncDot />
         </div>
         <Button
           onClick={() => abrir()}
@@ -135,7 +135,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
         <div className="mt-2 flex flex-col gap-3 border-t border-border pt-4">
           <div className="flex items-center justify-between">
-            <SyncDot />
+            <UserCount />
             <div className="flex items-center gap-1">
               <ThemeToggle />
               <UserMenu />
