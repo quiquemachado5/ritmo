@@ -23,6 +23,18 @@ const ORDEN = [
   { id: "snack", label: "Snacks", wash: "bg-secondary", ink: "text-foreground" },
 ] as const satisfies readonly { id: TipoComida; label: string; wash: string; ink: string }[];
 
+function emojiComida(texto: string): string {
+  const nombre = texto.toLocaleLowerCase("es-ES");
+  if (/\bpan|tostada|bocadillo/.test(nombre)) return "🍞";
+  if (/cafe|café|latte/.test(nombre)) return "☕";
+  if (/pollo|pavo|carne|ternera|hamburguesa/.test(nombre)) return "🥩";
+  if (/pescado|merluza|salmon|salmón|atún/.test(nombre)) return "🐟";
+  if (/ensalada|verdura|gazpacho/.test(nombre)) return "🥗";
+  if (/pasta|arroz/.test(nombre)) return "🍝";
+  if (/fruta|manzana|platano|plátano/.test(nombre)) return "🍎";
+  return "🍽️";
+}
+
 export default function NutricionPage() {
   const { estado, cargando, dia, borrarComida, registrarComida } = useRitmo();
   const { abrir, editarComidaEn } = useQuickLog();
@@ -119,14 +131,19 @@ export default function NutricionPage() {
           {ORDEN.map((tipo) => {
             const items = comidas.filter((c) => c.tipo === tipo.id);
             if (items.length === 0) return null;
+            const kcalTipo = items.reduce((a, c) => a + c.kcal, 0);
             return (
               <section key={tipo.id}>
                 <Card className="overflow-hidden p-0">
+                  <div className={`flex items-center justify-between gap-3 border-b border-border px-4 py-2.5 sm:px-5 ${tipo.wash}`}>
+                    <h2 className="font-display text-base font-bold">{tipo.label}</h2>
+                    <span className={`font-display text-base font-bold tabular ${tipo.ink}`}>{fmtKcal(kcalTipo)}<span className="ml-0.5 text-xs font-normal text-muted-foreground">kcal</span></span>
+                  </div>
                   <div className="divide-y divide-border">
                   {items.map((c) => (
                     <div key={c.id} className="group flex flex-col gap-3 px-4 py-3.5 transition-colors hover:bg-secondary/35 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                       <div className="flex min-w-0 items-start gap-3">
-                        <span className={`mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl ${tipo.wash} text-xs font-bold ${tipo.ink}`}>{tipo.label.slice(0, 1)}</span>
+                        <span className={`mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl text-base ${tipo.wash}`} aria-hidden="true">{emojiComida(c.texto)}</span>
                         <div className="min-w-0">
                         <p className="truncate text-sm font-medium">{c.texto}</p>
                         <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground tabular">
