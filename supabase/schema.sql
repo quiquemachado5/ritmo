@@ -69,6 +69,9 @@ comment on table public.dias is
   'Registro diario: hábitos, peso, energía, comidas, agua y pasos. Un día por usuario y fecha.';
 
 -- Balance calórico neto calculado en la base de datos.
+-- Dropear vista primero porque depende de esta columna.
+drop view if exists public.resumen_mensual;
+
 alter table public.dias drop column if exists balance_kcal;
 alter table public.dias
   add column balance_kcal integer
