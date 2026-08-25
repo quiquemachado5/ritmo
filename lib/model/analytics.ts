@@ -17,6 +17,7 @@ import type {
   Pesaje,
   PesoIntervalo,
   ReglaImputacion,
+  TipoComida,
 } from "./types";
 
 /** Días como array ordenado por fecha ascendente. */
@@ -686,4 +687,81 @@ export function recordsPersonales(estado: Estado): RecordsPersonales {
     totalComidas: meses.reduce((a, m) => a + m.comidasRegistradas, 0),
     totalDiasRegistrados: meses.reduce((a, m) => a + m.diasRegistrados, 0),
   };
+}
+
+/* ---------------------------------------------------------------- BIBLIOTECA */
+
+export interface ComidaGuardada {
+  clave: string;   // "tipo:texto normalizado" — identidad estable
+  texto: string;   // etiqueta a mostrar (la más reciente)
+  tipo: TipoComida;
+  kcal: number;
+  proteinas: number;
+  carbohidratos: number;
+  grasas: number;
+  estimado?: boolean;
+  veces: number;
+  ultima: string;  // fecha del último uso
+}
+
+export type OrdenBiblioteca = "kcal" | "alfabetico" | "frecuencia";
+
+/**
+ * Biblioteca de comidas del usuario, agrupada por tipo. Se deriva del histórico:
+ * cada comida única (por tipo + texto normalizado) se guarda una vez, con sus
+ * macros más recientes, cuántas veces se ha usado y la última fecha. Es la
+ * "base de datos" personal para reutilizar cualquier día, siempre en sincronía
+ * con lo que realmente se registra.
+ */
+export function bibliotecaComidas(
+  estado: Estado,
+  orden: OrdenBiblioteca = "frecuencia",
+): Record<TipoComida, ComidaGuardada[]> {
+  const mapa = new Map<string, ComidaGuardada>();
+
+  for (const d of diasOrdenados(estado)) {
+    for (const c of d.comidas || []) {
+      const norm = (c.texto || "").trim().toLowerCase().replace(/\s+/g, " ");
+      if (!norm) continue;
+      const clave = `${c.tipo}:${norm}`;
+      const prev = mapa.get(clave);
+      if (prev) {
+        prev.veces += 1;
+        if (d.fecha >= prev.ultima) {
+          // Los valores más recientes mandan (pudiste corregir la comida).
+          prev.ultima = d.fecha;
+          prev.texto = c.texto;
+          prev.kcal = c.kcal;
+          prev.proteinas = c.proteinas;
+          prev.carbohidratos = c.carbohidratos;
+          prev.grasas = c.grasas;
+          prev.estimado = c.estimado;
+        }
+      } else {
+        mapa.set(clave, {
+          clave,
+          texto: c.texto,
+          tipo: c.tipo,
+          kcal: c.kcal,
+          proteinas: c.proteinas,
+          carbohidratos: c.carbohidratos,
+          grasas: c.grasas,
+          estimado: c.estimado,
+          veces: 1,
+          ultima: d.fecha,
+        });
+      }
+    }
+  }
+
+  const cmp: Record<OrdenBiblioteca, (a: ComidaGuardada, b: ComidaGuardada) => number> = {
+    kcal: (a, b) => b.kcal - a.kcal,
+    alfabetico: (a, b) => a.texto.localeCompare(b.texto, "es", { sensitivity: "base" }),
+    frecuencia: (a, b) => (b.veces - a.veces) || (a.ultima < b.ultima ? 1 : -1),
+  };
+
+  const salida: Record<string, ComidaGuardada[]> = { desayuno: [], comida: [], cena: [], snack: [] };
+  for (const item of mapa.values()) salida[item.tipo].push(item);
+  for (const k of Object.keys(salida)) salida[k].sort(cmp[orden]);
+  return salida as Record<TipoComida, ComidaGuardada[]>;
 }

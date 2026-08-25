@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Ring, MacroBar, SectionLabel, Chip, EmptyState } from "@/components/app/primitives";
+import { MealLibrary } from "@/components/app/meal-library";
 import { fmtKcal, fmtFechaLarga, capitalizar } from "@/lib/format";
 import type { TipoComida } from "@/lib/model/types";
 
@@ -146,6 +147,9 @@ export default function NutricionPage() {
           </Button>
         </div>
       )}
+
+      {/* Biblioteca personal de comidas: reutiliza cualquier plato en este día */}
+      <MealLibrary fecha={fecha} />
     </div>
   );
 }
