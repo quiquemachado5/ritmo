@@ -7,6 +7,7 @@ import type { Comida, Composicion, Dia, Estado, Perfil } from "@/lib/model/types
 import { createClient } from "@/lib/supabase/client";
 import { CloudAdapter } from "./cloud";
 import type { Adapter, Modo, StoreData } from "./types";
+import { fusionarImport } from "./merge";
 
 function clonar<T>(v: T): T {
   return typeof structuredClone === "function" ? structuredClone(v) : JSON.parse(JSON.stringify(v));
@@ -317,12 +318,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const importar = React.useCallback(
     async (datos: Partial<StoreData>) => {
       const prev = dataRef.current;
-      const dias = { ...prev.dias, ...(datos.dias || {}) };
-      const porFecha = new Map(prev.composicion.map((m) => [m.fecha, m] as const));
-      for (const m of datos.composicion || []) porFecha.set(m.fecha, { ...(porFecha.get(m.fecha) || {}), ...m });
-      const composicion = [...porFecha.values()].sort((a, b) => (a.fecha < b.fecha ? -1 : 1));
-      const perfil = { ...prev.perfil, ...(datos.perfil || {}) };
-      const next: StoreData = { perfil, dias, composicion };
+      const next = fusionarImport(prev, datos);
+      const { dias } = next;
       aplicar(next);
       setSincronizando(true);
       try {
