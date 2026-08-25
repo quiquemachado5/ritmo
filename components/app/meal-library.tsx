@@ -75,11 +75,11 @@ export function MealLibrary({ fecha }: { fecha: string }) {
     [porCat],
   );
 
-  const itemsCat = porCat[cat] ?? [];
   const filtradas = React.useMemo(() => {
+    const itemsCat = porCat[cat] ?? [];
     const needle = q.trim().toLowerCase();
     return needle ? itemsCat.filter((c) => c.texto.toLowerCase().includes(needle)) : itemsCat;
-  }, [itemsCat, q]);
+  }, [porCat, cat, q]);
 
   async function usar(item: ComidaGuardada) {
     const comida: Comida = {
@@ -103,7 +103,7 @@ export function MealLibrary({ fecha }: { fecha: string }) {
         Mis comidas
       </SectionLabel>
 
-      <div className="flex flex-col gap-4 card-ritmo p-4 sm:p-5">
+      <div className="flex flex-col gap-4 overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
         {/* Categorías */}
         <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
           {CATS.map((c) => {
@@ -181,10 +181,10 @@ export function MealLibrary({ fecha }: { fecha: string }) {
             {q ? "Nada coincide con tu búsqueda." : "Aún no hay comidas en esta categoría."}
           </p>
         ) : (
-          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <ul className="overflow-hidden rounded-xl border border-border bg-background divide-y divide-border">
             {filtradas.map((item) =>
               editando === item.clave ? (
-                <li key={item.clave} className="sm:col-span-2">
+                <li key={item.clave}>
                   <EditorEntrada
                     item={item}
                     onCancel={() => setEditando(null)}
@@ -245,8 +245,8 @@ function TarjetaComida({
   return (
     <div
       className={cn(
-        "group flex items-center gap-2 rounded-xl border bg-card px-2.5 py-2 transition-all",
-        favorita ? "border-habit/40 bg-habit/[0.04]" : "border-border hover:border-primary/40",
+        "group flex items-center gap-2 px-3 py-3 transition-colors sm:px-4",
+        favorita ? "bg-habit/[0.06]" : "hover:bg-secondary/40",
       )}
     >
       {/* Región principal: añadir al día */}
@@ -267,7 +267,7 @@ function TarjetaComida({
           {fmtKcal(item.kcal)}
           <span className="ml-0.5 text-[0.65rem] font-normal text-muted-foreground">kcal</span>
         </span>
-        <span className="grid size-8 shrink-0 place-items-center rounded-full bg-secondary text-muted-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-secondary text-muted-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
           <Plus className="size-4" />
         </span>
       </button>

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AlertTriangle, Beef, ChevronLeft, ChevronRight, Pencil, Plus, RotateCcw, Sparkles, Trash2 } from "lucide-react";
+import { AlertTriangle, Apple, Beef, ChevronLeft, ChevronRight, Coffee, Moon, Pencil, Plus, RotateCcw, Sparkles, Trash2, UtensilsCrossed } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
 import { macrosObjetivo } from "@/lib/model/metrics";
@@ -10,18 +10,18 @@ import { hoy, sumarDias, diasEntre } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Ring, MacroBar, SectionLabel, Chip, EmptyState } from "@/components/app/primitives";
+import { Ring, MacroBar, Chip, EmptyState } from "@/components/app/primitives";
 import { MealLibrary } from "@/components/app/meal-library";
 import { fmtKcal, fmtFechaLarga, capitalizar } from "@/lib/format";
 import { uid } from "@/lib/utils";
 import type { TipoComida } from "@/lib/model/types";
 
-const ORDEN: { id: TipoComida; label: string }[] = [
-  { id: "desayuno", label: "Desayuno" },
-  { id: "comida", label: "Comida" },
-  { id: "cena", label: "Cena" },
-  { id: "snack", label: "Snacks" },
-];
+const ORDEN = [
+  { id: "desayuno", label: "Desayuno", icon: Coffee, wash: "bg-habit-wash", ink: "text-habit" },
+  { id: "comida", label: "Comida", icon: UtensilsCrossed, wash: "bg-energy-wash", ink: "text-energy" },
+  { id: "cena", label: "Cena", icon: Moon, wash: "bg-weight-wash", ink: "text-weight" },
+  { id: "snack", label: "Snacks", icon: Apple, wash: "bg-secondary", ink: "text-foreground" },
+] as const satisfies readonly { id: TipoComida; label: string; icon: typeof Coffee; wash: string; ink: string }[];
 
 export default function NutricionPage() {
   const { estado, cargando, dia, borrarComida, registrarComida } = useRitmo();
@@ -120,16 +120,19 @@ export default function NutricionPage() {
             const items = comidas.filter((c) => c.tipo === tipo.id);
             if (items.length === 0) return null;
             const kcalTipo = items.reduce((a, c) => a + c.kcal, 0);
+            const Icono = tipo.icon;
             return (
               <section key={tipo.id}>
-                <SectionLabel action={<span className="rounded-full bg-energy-wash px-2.5 py-1 text-xs font-semibold tabular text-energy-ink">{fmtKcal(kcalTipo)} kcal</span>}>
-                  {tipo.label}
-                </SectionLabel>
-                <Card className="divide-y divide-border overflow-hidden p-0">
+                <Card className="overflow-hidden p-0">
+                  <div className={`flex items-center justify-between gap-3 border-b border-border px-4 py-3.5 sm:px-5 ${tipo.wash}`}>
+                    <div className="flex items-center gap-3"><span className={`grid size-9 place-items-center rounded-xl bg-card/80 shadow-sm ${tipo.ink}`}><Icono className="size-4" /></span><div><h2 className="font-display text-lg font-bold">{tipo.label}</h2><p className="text-xs text-muted-foreground">{items.length} {items.length === 1 ? "registro" : "registros"}</p></div></div>
+                    <span className={`font-display text-lg font-bold tabular ${tipo.ink}`}>{fmtKcal(kcalTipo)}<span className="ml-0.5 text-xs font-normal text-muted-foreground">kcal</span></span>
+                  </div>
+                  <div className="divide-y divide-border">
                   {items.map((c) => (
-                    <div key={c.id} className="flex flex-col gap-3 px-4 py-4 transition-colors hover:bg-secondary/35 sm:flex-row sm:items-center sm:justify-between">
+                    <div key={c.id} className="group flex flex-col gap-3 px-4 py-4 transition-colors hover:bg-secondary/35 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                       <div className="flex min-w-0 items-start gap-3">
-                        <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-full bg-energy-wash text-xs font-bold text-energy">{tipo.label.slice(0, 1)}</span>
+                        <span className={`mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl ${tipo.wash} text-xs font-bold ${tipo.ink}`}>{tipo.label.slice(0, 1)}</span>
                         <div className="min-w-0">
                         <p className="truncate text-sm font-medium">{c.texto}</p>
                         <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground tabular">
@@ -167,6 +170,7 @@ export default function NutricionPage() {
                       </div>
                     </div>
                   ))}
+                  </div>
                 </Card>
               </section>
             );

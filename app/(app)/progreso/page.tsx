@@ -290,21 +290,29 @@ export default function ProgresoPage() {
 
           <section aria-labelledby="historial">
             <SectionLabel action={<span className="text-xs text-muted-foreground tabular">{historial.length} registros</span>}><span id="historial">Historial de mediciones</span></SectionLabel>
-            <Card className="max-h-[30rem] divide-y divide-border overflow-y-auto p-0">
-              {[...historial].reverse().map((registro) => (
-                <div key={registro.fecha} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-4 py-3 sm:px-5">
-                  <div className="min-w-28">
-                    <p className="text-sm font-semibold tabular">{fmtFechaCorta(registro.fecha)}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">{relativo(registro.fecha, hoyISO)} · dato real</p>
+            <Card className="overflow-hidden p-0">
+              <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border bg-secondary/35 px-5 py-4 sm:px-6">
+                <div><p className="text-sm font-semibold">Registro cronológico</p><p className="mt-0.5 text-xs text-muted-foreground">Cada punto es un pesaje real guardado por ti.</p></div>
+                <span className="rounded-full bg-card px-3 py-1.5 text-xs font-semibold tabular text-weight shadow-sm">{historial.length} mediciones reales</span>
+              </div>
+              <div className="max-h-[30rem] overflow-y-auto px-4 py-1 sm:px-6">
+              {[...historial].reverse().map((registro, index, registros) => (
+                <div key={registro.fecha} className="relative grid grid-cols-[1.1rem_minmax(0,1fr)] gap-3 py-4 first:pt-5 last:pb-5">
+                  <div className="relative flex justify-center pt-1.5">
+                    <span className="z-10 size-3 rounded-full border-2 border-card bg-weight shadow-[0_0_0_1px_var(--weight-border)]" />
+                    {index < registros.length - 1 && <span className="absolute bottom-[-1.25rem] top-4 w-px bg-weight-border" />}
                   </div>
-                  <div className="ml-auto flex items-center gap-2 sm:gap-4">
-                    {registro.grasaPct != null && <Chip tone="body">{fmtNum(registro.grasaPct, 1)}% grasa</Chip>}
-                    <DeltaTag delta={registro.delta} />
-                    <span className="w-20 text-right font-display text-lg font-bold tabular text-weight">{fmtPeso(registro.peso)}<span className="ml-0.5 text-xs font-normal text-muted-foreground">kg</span></span>
-                    {confirmBorrar === registro.fecha ? <div className="flex items-center gap-1"><Button variant="destructive" size="sm" className="h-9 gap-1 px-2 text-xs" onClick={() => borrarPesaje(registro.fecha)}><AlertTriangle className="size-3" /> Borrar</Button><Button variant="ghost" size="sm" className="h-9 px-2 text-xs" onClick={() => setConfirmBorrar(null)}>No</Button></div> : <Button variant="ghost" size="icon" className="size-10 text-muted-foreground hover:text-destructive" onClick={() => setConfirmBorrar(registro.fecha)} aria-label={`Eliminar pesaje del ${fmtFechaCorta(registro.fecha)}`}><Trash2 className="size-4" /></Button>}
+                  <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0"><p className="text-sm font-semibold tabular">{fmtFechaCorta(registro.fecha)}</p><p className="mt-0.5 text-xs text-muted-foreground">{relativo(registro.fecha, hoyISO)} · dato real</p>{registro.grasaPct != null && <Chip tone="body" className="mt-2">{fmtNum(registro.grasaPct, 1)}% grasa corporal</Chip>}</div>
+                    <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                      <DeltaTag delta={registro.delta} />
+                      <span className="rounded-xl bg-weight-wash px-3 py-2 font-display text-xl font-bold tabular text-weight">{fmtPeso(registro.peso)}<span className="ml-0.5 text-xs font-normal text-muted-foreground">kg</span></span>
+                      {confirmBorrar === registro.fecha ? <div className="flex items-center gap-1"><Button variant="destructive" size="sm" className="h-9 gap-1 px-2 text-xs" onClick={() => borrarPesaje(registro.fecha)}><AlertTriangle className="size-3" /> Borrar</Button><Button variant="ghost" size="sm" className="h-9 px-2 text-xs" onClick={() => setConfirmBorrar(null)}>No</Button></div> : <Button variant="ghost" size="icon" className="size-9 text-muted-foreground hover:text-destructive" onClick={() => setConfirmBorrar(registro.fecha)} aria-label={`Eliminar pesaje del ${fmtFechaCorta(registro.fecha)}`}><Trash2 className="size-4" /></Button>}
+                    </div>
                   </div>
                 </div>
               ))}
+              </div>
             </Card>
           </section>
         </>
@@ -324,10 +332,10 @@ function PredCell({ etiqueta, iv, base }: { etiqueta: string; iv: { peso: number
 }
 
 function DeltaTag({ delta }: { delta: number | null }) {
-  if (delta == null) return <span className="hidden w-14 text-right text-xs text-muted-foreground sm:block">—</span>;
+  if (delta == null) return <span className="rounded-full bg-secondary px-2 py-1 text-xs text-muted-foreground">Sin cambio</span>;
   const cero = Math.abs(delta) < 0.05;
   const baja = delta < 0;
-  return <span className={cn("hidden w-14 items-center justify-end gap-0.5 text-xs font-medium tabular sm:flex", cero ? "text-muted-foreground" : baja ? "text-weight" : "text-energy")}>{cero ? <Minus className="size-3" /> : baja ? <ArrowDownRight className="size-3" /> : <ArrowUpRight className="size-3" />}{cero ? "0" : fmtSigno(delta, 1)}</span>;
+  return <span className={cn("inline-flex items-center gap-0.5 rounded-full px-2 py-1 text-xs font-semibold tabular", cero ? "bg-secondary text-muted-foreground" : baja ? "bg-weight-wash text-weight" : "bg-energy-wash text-energy")}>{cero ? <Minus className="size-3" /> : baja ? <ArrowDownRight className="size-3" /> : <ArrowUpRight className="size-3" />}{cero ? "0" : fmtSigno(delta, 1)} kg</span>;
 }
 
 function RangoGrasa({ valor, rango }: { valor: number; rango: { min: number; max: number; atleta: number } }) {
