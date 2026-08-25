@@ -14,14 +14,19 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <style>{bgGradient}</style>
       <div className="flex min-h-dvh flex-col items-center justify-center px-4 py-4 relative overflow-hidden bg-background">
         {/* Animated gradient background */}
-        <div className="absolute inset-0 -z-10 opacity-30 pointer-events-none"
+        <div className="absolute inset-0 -z-10 pointer-events-none"
           style={{
-            background: "linear-gradient(-45deg, var(--color-primary-light), var(--color-primary), var(--color-primary-dark))",
+            background: "linear-gradient(-45deg, #16a34a 0%, #22c55e 25%, #1f6e47 50%, #2d5a4a 75%, #16a34a 100%)",
             backgroundSize: "400% 400%",
-            animation: "gradientShift 15s ease infinite",
+            animation: "gradientShift 25s ease infinite",
+            opacity: 0.15,
           }}
         />
-        <div className="absolute inset-0 -z-10 backdrop-blur-3xl"></div>
+        <div className="absolute inset-0 -z-10"
+          style={{
+            background: "radial-gradient(circle at 20% 40%, rgba(34, 197, 94, 0.12) 0%, transparent 40%), radial-gradient(circle at 80% 80%, rgba(22, 163, 74, 0.1) 0%, transparent 50%)",
+          }}
+        />
         <div className="mb-4 relative z-10">
           <Link href="/" aria-label="RITMO">
             <RitmoLogo size={28} />
