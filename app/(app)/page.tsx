@@ -212,10 +212,10 @@ export default function HoyPage() {
                   <span
                     className={cn(
                       "grid size-5 shrink-0 place-items-center rounded-full border-2",
-                      hecho ? "border-primary bg-primary text-primary-foreground" : "border-border",
+                      hecho ? "border-primary bg-primary text-primary-foreground animate-check-ring" : "border-border",
                     )}
                   >
-                    {hecho && <span className="text-[0.6rem]">✓</span>}
+                    {hecho && <span className="text-[0.6rem] animate-check-pop">✓</span>}
                   </span>
                   <span className="truncate">{h.etiqueta}</span>
                 </button>

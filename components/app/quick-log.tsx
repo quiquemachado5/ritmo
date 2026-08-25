@@ -276,10 +276,10 @@ function PanelHabitos({ fecha }: { fecha: string }) {
             <span
               className={cn(
                 "grid size-6 place-items-center rounded-full border-2 transition-colors",
-                hecho ? "border-primary bg-primary text-primary-foreground" : "border-border",
+                hecho ? "border-primary bg-primary text-primary-foreground animate-check-ring" : "border-border",
               )}
             >
-              {hecho && <Check className="size-3.5" strokeWidth={3} />}
+              {hecho && <Check className="size-3.5 animate-check-pop" strokeWidth={3} />}
             </span>
           </button>
         );
