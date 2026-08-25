@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Gauge, Scale, TrendingDown, TrendingUp } from "lucide-react";
+import { Award, Flame, Gauge, Scale, TrendingDown, TrendingUp, Utensils } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
-import { pesajes as getPesajes, resumen, serieBalance, seriePesoDiaria } from "@/lib/model/analytics";
+import { pesajes as getPesajes, recordsPersonales, resumen, resumenPorMes, serieBalance, seriePesoDiaria } from "@/lib/model/analytics";
 import { hoy, sumarDias } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -228,8 +228,97 @@ export default function ProgresoPage() {
               Verde = déficit (peso a la baja) · terracota = superávit. Las barras translúcidas son días imputados.
             </p>
           </Card>
+
+          {/* Records personales + comparativa mensual */}
+          <RecordsYComparativa />
         </>
       )}
+    </div>
+  );
+}
+
+/** Records contra tu propio histórico + este mes vs. el anterior. Solo aparece
+    cuando hay suficiente historia para que diga algo. */
+function RecordsYComparativa() {
+  const { estado } = useRitmo();
+  const rec = React.useMemo(() => recordsPersonales(estado), [estado]);
+  const meses = React.useMemo(() => resumenPorMes(estado), [estado]);
+  const esteMes = meses[0] ?? null;
+  const mesPrevio = meses[1] ?? null;
+
+  const hayRecords = rec.mejorMesAdherencia || rec.mayorPerdidaMes || rec.totalDiasRegistrados > 0;
+  if (!hayRecords) return null;
+
+  const deltaAdh = esteMes && mesPrevio ? esteMes.adherenciaMedia - mesPrevio.adherenciaMedia : null;
+
+  return (
+    <Card className="p-5">
+      <SectionLabel>Tus records</SectionLabel>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-4">
+        <RecordCell
+          icon={<Award className="size-4 text-streak" />}
+          etiqueta="Mejor racha"
+          valor={String(record_racha(estado))}
+          unidad="días"
+        />
+        {rec.mejorMesAdherencia && (
+          <RecordCell
+            icon={<Flame className="size-4 text-habit" />}
+            etiqueta="Mejor mes"
+            valor={`${rec.mejorMesAdherencia.adherenciaMedia}%`}
+            sub={rec.mejorMesAdherencia.etiqueta}
+          />
+        )}
+        {rec.mayorPerdidaMes && (
+          <RecordCell
+            icon={<TrendingDown className="size-4 text-weight" />}
+            etiqueta="Mayor pérdida"
+            valor={fmtSigno(rec.mayorPerdidaMes.cambioPeso as number, 1)}
+            unidad="kg"
+            sub={rec.mayorPerdidaMes.etiqueta}
+          />
+        )}
+        <RecordCell
+          icon={<Utensils className="size-4 text-energy" />}
+          etiqueta="Comidas"
+          valor={String(rec.totalComidas)}
+          sub={`${rec.totalDiasRegistrados} días activos`}
+        />
+      </div>
+
+      {esteMes && mesPrevio && deltaAdh != null && (
+        <div className="mt-5 flex items-start gap-3 border-t border-border pt-4 text-sm">
+          {deltaAdh >= 0
+            ? <TrendingUp className="size-4 shrink-0 text-weight" />
+            : <TrendingDown className="size-4 shrink-0 text-energy" />}
+          <span className="text-muted-foreground">
+            Este mes ({esteMes.etiqueta}) llevas <span className="tabular font-medium text-foreground">{esteMes.adherenciaMedia}%</span> de constancia,{" "}
+            {deltaAdh === 0
+              ? "igual que"
+              : <><span className="tabular font-medium text-foreground">{Math.abs(deltaAdh)} pts</span> {deltaAdh > 0 ? "por encima" : "por debajo"} de</>}{" "}
+            {mesPrevio.etiqueta}{mesPrevio.cambioPeso != null ? <> · entonces {mesPrevio.cambioPeso <= 0 ? "perdiste" : "ganaste"} <span className="tabular font-medium text-foreground">{fmtPeso(Math.abs(mesPrevio.cambioPeso))}</span> kg</> : null}.
+          </span>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function record_racha(estado: Parameters<typeof recordsPersonales>[0]): number {
+  const r = resumen(estado);
+  return r.habitos.mejorRacha.longitud;
+}
+
+function RecordCell({ icon, etiqueta, valor, unidad, sub }: { icon: React.ReactNode; etiqueta: string; valor: string; unidad?: string; sub?: string }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="flex items-center gap-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+        {icon} {etiqueta}
+      </span>
+      <span className="font-display text-xl font-bold leading-none tabular">
+        {valor}{unidad && <span className="ml-0.5 text-xs font-medium text-muted-foreground">{unidad}</span>}
+      </span>
+      {sub && <span className="text-[0.68rem] text-muted-foreground">{sub}</span>}
     </div>
   );
 }

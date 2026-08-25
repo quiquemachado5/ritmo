@@ -6,6 +6,7 @@ import {
   Check,
   ListChecks,
   Loader2,
+  Plus,
   Scale,
   Sparkles,
   UtensilsCrossed,
@@ -26,6 +27,7 @@ import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } f
 import { useIsDesktop } from "@/hooks/use-media-query";
 import { useRitmo } from "@/lib/store/provider";
 import { HABITOS } from "@/lib/model/config";
+import { comidasFrecuentes } from "@/lib/model/analytics";
 import { analizarComida } from "@/lib/nutrition/client";
 import type { AnalisisNutricional } from "@/lib/nutrition/types";
 import type { Comida, TipoComida } from "@/lib/model/types";
@@ -116,8 +118,15 @@ const TIPOS: { id: TipoComida; label: string }[] = [
 ];
 
 function PanelComida({ fecha, onDone, comidaEdit }: { fecha: string; onDone: () => void; comidaEdit?: Comida | null }) {
-  const { registrarComida, editarComida } = useRitmo();
+  const { registrarComida, editarComida, estado } = useRitmo();
   const editando = comidaEdit != null;
+  const frecuentes = React.useMemo(() => (editando ? [] : comidasFrecuentes(estado, 6)), [estado, editando]);
+
+  async function anadirRapido(base: Comida) {
+    await registrarComida(fecha, { ...base, id: crypto.randomUUID(), tipo, creado: new Date().toISOString() });
+    toast.success(`Añadida: ${base.texto} (${base.kcal} kcal)`);
+    onDone();
+  }
   const [texto, setTexto] = React.useState(comidaEdit?.texto ?? "");
   const [tipo, setTipo] = React.useState<TipoComida>(comidaEdit?.tipo ?? "comida");
   const [analizando, setAnalizando] = React.useState(false);
@@ -198,6 +207,33 @@ function PanelComida({ fecha, onDone, comidaEdit }: { fecha: string; onDone: () 
         {analizando ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4 text-primary" />}
         {analizando ? "Analizando…" : editando ? "Recalcular con IA" : "Calcular calorías y macros"}
       </Button>
+
+      {/* Recientes: registro de un toque, sin volver a analizar */}
+      {!editando && !analisis && frecuentes.length > 0 && (
+        <div>
+          <p className="mb-2 text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            Recientes · un toque para añadir
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {frecuentes.map(({ comida, veces }) => (
+              <button
+                key={comida.id}
+                onClick={() => anadirRapido(comida)}
+                className="flex items-center justify-between gap-3 rounded-xl border border-border px-3 py-2.5 text-left transition-colors hover:bg-secondary"
+              >
+                <span className="min-w-0 flex items-center gap-2">
+                  <Plus className="size-4 shrink-0 text-primary" />
+                  <span className="truncate text-sm font-medium">{comida.texto}</span>
+                  {veces > 1 && <span className="shrink-0 text-[0.7rem] text-muted-foreground">×{veces}</span>}
+                </span>
+                <span className="shrink-0 font-display text-sm font-bold tabular text-energy">
+                  {comida.kcal}<span className="ml-0.5 text-[0.7rem] font-normal text-muted-foreground">kcal</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Modo edición sin análisis nuevo: campos numéricos directos */}
       {editando && !analisis && manual && (

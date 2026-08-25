@@ -9,6 +9,7 @@ import * as M from "./metrics";
 import { diaAbsoluto, diasEntre, hoy, sumarDias } from "./dates";
 import { TOTAL_HABITOS } from "./config";
 import type {
+  Comida,
   Composicion,
   Dia,
   EnergiaDia,
@@ -589,3 +590,100 @@ export function resumen(estado: Estado) {
 }
 
 export type Resumen = ReturnType<typeof resumen>;
+
+/** Comidas recientes únicas (por texto normalizado), de más a menos frecuente
+    y luego más reciente. Para el registro rápido de un toque. */
+export function comidasFrecuentes(estado: Estado, limite = 6): Array<{ comida: Comida; veces: number }> {
+  const dias = diasOrdenados(estado);
+  const mapa = new Map<string, { comida: Comida; veces: number; ultima: string }>();
+  for (const d of dias) {
+    for (const c of d.comidas || []) {
+      const clave = (c.texto || "").trim().toLowerCase();
+      if (!clave) continue;
+      const prev = mapa.get(clave);
+      if (prev) {
+        prev.veces += 1;
+        if (d.fecha > prev.ultima) { prev.ultima = d.fecha; prev.comida = c; }
+      } else {
+        mapa.set(clave, { comida: c, veces: 1, ultima: d.fecha });
+      }
+    }
+  }
+  return [...mapa.values()]
+    .sort((a, b) => (b.veces - a.veces) || (a.ultima < b.ultima ? 1 : -1))
+    .slice(0, limite)
+    .map(({ comida, veces }) => ({ comida, veces }));
+}
+
+export interface ResumenMes {
+  clave: string;        // "2026-08"
+  etiqueta: string;     // "ago 2026"
+  diasRegistrados: number;
+  adherenciaMedia: number;   // 0..100
+  cambioPeso: number | null; // kg (último - primer pesaje del mes)
+  comidasRegistradas: number;
+}
+
+const MESES_ABREV = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+
+/** Agrega el histórico por mes natural, del más reciente al más antiguo.
+    Base de records personales y comparativas mes a mes. */
+export function resumenPorMes(estado: Estado): ResumenMes[] {
+  const dias = diasOrdenados(estado);
+  const pesos = pesajes(estado);
+  const porMes = new Map<string, { dias: Dia[]; pesos: Pesaje[] }>();
+
+  for (const d of dias) {
+    const clave = d.fecha.slice(0, 7);
+    if (!porMes.has(clave)) porMes.set(clave, { dias: [], pesos: [] });
+    porMes.get(clave)!.dias.push(d);
+  }
+  for (const p of pesos) {
+    const clave = p.fecha.slice(0, 7);
+    if (!porMes.has(clave)) porMes.set(clave, { dias: [], pesos: [] });
+    porMes.get(clave)!.pesos.push(p);
+  }
+
+  const salida: ResumenMes[] = [];
+  for (const [clave, { dias: ds, pesos: ps }] of porMes) {
+    const conReg = ds.filter((d) => Object.values(d.habitos || {}).some(Boolean) || (d.comidas?.length ?? 0) > 0 || d.peso != null);
+    const adhSuma = ds.reduce((a, d) => a + M.adherenciaDia(d.habitos, TOTAL_HABITOS), 0);
+    const [y, m] = clave.split("-");
+    const cambioPeso = ps.length >= 2 ? Math.round((ps[ps.length - 1].peso - ps[0].peso) * 10) / 10 : null;
+    salida.push({
+      clave,
+      etiqueta: `${MESES_ABREV[Number(m) - 1]} ${y}`,
+      diasRegistrados: conReg.length,
+      adherenciaMedia: ds.length ? Math.round(adhSuma / ds.length) : 0,
+      cambioPeso,
+      comidasRegistradas: ds.reduce((a, d) => a + (d.comidas?.length ?? 0), 0),
+    });
+  }
+  return salida.sort((a, b) => (a.clave < b.clave ? 1 : -1));
+}
+
+export interface RecordsPersonales {
+  mejorMesAdherencia: ResumenMes | null;
+  mayorPerdidaMes: ResumenMes | null; // mes con cambioPeso más negativo
+  totalComidas: number;
+  totalDiasRegistrados: number;
+}
+
+/** Records personales derivados del histórico mensual. */
+export function recordsPersonales(estado: Estado): RecordsPersonales {
+  const meses = resumenPorMes(estado);
+  const conAdh = meses.filter((m) => m.diasRegistrados > 0);
+  const mejorMesAdherencia = conAdh.length
+    ? conAdh.reduce((mejor, m) => (m.adherenciaMedia > mejor.adherenciaMedia ? m : mejor))
+    : null;
+  const conCambio = meses.filter((m) => m.cambioPeso != null);
+  const mayorPerdidaMes = conCambio.length
+    ? conCambio.reduce((mejor, m) => ((m.cambioPeso as number) < (mejor.cambioPeso as number) ? m : mejor))
+    : null;
+  return {
+    mejorMesAdherencia,
+    mayorPerdidaMes: mayorPerdidaMes && (mayorPerdidaMes.cambioPeso as number) < 0 ? mayorPerdidaMes : null,
+    totalComidas: meses.reduce((a, m) => a + m.comidasRegistradas, 0),
+    totalDiasRegistrados: meses.reduce((a, m) => a + m.diasRegistrados, 0),
+  };
+}
