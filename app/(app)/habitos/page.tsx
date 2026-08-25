@@ -3,7 +3,7 @@
 import { fmtFechaCorta } from "@/lib/format";
 
 import * as React from "react";
-import { Check, Flame, Trophy } from "lucide-react";
+import { Check, Flame } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { resumen, adherenciaPorHabito } from "@/lib/model/analytics";
 import { HABITOS } from "@/lib/model/config";
@@ -30,23 +30,13 @@ export default function HabitosPage() {
       </header>
 
       {/* Rachas */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <Card className="flex flex-col items-center gap-1 p-4 text-center">
           <Flame className="size-5 text-streak" />
           <span className="font-display text-2xl font-bold tabular text-streak">{r.habitos.rachaActual.longitud}</span>
           <span className="text-[0.7rem] text-muted-foreground">racha actual</span>
           <span className="text-[0.65rem] text-muted-foreground/70">
             {r.habitos.rachaActual.longitud > 0 ? `desde el ${fmtFechaCorta(r.habitos.rachaActual.desde!)}` : "los 6 hábitos, sin fallar"}
-          </span>
-        </Card>
-        <Card className="flex flex-col items-center gap-1 p-4 text-center">
-          <Trophy className="size-5 text-habit" />
-          <span className="font-display text-2xl font-bold tabular text-habit">{r.habitos.mejorRacha.longitud}</span>
-          <span className="text-[0.7rem] text-muted-foreground">mejor racha</span>
-          <span className="text-[0.65rem] text-muted-foreground/70">
-            {r.habitos.mejorRacha.longitud > 0
-              ? `${fmtFechaCorta(r.habitos.mejorRacha.desde!)} – ${fmtFechaCorta(r.habitos.mejorRacha.hasta!)}`
-              : "aún sin racha"}
           </span>
         </Card>
         <Card className="flex flex-col items-center gap-1 p-4 text-center">

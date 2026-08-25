@@ -2,10 +2,10 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Award, Flame, Plus, Target, TrendingDown, TrendingUp } from "lucide-react";
+import { Award, Flame, Plus, Target, TrendingDown, TrendingUp, Utensils } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
-import { resumen, adherenciaPorHabito } from "@/lib/model/analytics";
+import { resumen, adherenciaPorHabito, recordsPersonales, resumenPorMes } from "@/lib/model/analytics";
 import { macrosObjetivo } from "@/lib/model/metrics";
 import { HABITOS } from "@/lib/model/config";
 import { hoy } from "@/lib/model/dates";
@@ -112,73 +112,89 @@ export default function HoyPage() {
               <MacroBar label="Grasas" value={macros.g} max={objMacros.grasas} colorVar="--energy" />
             </div>
           </div>
+
+          {/* Balance del día — basado en hábitos */}
+          {(() => {
+            const marcados = habitosHechos;
+            const total = HABITOS.length;
+            const pct = total > 0 ? marcados / total : 0;
+            const tonos = pct >= 0.83
+              ? { text: "text-primary", border: "border-primary/20", bg: "bg-primary/5", bar: "bg-primary" }
+              : pct >= 0.5
+                ? { text: "text-habit", border: "border-habit/20", bg: "bg-habit/5", bar: "bg-habit" }
+                : pct > 0
+                  ? { text: "text-warning", border: "border-warning/20", bg: "bg-warning/5", bar: "bg-warning" }
+                  : { text: "text-energy", border: "border-energy/20", bg: "bg-energy/5", bar: "bg-energy" };
+            const frase = pct >= 0.83
+              ? "Día excelente, sigue así"
+              : pct >= 0.5
+                ? "Buen día, remata lo que falta"
+                : pct > 0
+                  ? "Día flojo, aún puedes mejorarlo"
+                  : "Aún no has cumplido ningún hábito";
+            const kcalWarning = restanteKcal < 0 && habitosHechos >= 4;
+            return (
+              <div className={cn("mt-4 flex flex-col gap-2 rounded-xl border px-4 py-3", tonos.border, tonos.bg)}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <Target className={cn("size-5", tonos.text)} />
+                    <div>
+                      <p className={cn("text-sm font-bold", tonos.text)}>Balance del día</p>
+                      <p className="text-xs text-muted-foreground">{frase}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className={cn("font-display text-2xl font-bold tabular", tonos.text)}>
+                      {marcados}/{total}
+                    </span>
+                    <p className="text-[0.6rem] text-muted-foreground">hábitos</p>
+                  </div>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                  <div className={cn("h-full rounded-full transition-all", tonos.bar)} style={{ width: `${pct * 100}%` }} />
+                </div>
+                {kcalWarning && (
+                  <p className="flex items-center gap-1.5 text-[0.7rem] text-warning">
+                    <Flame className="size-3" />
+                    Has marcado hábitos como cumplidos pero superas tu objetivo calórico — revisa porciones.
+                  </p>
+                )}
+              </div>
+            );
+          })()}
         </Card>
       </section>
 
-      {/* Peso y predicción */}
+      {/* Último pesaje */}
       <section>
         <SectionLabel action={<Link href="/progreso" className="text-xs font-medium text-primary hover:underline">Ver progreso</Link>}>
-          Peso y predicción
+          Peso
         </SectionLabel>
         <Card className="p-5">
-          {r.peso.estimadoHoy != null ? (
-            <>
-              <div className="flex items-end justify-between gap-4">
-                <div>
-                  <Metric
-                    label="Peso estimado hoy"
-                    value={fmtPeso(r.peso.estimadoHoy)}
-                    unit="kg"
-                    tone="weight"
-                  />
-                  {r.prediccion.partida != null && (
-                    <p className="mt-1 text-xs text-muted-foreground tabular">
-                      rango {fmtPeso(r.prediccion.manana?.minimo ?? r.peso.estimadoHoy)}–{fmtPeso(r.prediccion.manana?.maximo ?? r.peso.estimadoHoy)} kg
-                    </p>
-                  )}
-                </div>
-                <div className="text-right">
-                  {tendKg != null && (
-                    <div className={cn("inline-flex items-center gap-1 font-semibold tabular", tendKg <= 0 ? "text-weight" : "text-energy")}>
-                      {tendKg <= 0 ? <TrendingDown className="size-4" /> : <TrendingUp className="size-4" />}
-                      {fmtSigno(tendKg, 2)} kg/sem
-                    </div>
-                  )}
-                  {r.prediccion.modelo && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      confianza {r.prediccion.modelo.calidad}
-                    </p>
-                  )}
-                </div>
+          {r.peso.actual != null ? (
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <Metric label="Último peso real" value={fmtPeso(r.peso.actual)} unit="kg" tone="weight" />
+                {r.peso.fecha && (
+                  <p className="mt-1 text-xs text-muted-foreground">báscula · {relativo(r.peso.fecha, hoyISO)}</p>
+                )}
               </div>
-
-              {/* Franja báscula → hoy → revisión */}
-              <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-secondary/50 p-3 text-center sm:grid-cols-4">
-                <RevItem etiqueta="Peso real" valor={fmtPeso(r.peso.actual)} sub={r.peso.fecha ? `báscula · ${relativo(r.peso.fecha, hoyISO)}` : "—"} />
-                <RevItem etiqueta="Peso estimado" valor={fmtPeso(r.peso.estimadoHoy)} sub="hoy, según el modelo" destacado />
-                <RevItem
-                  etiqueta="Objetivo"
-                  valor={fmtPeso(r.peso.objetivo)}
-                  sub={r.peso.restante != null ? `faltan ${fmtPeso(Math.abs(r.peso.restante))} kg` : "sin fijar"}
-                />
-                <RevItem
-                  etiqueta="Próx. revisión"
-                  valor={r.prediccion.proximoPesaje ? fmtFechaCorta(r.prediccion.proximoPesaje) : "—"}
-                  sub="pésate"
-                />
-              </div>
-
-              {r.peso.restante != null && estado.perfil.pesoObjetivo != null && (
-                <div className="mt-4 flex items-center justify-between border-t border-border pt-4 text-sm">
-                  <span className="text-muted-foreground">
+              <div className="text-right">
+                {tendKg != null && (
+                  <div className={cn("inline-flex items-center gap-1 font-semibold tabular", tendKg <= 0 ? "text-weight" : "text-energy")}>
+                    {tendKg <= 0 ? <TrendingDown className="size-4" /> : <TrendingUp className="size-4" />}
+                    {fmtSigno(tendKg, 2)} kg/sem
+                  </div>
+                )}
+                {r.peso.restante != null && estado.perfil.pesoObjetivo != null && (
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {Math.abs(r.peso.restante) < 0.1
-                      ? "¡Estás en tu objetivo!"
-                      : `${fmtPeso(Math.abs(r.peso.restante))} kg ${r.peso.restante > 0 ? "hasta" : "por debajo de"} tu objetivo`}
-                  </span>
-                  <Chip tone="weight">meta {fmtPeso(estado.perfil.pesoObjetivo)} kg</Chip>
-                </div>
-              )}
-            </>
+                      ? "¡En tu objetivo!"
+                      : `${fmtPeso(Math.abs(r.peso.restante))} kg hasta ${fmtPeso(estado.perfil.pesoObjetivo)}`}
+                  </p>
+                )}
+              </div>
+            </div>
           ) : (
             <div className="flex flex-col items-center gap-3 py-4 text-center">
               <p className="text-sm text-muted-foreground">Aún no hay pesajes. Registra tu peso para activar la predicción.</p>
@@ -270,14 +286,15 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
     () => [...adherenciaPorHabito(estado, HABITOS, 7)].sort((a, b) => b.pct - a.pct),
     [estado],
   );
+  const rec = React.useMemo(() => recordsPersonales(estado), [estado]);
+  const meses = React.useMemo(() => resumenPorMes(estado), [estado]);
 
   const adh = r.habitos.adherencia7;
   const racha = r.habitos.rachaActual.longitud;
+  const mejorRacha = r.habitos.mejorRacha.longitud;
   const tendKg = r.prediccion.modelo?.kgSemana ?? null;
   const quiere = estado.perfil.objetivo ?? "perder";
 
-  // El veredicto sale de la constancia, pero baja un escalón si el peso va en
-  // dirección contraria al objetivo: cumplir a medias y engordar no es "bien".
   let veredicto: Veredicto = adh >= 85 ? "excelente" : adh >= 70 ? "bien" : adh >= 50 ? "flojea" : "mal";
   const enContra =
     tendKg != null && ((quiere === "perder" && tendKg > 0.15) || (quiere === "ganar" && tendKg < -0.15));
@@ -286,7 +303,6 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
   }
   const v = VEREDICTO[veredicto];
 
-  // Frase de cabecera: reconocer o apretar, según toque.
   const cabecera =
     veredicto === "excelente"
       ? `${adh}% de constancia. Enhorabuena, así se construye.`
@@ -298,7 +314,6 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
 
   const lineas: { icon: React.ReactNode; text: string }[] = [];
 
-  // Dónde incidir: el hábito más flojo de los últimos 7 días.
   const peor = porHabito[porHabito.length - 1];
   if (peor && peor.pct < 100) {
     lineas.push({
@@ -307,7 +322,6 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
     });
   }
 
-  // Reconocer lo que sí sostiene.
   const mejor = porHabito[0];
   if (mejor && mejor.pct >= 70 && mejor.clave !== peor?.clave) {
     lineas.push({
@@ -316,20 +330,18 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
     });
   }
 
-  // Racha.
   if (racha >= 3) {
     lineas.push({
       icon: <Award className="size-4 shrink-0 text-streak" />,
       text: `${racha} días seguidos con los 6 hábitos. No rompas la cadena.`,
     });
-  } else if (racha === 0 && r.habitos.mejorRacha.longitud >= 3) {
+  } else if (racha === 0 && mejorRacha >= 3) {
     lineas.push({
       icon: <Award className="size-4 shrink-0 text-muted-foreground" />,
-      text: `Sin racha viva. Tu récord son ${r.habitos.mejorRacha.longitud} días: hoy puede ser el 1.`,
+      text: `Sin racha viva. Tu récord son ${mejorRacha} días: hoy puede ser el 1.`,
     });
   }
 
-  // Lectura del peso, siempre encuadrada con el objetivo.
   if (tendKg != null && Math.abs(tendKg) >= 0.1) {
     const baja = tendKg < 0;
     lineas.push({
@@ -342,7 +354,6 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
     });
   }
 
-  // Aviso si el modelo lleva mucho a ciegas.
   if ((r.prediccion.diasSinPesaje ?? 0) >= 14) {
     lineas.push({
       icon: <Target className="size-4 shrink-0 text-muted-foreground" />,
@@ -350,29 +361,92 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
     });
   }
 
+  const hayRecords = rec.mejorMesAdherencia || rec.mayorPerdidaMes || rec.totalDiasRegistrados > 0;
+
   return (
     <section>
-      <SectionLabel>Resumen semanal</SectionLabel>
-      <Card className="flex flex-col gap-3 p-4">
-        <div className="flex items-start gap-2.5">
-          <span className={cn("mt-1.5 size-2 shrink-0 rounded-full", v.punto)} />
-          <div>
-            <p className={cn("font-display text-sm font-bold", v.clase)}>{v.titulo}</p>
-            <p className="text-sm text-muted-foreground">{cabecera}</p>
+      <SectionLabel>Resumen y records</SectionLabel>
+      <Card className="flex flex-col gap-0 p-0 overflow-hidden">
+        {/* Veredicto semanal */}
+        <div className="flex flex-col gap-3 p-5">
+          <div className="flex items-start gap-2.5">
+            <span className={cn("mt-1.5 size-2 shrink-0 rounded-full", v.punto)} />
+            <div>
+              <p className={cn("font-display text-sm font-bold", v.clase)}>{v.titulo}</p>
+              <p className="text-sm text-muted-foreground">{cabecera}</p>
+            </div>
           </div>
+          {lineas.length > 0 && (
+            <div className="flex flex-col gap-2.5 border-t border-border pt-3">
+              {lineas.map((l, i) => (
+                <div key={i} className="flex items-start gap-3 text-sm">
+                  {l.icon}
+                  <span className="text-muted-foreground">{l.text}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        {lineas.length > 0 && (
-          <div className="flex flex-col gap-2.5 border-t border-border pt-3">
-            {lineas.map((l, i) => (
-              <div key={i} className="flex items-start gap-3 text-sm">
-                {l.icon}
-                <span className="text-muted-foreground">{l.text}</span>
-              </div>
-            ))}
+
+        {/* Records personales */}
+        {hayRecords && (
+          <div className="border-t border-border bg-secondary/30 p-5">
+            <p className="mb-3 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Tus records</p>
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+              <RecordBadge icon={<Award className="size-3.5 text-streak" />} label="Mejor racha" value={`${mejorRacha}`} unit="días" />
+              {rec.mejorMesAdherencia && (
+                <RecordBadge icon={<Flame className="size-3.5 text-habit" />} label="Mejor mes" value={`${rec.mejorMesAdherencia.adherenciaMedia}%`} sub={rec.mejorMesAdherencia.etiqueta} />
+              )}
+              {rec.mayorPerdidaMes && (
+                <RecordBadge icon={<TrendingDown className="size-3.5 text-weight" />} label="Mayor pérdida" value={fmtSigno(rec.mayorPerdidaMes.cambioPeso as number, 1)} unit="kg" sub={rec.mayorPerdidaMes.etiqueta} />
+              )}
+              <RecordBadge icon={<Utensils className="size-3.5 text-energy" />} label="Comidas" value={`${rec.totalComidas}`} sub={`${rec.totalDiasRegistrados} días`} />
+            </div>
           </div>
         )}
+
+        {/* Comparativa mensual */}
+        {(() => {
+          const esteMes = meses[0] ?? null;
+          const mesPrevio = meses[1] ?? null;
+          if (!esteMes || !mesPrevio) return null;
+          const deltaAdh = esteMes.adherenciaMedia - mesPrevio.adherenciaMedia;
+          return (
+            <div className="border-t border-border p-5">
+              <div className="flex items-start gap-3 text-sm">
+                {deltaAdh >= 0
+                  ? <TrendingUp className="size-4 shrink-0 text-weight" />
+                  : <TrendingDown className="size-4 shrink-0 text-energy" />}
+                <span className="text-muted-foreground">
+                  Este mes ({esteMes.etiqueta}): <span className="tabular font-medium text-foreground">{esteMes.adherenciaMedia}%</span> de constancia,{" "}
+                  {deltaAdh === 0
+                    ? "igual que"
+                    : <><span className="tabular font-medium text-foreground">{Math.abs(deltaAdh)} pts</span> {deltaAdh > 0 ? "por encima" : "por debajo"} de</>}{" "}
+                  {mesPrevio.etiqueta}{mesPrevio.cambioPeso != null ? <> · {mesPrevio.cambioPeso <= 0 ? "perdiste" : "ganaste"} <span className="tabular font-medium text-foreground">{fmtPeso(Math.abs(mesPrevio.cambioPeso))}</span> kg</> : null}.
+                </span>
+              </div>
+            </div>
+          );
+        })()}
       </Card>
     </section>
+  );
+}
+
+function RecordBadge({ icon, label, value, unit, sub }: { icon: React.ReactNode; label: string; value: string; unit?: string; sub?: string }) {
+  return (
+    <div className="flex items-center gap-2.5 rounded-lg bg-background px-3 py-2.5 shadow-sm">
+      <div className="grid size-7 shrink-0 place-items-center rounded-md bg-secondary">
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p className="text-[0.6rem] text-muted-foreground truncate">{label}</p>
+        <p className="font-display text-sm font-bold tabular leading-none">
+          {value}{unit && <span className="ml-0.5 text-[0.6rem] font-medium text-muted-foreground">{unit}</span>}
+        </p>
+        {sub && <p className="text-[0.55rem] text-muted-foreground truncate">{sub}</p>}
+      </div>
+    </div>
   );
 }
 
