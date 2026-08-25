@@ -141,7 +141,7 @@ export default function NutricionPage() {
                   </div>
                   <div className="divide-y divide-border">
                   {items.map((c) => (
-                    <div key={c.id} className="group flex flex-col gap-3 px-4 py-3.5 transition-colors hover:bg-secondary/35 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                    <div key={c.id} className="group flex flex-col gap-3 px-4 pb-3.5 pt-0 transition-colors hover:bg-secondary/35 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                       <div className="flex min-w-0 items-start gap-3">
                         <span className={`mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl text-base ${tipo.wash}`} aria-hidden="true">{emojiComida(c.texto)}</span>
                         <div className="min-w-0">
