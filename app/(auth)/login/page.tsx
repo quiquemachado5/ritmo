@@ -10,29 +10,7 @@ import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { SocialLogin } from "@/components/social-login";
 import { loginRateLimiter, validateEmail } from "@/lib/validation";
-
-const animations = `
-  @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
-    20%, 40%, 60%, 80% { transform: translateX(3px); }
-  }
-  
-  @keyframes slideInLeft {
-    0% { opacity: 0; transform: translateX(-16px); }
-    100% { opacity: 1; transform: translateX(0); }
-  }
-  
-  @keyframes slideInRight {
-    0% { opacity: 0; transform: translateX(16px); }
-    100% { opacity: 1; transform: translateX(0); }
-  }
-  
-  @keyframes fadeIn {
-    0% { opacity: 0; }
-    100% { opacity: 1; }
-  }
-`;
+import { transitionCSS, springBezier, stagger } from "@/lib/transitions";
 
 export default function LoginPage() {
   return (
@@ -71,234 +49,161 @@ function LoginForm() {
 
     const emailValidation = validateEmail(email);
     if (!emailValidation.valid) {
-      setError("Correo inválido");
-      setShaking(true);
-      setTimeout(() => setShaking(false), 500);
+      triggerShake("Correo inválido.");
       return;
     }
     if (!password) {
-      setError("Ingresa contraseña");
-      setShaking(true);
-      setTimeout(() => setShaking(false), 500);
+      triggerShake("Ingresa tu contraseña.");
       return;
     }
 
     const rateLimitCheck = loginRateLimiter.check(email);
     if (!rateLimitCheck.allowed) {
       const minutes = Math.ceil(rateLimitCheck.resetIn / 1000 / 60);
-      setError(`Intenta en ${minutes}m`);
-      setShaking(true);
-      setTimeout(() => setShaking(false), 500);
+      triggerShake(`Demasiados intentos. Intenta en ${minutes}m.`);
       return;
     }
 
     setCargando(true);
     try {
       const supabase = createClient();
-      const { error: loginError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
+      const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
       if (loginError) throw loginError;
 
-      if (recordarme) {
-        localStorage.setItem("ritmo_recordarme", "true");
-      } else {
-        localStorage.removeItem("ritmo_recordarme");
-      }
+      if (recordarme) localStorage.setItem("ritmo_recordarme", "true");
+      else localStorage.removeItem("ritmo_recordarme");
 
       router.push(params.get("next") || "/");
       router.refresh();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes("Invalid login") || msg.includes("Invalid credentials"))
-        setError("Correo o contraseña incorrectos");
+        triggerShake("Correo o contraseña incorrectos.");
       else if (msg.includes("Email not confirmed"))
-        setError("Confirma tu correo");
+        triggerShake("Confirma tu correo primero.");
       else if (msg.includes("User not found"))
-        setError("Cuenta no encontrada");
+        triggerShake("No existe esa cuenta.");
       else if (msg.includes("Failed to fetch"))
-        setError("Sin conexión");
+        triggerShake("Sin conexión.");
       else
-        setError("Error al iniciar sesión");
-      
-      setShaking(true);
-      setTimeout(() => setShaking(false), 500);
+        triggerShake("Error al iniciar sesión.");
       setCargando(false);
     }
   }
 
+  function triggerShake(msg: string) {
+    setError(msg);
+    setShaking(true);
+    setTimeout(() => setShaking(false), 500);
+  }
+
   return (
     <>
-      <style>{animations}</style>
-      
-      {/* Layout Horizontal */}
-      <div className="w-full max-w-5xl mx-auto">
-        <div 
-          className="grid grid-cols-2 gap-8 items-center bg-background rounded-2xl border border-border/50 shadow-xl overflow-hidden"
-          style={{ animation: "fadeIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)" }}
+      <style>{transitionCSS}</style>
+      <div style={{ animation: `fadeScale 0.5s ${springBezier} forwards` }}>
+        <div
+          className="bg-background border border-border/50 rounded-2xl shadow-lg overflow-hidden"
+          style={{ animation: shaking ? `shake 0.5s cubic-bezier(0.36, 0, 0.66, -0.56)` : "none" }}
         >
-          {/* Left: Branding */}
-          <div 
-            className="p-8 bg-gradient-to-br from-primary/5 to-primary/10 flex flex-col justify-center"
-            style={{ animation: "slideInLeft 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)" }}
-          >
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <h2 className="text-3xl font-display font-bold text-foreground">RITMO</h2>
-                <p className="text-sm text-muted-foreground font-medium">Constancia sobre perfección</p>
-              </div>
-              
-              <p className="text-sm text-muted-foreground leading-relaxed mt-6">
-                Construye tu ritmo de salud con datos precisos y análisis inteligentes.
-              </p>
-              
-              <div className="pt-4 space-y-2 text-xs text-muted-foreground/70">
-                <div className="flex gap-2">
-                  <span className="text-primary">✓</span>
-                  <span>Datos cifrados en Supabase</span>
-                </div>
-                <div className="flex gap-2">
-                  <span className="text-primary">✓</span>
-                  <span>Sin compartir información</span>
-                </div>
-                <div className="flex gap-2">
-                  <span className="text-primary">✓</span>
-                  <span>Análisis predictivo</span>
-                </div>
-              </div>
+          <div className="h-0.5 bg-gradient-to-r from-primary via-primary/80 to-primary/60" />
+
+          <div className="px-7 py-6 space-y-5">
+            <div className="overflow-hidden">
+              <h1
+                className="font-display text-3xl font-bold"
+                style={{ animation: `revealText 0.7s ${springBezier} forwards` }}
+              >
+                Bienvenido
+              </h1>
             </div>
-          </div>
 
-          {/* Right: Form */}
-          <div 
-            className="p-8"
-            style={{ animation: "slideInRight 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)" }}
-          >
-            <div className="space-y-4">
-              {/* Header */}
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">Inicia sesión</h1>
+            {error && (
+              <div
+                className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive"
+                style={{ animation: `toastIn 0.3s ${springBezier}` }}
+              >
+                <Shield className="size-3.5 shrink-0" />
+                <span>{error}</span>
               </div>
+            )}
 
-              {/* Error */}
-              {error && (
-                <div 
-                  className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive"
-                  style={{ animation: "slideInRight 0.3s cubic-bezier(0.36, 0, 0.66, -0.56)" }}
-                >
-                  <Shield className="size-3 shrink-0" />
-                  <span>{error}</span>
-                </div>
-              )}
-
-              {/* Form */}
-              <form onSubmit={entrar} className="space-y-3">
-                {/* Email */}
-                <div>
-                  <Label htmlFor="email" className="text-xs font-semibold">Email</Label>
-                  <div className="relative mt-1">
-                    <Mail className={`absolute left-2.5 top-2.5 size-4 transition-colors ${
-                      focusedField === "email" ? "text-primary" : "text-muted-foreground"
-                    } ${validatedEmail && !focusedField ? "text-green-500" : ""}`} />
-                    <Input
-                      id="email"
-                      type="email"
-                      autoComplete="email"
-                      required
-                      value={email}
-                      onChange={(e) => handleEmailChange(e.target.value)}
-                      onFocus={() => setFocusedField("email")}
-                      onBlur={() => setFocusedField(null)}
-                      placeholder="tu@correo.com"
-                      disabled={cargando}
-                      className="h-9 pl-9 text-sm rounded-lg border-2 border-input transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
-                    {validatedEmail && !focusedField && (
-                      <Check className="absolute right-2.5 top-2.5 size-4 text-green-500" />
-                    )}
-                  </div>
-                </div>
-
-                {/* Password */}
-                <div>
-                  <Label htmlFor="password" className="text-xs font-semibold">Contraseña</Label>
-                  <div className="relative mt-1">
-                    <Lock className={`absolute left-2.5 top-2.5 size-4 transition-colors ${
-                      focusedField === "password" ? "text-primary" : "text-muted-foreground"
-                    }`} />
-                    <Input
-                      id="password"
-                      type="password"
-                      autoComplete="current-password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      onFocus={() => setFocusedField("password")}
-                      onBlur={() => setFocusedField(null)}
-                      placeholder="••••••••"
-                      disabled={cargando}
-                      className="h-9 pl-9 text-sm rounded-lg border-2 border-input transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-                </div>
-
-                {/* Remember & Forgot */}
-                <div className="flex items-center justify-between pt-1">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="recordarme"
-                      checked={recordarme}
-                      onChange={(e) => setRecordarme(e.target.checked)}
-                      disabled={cargando}
-                      className="size-3.5 rounded cursor-pointer accent-primary"
-                    />
-                    <Label htmlFor="recordarme" className="text-xs cursor-pointer">Recuérdame</Label>
-                  </div>
-                  <Link href="/recuperar" className="text-xs font-medium text-primary hover:underline">
-                    ¿Olvidaste?
-                  </Link>
-                </div>
-
-                {/* Submit */}
-                <Button
-                  type="submit"
-                  disabled={cargando}
-                  className="w-full h-9 text-sm font-semibold rounded-lg transition-all active:scale-95"
-                  style={{
-                    transform: shaking ? "translateX(-4px)" : "translateX(0)",
-                    animation: shaking ? "shake 0.4s cubic-bezier(0.36, 0, 0.66, -0.56)" : "none"
-                  }}
-                >
-                  {cargando ? (
-                    <>
-                      <Loader2 className="size-3.5 animate-spin mr-1.5" />
-                      Iniciando...
-                    </>
-                  ) : (
-                    <>
-                      Iniciar
-                      <ArrowRight className="size-3.5 ml-1.5" />
-                    </>
+            <form onSubmit={entrar} className="space-y-3">
+              <div style={stagger(1)}>
+                <Label htmlFor="email" className="text-sm font-semibold mb-1.5 block">Email</Label>
+                <div className="relative">
+                  <Mail className={`absolute left-3 top-2.5 size-4 transition-all duration-200 ${
+                    focusedField === "email" ? "text-primary" : "text-muted-foreground"
+                  } ${validatedEmail && focusedField !== "email" ? "text-green-500" : ""}`} />
+                  <Input
+                    id="email" type="email" autoComplete="email" required
+                    value={email} onChange={(e) => handleEmailChange(e.target.value)}
+                    onFocus={() => setFocusedField("email")}
+                    onBlur={() => setFocusedField(null)}
+                    placeholder="tu@correo.com" disabled={cargando}
+                    className="pl-9 h-10 text-sm rounded-lg border-2 transition-all focus:border-primary focus:ring-1 focus:ring-primary/20"
+                  />
+                  {validatedEmail && focusedField !== "email" && (
+                    <Check className="absolute right-3 top-2.5 size-4 text-green-500"
+                      style={{ animation: `successPop 0.3s ${springBezier}` }} />
                   )}
-                </Button>
-              </form>
-
-              {/* Social */}
-              <div className="!mt-4">
-                <SocialLogin />
+                </div>
               </div>
 
-              {/* Sign Up */}
-              <p className="text-center text-xs text-muted-foreground pt-2 border-t border-border/30">
-                ¿No tienes cuenta?{" "}
-                <Link href="/registro" className="font-semibold text-primary hover:underline">
-                  Crear una
+              <div style={stagger(2)}>
+                <Label htmlFor="password" className="text-sm font-semibold mb-1.5 block">Contraseña</Label>
+                <div className="relative">
+                  <Lock className={`absolute left-3 top-2.5 size-4 transition-all duration-200 ${
+                    focusedField === "password" ? "text-primary" : "text-muted-foreground"
+                  }`} />
+                  <Input
+                    id="password" type="password" autoComplete="current-password" required
+                    value={password} onChange={(e) => setPassword(e.target.value)}
+                    onFocus={() => setFocusedField("password")}
+                    onBlur={() => setFocusedField(null)}
+                    placeholder="••••••••" disabled={cargando}
+                    className="pl-9 h-10 text-sm rounded-lg border-2 transition-all focus:border-primary focus:ring-1 focus:ring-primary/20"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between" style={stagger(3)}>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox" checked={recordarme}
+                    onChange={(e) => setRecordarme(e.target.checked)}
+                    disabled={cargando}
+                    className="size-3.5 rounded accent-primary cursor-pointer"
+                  />
+                  <span className="text-[0.7rem] text-muted-foreground">Recuérdame</span>
+                </label>
+                <Link href="/recuperar" className="text-[0.7rem] font-medium text-primary hover:text-primary/80 transition-colors">
+                  ¿Olvidaste contraseña?
                 </Link>
-              </p>
+              </div>
+
+              <Button
+                type="submit" disabled={cargando}
+                className="w-full h-10 text-sm font-semibold rounded-lg transition-all active:scale-95"
+                style={stagger(4)}
+              >
+                {cargando ? (
+                  <><Loader2 className="size-3.5 animate-spin mr-1.5" />Entrando...</>
+                ) : (
+                  <>Iniciar sesión<ArrowRight className="size-3.5 ml-1.5" /></>
+                )}
+              </Button>
+            </form>
+
+            <div style={stagger(5)}>
+              <SocialLogin />
             </div>
+
+            <p className="text-center text-xs text-muted-foreground pt-2 border-t border-border/30" style={stagger(6)}>
+              ¿Sin cuenta?{" "}
+              <Link href="/registro" className="font-semibold text-primary hover:text-primary/80 transition-colors">
+                Crear una
+              </Link>
+            </p>
           </div>
         </div>
       </div>
