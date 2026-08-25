@@ -16,7 +16,7 @@ export function RitmoMark({ className }: { className?: string }) {
       <rect x="3" y="19" width="5" height="10" rx="2.5" fill="currentColor" opacity="0.45" />
       <rect x="10.5" y="13" width="5" height="16" rx="2.5" fill="currentColor" opacity="0.7" />
       <rect x="18" y="7" width="5" height="22" rx="2.5" fill="currentColor" />
-      <circle cx="27.5" cy="6" r="2.6" fill="currentColor" />
+      <circle cx="27.5" cy="6" r="2.6" fill="currentColor" className="animate-ritmo-pulse" />
     </svg>
   );
 }

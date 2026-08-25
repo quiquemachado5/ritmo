@@ -288,7 +288,7 @@
 .ritmo-wordmark span:nth-child(4) { font-size: 1.12rem; transform: translateY(-.22rem); }
 .ritmo-wordmark span:nth-child(5) { font-size: 1rem; transform: translateY(-.28rem); }
 @keyframes ritmo-pulse { 0%,100% { opacity:.55; transform:scale(.86); } 50% { opacity:1; transform:scale(1); } }
-.animate-ritmo-pulse { animation: ritmo-pulse 1.8s cubic-bezier(.16,1,.3,1) infinite; }
+.animate-ritmo-pulse { transform-box: fill-box; transform-origin: center; animation: ritmo-pulse 1.8s cubic-bezier(.16,1,.3,1) infinite; }
 @media (prefers-reduced-motion: reduce) {
   .animate-check-pop, .animate-check-ring { animation: none; }
 }
