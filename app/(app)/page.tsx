@@ -61,7 +61,7 @@ export default function HoyPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Saludo */}
-      <header className="flex items-start justify-between gap-3">
+      <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm text-muted-foreground">{capitalizar(new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long" }).format(new Date()))}</p>
           <h1 className="font-display text-2xl font-bold tracking-tight">
@@ -243,24 +243,27 @@ export default function HoyPage() {
 
       {/* Comidas de hoy */}
       <section>
-        <SectionLabel action={<button onClick={() => abrir("comida")} className="text-xs font-medium text-primary hover:underline">Añadir</button>}>
+        <SectionLabel action={<button onClick={() => abrir("comida")} className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground"><Plus className="size-3.5" /> Añadir</button>}>
           Comidas de hoy
         </SectionLabel>
-        <Card className="divide-y divide-border p-0">
+        <Card className="overflow-hidden p-0">
           {comidas.length === 0 ? (
-            <button onClick={() => abrir("comida")} className="flex w-full items-center justify-center gap-2 py-6 text-sm text-muted-foreground hover:text-foreground">
-              <Plus className="size-4" /> Registra tu primera comida del día
+            <button onClick={() => abrir("comida")} className="flex w-full items-center gap-4 px-5 py-6 text-left transition-colors hover:bg-energy-wash/35">
+              <span className="grid size-11 shrink-0 place-items-center rounded-full bg-energy-wash text-energy"><Utensils className="size-5" /></span>
+              <span><span className="block text-sm font-semibold">Aún no hay comidas registradas</span><span className="mt-0.5 block text-xs text-muted-foreground">Añade la primera y RITMO calcula sus macros.</span></span>
+              <Plus className="ml-auto size-5 text-energy" />
             </button>
           ) : (
-            comidas.map((c) => (
-              <div key={c.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{c.texto}</p>
-                  <p className="text-xs capitalize text-muted-foreground">{c.tipo}</p>
-                </div>
-                <span className="shrink-0 font-display font-bold tabular text-energy">{fmtKcal(c.kcal)}<span className="ml-0.5 text-xs font-normal text-muted-foreground">kcal</span></span>
-              </div>
-            ))
+            <div className="divide-y divide-border">
+              {comidas.map((c) => (
+                <button key={c.id} onClick={() => abrir("comida")} className="flex w-full items-center gap-3 px-5 py-3.5 text-left transition-colors hover:bg-secondary/45">
+                  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-energy-wash text-[0.65rem] font-bold uppercase text-energy">{c.tipo.slice(0, 1)}</span>
+                  <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{c.texto}</span><span className="mt-1 flex flex-wrap gap-x-2 text-[0.68rem] tabular text-muted-foreground">P {c.proteinas}g · C {c.carbohidratos}g · G {c.grasas}g</span></span>
+                  <span className="shrink-0 text-right font-display text-lg font-bold tabular text-energy">{fmtKcal(c.kcal)}<span className="ml-0.5 text-[0.65rem] font-normal text-muted-foreground">kcal</span></span>
+                </button>
+              ))}
+              <button onClick={() => abrir("comida")} className="flex w-full items-center justify-center gap-2 py-3 text-xs font-semibold text-primary hover:bg-primary/5"><Plus className="size-3.5" /> Añadir otra comida</button>
+            </div>
           )}
         </Card>
       </section>

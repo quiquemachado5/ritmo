@@ -39,16 +39,19 @@ export function WeightChart({ data, objetivo }: { data: PuntoPeso[]; objetivo?: 
   const valores = data.flatMap((d) => [d.real, d.pred, d.banda?.[0], d.banda?.[1]].filter((v): v is number => v != null));
   const min = valores.length ? Math.floor(Math.min(...valores) - 1) : 0;
   const max = valores.length ? Math.ceil(Math.max(...valores) + 1) : 100;
+  const ultimoReal = [...data].reverse().find((d) => d.real != null)?.real;
+  const estimacionHoy = data.find((d) => d.banda != null)?.pred ?? [...data].reverse().find((d) => d.pred != null)?.pred;
+  const resumenAccesible = `Gráfico de peso. Último pesaje registrado: ${ultimoReal != null ? `${fmtPeso(ultimoReal)} kg` : "sin datos"}. Estimación del modelo para hoy: ${estimacionHoy != null ? `${fmtPeso(estimacionHoy)} kg` : "sin datos"}.${objetivo != null ? ` Objetivo: ${fmtPeso(objetivo)} kg.` : ""}`;
 
   return (
-    <div className="h-64 w-full">
+    <div className="h-64 w-full" role="img" aria-label={resumenAccesible}>
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
           <defs>
             <linearGradient id="bandaGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--weight)" stopOpacity={0.18} />
-              <stop offset="50%" stopColor="var(--weight)" stopOpacity={0.08} />
-              <stop offset="100%" stopColor="var(--weight)" stopOpacity={0.18} />
+              <stop offset="0%" stopColor="var(--body)" stopOpacity={0.2} />
+              <stop offset="50%" stopColor="var(--body)" stopOpacity={0.07} />
+              <stop offset="100%" stopColor="var(--body)" stopOpacity={0.2} />
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
@@ -60,7 +63,7 @@ export function WeightChart({ data, objetivo }: { data: PuntoPeso[]; objetivo?: 
           <Area
             type="monotone"
             dataKey="banda"
-            stroke="var(--weight)"
+            stroke="var(--body)"
             strokeOpacity={0.25}
             strokeWidth={1}
             fill="url(#bandaGradient)"
@@ -71,7 +74,7 @@ export function WeightChart({ data, objetivo }: { data: PuntoPeso[]; objetivo?: 
           <Line
             type="monotone"
             dataKey="pred"
-            stroke="var(--weight)"
+            stroke="var(--body)"
             strokeWidth={2}
             strokeDasharray="5 4"
             dot={false}
@@ -98,8 +101,8 @@ export function WeightChart({ data, objetivo }: { data: PuntoPeso[]; objetivo?: 
               return (
                 <CajaTooltip>
                   <p className="mb-1 font-medium text-foreground">{label}</p>
-                  {real != null && <p className="text-weight tabular">Real: {fmtPeso(real)} kg</p>}
-                  {pred != null && <p className="text-muted-foreground tabular">Estimado: {fmtPeso(pred)} kg</p>}
+                  {real != null && <p className="text-weight tabular">Báscula: {fmtPeso(real)} kg</p>}
+                  {pred != null && <p className="text-body tabular">Modelo: {fmtPeso(pred)} kg</p>}
                 </CajaTooltip>
               );
             }}

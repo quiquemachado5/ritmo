@@ -343,7 +343,7 @@ export default function AjustesPage() {
       {/* Cuenta */}
       <section>
         <SectionLabel>Cuenta</SectionLabel>
-        <Card className="flex items-center justify-between p-5">
+        <Card className="flex flex-wrap items-center justify-between gap-3 p-5">
           <div>
             <p className="text-sm font-medium">{userEmail ?? "Modo demo (local)"}</p>
             <p className="text-xs text-muted-foreground">{modo === "nube" ? "Sincronizado con la nube" : "Datos en este dispositivo"}</p>
@@ -359,7 +359,7 @@ export default function AjustesPage() {
 
 function Row({ label, children, htmlFor }: { label: string; children: React.ReactNode; htmlFor?: string }) {
   return (
-    <div className="flex items-center justify-between gap-4">
+    <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
       <Label htmlFor={htmlFor} className="text-sm">{label}</Label>
       {children}
     </div>

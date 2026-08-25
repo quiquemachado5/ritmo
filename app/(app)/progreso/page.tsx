@@ -1,15 +1,27 @@
 "use client";
 
 import * as React from "react";
-import { Gauge, Minus, Scale, TrendingDown, TrendingUp } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowDownRight,
+  ArrowUpRight,
+  Gauge,
+  Minus,
+  Scale,
+  Trash2,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
+import { useQuickLog } from "@/components/app/quick-log-provider";
 import { detectarMeseta, pesajes as getPesajes, resumen, serieBalance, seriePesoDiaria } from "@/lib/model/analytics";
 import { hoy, sumarDias } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { WeightChart, BalanceChart, type PuntoPeso } from "@/components/app/charts";
+import { WeightChart, BalanceChart, CompositionChart, type PuntoPeso } from "@/components/app/charts";
 import { Metric, SectionLabel, Chip, EmptyState } from "@/components/app/primitives";
-import { fmtPeso, fmtSigno, fmtKcal, fmtFechaCorta } from "@/lib/format";
+import { fmtPeso, fmtSigno, fmtNum, fmtFechaCorta, relativo } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const RANGOS = [
@@ -20,232 +32,308 @@ const RANGOS = [
   { id: "Todo", dias: Infinity },
 ] as const;
 
-// Calidad del modelo → lenguaje visual RITMO (color por dato, nunca decorativo).
 const CALIDAD_LABEL = { inicial: "inicial", media: "media", alta: "alta" } as const;
 const CALIDAD_TONE = { inicial: "muted", media: "habit", alta: "weight" } as const;
 const CALIDAD_ICON = { inicial: "text-muted-foreground", media: "text-habit", alta: "text-weight" } as const;
-
+/**
+ * Pantalla única de evolución corporal. Los datos de báscula y composición son
+ * hechos registrados; el modelo ocupa deliberadamente su propio bloque.
+ */
 export default function ProgresoPage() {
-  const { estado, cargando } = useRitmo();
-  const [rango, setRango] = React.useState<(typeof RANGOS)[number]["id"]>("3M");
-
+  const { estado, cargando, medicion, actualizarDia, borrarMedicion } = useRitmo();
+  const { abrir } = useQuickLog();
+  const [rango, setRango] = React.useState<(typeof RANGOS)[number]["id"]>("1A");
+  const [confirmBorrar, setConfirmBorrar] = React.useState<string | null>(null);
   const r = React.useMemo(() => resumen(estado), [estado]);
   const meseta = React.useMemo(() => detectarMeseta(estado), [estado]);
+  // Algunos historiales pueden ofrecer proyecciones futuras antes de tener un
+  // intervalo calibrado para hoy. La UI no debe asumir que ese rango existe.
+  const intervaloHoy = r.prediccion.hoy ?? null;
+  const hoyISO = hoy();
+
+  const historial = React.useMemo(() => {
+    const puntos = getPesajes(estado);
+    const compPorFecha = new Map(estado.composicion.filter((c) => c.grasaPct != null).map((c) => [c.fecha, c.grasaPct!]));
+    return puntos.map((punto, i) => ({
+      fecha: punto.fecha,
+      peso: punto.peso,
+      delta: i > 0 ? Math.round((punto.peso - puntos[i - 1].peso) * 10) / 10 : null,
+      grasaPct: compPorFecha.get(punto.fecha) ?? null,
+    }));
+  }, [estado]);
+
+  const compSerie = React.useMemo(
+    () => estado.composicion
+      .filter((c) => c.grasaPct != null)
+      .sort((a, b) => (a.fecha < b.fecha ? -1 : 1))
+      .map((c) => ({ label: fmtFechaCorta(c.fecha), grasa: c.grasaPct!, muscular: c.masaMuscularKg ?? null })),
+    [estado],
+  );
+
+  const ultimaMedicion = React.useMemo(
+    () => [...estado.composicion].sort((a, b) => (a.fecha < b.fecha ? 1 : -1))[0],
+    [estado.composicion],
+  );
 
   const { datosPeso, datosBalance, statsWin } = React.useMemo(() => {
-    const todos = getPesajes(estado);
     const dias = RANGOS.find((x) => x.id === rango)!.dias;
-    const desde = dias === Infinity ? "0000-01-01" : sumarDias(hoy(), -dias);
-    const win = todos.filter((p) => p.fecha >= desde);
+    const fechaHoy = hoy();
+    const desde = dias === Infinity ? "0000-01-01" : sumarDias(fechaHoy, -dias);
+    const ventana = historial.filter((p) => p.fecha >= desde);
+    const fechaUltimoReal = r.peso.fecha;
 
-    // Serie DIARIA: el estimado avanza cada día con el balance energético y se
-    // re-ancla en cada báscula. Antes sólo había un punto por pesaje, así que
-    // la línea se quedaba en el último peso real y nunca reflejaba el de hoy.
-    const pesoData: PuntoPeso[] = seriePesoDiaria(estado, desde, hoy()).map((d) => ({
+    // La proyección solo comienza en el último pesaje real. Así nunca se
+    // disfraza una estimación histórica de lectura de báscula.
+    const pesoData: PuntoPeso[] = seriePesoDiaria(estado, desde, fechaHoy).map((d) => ({
       label: fmtFechaCorta(d.fecha),
       real: d.real,
-      pred: d.estimado,
-      banda: null,
+      pred: fechaUltimoReal && d.fecha >= fechaUltimoReal ? d.estimado : null,
+      banda: d.fecha === fechaHoy && d.estimado != null && intervaloHoy
+        ? [intervaloHoy.minimo, intervaloHoy.maximo]
+        : null,
     }));
 
-    // Proyección futura, con la banda de confianza del modelo.
-    for (const [dias, iv] of [[14, r.prediccion.quincena], [30, r.prediccion.mes]] as const) {
+    for (const [diasFuturos, iv] of [[14, r.prediccion.quincena], [30, r.prediccion.mes]] as const) {
       if (!iv) continue;
-      pesoData.push({
-        label: fmtFechaCorta(sumarDias(hoy(), dias)),
-        real: null,
-        pred: iv.peso,
-        banda: [iv.minimo, iv.maximo],
-      });
+      pesoData.push({ label: fmtFechaCorta(sumarDias(hoy(), diasFuturos)), real: null, pred: iv.peso, banda: [iv.minimo, iv.maximo] });
     }
 
     const balDias = dias === Infinity ? 90 : Math.min(dias, 90);
-    const balData = serieBalance(estado, balDias).map((b) => ({
-      label: fmtFechaCorta(b.fecha),
-      balance: b.balance,
-      imputado: b.imputado,
-    }));
-
-    const inicialWin = win.length ? win[0] : null;
-    const actualWin = win.length ? win[win.length - 1] : null;
     return {
       datosPeso: pesoData,
-      datosBalance: balData,
+      datosBalance: serieBalance(estado, balDias).map((b) => ({ label: fmtFechaCorta(b.fecha), balance: b.balance, imputado: b.imputado })),
       statsWin: {
-        inicial: inicialWin?.peso ?? null,
-        actual: actualWin?.peso ?? null,
-        cambio: inicialWin && actualWin ? Math.round((actualWin.peso - inicialWin.peso) * 10) / 10 : null,
+        inicial: ventana[0]?.peso ?? null,
+        actual: ventana[ventana.length - 1]?.peso ?? null,
+        cambio: ventana.length > 1 ? Math.round((ventana[ventana.length - 1].peso - ventana[0].peso) * 10) / 10 : null,
       },
     };
-  }, [estado, rango, r]);
+  }, [estado, historial, intervaloHoy, r, rango]);
 
-  if (cargando) return <div className="flex flex-col gap-6"><Skeleton className="h-8 w-40" /><Skeleton className="h-72 w-full rounded-xl" /><Skeleton className="h-56 w-full rounded-xl" /></div>;
+  async function borrarPesaje(fecha: string) {
+    if (medicion(fecha)) await borrarMedicion(fecha);
+    await actualizarDia(fecha, { peso: undefined });
+    setConfirmBorrar(null);
+  }
 
-  const tendKg = r.prediccion.modelo?.kgSemana ?? r.tendencia?.kgSemana ?? null;
-  const hayPesajes = r.peso.registros > 0;
+  if (cargando) {
+    return <div className="flex flex-col gap-6"><Skeleton className="h-10 w-48" /><Skeleton className="h-72 w-full rounded-xl" /><Skeleton className="h-56 w-full rounded-xl" /></div>;
+  }
+
+  const hayPesajes = historial.length > 0;
+  // La tendencia de este bloque se deriva únicamente de pesajes registrados.
+  const tendKg = r.tendencia?.kgSemana ?? null;
+  const composicion = r.composicion;
+  const diasDesdeBascula = r.prediccion.diasSinPesaje ?? 0;
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex items-center justify-between">
-        <h1 className="font-display text-2xl font-bold tracking-tight">Progreso</h1>
+    <div className="flex flex-col gap-8">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="font-display text-3xl font-bold tracking-tight">Progreso</h1>
+          <p className="mt-1 max-w-xl text-sm text-muted-foreground">Tu historial confirmado y la orientación del modelo se leen por separado.</p>
+        </div>
+        <Button onClick={() => abrir("peso")} className="min-h-11 gap-2"><Scale className="size-4" /> Registrar medición</Button>
       </header>
 
       {!hayPesajes ? (
-        <EmptyState title="Aún no hay datos de peso">
-          Registra tu peso con regularidad para ver tu evolución y la predicción.
+        <EmptyState icon={<Scale className="size-8" />} title="Empieza con una medición real" action={<Button onClick={() => abrir("peso")} className="mt-1 gap-2"><Scale className="size-4" /> Registrar peso</Button>}>
+          Con pesajes regulares, RITMO podrá separar tu evolución real de la estimación del modelo.
         </EmptyState>
       ) : (
         <>
-          {/* Evolución de peso */}
-          <Card className="overflow-hidden p-0">
-            {/* Cabecera: peso real + tendencia */}
-            <div className="flex items-center justify-between p-5 pb-0">
-              <div>
-                <p className="text-[0.6rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Último pesaje real</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="font-display text-3xl font-bold tabular">{fmtPeso(r.peso.actual)}</span>
-                  <span className="text-sm text-muted-foreground">kg</span>
-                  {r.peso.fecha && <span className="text-xs text-muted-foreground">· {fmtFechaCorta(r.peso.fecha)}</span>}
+          <section aria-labelledby="estado-actual">
+            <h2 id="estado-actual" className="sr-only">Estado actual</h2>
+            <Card className="overflow-hidden p-0">
+              <div className="grid divide-y divide-border lg:grid-cols-[1fr_1.08fr] lg:divide-x lg:divide-y-0">
+                <div className="p-5 sm:p-6">
+                  <div className="mb-5 flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">Última medición real</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Dato introducido por ti · no es una predicción</p>
+                    </div>
+                    <Chip tone="weight">Báscula</Chip>
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <span className="font-display text-5xl font-bold leading-none tabular text-weight">{fmtPeso(r.peso.actual)}</span>
+                    <span className="mb-1 text-base font-medium text-muted-foreground">kg</span>
+                  </div>
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    {r.peso.fecha ? <>Registrado el <span className="font-medium text-foreground">{fmtFechaCorta(r.peso.fecha)}</span></> : "Sin fecha"}
+                  </p>
+                  {tendKg != null && (
+                    <div className={cn("mt-5 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold tabular", tendKg <= 0 ? "bg-weight-wash text-weight-ink" : "bg-energy-wash text-energy-ink")}>
+                      {tendKg <= 0 ? <TrendingDown className="size-4" /> : <TrendingUp className="size-4" />}
+                      Tendencia de pesajes: {fmtSigno(tendKg, 2)} kg/semana
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-body-wash/45 p-5 sm:p-6">
+                  <div className="mb-5 flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">Estimación del modelo para hoy</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Calculada a partir de tu último pesaje y balance energético</p>
+                    </div>
+                    <Chip tone="body">Modelo</Chip>
+                  </div>
+                  <div className="flex flex-wrap items-end gap-x-2 gap-y-1">
+                    <span className="font-display text-5xl font-bold leading-none tabular text-body">{fmtPeso(r.peso.estimadoHoy)}</span>
+                    <span className="mb-1 text-base font-medium text-muted-foreground">kg</span>
+                    {intervaloHoy && <span className="mb-1 text-xs tabular text-muted-foreground">rango {fmtPeso(intervaloHoy.minimo)}–{fmtPeso(intervaloHoy.maximo)}</span>}
+                  </div>
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    {diasDesdeBascula === 0
+                      ? "Coincide con tu pesaje de hoy."
+                      : <><span className="font-medium text-foreground tabular">{diasDesdeBascula} días</span> desde la báscula; el rango se ampliará hasta el próximo pesaje.</>}
+                    {r.peso.restante != null && <> Según esta estimación, faltan <span className="font-medium text-foreground tabular">{fmtPeso(Math.abs(r.peso.restante))} kg</span> para tu objetivo.</>}
+                  </p>
+                  <div className="mt-5 border-t border-body-border pt-4 text-xs leading-relaxed text-muted-foreground">
+                    Una medición nueva recalibra el modelo. Esta cifra orienta: no sustituye a la báscula.
+                  </div>
                 </div>
               </div>
-              <div className="text-right">
-                {tendKg != null && (
-                  <div className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold tabular",
-                    tendKg <= 0 ? "bg-weight/10 text-weight" : "bg-energy/10 text-energy"
-                  )}>
-                    {tendKg <= 0 ? <TrendingDown className="size-4" /> : <TrendingUp className="size-4" />}
-                    {fmtSigno(tendKg, 2)} kg/sem
-                  </div>
-                )}
-                {r.peso.restante != null && (
-                  <p className="mt-1 text-[0.65rem] text-muted-foreground">
-                    objetivo {fmtPeso(r.peso.objetivo)} kg · faltan {fmtPeso(Math.abs(r.peso.restante))}
-                  </p>
-                )}
+            </Card>
+          </section>
+
+          <section aria-labelledby="evolucion-real">
+            <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 id="evolucion-real" className="font-display text-xl font-bold">Evolución y proyección</h2>
+                <p className="mt-1 text-sm text-muted-foreground">La línea verde recoge pesajes; la ciruela solo comienza donde termina tu última medición.</p>
+              </div>
+              <div className="flex max-w-full overflow-x-auto rounded-full bg-secondary p-1 [scrollbar-width:none]">
+                {RANGOS.map((x) => (
+                  <button key={x.id} onClick={() => setRango(x.id)} aria-pressed={rango === x.id} className={cn("h-9 shrink-0 rounded-full px-3 text-xs font-semibold transition-colors", rango === x.id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>{x.id}</button>
+                ))}
               </div>
             </div>
-
-            {/* Gráfica */}
-            <div className="p-5">
-              <div className="mb-3 flex items-center justify-end">
-                <div className="flex gap-1 rounded-full bg-secondary p-0.5">
-                  {RANGOS.map((x) => (
-                    <button
-                      key={x.id}
-                      onClick={() => setRango(x.id)}
-                      className={cn(
-                        "h-8 rounded-full px-2.5 text-[0.65rem] font-medium transition-colors",
-                        rango === x.id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
-                      )}
-                    >
-                      {x.id}
-                    </button>
-                  ))}
-                </div>
+            <Card className="p-4 sm:p-6">
+              <div className="mb-5 grid grid-cols-2 gap-4 border-b border-border pb-5 sm:grid-cols-3">
+                <Metric label="Inicio del período" value={fmtPeso(statsWin.inicial)} unit="kg" />
+                <Metric label="Cambio medido" value={statsWin.cambio != null ? fmtSigno(statsWin.cambio) : "—"} unit="kg" tone={statsWin.cambio != null && statsWin.cambio <= 0 ? "weight" : "energy"} />
+                <Metric className="col-span-2 sm:col-span-1" label="Objetivo" value={fmtPeso(r.peso.objetivo)} unit="kg" />
               </div>
               <WeightChart data={datosPeso} objetivo={estado.perfil.pesoObjetivo} />
-              <div className="mt-3 flex flex-wrap items-center gap-3 text-[0.65rem] text-muted-foreground">
-                <span className="flex items-center gap-1.5"><span className="h-0.5 w-3 rounded bg-weight" /> Báscula</span>
-                <span className="flex items-center gap-1.5"><span className="h-0.5 w-3 rounded border-b-2 border-dashed border-weight" /> Estimado</span>
-                {estado.perfil.pesoObjetivo && <span className="flex items-center gap-1.5"><span className="h-0.5 w-3 rounded border-b-2 border-dotted border-weight" /> Objetivo</span>}
+              <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
+                <span className="flex items-center gap-2"><span className="h-0.5 w-5 rounded bg-weight" /> Peso medido</span>
+                <span className="flex items-center gap-2"><span className="h-0.5 w-5 border-b-2 border-dashed border-body" /> Estimación del modelo</span>
+                <span className="flex items-center gap-2"><span className="h-3 w-5 rounded-sm bg-body/15 ring-1 ring-body/30" /> Rango orientativo</span>
+                {estado.perfil.pesoObjetivo != null && <span className="flex items-center gap-2"><span className="h-0.5 w-5 border-b-2 border-dotted border-weight/60" /> Objetivo</span>}
               </div>
-            </div>
+            </Card>
+          </section>
 
-            {/* Predicción */}
-            {r.prediccion.disponible && (
-              <div className="border-t border-border bg-secondary/20 p-5">
-                <div className="mb-4 flex items-center justify-between gap-2">
-                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Predicción del modelo</p>
-                  <Chip tone={CALIDAD_TONE[r.prediccion.modelo?.calidad ?? "inicial"]}>
-                    {CALIDAD_LABEL[r.prediccion.modelo?.calidad ?? "inicial"]}
-                  </Chip>
+          {r.prediccion.disponible && (
+            <section aria-labelledby="modelo">
+              <Card className="border-body-border bg-body-wash/35 p-5 sm:p-6">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 id="modelo" className="font-display text-xl font-bold">Lo que estima el modelo</h2>
+                    <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Escenarios calculados, no futuros pesajes. Se muestran con su intervalo de incertidumbre.</p>
+                  </div>
+                  <Chip tone={CALIDAD_TONE[r.prediccion.modelo?.calidad ?? "inicial"]}>{CALIDAD_LABEL[r.prediccion.modelo?.calidad ?? "inicial"]} confianza</Chip>
                 </div>
-
-                <div className="grid grid-cols-4 gap-2">
+                <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
                   <PredCell etiqueta="Mañana" iv={r.prediccion.manana} base={r.peso.estimadoHoy} />
-                  <PredCell etiqueta="1 sem" iv={r.prediccion.semana} base={r.peso.estimadoHoy} />
+                  <PredCell etiqueta="1 semana" iv={r.prediccion.semana} base={r.peso.estimadoHoy} />
                   <PredCell etiqueta="15 días" iv={r.prediccion.quincena} base={r.peso.estimadoHoy} />
                   <PredCell etiqueta="1 mes" iv={r.prediccion.mes} base={r.peso.estimadoHoy} />
                 </div>
-
-                <div className="mt-4 flex flex-col gap-2 text-[0.7rem]">
-                  <div className="flex items-start gap-2.5">
-                    <Gauge className={cn("size-3.5 mt-0.5 shrink-0", CALIDAD_ICON[r.prediccion.modelo?.calidad ?? "inicial"])} />
-                    <span className="text-muted-foreground">
-                      {r.prediccion.modelo?.calidad === "alta"
-                        ? <>TDEE observado{r.prediccion.modelo?.tdee ? <> ~<span className="tabular font-medium text-foreground">{r.prediccion.modelo.tdee}</span> kcal/día</> : null}. Rango al 80%.</>
-                        : r.prediccion.modelo?.calidad === "media"
-                          ? "Basada en tu balance calórico. Registra más comidas para afinar."
-                          : <><span className="tabular font-medium text-foreground">{r.prediccion.pesajes}</span> pesajes. Registra comidas para afinar.</>}
-                    </span>
-                  </div>
-
-                  {r.prediccion.diasSinPesaje != null && r.prediccion.diasSinPesaje > 0 && (
-                    <div className="flex items-start gap-2.5">
-                      <Scale className={cn("size-3.5 mt-0.5 shrink-0", r.prediccion.diasSinPesaje > 21 ? "text-warning" : "text-muted-foreground")} />
-                      <span className="text-muted-foreground">
-                        <span className="tabular font-medium text-foreground">{r.prediccion.diasSinPesaje}</span> días sin pesarte.
-                        {r.prediccion.proximoPesaje && <> Pésate hacia <span className="font-medium text-foreground">{fmtFechaCorta(r.prediccion.proximoPesaje)}</span>.</>}
-                      </span>
-                    </div>
-                  )}
-
-                  {meseta.enMeseta && (
-                    <div className="flex items-start gap-2.5">
-                      <Minus className="size-3.5 mt-0.5 shrink-0 text-warning" />
-                      <span className="text-muted-foreground">
-                        Estancado <span className="tabular font-medium text-foreground">{meseta.dias}</span> días.{" "}
-                        {meseta.sugerencia === "bajar-kcal" ? "Ajusta 100–150 kcal menos." : meseta.sugerencia === "subir-kcal" ? "Sube 100–150 kcal." : "Revisa registro de comidas."}
-                      </span>
-                    </div>
-                  )}
+                <div className="mt-5 grid gap-3 border-t border-body-border pt-4 text-sm text-muted-foreground sm:grid-cols-2">
+                  <p className="flex items-start gap-2"><Gauge className={cn("mt-0.5 size-4 shrink-0", CALIDAD_ICON[r.prediccion.modelo?.calidad ?? "inicial"])} />
+                    <span>{r.prediccion.modelo?.calidad === "alta" ? <>TDEE observado: <span className="font-medium text-foreground tabular">~{r.prediccion.modelo.tdee} kcal/día</span>. Rango al 80%.</> : r.prediccion.modelo?.calidad === "media" ? "Basado en tu balance calórico. Registrar más comidas lo afina." : `${r.prediccion.pesajes} pesajes disponibles. Registra comidas y más pesajes para afinar.`}</span>
+                  </p>
+                  {meseta.enMeseta ? <p className="flex items-start gap-2"><Minus className="mt-0.5 size-4 shrink-0 text-warning" /><span>Estancamiento durante <span className="font-medium text-foreground tabular">{meseta.dias} días</span>. {meseta.sugerencia === "bajar-kcal" ? "Revisa un ajuste de 100–150 kcal." : meseta.sugerencia === "subir-kcal" ? "Revisa si debes subir 100–150 kcal." : "Revisa el registro de comidas."}</span></p> : <p className="flex items-start gap-2"><Scale className="mt-0.5 size-4 shrink-0 text-body" /><span>{r.prediccion.proximoPesaje ? <>Próxima comprobación sugerida: <span className="font-medium text-foreground">{fmtFechaCorta(r.prediccion.proximoPesaje)}</span>.</> : "Un nuevo pesaje vuelve a anclar la estimación."}</span></p>}
                 </div>
+              </Card>
+            </section>
+          )}
+
+          <section aria-labelledby="balance">
+            <div className="mb-3">
+              <h2 id="balance" className="font-display text-xl font-bold">Balance calórico</h2>
+              <p className="mt-1 text-sm text-muted-foreground">El contexto energético que utiliza el modelo; los días imputados siguen visibles.</p>
+            </div>
+            <Card className="p-4 sm:p-6"><BalanceChart data={datosBalance} /><p className="mt-3 text-xs text-muted-foreground">Verde = déficit · terracota = superávit · translúcido = día imputado.</p></Card>
+          </section>
+
+          {(composicion || compSerie.length > 1 || ultimaMedicion) && (
+            <section aria-labelledby="composicion">
+              <div className="mb-3">
+                <h2 id="composicion" className="font-display text-xl font-bold">Composición corporal</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Aquí solo aparecen mediciones reales; RITMO no extrapola grasa ni masa muscular.</p>
               </div>
-            )}
-          </Card>
+              <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
+                {composicion && <Card className="p-5 sm:p-6">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-5">
+                    <Metric label="Grasa" value={fmtNum(composicion.grasaPct, 1)} unit="%" tone="body" />
+                    <Metric label="Masa magra" value={fmtPeso(composicion.magraKg)} unit="kg" tone="weight" />
+                    <Metric label="Masa grasa" value={fmtPeso(composicion.grasaKg)} unit="kg" tone="body" />
+                    <Metric label="FFMI" value={composicion.ffmi != null ? fmtNum(composicion.ffmi, 1) : "—"} />
+                  </div>
+                  <div className="mt-5 border-t border-border pt-4">
+                    <div className="mb-2 flex justify-between gap-3 text-xs text-muted-foreground"><span>Rango de grasa ({estado.perfil.sexo})</span><span className="tabular">{composicion.rango.min}–{composicion.rango.max}%</span></div>
+                    <RangoGrasa valor={composicion.grasaPct} rango={composicion.rango} />
+                    <p className="mt-3 text-xs text-muted-foreground">Medición del {fmtFechaCorta(composicion.fecha)} · {relativo(composicion.fecha, hoyISO)}</p>
+                  </div>
+                </Card>}
+                {compSerie.length > 1 ? <Card className="p-4 sm:p-6"><CompositionChart data={compSerie} /><p className="mt-3 text-xs text-muted-foreground">{compSerie.length} mediciones con porcentaje de grasa.</p></Card> : <Card className="flex min-h-48 flex-col justify-center p-5 sm:p-6"><p className="font-medium">Aún falta una segunda medición de composición</p><p className="mt-1 text-sm text-muted-foreground">Registra grasa corporal o masa muscular en diferentes fechas para ver la evolución.</p></Card>}
+              </div>
+              {ultimaMedicion && (ultimaMedicion.cintura || ultimaMedicion.cadera || ultimaMedicion.pecho || ultimaMedicion.brazo || ultimaMedicion.muslo) && (
+                <Card className="mt-4 grid grid-cols-2 gap-4 p-5 sm:grid-cols-3 lg:grid-cols-5">
+                  {([['Cintura', ultimaMedicion.cintura], ['Cadera', ultimaMedicion.cadera], ['Pecho', ultimaMedicion.pecho], ['Brazo', ultimaMedicion.brazo], ['Muslo', ultimaMedicion.muslo]] as const).filter(([, value]) => value != null).map(([label, value]) => <Metric key={label} label={label} value={fmtNum(value!, 0)} unit="cm" />)}
+                </Card>
+              )}
+            </section>
+          )}
 
-          {/* Balance calórico */}
-          <Card className="p-5">
-            <SectionLabel>Balance calórico diario</SectionLabel>
-            <BalanceChart data={datosBalance} />
-            <p className="mt-3 text-xs text-muted-foreground">
-              Verde = déficit (peso a la baja) · terracota = superávit. Las barras translúcidas son días imputados.
-            </p>
-          </Card>
-
+          <section aria-labelledby="historial">
+            <SectionLabel action={<span className="text-xs text-muted-foreground tabular">{historial.length} registros</span>}><span id="historial">Historial de mediciones</span></SectionLabel>
+            <Card className="max-h-[30rem] divide-y divide-border overflow-y-auto p-0">
+              {[...historial].reverse().map((registro) => (
+                <div key={registro.fecha} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-4 py-3 sm:px-5">
+                  <div className="min-w-28">
+                    <p className="text-sm font-semibold tabular">{fmtFechaCorta(registro.fecha)}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{relativo(registro.fecha, hoyISO)} · dato real</p>
+                  </div>
+                  <div className="ml-auto flex items-center gap-2 sm:gap-4">
+                    {registro.grasaPct != null && <Chip tone="body">{fmtNum(registro.grasaPct, 1)}% grasa</Chip>}
+                    <DeltaTag delta={registro.delta} />
+                    <span className="w-20 text-right font-display text-lg font-bold tabular text-weight">{fmtPeso(registro.peso)}<span className="ml-0.5 text-xs font-normal text-muted-foreground">kg</span></span>
+                    {confirmBorrar === registro.fecha ? <div className="flex items-center gap-1"><Button variant="destructive" size="sm" className="h-9 gap-1 px-2 text-xs" onClick={() => borrarPesaje(registro.fecha)}><AlertTriangle className="size-3" /> Borrar</Button><Button variant="ghost" size="sm" className="h-9 px-2 text-xs" onClick={() => setConfirmBorrar(null)}>No</Button></div> : <Button variant="ghost" size="icon" className="size-10 text-muted-foreground hover:text-destructive" onClick={() => setConfirmBorrar(registro.fecha)} aria-label={`Eliminar pesaje del ${fmtFechaCorta(registro.fecha)}`}><Trash2 className="size-4" /></Button>}
+                  </div>
+                </div>
+              ))}
+            </Card>
+          </section>
         </>
       )}
     </div>
   );
 }
 
-
 function PredCell({ etiqueta, iv, base }: { etiqueta: string; iv: { peso: number; minimo: number; maximo: number } | null; base?: number | null }) {
-  const delta = iv && base ? iv.peso - base : null;
+  const delta = iv && base != null ? iv.peso - base : null;
   const baja = delta != null && delta <= 0;
+  return <div className="rounded-xl border border-body-border bg-card/75 p-3 text-center sm:p-4">
+    <p className="text-xs font-semibold text-muted-foreground">{etiqueta}</p>
+    <p className="mt-3 font-display text-2xl font-bold leading-none tabular text-body">{iv ? fmtPeso(iv.peso) : "—"}<span className="ml-1 text-xs font-medium text-muted-foreground">kg</span></p>
+    {iv && <><p className={cn("mt-2 text-xs font-semibold tabular", baja ? "text-weight" : "text-energy")}>{delta != null ? fmtSigno(delta, 1) : "—"} kg</p><p className="mt-1 text-[0.7rem] tabular text-muted-foreground">{fmtPeso(iv.minimo)}–{fmtPeso(iv.maximo)}</p></>}
+  </div>;
+}
 
-  return (
-    <div className="flex flex-col items-center gap-1.5 rounded-xl bg-secondary/50 px-3 py-3 text-center">
-      <span className="text-[0.6rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{etiqueta}</span>
-      <span className={cn("font-display text-2xl font-bold leading-none tabular", baja ? "text-weight" : "text-energy")}>
-        {iv ? fmtPeso(iv.peso) : "—"}
-      </span>
-      <span className="text-[0.6rem] font-medium text-muted-foreground">kg</span>
-      {iv && (
-        <>
-          {delta != null && (
-            <span className={cn("inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[0.6rem] font-semibold tabular",
-              baja ? "bg-weight/10 text-weight" : "bg-energy/10 text-energy"
-            )}>
-              {baja ? <TrendingDown className="size-3" /> : <TrendingUp className="size-3" />}
-              {fmtSigno(delta, 1)}
-            </span>
-          )}
-          <span className="text-[0.6rem] text-muted-foreground/70 tabular">
-            {fmtPeso(iv.minimo)}–{fmtPeso(iv.maximo)}
-          </span>
-        </>
-      )}
-    </div>
-  );
+function DeltaTag({ delta }: { delta: number | null }) {
+  if (delta == null) return <span className="hidden w-14 text-right text-xs text-muted-foreground sm:block">—</span>;
+  const cero = Math.abs(delta) < 0.05;
+  const baja = delta < 0;
+  return <span className={cn("hidden w-14 items-center justify-end gap-0.5 text-xs font-medium tabular sm:flex", cero ? "text-muted-foreground" : baja ? "text-weight" : "text-energy")}>{cero ? <Minus className="size-3" /> : baja ? <ArrowDownRight className="size-3" /> : <ArrowUpRight className="size-3" />}{cero ? "0" : fmtSigno(delta, 1)}</span>;
+}
+
+function RangoGrasa({ valor, rango }: { valor: number; rango: { min: number; max: number; atleta: number } }) {
+  const escala = Math.max(rango.max + 12, valor + 4);
+  const pos = Math.min(100, (valor / escala) * 100);
+  const zonaMin = (rango.min / escala) * 100;
+  const zonaMax = (rango.max / escala) * 100;
+  return <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-secondary"><div className="absolute inset-y-0 rounded-full bg-weight/30" style={{ left: `${zonaMin}%`, width: `${zonaMax - zonaMin}%` }} /><div className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-card bg-body" style={{ left: `${pos}%` }} /></div>;
 }

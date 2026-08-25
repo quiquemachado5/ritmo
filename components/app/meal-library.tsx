@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { ArrowDownAZ, Check, EyeOff, Flame, Pencil, Plus, Repeat2, Search, Star, Trash2, X } from "lucide-react";
+import { Apple, ArrowDownAZ, Check, EyeOff, Flame, Moon, Pencil, Plus, Repeat2, Search, Star, Sun, Trash2, Utensils, X } from "lucide-react";
 import { cn, uid } from "@/lib/utils";
 import { useRitmo } from "@/lib/store/provider";
 import { bibliotecaComidas, type ComidaGuardada, type OrdenBiblioteca } from "@/lib/model/analytics";
@@ -13,11 +13,11 @@ import type { Comida, TipoComida } from "@/lib/model/types";
 
 type ItemBiblioteca = ComidaGuardada & { esCatalogo?: boolean };
 
-const CATS: { id: TipoComida; label: string; emoji: string }[] = [
-  { id: "desayuno", label: "Desayuno", emoji: "🌅" },
-  { id: "comida", label: "Comida", emoji: "🍽️" },
-  { id: "cena", label: "Cena", emoji: "🌙" },
-  { id: "snack", label: "Snacks", emoji: "🍎" },
+const CATS: { id: TipoComida; label: string; icon: typeof Sun }[] = [
+  { id: "desayuno", label: "Desayuno", icon: Sun },
+  { id: "comida", label: "Comida", icon: Utensils },
+  { id: "cena", label: "Cena", icon: Moon },
+  { id: "snack", label: "Snacks", icon: Apple },
 ];
 
 const ORDENES: { id: OrdenBiblioteca; label: string; icon: typeof Flame }[] = [
@@ -103,9 +103,9 @@ export function MealLibrary({ fecha }: { fecha: string }) {
         Mis comidas
       </SectionLabel>
 
-      <div className="flex flex-col gap-3 card-ritmo p-4">
+      <div className="flex flex-col gap-4 card-ritmo p-4 sm:p-5">
         {/* Categorías */}
-        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5">
+        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
           {CATS.map((c) => {
             const n = (porCat[c.id] ?? []).length;
             const activa = cat === c.id;
@@ -116,13 +116,13 @@ export function MealLibrary({ fecha }: { fecha: string }) {
                 className={cn(
                   "flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm font-medium transition-colors",
                   activa
-                    ? "border-primary bg-primary/10 text-primary"
+                    ? "border-primary bg-primary text-primary-foreground shadow-sm"
                     : "border-border text-muted-foreground hover:bg-secondary",
                 )}
               >
-                <span aria-hidden>{c.emoji}</span>
+                <c.icon className="size-3.5" aria-hidden="true" />
                 {c.label}
-                <span className={cn("tabular text-xs", activa ? "text-primary/70" : "text-muted-foreground/70")}>
+                <span className={cn("tabular text-xs", activa ? "text-primary-foreground/75" : "text-muted-foreground/70")}>
                   {n}
                 </span>
               </button>

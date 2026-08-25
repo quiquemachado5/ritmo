@@ -37,21 +37,16 @@ export function RitmoBadge({ className }: { className?: string }) {
 }
 
 /** Logo completo: isotipo + logotipo. */
-export function RitmoLogo({
-  className,
-  compact = false,
-}: {
-  className?: string;
-  compact?: boolean;
-}) {
+export function RitmoLogo({ className, compact = false }: { className?: string; compact?: boolean }) {
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
-      <RitmoBadge />
+      {!compact && <RitmoBadge />}
       {!compact && (
-        <span className="font-display text-[1.35rem] font-extrabold leading-none tracking-tight text-foreground">
-          RITMO
+        <span aria-label="RITMO" className="ritmo-wordmark text-primary">
+          <span>R</span><span>I</span><span>T</span><span>M</span><span>O</span>
         </span>
       )}
+      {compact && <RitmoMark />}
     </span>
   );
 }

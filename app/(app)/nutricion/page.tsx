@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AlertTriangle, Beef, ChevronLeft, ChevronRight, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { AlertTriangle, Beef, ChevronLeft, ChevronRight, Pencil, Plus, RotateCcw, Sparkles, Trash2 } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
 import { macrosObjetivo } from "@/lib/model/metrics";
@@ -68,8 +68,11 @@ export default function NutricionPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Cabecera con navegación de día */}
-      <header className="flex items-center justify-between">
-        <h1 className="font-display text-2xl font-bold tracking-tight">Nutrición</h1>
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-bold tracking-tight">Nutrición</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Registra, revisa y ajusta cada estimación.</p>
+        </div>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" onClick={() => setFecha((f) => sumarDias(f, -1))} aria-label="Día anterior">
             <ChevronLeft className="size-5" />
@@ -119,22 +122,25 @@ export default function NutricionPage() {
             const kcalTipo = items.reduce((a, c) => a + c.kcal, 0);
             return (
               <section key={tipo.id}>
-                <SectionLabel action={<span className="text-xs font-semibold tabular text-energy">{fmtKcal(kcalTipo)} kcal</span>}>
+                <SectionLabel action={<span className="rounded-full bg-energy-wash px-2.5 py-1 text-xs font-semibold tabular text-energy-ink">{fmtKcal(kcalTipo)} kcal</span>}>
                   {tipo.label}
                 </SectionLabel>
-                <Card className="divide-y divide-border p-0">
+                <Card className="divide-y divide-border overflow-hidden p-0">
                   {items.map((c) => (
-                    <div key={c.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                      <div className="min-w-0">
+                    <div key={c.id} className="flex flex-col gap-3 px-4 py-4 transition-colors hover:bg-secondary/35 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-full bg-energy-wash text-xs font-bold text-energy">{tipo.label.slice(0, 1)}</span>
+                        <div className="min-w-0">
                         <p className="truncate text-sm font-medium">{c.texto}</p>
-                        <p className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground tabular">
+                        <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground tabular">
                           <span>P {c.proteinas}g</span>
                           <span>C {c.carbohidratos}g</span>
                           <span>G {c.grasas}g</span>
-                          {c.estimado && <Chip tone="warning">aprox.</Chip>}
+                          {c.fuente === "manual" ? <Chip tone="weight">manual</Chip> : c.estimado && <Chip tone={c.fuente === "gemini" ? "weight" : "warning"}>{c.fuente === "gemini" ? "Gemini · estimado" : c.fuente === "edamam" ? "Edamam · estimado" : "aprox."}</Chip>}
                         </p>
+                        </div>
                       </div>
-                      <div className="flex shrink-0 items-center gap-1">
+                      <div className="flex w-full items-center justify-between gap-1 sm:w-auto">
                         <span className="mr-1 font-display font-bold tabular text-energy">{fmtKcal(c.kcal)}</span>
                         {confirmBorrar === c.id ? (
                           <div className="flex items-center gap-1">
@@ -165,8 +171,8 @@ export default function NutricionPage() {
               </section>
             );
           })}
-          <Button onClick={() => abrir("comida", fecha)} variant="secondary" className="gap-2">
-            <Plus className="size-4" /> Añadir comida
+          <Button onClick={() => abrir("comida", fecha)} variant="secondary" className="min-h-11 gap-2">
+            <Sparkles className="size-4" /> Analizar otra comida
           </Button>
         </div>
       )}

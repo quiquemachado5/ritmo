@@ -4,7 +4,7 @@
 
 RITMO es un rediseño integral construido **sobre** el modelo de la aplicación anterior (`legacy/composicion`): conserva su matemática —la parte más valiosa— y la lleva a una arquitectura moderna con su propia identidad.
 
-- **Stack:** Next.js 16 (App Router) · TypeScript · Tailwind v4 · shadcn/ui · Supabase · Recharts · Claude API.
+- **Stack:** Next.js 16 (App Router) · TypeScript · Tailwind v4 · shadcn/ui · Supabase · Recharts · Gemini API opcional.
 - **Diseño:** sistema propio de RITMO —verde pino sobre neutros de papel cálido, tipografía Bricolage Grotesque + Hanken Grotesk, claro/oscuro coherente.
 
 ---
@@ -63,17 +63,18 @@ Con esto, la app pide registro/login, ejecuta el **onboarding obligatorio** y si
 
 ---
 
-## 4. Contador de calorías inteligente (Claude)
+## 4. Contador de calorías inteligente (Gemini)
 
-El registro de comidas en lenguaje natural (“2 huevos revueltos, tostada y café con leche” → kcal + macros) usa la **API de Claude** desde una ruta de servidor ([`app/api/nutricion/route.ts`](app/api/nutricion/route.ts)).
+El registro de comidas en lenguaje natural (“2 huevos revueltos, tostada y café con leche” → kcal + macros) puede usar **Gemini** desde una ruta de servidor ([`app/api/nutricion/route.ts`](app/api/nutricion/route.ts)). La clave nunca se envía al navegador.
 
-Añade tu clave en `.env.local`:
+Añade en `.env.local` una clave creada en [Google AI Studio](https://aistudio.google.com/app/apikey):
 
 ```env
-ANTHROPIC_API_KEY=sk-ant-...
+GEMINI_API_KEY=...
+GEMINI_NUTRITION_MODEL=gemini-2.5-flash
 ```
 
-Sin la clave, la nutrición sigue funcionando con un **estimador offline** aproximado (base de alimentos local). El modelo por defecto es `claude-opus-5`; puedes cambiarlo con `RITMO_NUTRITION_MODEL`.
+Gemini tiene un nivel gratuito con límites de uso que pueden cambiar; revisa la cuota de tu proyecto antes de desplegar. Google indica que el contenido enviado en el nivel gratuito puede usarse para mejorar sus productos, así que no incluyas información personal o médica en la descripción de la comida. Sin clave —o si Gemini no responde— RITMO intenta Edamam si está configurado y finalmente mantiene el estimador local. Todas las respuestas se guardan como estimaciones editables: la etiqueta del producto y las cantidades pesadas prevalecen.
 
 ---
 
@@ -81,7 +82,7 @@ Sin la clave, la nutrición sigue funcionando con un **estimador offline** aprox
 
 **Vercel (recomendado para Next.js):**
 1. Importa el repositorio en [vercel.com](https://vercel.com).
-2. Añade las variables de entorno (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `ANTHROPIC_API_KEY`).
+2. Añade las variables de entorno (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `GEMINI_API_KEY` si quieres análisis con IA).
 3. Deploy. Añade la URL resultante a *Redirect URLs* en Supabase.
 
 **Netlify:** funciona con el plugin oficial `@netlify/plugin-nextjs` (build `next build`). Configura las mismas variables de entorno.
@@ -92,10 +93,10 @@ Sin la clave, la nutrición sigue funcionando con un **estimador offline** aprox
 
 ```
 app/
-  (app)/            Panel protegido: hoy, nutricion, habitos, progreso, cuerpo, calendario, ajustes
+  (app)/            Panel protegido: hoy, nutricion, habitos, progreso, calendario, ajustes
   (auth)/           login, registro
   onboarding/       Alta obligatoria por pasos
-  api/nutricion/    Ruta de servidor con Claude (+ fallback offline)
+  api/nutricion/    Ruta de servidor con Gemini, Edamam y fallback local
   auth/callback/    Intercambio del enlace de correo por sesión
 components/
   app/              Shell, navegación, registro rápido, gráficas, heatmap, primitivos

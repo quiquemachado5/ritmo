@@ -14,25 +14,26 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { RitmoBadge, RitmoLogo } from "@/components/ritmo-mark";
+import { RitmoLogo } from "@/components/ritmo-mark";
 import { ThemeToggle } from "./theme-toggle";
 import { NAV_ITEMS } from "./nav-items";
 import { useQuickLog } from "./quick-log-provider";
 import { useRitmo } from "@/lib/store/provider";
 import { QuickLog } from "./quick-log";
 import { PageTransition } from "@/components/page-transition";
+import { UserCount } from "./user-count";
 
 function SyncDot() {
   const { modo, sincronizando } = useRitmo();
   return (
-    <span className="inline-flex items-center gap-1.5 text-[0.7rem] font-medium text-muted-foreground">
+    <span title={sincronizando ? "Guardando cambios" : modo === "nube" ? "Sincronizado" : "Este dispositivo"} className="inline-flex items-center gap-1.5 text-[0.7rem] font-medium text-muted-foreground">
       <span
         className={cn(
           "size-2 rounded-full",
           sincronizando ? "animate-pulse bg-warning" : modo === "nube" ? "bg-success" : "bg-muted-foreground/50",
         )}
       />
-      <span className="hidden sm:inline">
+      <span className="hidden xl:inline">
         {sincronizando ? "Guardando…" : modo === "nube" ? "Sincronizado" : "Este dispositivo"}
       </span>
     </span>
@@ -101,15 +102,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-dvh bg-background">
       {/* Sidebar — escritorio */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-border bg-card px-3 py-5 md:flex">
-        <div className="px-2">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-border bg-card px-3 py-5 md:flex">
+        <div className="flex flex-col items-center gap-2 px-2">
           <Link href="/" aria-label="RITMO — inicio">
             <RitmoLogo />
           </Link>
+          <UserCount />
         </div>
         <Button
           onClick={() => abrir()}
-          className="mt-6 h-11 justify-start gap-2 rounded-xl text-[0.95rem] shadow-sm"
+          className="mt-7 h-11 justify-center gap-2 rounded-xl text-[0.95rem] shadow-sm"
         >
           <Plus className="size-5" />
           Registrar
@@ -139,8 +141,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <UserMenu />
             </div>
           </div>
-          <p className="text-[0.6rem] text-muted-foreground/50">
-            hecho por{" "}
+          <p className="text-center text-[0.6rem] text-muted-foreground/40">
+            creado por{" "}
             <a href="https://github.com/quiquemachado5" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground hover:underline">
               quiquemachado5
             </a>
@@ -161,15 +163,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Contenido */}
-      <div className="md:pl-60">
-        <main className="mx-auto w-full max-w-3xl px-4 pb-28 pt-5 md:pb-14 md:pt-9">
+      <div className="md:pl-64">
+        <main className="mx-auto w-full max-w-6xl px-[clamp(1rem,3vw,2.75rem)] pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-5 md:pb-14 md:pt-9">
           <PageTransition>{children}</PageTransition>
         </main>
       </div>
 
       {/* Barra inferior + FAB — móvil */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur-md md:hidden">
-        <div className="mx-auto flex h-[4.2rem] max-w-lg items-stretch justify-around px-2 pb-[env(safe-area-inset-bottom)]">
+        <div className="mx-auto flex min-h-[4.2rem] max-w-lg items-stretch justify-around px-2 pb-[env(safe-area-inset-bottom)]">
           {primarios.slice(0, 2).map((item) => (
             <NavTab key={item.href} item={item} active={activo(item.href)} />
           ))}

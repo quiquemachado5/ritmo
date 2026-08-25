@@ -157,6 +157,18 @@ function PanelComida({ fecha, onDone, comidaEdit }: { fecha: string; onDone: () 
   async function guardar() {
     if (!manual) return;
     const n = (s: string) => Math.max(0, Math.round(Number(s.replace(",", ".")) || 0));
+    const editadoManual = analisis != null && (
+      n(manual.kcal) !== analisis.kcal ||
+      n(manual.p) !== analisis.proteinas ||
+      n(manual.c) !== analisis.carbohidratos ||
+      n(manual.g) !== analisis.grasas
+    );
+    const editadoExistente = analisis == null && comidaEdit != null && (
+      n(manual.kcal) !== comidaEdit.kcal ||
+      n(manual.p) !== comidaEdit.proteinas ||
+      n(manual.c) !== comidaEdit.carbohidratos ||
+      n(manual.g) !== comidaEdit.grasas
+    );
     const comida: Comida = {
       id: comidaEdit?.id ?? uid(),
       tipo,
@@ -165,7 +177,10 @@ function PanelComida({ fecha, onDone, comidaEdit }: { fecha: string; onDone: () 
       proteinas: n(manual.p),
       carbohidratos: n(manual.c),
       grasas: n(manual.g),
-      estimado: analisis ? analisis.fuente === "offline" : comidaEdit?.estimado,
+      fuente: analisis ? (editadoManual ? "manual" : analisis.fuente) : editadoExistente ? "manual" : comidaEdit?.fuente,
+      // Una IA, una base nutricional y el estimador local parten de cantidades
+      // interpretadas. Si el usuario cambia los valores, su ajuste prevalece.
+      estimado: analisis ? !editadoManual : editadoExistente ? false : comidaEdit?.estimado,
       creado: comidaEdit?.creado ?? new Date().toISOString(),
     };
     if (editando) {
@@ -259,7 +274,7 @@ function PanelComida({ fecha, onDone, comidaEdit }: { fecha: string; onDone: () 
               <span className="ml-1 text-sm font-medium text-muted-foreground">kcal</span>
             </span>
             <Chip tone={analisis.fuente === "offline" ? "warning" : "weight"}>
-              {analisis.fuente === "edamam" ? "Edamam" : analisis.fuente === "claude" ? "IA" : "aprox."}
+              {analisis.fuente === "gemini" ? "Gemini" : analisis.fuente === "edamam" ? "Edamam" : analisis.fuente === "claude" ? "IA" : "local"}
             </Chip>
           </div>
           <div className="grid grid-cols-3 gap-3">

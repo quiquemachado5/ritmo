@@ -18,6 +18,8 @@ export interface Comida {
   proteinas: number;
   carbohidratos: number;
   grasas: number;
+  /** Procedencia del cálculo; los valores siguen siendo estimaciones editables. */
+  fuente?: "gemini" | "edamam" | "offline" | "claude" | "manual";
   estimado?: boolean;
   creado?: string; // ISO datetime
 }

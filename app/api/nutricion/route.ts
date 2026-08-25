@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { estimarOffline } from "@/lib/nutrition/offline";
 import type { AnalisisNutricional } from "@/lib/nutrition/types";
 import { analizarConEdamam } from "@/lib/nutrition/edamam";
+import { analizarConGemini } from "@/lib/nutrition/gemini";
 import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -78,9 +79,17 @@ export async function POST(request: Request) {
     let resultado: AnalisisNutricional | null = null;
 
     try {
-      resultado = await analizarConEdamam(texto);
+      resultado = await analizarConGemini(texto);
     } catch (error) {
-      console.error("Edamam error:", error);
+      console.error("Gemini nutrición error:", error);
+    }
+
+    if (!resultado) {
+      try {
+        resultado = await analizarConEdamam(texto);
+      } catch (error) {
+        console.error("Edamam error:", error);
+      }
     }
 
     /* Sanidad check: comida > 4000 kcal probablemente sea un error */
@@ -91,9 +100,11 @@ export async function POST(request: Request) {
     /* Fallback offline */
     if (!resultado) {
       resultado = estimarOffline(texto);
-      resultado.aviso = "Análisis sin conexión. Puedes editar los valores.";
+      resultado.aviso = "Estimación local aproximada. Puedes editar los valores.";
     } else {
-      resultado.aviso = "Estimado · puedes editarlo";
+      resultado.aviso = resultado.fuente === "gemini"
+        ? "Estimado con Gemini · comprueba la etiqueta o cantidades si las conoces."
+        : "Estimado · puedes editarlo";
     }
 
     return NextResponse.json(resultado, {
