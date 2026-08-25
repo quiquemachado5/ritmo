@@ -12,6 +12,21 @@ export const transitionCSS = `
     100% { opacity: 1; transform: translateY(0); filter: blur(0); }
   }
 
+  @keyframes slideDown {
+    0% { opacity: 0; transform: translateY(-12px); filter: blur(4px); }
+    100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+  }
+
+  @keyframes slideLeft {
+    0% { opacity: 0; transform: translateX(-16px); filter: blur(4px); }
+    100% { opacity: 1; transform: translateX(0); filter: blur(0); }
+  }
+
+  @keyframes slideRight {
+    0% { opacity: 0; transform: translateX(16px); filter: blur(4px); }
+    100% { opacity: 1; transform: translateX(0); filter: blur(0); }
+  }
+
   @keyframes fadeScale {
     0% { opacity: 0; transform: scale(0.96); filter: blur(2px); }
     100% { opacity: 1; transform: scale(1); filter: blur(0); }
@@ -41,6 +56,26 @@ export const transitionCSS = `
   @keyframes drawCheck {
     0% { stroke-dashoffset: 24; }
     100% { stroke-dashoffset: 0; }
+  }
+
+  @keyframes ripple {
+    0% { transform: scale(0); opacity: 1; }
+    100% { transform: scale(4); opacity: 0; }
+  }
+
+  @keyframes skeleton {
+    0% { background-position: -1000px 0; }
+    100% { background-position: 1000px 0; }
+  }
+
+  @keyframes pageIn {
+    0% { opacity: 0; transform: translateY(8px); filter: blur(2px); }
+    100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+  }
+
+  @keyframes pageOut {
+    0% { opacity: 1; transform: translateY(0); filter: blur(0); }
+    100% { opacity: 0; transform: translateY(-8px); filter: blur(2px); }
   }
 `;
 

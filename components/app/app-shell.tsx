@@ -20,6 +20,7 @@ import { NAV_ITEMS } from "./nav-items";
 import { useQuickLog } from "./quick-log-provider";
 import { useRitmo } from "@/lib/store/provider";
 import { QuickLog } from "./quick-log";
+import { PageTransition } from "@/components/page-transition";
 
 function SyncDot() {
   const { modo, sincronizando } = useRitmo();
@@ -161,7 +162,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Contenido */}
       <div className="md:pl-60">
-        <main className="mx-auto w-full max-w-3xl px-4 pb-28 pt-5 md:pb-14 md:pt-9">{children}</main>
+        <main className="mx-auto w-full max-w-3xl px-4 pb-28 pt-5 md:pb-14 md:pt-9">
+          <PageTransition>{children}</PageTransition>
+        </main>
       </div>
 
       {/* Barra inferior + FAB — móvil */}
