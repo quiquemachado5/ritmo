@@ -149,10 +149,13 @@ export class CloudAdapter implements Adapter {
     if (error) throw error;
   }
   async guardarPerfil(perfil: Perfil) {
+    // Upsert completo del perfil: escribimos null para los campos opcionales
+    // ausentes, de modo que vaciar un objetivo (p. ej. proteína) sí se guarde
+    // en vez de conservar el valor antiguo.
     const fila: Record<string, unknown> = { user_id: this.userId };
     for (const [js, sql] of Object.entries(PERFIL_COLS)) {
       const v = (perfil as unknown as Record<string, unknown>)[js];
-      if (v !== undefined) fila[sql] = v;
+      fila[sql] = v === undefined ? null : v;
     }
     const { error } = await this.client.from("perfiles").upsert(fila, { onConflict: "user_id" });
     if (error) throw error;

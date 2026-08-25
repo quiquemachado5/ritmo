@@ -2,11 +2,12 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { ArrowDownAZ, Flame, Plus, Search, Repeat2 } from "lucide-react";
+import { ArrowDownAZ, Check, EyeOff, Flame, Pencil, Plus, Repeat2, Search, Star, X } from "lucide-react";
 import { cn, uid } from "@/lib/utils";
 import { useRitmo } from "@/lib/store/provider";
 import { bibliotecaComidas, type ComidaGuardada, type OrdenBiblioteca } from "@/lib/model/analytics";
-import { fmtKcal, capitalizar, fmtFechaCorta } from "@/lib/format";
+import { fmtKcal, capitalizar } from "@/lib/format";
+import { useMealPrefs, toggleFavorito, toggleOculta, setOverride } from "@/lib/meal-prefs";
 import { SectionLabel, EmptyState } from "./primitives";
 import type { Comida, TipoComida } from "@/lib/model/types";
 
@@ -25,22 +26,45 @@ const ORDENES: { id: OrdenBiblioteca; label: string; icon: typeof Flame }[] = [
 
 /**
  * Biblioteca de comidas: tu "base de datos" personal, agrupada por tipo, que se
- * autoconstruye con lo que registras. Reutiliza cualquier plato en el día que
- * estés viendo con un toque.
+ * autoconstruye con lo que registras. Reutiliza cualquier plato con un toque,
+ * márcalo como favorito, edítalo u ocúltalo (preferencias locales sobre la
+ * agregación derivada del histórico).
  */
 export function MealLibrary({ fecha }: { fecha: string }) {
   const { estado, registrarComida } = useRitmo();
+  const prefs = useMealPrefs();
   const [orden, setOrden] = React.useState<OrdenBiblioteca>("frecuencia");
   const [cat, setCat] = React.useState<TipoComida>("desayuno");
   const [q, setQ] = React.useState("");
+  const [editando, setEditando] = React.useState<string | null>(null);
 
   const biblioteca = React.useMemo(() => bibliotecaComidas(estado, orden), [estado, orden]);
+
+  // Aplica overrides de edición y quita las ocultas; cuenta por categoría con
+  // esas reglas ya aplicadas para que los contadores cuadren.
+  const porCat = React.useMemo(() => {
+    const out = {} as Record<TipoComida, ComidaGuardada[]>;
+    for (const c of CATS) {
+      const arr = (biblioteca[c.id] ?? [])
+        .filter((it) => !prefs.hidden.includes(it.clave))
+        .map((it) => {
+          const ov = prefs.overrides[it.clave];
+          return ov ? { ...it, ...limpiarOverride(ov) } : it;
+        });
+      // Favoritas primero, conservando el orden derivado dentro de cada grupo.
+      const fav = arr.filter((it) => prefs.fav.includes(it.clave));
+      const resto = arr.filter((it) => !prefs.fav.includes(it.clave));
+      out[c.id] = [...fav, ...resto];
+    }
+    return out;
+  }, [biblioteca, prefs]);
+
   const total = React.useMemo(
-    () => Object.values(biblioteca).reduce((a, arr) => a + arr.length, 0),
-    [biblioteca],
+    () => Object.values(porCat).reduce((a, arr) => a + arr.length, 0),
+    [porCat],
   );
 
-  const itemsCat = biblioteca[cat] ?? [];
+  const itemsCat = porCat[cat] ?? [];
   const filtradas = React.useMemo(() => {
     const needle = q.trim().toLowerCase();
     return needle ? itemsCat.filter((c) => c.texto.toLowerCase().includes(needle)) : itemsCat;
@@ -59,10 +83,10 @@ export function MealLibrary({ fecha }: { fecha: string }) {
       creado: new Date().toISOString(),
     };
     await registrarComida(fecha, comida);
-    toast.success(`${item.texto} · ${fmtKcal(item.kcal)} kcal`, { description: "Añadida al día" });
+    toast.success(`${capitalizar(item.texto)} · ${fmtKcal(item.kcal)} kcal`, { description: "Añadida al día" });
   }
 
-  if (total === 0) {
+  if (total === 0 && prefs.hidden.length === 0) {
     return (
       <section>
         <SectionLabel>Mis comidas</SectionLabel>
@@ -84,12 +108,12 @@ export function MealLibrary({ fecha }: { fecha: string }) {
         {/* Categorías */}
         <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5">
           {CATS.map((c) => {
-            const n = (biblioteca[c.id] ?? []).length;
+            const n = (porCat[c.id] ?? []).length;
             const activa = cat === c.id;
             return (
               <button
                 key={c.id}
-                onClick={() => setCat(c.id)}
+                onClick={() => { setCat(c.id); setEditando(null); }}
                 className={cn(
                   "flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm font-medium transition-colors",
                   activa
@@ -143,36 +167,183 @@ export function MealLibrary({ fecha }: { fecha: string }) {
           </p>
         ) : (
           <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {filtradas.map((item) => (
-              <li key={item.clave}>
-                <button
-                  onClick={() => usar(item)}
-                  className="group flex w-full items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5 text-left transition-all hover:border-primary/40 hover:bg-primary/[0.04] active:scale-[0.99]"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{capitalizar(item.texto)}</p>
-                    <p className="mt-0.5 flex items-center gap-2 text-[0.7rem] text-muted-foreground tabular">
-                      <span>P {item.proteinas}</span>
-                      <span>C {item.carbohidratos}</span>
-                      <span>G {item.grasas}</span>
-                      {item.veces > 1 && <span className="text-primary/80">· ×{item.veces}</span>}
-                    </p>
-                  </div>
-                  <span className="shrink-0 text-right">
-                    <span className="block font-display text-base font-bold leading-none tabular text-energy">
-                      {fmtKcal(item.kcal)}
-                      <span className="ml-0.5 text-[0.65rem] font-normal text-muted-foreground">kcal</span>
-                    </span>
-                  </span>
-                  <span className="grid size-8 shrink-0 place-items-center rounded-full bg-secondary text-muted-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                    <Plus className="size-4" />
-                  </span>
-                </button>
-              </li>
-            ))}
+            {filtradas.map((item) =>
+              editando === item.clave ? (
+                <li key={item.clave} className="sm:col-span-2">
+                  <EditorEntrada
+                    item={item}
+                    onCancel={() => setEditando(null)}
+                    onSave={(ov) => { setOverride(item.clave, ov); setEditando(null); toast.success("Comida actualizada en la biblioteca"); }}
+                  />
+                </li>
+              ) : (
+                <li key={item.clave}>
+                  <TarjetaComida
+                    item={item}
+                    favorita={prefs.fav.includes(item.clave)}
+                    onUsar={() => usar(item)}
+                    onFav={() => toggleFavorito(item.clave)}
+                    onEdit={() => setEditando(item.clave)}
+                    onHide={() => { toggleOculta(item.clave); toast("Comida ocultada de la biblioteca"); }}
+                  />
+                </li>
+              ),
+            )}
           </ul>
+        )}
+
+        {prefs.hidden.length > 0 && (
+          <button
+            onClick={() => prefs.hidden.forEach((k) => toggleOculta(k))}
+            className="self-start text-xs text-muted-foreground underline-offset-2 hover:underline"
+          >
+            Mostrar {prefs.hidden.length} comida{prefs.hidden.length > 1 ? "s" : ""} oculta{prefs.hidden.length > 1 ? "s" : ""}
+          </button>
         )}
       </div>
     </section>
   );
+}
+
+function TarjetaComida({
+  item,
+  favorita,
+  onUsar,
+  onFav,
+  onEdit,
+  onHide,
+}: {
+  item: ComidaGuardada;
+  favorita: boolean;
+  onUsar: () => void;
+  onFav: () => void;
+  onEdit: () => void;
+  onHide: () => void;
+}) {
+  return (
+    <div
+      className={cn(
+        "group flex items-center gap-2 rounded-xl border bg-card px-2.5 py-2 transition-all",
+        favorita ? "border-habit/40 bg-habit/[0.04]" : "border-border hover:border-primary/40",
+      )}
+    >
+      {/* Región principal: añadir al día */}
+      <button onClick={onUsar} className="flex min-w-0 flex-1 items-center gap-3 text-left" aria-label={`Añadir ${item.texto}`}>
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-1.5 truncate text-sm font-medium">
+            {favorita && <Star className="size-3.5 shrink-0 fill-habit text-habit" />}
+            <span className="truncate">{capitalizar(item.texto)}</span>
+          </p>
+          <p className="mt-0.5 flex items-center gap-2 text-[0.7rem] text-muted-foreground tabular">
+            <span>P {item.proteinas}</span>
+            <span>C {item.carbohidratos}</span>
+            <span>G {item.grasas}</span>
+            {item.veces > 1 && <span className="text-primary/80">· ×{item.veces}</span>}
+          </p>
+        </div>
+        <span className="shrink-0 font-display text-base font-bold leading-none tabular text-energy">
+          {fmtKcal(item.kcal)}
+          <span className="ml-0.5 text-[0.65rem] font-normal text-muted-foreground">kcal</span>
+        </span>
+        <span className="grid size-8 shrink-0 place-items-center rounded-full bg-secondary text-muted-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+          <Plus className="size-4" />
+        </span>
+      </button>
+
+      {/* Acciones */}
+      <div className="flex shrink-0 items-center">
+        <IconBtn label={favorita ? "Quitar de favoritas" : "Marcar favorita"} onClick={onFav} activo={favorita}>
+          <Star className={cn("size-4", favorita && "fill-habit text-habit")} />
+        </IconBtn>
+        <IconBtn label="Editar comida" onClick={onEdit}>
+          <Pencil className="size-4" />
+        </IconBtn>
+        <IconBtn label="Ocultar de la biblioteca" onClick={onHide}>
+          <EyeOff className="size-4" />
+        </IconBtn>
+      </div>
+    </div>
+  );
+}
+
+function IconBtn({ children, label, onClick, activo }: { children: React.ReactNode; label: string; onClick: () => void; activo?: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className={cn(
+        "grid size-8 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+        activo && "text-habit",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function EditorEntrada({
+  item,
+  onCancel,
+  onSave,
+}: {
+  item: ComidaGuardada;
+  onCancel: () => void;
+  onSave: (ov: { texto: string; kcal: number; proteinas: number; carbohidratos: number; grasas: number }) => void;
+}) {
+  const [texto, setTexto] = React.useState(item.texto);
+  const [kcal, setKcal] = React.useState(String(item.kcal));
+  const [p, setP] = React.useState(String(item.proteinas));
+  const [c, setC] = React.useState(String(item.carbohidratos));
+  const [g, setG] = React.useState(String(item.grasas));
+  const n = (s: string) => Math.max(0, Math.round(Number(s.replace(",", ".")) || 0));
+
+  return (
+    <div className="rounded-xl border border-primary/40 bg-primary/[0.03] p-3">
+      <input
+        value={texto}
+        onChange={(e) => setTexto(e.target.value)}
+        placeholder="Nombre de la comida"
+        className="mb-2 h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-ring"
+      />
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <CampoNum label="kcal" value={kcal} onChange={setKcal} />
+        <CampoNum label="Proteínas" value={p} onChange={setP} />
+        <CampoNum label="Carbos" value={c} onChange={setC} />
+        <CampoNum label="Grasas" value={g} onChange={setG} />
+      </div>
+      <div className="mt-3 flex justify-end gap-2">
+        <button onClick={onCancel} className="flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-muted-foreground hover:bg-secondary">
+          <X className="size-4" /> Cancelar
+        </button>
+        <button
+          onClick={() => onSave({ texto: texto.trim() || item.texto, kcal: n(kcal), proteinas: n(p), carbohidratos: n(c), grasas: n(g) })}
+          className="flex h-9 items-center gap-1.5 rounded-full bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          <Check className="size-4" /> Guardar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CampoNum({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
+      <input
+        inputMode="numeric"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm tabular outline-none focus:border-ring"
+      />
+    </label>
+  );
+}
+
+/** Solo conserva los campos definidos del override (evita pisar con undefined). */
+function limpiarOverride(ov: Partial<ComidaGuardada>): Partial<ComidaGuardada> {
+  const out: Partial<ComidaGuardada> = {};
+  for (const [k, v] of Object.entries(ov)) if (v !== undefined) (out as Record<string, unknown>)[k] = v;
+  return out;
 }

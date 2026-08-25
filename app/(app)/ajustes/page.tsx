@@ -26,6 +26,19 @@ export default function AjustesPage() {
   const p = estado.perfil;
   const [form, setForm] = React.useState(p);
   React.useEffect(() => setForm(p), [p]);
+  // Todos los hooks van ANTES de cualquier return: las reglas de hooks exigen
+  // el mismo número y orden en cada render (cargando vs cargado incluido).
+  const [diasSinExportar, setDiasSinExportar] = React.useState<number | null>(null);
+  const [backupInfo, setBackupInfo] = React.useState<{ at: string } | null>(null);
+  const [importando, setImportando] = React.useState(false);
+  const [previewDatos, setPreviewDatos] = React.useState<any>(null);
+  React.useEffect(() => {
+    setDiasSinExportar(diasDesdeExportacion());
+    const b = leerBackupLocal();
+    setBackupInfo(b ? { at: b.at } : null);
+  }, []);
+  // g/kg por defecto según objetivo, para el placeholder del campo de proteína.
+  const proteinaSugerida = String(form.objetivo === "perder" ? 2.0 : form.objetivo === "ganar" ? 1.8 : 1.6);
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }));
 
   if (cargando) return <div className="flex flex-col gap-6"><Skeleton className="h-8 w-40" /><Skeleton className="h-64 w-full rounded-xl" /></div>;
@@ -52,6 +65,11 @@ export default function AjustesPage() {
       toast.error("Calorías objetivo: entre 800 y 5000");
       return;
     }
+    const proteina = form.proteinaObjetivo != null && String(form.proteinaObjetivo) !== "" ? Number(form.proteinaObjetivo) : undefined;
+    if (proteina != null && (!Number.isFinite(proteina) || proteina < 0.5 || proteina > 4)) {
+      toast.error("Proteína: entre 0,5 y 4 g/kg (o vacío para automático)");
+      return;
+    }
 
     await actualizarPerfil({
       nombre: form.nombre,
@@ -61,6 +79,7 @@ export default function AjustesPage() {
       objetivo: form.objetivo,
       pesoObjetivo: pesoObj,
       kcalObjetivo: kcal,
+      proteinaObjetivo: proteina,
       factorActividad: Number(form.factorActividad),
     });
     toast.success("Perfil guardado");
@@ -98,14 +117,6 @@ export default function AjustesPage() {
     setDiasSinExportar(0);
   }
 
-  const [diasSinExportar, setDiasSinExportar] = React.useState<number | null>(null);
-  const [backupInfo, setBackupInfo] = React.useState<{ at: string } | null>(null);
-  React.useEffect(() => {
-    setDiasSinExportar(diasDesdeExportacion());
-    const b = leerBackupLocal();
-    setBackupInfo(b ? { at: b.at } : null);
-  }, []);
-
   async function restaurarCopiaLocal() {
     const b = leerBackupLocal();
     if (!b) {
@@ -114,9 +125,6 @@ export default function AjustesPage() {
     }
     setPreviewDatos(b.data);
   }
-
-  const [importando, setImportando] = React.useState(false);
-  const [previewDatos, setPreviewDatos] = React.useState<any>(null);
 
   async function subirArchivo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -189,6 +197,21 @@ export default function AjustesPage() {
           <Row label="Calorías objetivo" htmlFor="kcalObjetivo">
             <Input id="kcalObjetivo" inputMode="numeric" value={String(form.kcalObjetivo ?? "")} onChange={(e) => set("kcalObjetivo", Number(e.target.value) as never)} className="max-w-28 tabular h-11" />
           </Row>
+          <div>
+            <Row label="Proteína (g/kg)" htmlFor="proteinaObjetivo">
+              <Input
+                id="proteinaObjetivo"
+                inputMode="decimal"
+                placeholder={proteinaSugerida}
+                value={form.proteinaObjetivo != null ? String(form.proteinaObjetivo) : ""}
+                onChange={(e) => set("proteinaObjetivo", (e.target.value === "" ? undefined : Number(e.target.value)) as never)}
+                className="max-w-24 tabular h-11"
+              />
+            </Row>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Gramos de proteína por kg de peso. Vacío = automático ({proteinaSugerida} g/kg según tu objetivo).
+            </p>
+          </div>
           <div>
             <Label className="mb-2 block">Nivel de actividad</Label>
             <div className="flex flex-col gap-1.5">
