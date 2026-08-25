@@ -12,8 +12,8 @@ import { hoy } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Ring, MacroBar, Metric, SectionLabel, Chip } from "@/components/app/primitives";
-import { fmtPeso, fmtKcal, fmtSigno, fmtFechaCorta, relativo, capitalizar } from "@/lib/format";
+import { Ring, MacroBar, Metric, SectionLabel } from "@/components/app/primitives";
+import { fmtPeso, fmtKcal, fmtSigno, relativo, capitalizar } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 function saludo(): string {
@@ -82,34 +82,30 @@ export default function HoyPage() {
         <SectionLabel action={<Link href="/nutricion" className="text-xs font-medium text-primary hover:underline">Ver nutrición</Link>}>
           Energía de hoy
         </SectionLabel>
-        <Card className="p-5">
-          <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center sm:gap-7">
-            <Ring
-              value={consumidas}
-              max={objetivoKcal}
-              colorVar="--energy"
-              size={140}
-              stroke={13}
-              ariaLabel={`Energía de hoy: ${fmtKcal(consumidas)} de ${fmtKcal(objetivoKcal)} kcal`}
-            >
-              <div>
-                <span className="block font-display text-3xl font-bold leading-none tabular">
-                  {fmtKcal(Math.abs(restanteKcal))}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {restanteKcal >= 0 ? "kcal restantes" : "kcal de más"}
-                </span>
-              </div>
-            </Ring>
-            <div className="grid w-full flex-1 gap-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">
-                  <span className="font-semibold tabular text-foreground">{fmtKcal(consumidas)}</span> de {fmtKcal(objetivoKcal)} kcal
-                </span>
-              </div>
-              <MacroBar label="Proteínas" value={macros.p} max={objMacros.proteinas} colorVar="--weight" />
-              <MacroBar label="Carbohidratos" value={macros.c} max={objMacros.carbohidratos} colorVar="--habit" />
-              <MacroBar label="Grasas" value={macros.g} max={objMacros.grasas} colorVar="--energy" />
+        <Card className="overflow-hidden p-0">
+          <div className="grid lg:grid-cols-[minmax(16rem,.82fr)_1fr]">
+            <div className="relative flex min-h-56 items-center justify-center overflow-hidden bg-energy-wash px-5 py-6 sm:min-h-64">
+              <div className="absolute inset-x-0 top-0 h-1 bg-energy" />
+              <div className="absolute -bottom-16 -left-14 size-48 rounded-full border-[22px] border-energy/10" />
+              <Ring
+                value={consumidas}
+                max={objetivoKcal}
+                colorVar="--energy"
+                size={166}
+                stroke={14}
+                ariaLabel={`Energía de hoy: ${fmtKcal(consumidas)} de ${fmtKcal(objetivoKcal)} kcal`}
+                className="relative"
+              >
+                <div>
+                  <span className="block font-display text-4xl font-bold leading-none tabular text-energy">{fmtKcal(Math.abs(restanteKcal))}</span>
+                  <span className="mt-1 block text-xs font-medium text-energy-ink">{restanteKcal >= 0 ? "kcal restantes" : "kcal de más"}</span>
+                </div>
+              </Ring>
+              <div className="absolute bottom-4 left-5 right-5 flex items-center justify-between text-xs text-energy-ink"><span>Consumidas</span><span className="font-semibold tabular">{fmtKcal(consumidas)} / {fmtKcal(objetivoKcal)}</span></div>
+            </div>
+            <div className="flex flex-col justify-center gap-5 p-5 sm:p-7">
+              <div><h2 className="font-display text-2xl font-bold">El balance de tu día</h2><p className="mt-1 text-sm text-muted-foreground">Tu objetivo energético y los macros que lo sostienen.</p></div>
+              <div className="grid gap-4"><MacroBar label="Proteínas" value={macros.p} max={objMacros.proteinas} colorVar="--weight" /><MacroBar label="Carbohidratos" value={macros.c} max={objMacros.carbohidratos} colorVar="--habit" /><MacroBar label="Grasas" value={macros.g} max={objMacros.grasas} colorVar="--energy" /></div>
             </div>
           </div>
 
@@ -134,7 +130,7 @@ export default function HoyPage() {
                   : "Aún no has cumplido ningún hábito";
             const kcalWarning = restanteKcal < 0 && habitosHechos >= 4;
             return (
-              <div className={cn("mt-4 flex flex-col gap-2 rounded-xl border px-4 py-3", tonos.border, tonos.bg)}>
+              <div className={cn("flex flex-col gap-2 border-t px-5 py-4 sm:px-7", tonos.border, tonos.bg)}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <Target className={cn("size-5", tonos.text)} />
@@ -369,34 +365,34 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
   return (
     <section>
       <SectionLabel>Resumen y records</SectionLabel>
-      <Card className="flex flex-col gap-0 p-0 overflow-hidden">
+      <Card className="flex flex-col gap-0 overflow-hidden p-0">
         {/* Veredicto semanal */}
-        <div className="flex flex-col gap-3 p-5">
-          <div className="flex items-start gap-2.5">
-            <span className={cn("mt-1.5 size-2 shrink-0 rounded-full", v.punto)} />
-            <div>
-              <p className={cn("font-display text-sm font-bold", v.clase)}>{v.titulo}</p>
-              <p className="text-sm text-muted-foreground">{cabecera}</p>
-            </div>
+        <div className="grid lg:grid-cols-[minmax(15rem,.72fr)_1fr]">
+          <div className="relative overflow-hidden bg-secondary/45 p-5 sm:p-7">
+            <span className={cn("absolute left-0 top-0 h-full w-1", v.punto)} />
+            <div className="relative"><p className={cn("font-display text-2xl font-bold", v.clase)}>{v.titulo}</p><p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">{cabecera}</p></div>
+            <div className="relative mt-7 flex items-end justify-between"><div><p className="text-xs text-muted-foreground">Constancia esta semana</p><p className={cn("font-display text-4xl font-bold tabular", v.clase)}>{adh}%</p></div><span className={cn("grid size-11 place-items-center rounded-2xl bg-card shadow-sm", v.clase)}><Award className="size-5" /></span></div>
           </div>
-          {lineas.length > 0 && (
-            <div className="flex flex-col gap-2.5 border-t border-border pt-3">
-              {lineas.map((l, i) => (
-                <div key={i} className="flex items-start gap-3 text-sm">
-                  {l.icon}
-                  <span className="text-muted-foreground">{l.text}</span>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="flex flex-col justify-center gap-3 p-5 sm:p-7">
+            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">Lo importante ahora</p>
+            {lineas.length > 0 ? (
+              <div className="grid gap-3">
+                {lineas.map((l, i) => (
+                  <div key={i} className="flex items-start gap-3 border-b border-border pb-3 last:border-0 last:pb-0">
+                    <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg bg-secondary">{l.icon}</span><span className="text-sm leading-5 text-muted-foreground">{l.text}</span>
+                  </div>
+                ))}
+              </div>
+            ) : <p className="text-sm text-muted-foreground">Registra unos días más para que RITMO pueda darte una lectura de tu semana.</p>}
+          </div>
         </div>
 
         {/* Records personales */}
         {hayRecords && (
-          <div className="border-t border-border bg-secondary/30 p-5">
-            <p className="mb-3 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Tus records</p>
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-              <RecordBadge icon={<Award className="size-3.5 text-streak" />} label="Mejor racha" value={`${mejorRacha}`} unit="días" />
+          <div className="border-t border-border bg-background p-5 sm:p-7">
+            <div className="mb-5 flex items-end justify-between gap-4"><div><h3 className="font-display text-xl font-bold">Tus mejores marcas</h3><p className="mt-1 text-sm text-muted-foreground">La evidencia de todo lo que ya has sostenido.</p></div><Award className="size-7 shrink-0 text-streak" /></div>
+            <div className="grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
+              <RecordBadge icon={<Award className="size-4 text-streak" />} label="Mejor racha" value={`${mejorRacha}`} unit="días" />
               {rec.mejorMesAdherencia && (
                 <RecordBadge icon={<Flame className="size-3.5 text-habit" />} label="Mejor mes" value={`${rec.mejorMesAdherencia.adherenciaMedia}%`} sub={rec.mejorMesAdherencia.etiqueta} />
               )}
@@ -438,27 +434,10 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
 
 function RecordBadge({ icon, label, value, unit, sub }: { icon: React.ReactNode; label: string; value: string; unit?: string; sub?: string }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-lg bg-background px-3 py-2.5 shadow-sm">
-      <div className="grid size-7 shrink-0 place-items-center rounded-md bg-secondary">
-        {icon}
-      </div>
-      <div className="min-w-0">
-        <p className="text-[0.6rem] text-muted-foreground truncate">{label}</p>
-        <p className="font-display text-sm font-bold tabular leading-none">
-          {value}{unit && <span className="ml-0.5 text-[0.6rem] font-medium text-muted-foreground">{unit}</span>}
-        </p>
-        {sub && <p className="text-[0.55rem] text-muted-foreground truncate">{sub}</p>}
-      </div>
-    </div>
-  );
-}
-
-function RevItem({ etiqueta, valor, sub, destacado }: { etiqueta: string; valor: string; sub: string; destacado?: boolean }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">{etiqueta}</span>
-      <span className={cn("font-display font-bold tabular", destacado ? "text-lg text-weight" : "text-base")}>{valor}</span>
-      <span className="text-[0.65rem] text-muted-foreground">{sub}</span>
+    <div className="min-w-0 bg-card px-4 py-4 sm:px-5">
+      <div className="flex items-center justify-between gap-2"><p className="truncate text-xs font-medium text-muted-foreground">{label}</p><span className="grid size-7 shrink-0 place-items-center rounded-lg bg-secondary">{icon}</span></div>
+      <p className="mt-4 font-display text-3xl font-bold leading-none tabular text-foreground">{value}{unit && <span className="ml-1 text-xs font-medium text-muted-foreground">{unit}</span>}</p>
+      {sub && <p className="mt-2 truncate text-xs text-muted-foreground">{sub}</p>}
     </div>
   );
 }
