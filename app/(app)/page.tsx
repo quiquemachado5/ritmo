@@ -82,30 +82,16 @@ export default function HoyPage() {
         <SectionLabel action={<Link href="/nutricion" className="text-xs font-medium text-primary hover:underline">Ver nutrición</Link>}>
           Energía de hoy
         </SectionLabel>
-        <Card className="overflow-hidden p-0">
-          <div className="grid lg:grid-cols-[minmax(16rem,.82fr)_1fr]">
-            <div className="relative flex min-h-56 items-center justify-center overflow-hidden bg-energy-wash px-5 py-6 sm:min-h-64">
-              <div className="absolute inset-x-0 top-0 h-1 bg-energy" />
-              <div className="absolute -bottom-16 -left-14 size-48 rounded-full border-[22px] border-energy/10" />
-              <Ring
-                value={consumidas}
-                max={objetivoKcal}
-                colorVar="--energy"
-                size={166}
-                stroke={14}
-                ariaLabel={`Energía de hoy: ${fmtKcal(consumidas)} de ${fmtKcal(objetivoKcal)} kcal`}
-                className="relative"
-              >
-                <div>
-                  <span className="block font-display text-4xl font-bold leading-none tabular text-energy">{fmtKcal(Math.abs(restanteKcal))}</span>
-                  <span className="mt-1 block text-xs font-medium text-energy-ink">{restanteKcal >= 0 ? "kcal restantes" : "kcal de más"}</span>
-                </div>
-              </Ring>
-              <div className="absolute bottom-4 left-5 right-5 flex items-center justify-between text-xs text-energy-ink"><span>Consumidas</span><span className="font-semibold tabular">{fmtKcal(consumidas)} / {fmtKcal(objetivoKcal)}</span></div>
-            </div>
-            <div className="flex flex-col justify-center gap-5 p-5 sm:p-7">
-              <div><h2 className="font-display text-2xl font-bold">El balance de tu día</h2><p className="mt-1 text-sm text-muted-foreground">Tu objetivo energético y los macros que lo sostienen.</p></div>
-              <div className="grid gap-4"><MacroBar label="Proteínas" value={macros.p} max={objMacros.proteinas} colorVar="--weight" /><MacroBar label="Carbohidratos" value={macros.c} max={objMacros.carbohidratos} colorVar="--habit" /><MacroBar label="Grasas" value={macros.g} max={objMacros.grasas} colorVar="--energy" /></div>
+        <Card className="p-5">
+          <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center sm:gap-7">
+            <Ring value={consumidas} max={objetivoKcal} colorVar="--energy" size={140} stroke={13} ariaLabel={`Energía de hoy: ${fmtKcal(consumidas)} de ${fmtKcal(objetivoKcal)} kcal`}>
+              <div><span className="block font-display text-3xl font-bold leading-none tabular">{fmtKcal(Math.abs(restanteKcal))}</span><span className="text-xs text-muted-foreground">{restanteKcal >= 0 ? "kcal restantes" : "kcal de más"}</span></div>
+            </Ring>
+            <div className="grid w-full flex-1 gap-3">
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground"><span className="font-semibold tabular text-foreground">{fmtKcal(consumidas)}</span> de {fmtKcal(objetivoKcal)} kcal</span></div>
+              <MacroBar label="Proteínas" value={macros.p} max={objMacros.proteinas} colorVar="--weight" />
+              <MacroBar label="Carbohidratos" value={macros.c} max={objMacros.carbohidratos} colorVar="--habit" />
+              <MacroBar label="Grasas" value={macros.g} max={objMacros.grasas} colorVar="--energy" />
             </div>
           </div>
 
@@ -130,7 +116,7 @@ export default function HoyPage() {
                   : "Aún no has cumplido ningún hábito";
             const kcalWarning = restanteKcal < 0 && habitosHechos >= 4;
             return (
-              <div className={cn("flex flex-col gap-2 border-t px-5 py-4 sm:px-7", tonos.border, tonos.bg)}>
+              <div className={cn("mt-4 flex flex-col gap-2 rounded-xl border px-4 py-3", tonos.border, tonos.bg)}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <Target className={cn("size-5", tonos.text)} />
