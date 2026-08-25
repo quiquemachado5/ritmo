@@ -96,27 +96,27 @@ export function Heatmap({
       ref={scroller}
       className="overflow-x-auto pb-2 [scrollbar-color:var(--border)_transparent] [scrollbar-width:thin]"
     >
-      <div className="inline-flex flex-col gap-1">
-        <div className="flex gap-[3px] text-[0.6rem] text-muted-foreground">
-          <div className="mr-1 w-4 shrink-0" />
+      <div className="inline-flex flex-col gap-2">
+        <div className="flex gap-1 text-xs text-muted-foreground">
+          <div className="mr-2 w-9 shrink-0" />
           {columnas.map((_, i) => {
             const m = meses.find((x) => x.col === i);
             return (
-              <div key={i} className="w-[13px] text-left">
+              <div key={i} className="w-5 text-left sm:w-6">
                 {m ? m.label : ""}
               </div>
             );
           })}
         </div>
-        <div className="flex gap-[3px]">
+        <div className="flex gap-1">
           {/* Inicial del día de la semana, para orientarse en la cuadrícula. */}
-          <div className="mr-1 flex w-4 shrink-0 flex-col gap-[3px] text-[0.6rem] leading-[13px] text-muted-foreground">
+          <div className="mr-2 flex w-9 shrink-0 flex-col gap-1 text-xs leading-5 text-muted-foreground sm:leading-6">
             {DIAS_SEMANA.map((d, j) => (
-              <span key={j} className="h-[13px]">{j % 2 === 1 ? d.slice(0, 1) : ""}</span>
+              <span key={j} className="h-5 sm:h-6">{j % 2 === 0 ? d : ""}</span>
             ))}
           </div>
           {columnas.map((col, i) => (
-            <div key={i} className="flex flex-col gap-[3px]">
+            <div key={i} className="flex flex-col gap-1">
               {col.map((cell, j) =>
                 cell && !cell.futuro ? (
                   <div
@@ -130,13 +130,13 @@ export function Heatmap({
                     onMouseLeave={() => setActivo(null)}
                     onBlur={() => setActivo(null)}
                     className={cn(
-                      "size-[13px] cursor-default rounded-[3px] outline-none transition-shadow",
+                      "size-5 cursor-default rounded-[4px] outline-none transition-shadow sm:size-6",
                       NIVEL_COLOR[cell.nivel],
                       activo?.fecha === cell.fecha && "ring-2 ring-foreground/50",
                     )}
                   />
                 ) : (
-                  <div key={j} className="size-[13px] rounded-[3px] bg-transparent" />
+                  <div key={j} className="size-5 rounded-[4px] bg-transparent sm:size-6" />
                 ),
               )}
             </div>
@@ -144,7 +144,7 @@ export function Heatmap({
         </div>
 
         {/* Detalle del día señalado: el `title` nativo tarda y se pierde. */}
-        <div className="min-h-[1.5rem] pt-1 text-xs">
+        <div className="min-h-[1.5rem] pt-2 text-sm">
           {activo ? (
             <span>
               <span className="font-medium text-foreground">{capitalizar(fmtFechaLarga(activo.fecha))}</span>
@@ -158,10 +158,10 @@ export function Heatmap({
             <span className="text-muted-foreground">Pasa el ratón por un día para ver su detalle.</span>
           )}
         </div>
-        <div className="mt-1 flex items-center justify-end gap-1.5 text-[0.65rem] text-muted-foreground">
+        <div className="mt-2 flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
           <span>menos</span>
           {NIVEL_COLOR.map((c, i) => (
-            <span key={i} className={cn("size-[11px] rounded-[3px]", c)} />
+            <span key={i} className={cn("size-4 rounded-[4px]", c)} />
           ))}
           <span>más</span>
         </div>

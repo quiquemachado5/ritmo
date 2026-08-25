@@ -7,11 +7,11 @@ import { Check, Flame } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { resumen, adherenciaPorHabito } from "@/lib/model/analytics";
 import { HABITOS } from "@/lib/model/config";
-import { hoy } from "@/lib/model/dates";
+import { DIAS_SEMANA, diaSemanaLunes, hoy, sumarDias } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Heatmap } from "@/components/app/heatmap";
-import { Metric, SectionLabel } from "@/components/app/primitives";
+import { SectionLabel } from "@/components/app/primitives";
 import { cn } from "@/lib/utils";
 
 export default function HabitosPage() {
@@ -20,6 +20,11 @@ export default function HabitosPage() {
   const r = React.useMemo(() => resumen(estado), [estado]);
   const porHabito = React.useMemo(() => adherenciaPorHabito(estado, HABITOS, 30), [estado]);
   const diaHoy = dia(hoyISO);
+  const semanaReciente = React.useMemo(() => Array.from({ length: 7 }, (_, i) => {
+    const fecha = sumarDias(hoyISO, i - 6);
+    const cumplidos = HABITOS.filter((h) => estado.dias[fecha]?.habitos?.[h.clave] === true).length;
+    return { fecha, cumplidos, esHoy: fecha === hoyISO };
+  }), [estado.dias, hoyISO]);
 
   if (cargando) return <div className="flex flex-col gap-6"><Skeleton className="h-8 w-40" /><Skeleton className="h-40 w-full rounded-xl" /><Skeleton className="h-48 w-full rounded-xl" /></div>;
 
@@ -30,7 +35,7 @@ export default function HabitosPage() {
       </header>
 
       {/* Rachas */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid gap-3 lg:grid-cols-[minmax(12rem,.65fr)_minmax(0,1.35fr)]">
         <Card className="flex flex-col items-center gap-1 p-4 text-center">
           <Flame className="size-5 text-streak" />
           <span className="font-display text-2xl font-bold tabular text-streak">{r.habitos.rachaActual.longitud}</span>
@@ -39,9 +44,22 @@ export default function HabitosPage() {
             {r.habitos.rachaActual.longitud > 0 ? `desde el ${fmtFechaCorta(r.habitos.rachaActual.desde!)}` : "los 6 hábitos, sin fallar"}
           </span>
         </Card>
-        <Card className="flex flex-col items-center gap-1 p-4 text-center">
-          <span className="font-display text-2xl font-bold tabular text-primary">{r.habitos.adherencia7}%</span>
-          <span className="text-[0.7rem] text-muted-foreground">últimos 7 días</span>
+        <Card className="overflow-hidden p-0">
+          <div className="flex items-center justify-between gap-4 border-b border-border bg-secondary/35 px-4 py-3 sm:px-5">
+            <div><h2 className="font-display text-lg font-bold">Últimos 7 días</h2><p className="text-xs text-muted-foreground">Tu ritmo reciente, día a día.</p></div>
+            <span className="font-display text-2xl font-bold tabular text-primary">{r.habitos.adherencia7}%</span>
+          </div>
+          <div className="grid grid-cols-7 gap-px bg-border">
+            {semanaReciente.map((d) => {
+              const completo = d.cumplidos === HABITOS.length;
+              const activo = d.cumplidos > 0;
+              return <div key={d.fecha} className={cn("min-w-0 bg-card px-1 py-3 text-center sm:py-4", d.esHoy && "bg-habit-wash")}>
+                <p className={cn("text-xs font-semibold", d.esHoy ? "text-habit-ink" : "text-muted-foreground")}>{DIAS_SEMANA[diaSemanaLunes(d.fecha)]}</p>
+                <p className={cn("mt-2 font-display text-xl font-bold tabular", completo ? "text-primary" : activo ? "text-habit" : "text-muted-foreground")}>{d.cumplidos}</p>
+                <p className="text-[0.65rem] text-muted-foreground">de {HABITOS.length}</p>
+              </div>;
+            })}
+          </div>
         </Card>
       </div>
 
