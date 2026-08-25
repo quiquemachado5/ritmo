@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Ring, MacroBar, SectionLabel, Chip, EmptyState } from "@/components/app/primitives";
 import { MealLibrary } from "@/components/app/meal-library";
 import { fmtKcal, fmtFechaLarga, capitalizar } from "@/lib/format";
+import { uid } from "@/lib/utils";
 import type { TipoComida } from "@/lib/model/types";
 
 const ORDEN: { id: TipoComida; label: string }[] = [
@@ -29,7 +30,7 @@ export default function NutricionPage() {
   const [confirmBorrar, setConfirmBorrar] = React.useState<string | null>(null);
 
   async function repetirHoy(c: import("@/lib/model/types").Comida) {
-    await registrarComida(hoy(), { ...c, id: crypto.randomUUID(), creado: new Date().toISOString() });
+    await registrarComida(hoy(), { ...c, id: uid(), creado: new Date().toISOString() });
     const { toast } = await import("sonner");
     toast.success(fecha === hoy() ? "Comida duplicada" : "Añadida a hoy");
   }

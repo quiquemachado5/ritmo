@@ -3,7 +3,7 @@
 import * as React from "react";
 import { toast } from "sonner";
 import { ArrowDownAZ, Flame, Plus, Search, Repeat2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, uid } from "@/lib/utils";
 import { useRitmo } from "@/lib/store/provider";
 import { bibliotecaComidas, type ComidaGuardada, type OrdenBiblioteca } from "@/lib/model/analytics";
 import { fmtKcal, capitalizar, fmtFechaCorta } from "@/lib/format";
@@ -48,7 +48,7 @@ export function MealLibrary({ fecha }: { fecha: string }) {
 
   async function usar(item: ComidaGuardada) {
     const comida: Comida = {
-      id: crypto.randomUUID(),
+      id: uid(),
       tipo: item.tipo,
       texto: item.texto,
       kcal: item.kcal,

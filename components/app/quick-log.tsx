@@ -11,7 +11,7 @@ import {
   Sparkles,
   UtensilsCrossed,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, uid } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -123,7 +123,7 @@ function PanelComida({ fecha, onDone, comidaEdit }: { fecha: string; onDone: () 
   const frecuentes = React.useMemo(() => (editando ? [] : comidasFrecuentes(estado, 6)), [estado, editando]);
 
   async function anadirRapido(base: Comida) {
-    await registrarComida(fecha, { ...base, id: crypto.randomUUID(), tipo, creado: new Date().toISOString() });
+    await registrarComida(fecha, { ...base, id: uid(), tipo, creado: new Date().toISOString() });
     toast.success(`Añadida: ${base.texto} (${base.kcal} kcal)`);
     onDone();
   }
@@ -158,7 +158,7 @@ function PanelComida({ fecha, onDone, comidaEdit }: { fecha: string; onDone: () 
     if (!manual) return;
     const n = (s: string) => Math.max(0, Math.round(Number(s.replace(",", ".")) || 0));
     const comida: Comida = {
-      id: comidaEdit?.id ?? crypto.randomUUID(),
+      id: comidaEdit?.id ?? uid(),
       tipo,
       texto: (analisis?.resumen || texto).trim() || comidaEdit?.texto || "Comida",
       kcal: n(manual.kcal),
