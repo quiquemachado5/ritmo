@@ -6,6 +6,7 @@ import { PERFIL_DEFECTO } from "@/lib/model/config";
 import type { Comida, Composicion, Dia, Estado, Perfil } from "@/lib/model/types";
 import { createClient } from "@/lib/supabase/client";
 import { CloudAdapter } from "./cloud";
+import { QueuedAdapter } from "./queued";
 import type { Adapter, Modo, StoreData } from "./types";
 import { fusionarImport } from "./merge";
 
@@ -104,7 +105,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         if (!sesion.user) {
           throw new Error("Sesión de Supabase requerida");
         }
-        adapter = new CloudAdapter(client, sesion.user.id);
+        // Envuelto en la cola offline: los cambios sin red se guardan y se
+        // sincronizan al reconectar, en vez de perderse o revertirse.
+        adapter = new QueuedAdapter(new CloudAdapter(client, sesion.user.id), sesion.user.id);
         email = sesion.user.email ?? null;
       } catch (e) {
         console.error("Fallo al inicializar Supabase", e);
