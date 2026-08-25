@@ -208,6 +208,11 @@
     font-feature-settings: "cv11", "ss01";
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    min-height: 100vh;
+  }
+  /* Tipografía: piso 12px para labels/hints, escalable en móvil */
+  label, .text-xs, .text-muted-foreground {
+    font-size: clamp(0.7rem, 1vw, 0.875rem);
   }
   /* Cifras alineadas: imprescindible en una app de datos. */
   .tabular {
@@ -230,6 +235,12 @@
     *, *::before, *::after {
       animation-duration: 0.01ms !important;
       transition-duration: 0.01ms !important;
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    /* Transiciones suaves para cambios visuales */
+    button, [role="button"], input, select, textarea {
+      transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
     }
   }
 }

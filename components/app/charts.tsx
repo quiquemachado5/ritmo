@@ -34,7 +34,7 @@ function CajaTooltip({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Peso real vs predicho con banda de confianza. */
+/** Peso real vs predicho con banda de confianza al 80%. */
 export function WeightChart({ data, objetivo }: { data: PuntoPeso[]; objetivo?: number | null }) {
   const valores = data.flatMap((d) => [d.real, d.pred, d.banda?.[0], d.banda?.[1]].filter((v): v is number => v != null));
   const min = valores.length ? Math.floor(Math.min(...valores) - 1) : 0;
@@ -44,20 +44,29 @@ export function WeightChart({ data, objetivo }: { data: PuntoPeso[]; objetivo?: 
     <div className="h-64 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
+          <defs>
+            <linearGradient id="bandaGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--weight)" stopOpacity={0.18} />
+              <stop offset="50%" stopColor="var(--weight)" stopOpacity={0.08} />
+              <stop offset="100%" stopColor="var(--weight)" stopOpacity={0.18} />
+            </linearGradient>
+          </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
           <XAxis dataKey="label" tick={ejeStyle} tickLine={false} axisLine={false} minTickGap={28} />
           <YAxis domain={[min, max]} tick={ejeStyle} tickLine={false} axisLine={false} width={42} />
           {objetivo != null && (
-            <ReferenceLine y={objetivo} stroke="var(--weight)" strokeDasharray="4 4" strokeOpacity={0.6} />
+            <ReferenceLine y={objetivo} stroke="var(--weight)" strokeDasharray="4 4" strokeOpacity={0.5} label={{ value: "Objetivo", position: "right", fill: "var(--muted-foreground)", fontSize: 11, offset: 4 }} />
           )}
           <Area
             type="monotone"
             dataKey="banda"
-            stroke="none"
-            fill="var(--weight)"
-            fillOpacity={0.12}
+            stroke="var(--weight)"
+            strokeOpacity={0.25}
+            strokeWidth={1}
+            fill="url(#bandaGradient)"
             isAnimationActive={false}
             connectNulls
+            name="Rango 80% confianza"
           />
           <Line
             type="monotone"
@@ -68,16 +77,18 @@ export function WeightChart({ data, objetivo }: { data: PuntoPeso[]; objetivo?: 
             dot={false}
             isAnimationActive={false}
             connectNulls
+            name="Estimado"
           />
           <Line
             type="monotone"
             dataKey="real"
             stroke="var(--weight)"
             strokeWidth={2.5}
-            dot={{ r: 2.5, fill: "var(--weight)", strokeWidth: 0 }}
-            activeDot={{ r: 4 }}
+            dot={{ r: 3, fill: "var(--weight)", strokeWidth: 0 }}
+            activeDot={{ r: 4.5 }}
             isAnimationActive={false}
             connectNulls
+            name="Real (báscula)"
           />
           <Tooltip
             content={({ active, payload, label }) => {

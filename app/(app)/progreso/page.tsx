@@ -162,30 +162,41 @@ export default function ProgresoPage() {
           {/* Predicción */}
           {r.prediccion.disponible && (
             <Card className="p-5">
-              <SectionLabel>Predicción</SectionLabel>
+              <SectionLabel>Predicción (banda 80% confianza)</SectionLabel>
+              <div className="mb-4 rounded-lg bg-secondary/40 p-3 text-xs leading-relaxed text-muted-foreground">
+                {r.prediccion.modelo?.calidad === "inicial" ? (
+                  <p>📊 <strong>Calidad: Inicial</strong> — Basada en {r.prediccion.pesajes} pesajes. Con más datos (especialmente registros de comidas), la predicción será más precisa.</p>
+                ) : r.prediccion.modelo?.calidad === "media" ? (
+                  <p>📊 <strong>Calidad: Media</strong> — Tendencia clara pero con variabilidad. Registra comidas para mejorar el rango de predicción.</p>
+                ) : (
+                  <p>📊 <strong>Calidad: Alta</strong> — Modelo calibrado. Tu TDEE observado es ~{r.prediccion.modelo?.tdee} kcal/día. La banda es confiable.</p>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                 <PredCell etiqueta="Mañana" iv={r.prediccion.manana} />
                 <PredCell etiqueta="En 1 semana" iv={r.prediccion.semana} />
                 <PredCell etiqueta="En 15 días" iv={r.prediccion.quincena} />
                 <PredCell etiqueta="En 1 mes" iv={r.prediccion.mes} />
               </div>
-              <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 text-sm text-muted-foreground">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Chip tone="weight">confianza {r.prediccion.modelo?.calidad}</Chip>
-                  {r.prediccion.diasSinPesaje != null && (
-                    <span>{r.prediccion.diasSinPesaje === 0 ? "pesaje reciente" : `${r.prediccion.diasSinPesaje} días desde el último pesaje`}</span>
-                  )}
-                  {r.prediccion.fechaObjetivo && (
-                    <span>· objetivo hacia <span className="font-medium text-foreground">{fmtFechaCorta(r.prediccion.fechaObjetivo)}</span></span>
-                  )}
-                </div>
-                <p className="text-xs leading-relaxed">
-                  {r.prediccion.modelo?.calidad === "inicial"
-                    ? "Predicción inicial: con más pesajes y registro de comidas, el rango se irá estrechando."
-                    : r.prediccion.modelo?.calidad === "media"
-                      ? "La predicción usa tu historial de balance calórico. Más datos = rangos más precisos."
-                      : "Predicción calibrada con tu TDEE observado. La banda refleja un 80% de confianza."}
-                </p>
+              <div className="mt-4 space-y-2 border-t border-border pt-4">
+                {r.prediccion.diasSinPesaje != null && r.prediccion.diasSinPesaje > 21 && (
+                  <div className="rounded-lg bg-warning/8 px-3 py-2 text-xs text-warning-ink">
+                    ⚖️ No pesas desde hace {r.prediccion.diasSinPesaje} días. Considera una medición para recalibrar.
+                  </div>
+                )}
+                {r.prediccion.modelo?.kgSemana != null && r.peso.objetivo != null && r.prediccion.modelo.kgSemana > 0 && (
+                  <div className="rounded-lg bg-energy/8 px-3 py-2 text-xs text-energy-ink">
+                    ⚠️ Tendencia a la alza ({fmtSigno(r.prediccion.modelo.kgSemana, 2)} kg/sem). Revisa tu balance energético.
+                  </div>
+                )}
+              </div>
+              <div className="mt-3 flex flex-col gap-1 text-xs text-muted-foreground">
+                {r.prediccion.diasSinPesaje != null && (
+                  <p>{r.prediccion.diasSinPesaje === 0 ? "✓ Pesaje de hoy" : `Último pesaje: hace ${r.prediccion.diasSinPesaje} días`}</p>
+                )}
+                {r.prediccion.proximoPesaje && (
+                  <p>💡 Próxima medición sugerida: {fmtFechaCorta(r.prediccion.proximoPesaje)} (en ~14 días para mayor señal)</p>
+                )}
               </div>
             </Card>
           )}
