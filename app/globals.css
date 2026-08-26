@@ -260,6 +260,23 @@
   box-shadow: var(--shadow-sm);
 }
 
+/* La densidad es una preferencia de lectura, no una variante de color. Se
+   concentra en el lienzo principal para mantener controles y áreas táctiles. */
+html[data-densidad="compacta"] .app-content {
+  padding-top: 1rem;
+  padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
+}
+html[data-densidad="compacta"] .app-content > div > .flex.flex-col {
+  gap: 1.25rem;
+}
+html[data-densidad="espaciosa"] .app-content > div > .flex.flex-col {
+  gap: 2rem;
+}
+@media (min-width: 48rem) {
+  html[data-densidad="compacta"] .app-content { padding-top: 1.5rem; padding-bottom: 3rem; }
+  html[data-densidad="espaciosa"] .app-content { padding-top: 2.75rem; padding-bottom: 4.5rem; }
+}
+
 /* --- Micro-interacciones --------------------------------------------------- */
 /* Pop del check al cumplir un hábito: entra con un pequeño rebote. Coherente
    con la racha 🔥 — marcar debe sentirse gratificante, no burocrático. */

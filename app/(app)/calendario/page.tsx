@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, MessageSquareText, Plus } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
 import { energiaDe } from "@/lib/model/analytics";
@@ -10,6 +10,7 @@ import { TOTAL_HABITOS, HABITOS } from "@/lib/model/config";
 import { claveMes, DIAS_SEMANA, diaSemanaLunes, hoy, limitesMes, sumarDias, sumarMeses } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { SectionLabel, Chip } from "@/components/app/primitives";
 import { fmtPeso, fmtKcal, fmtFechaLarga, fmtMes, capitalizar, fmtSigno, fmtFechaCorta } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -18,7 +19,7 @@ import type { EnergiaDia } from "@/lib/model/types";
 const NIVEL = ["bg-transparent", "bg-primary/25", "bg-primary/45", "bg-primary/70", "bg-primary"];
 
 export default function CalendarioPage() {
-  const { estado, dia } = useRitmo();
+  const { estado, dia, actualizarDia } = useRitmo();
   const { abrir } = useQuickLog();
   const hoyISO = hoy();
   const [mes, setMes] = React.useState(claveMes(hoyISO));
@@ -139,11 +140,51 @@ export default function CalendarioPage() {
             ))}
             {energiaSel.imputado && <Chip tone="warning">día imputado</Chip>}
           </div>
+          <NotaContexto fecha={sel} inicial={d.notas} onGuardar={(notas) => actualizarDia(sel, { notas })} />
           </div>
         </Card>
       </section>
     </div>
   );
+}
+
+function NotaContexto({ fecha, inicial, onGuardar }: { fecha: string; inicial?: string; onGuardar: (notas: string | undefined) => Promise<void> }) {
+  const [texto, setTexto] = React.useState(inicial ?? "");
+  const [guardando, setGuardando] = React.useState(false);
+
+  React.useEffect(() => setTexto(inicial ?? ""), [fecha, inicial]);
+
+  const limpio = texto.trim();
+  const cambio = limpio !== (inicial ?? "").trim();
+  const etiquetas = ["Viaje", "Comida libre", "Enfermedad", "Entrenamiento especial"];
+
+  function sumarEtiqueta(etiqueta: string) {
+    setTexto((actual) => actual.includes(etiqueta) ? actual : `${actual.trim()}${actual.trim() ? " · " : ""}${etiqueta}`);
+  }
+
+  async function guardar() {
+    setGuardando(true);
+    try {
+      await onGuardar(limpio || undefined);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return <div className="border-t border-border pt-4">
+    <div className="flex items-start gap-2.5">
+      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-body-wash text-body"><MessageSquareText className="size-4" /></span>
+      <div className="min-w-0 flex-1">
+        <label htmlFor={`nota-${fecha}`} className="text-sm font-semibold text-foreground">Contexto del día</label>
+        <p className="mt-0.5 text-xs text-muted-foreground">Una observación para recordar qué pasó; no modifica los cálculos.</p>
+      </div>
+    </div>
+    <div className="mt-3 flex flex-wrap gap-1.5">
+      {etiquetas.map((etiqueta) => <button key={etiqueta} type="button" onClick={() => sumarEtiqueta(etiqueta)} className={cn("rounded-full border px-2.5 py-1 text-xs font-medium transition-colors", texto.includes(etiqueta) ? "border-body-border bg-body-wash text-body-ink" : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground")}>{etiqueta}</button>)}
+    </div>
+    <Textarea id={`nota-${fecha}`} value={texto} onChange={(event) => setTexto(event.target.value)} placeholder="Ej.: viaje, cena fuera, fiebre o sesión de fuerza." className="mt-3 min-h-20 resize-y bg-card text-sm" />
+    <div className="mt-2 flex items-center justify-between gap-3"><span className="text-xs text-muted-foreground">{limpio ? "Nota privada del día" : "Sin contexto añadido"}</span><Button size="sm" variant="secondary" disabled={!cambio || guardando} onClick={() => void guardar()} className="h-8 px-3 text-xs">{guardando ? "Guardando…" : "Guardar nota"}</Button></div>
+  </div>;
 }
 
 function calidadDia(energia: EnergiaDia, habitos: number) {

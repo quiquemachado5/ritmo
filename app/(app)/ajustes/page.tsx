@@ -18,6 +18,8 @@ import { fmtFechaCorta } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Objetivo, Sexo } from "@/lib/model/types";
 
+type Densidad = "compacta" | "espaciosa";
+
 export default function AjustesPage() {
   const { estado, cargando, modo, userEmail, actualizarPerfil, exportar, importar, cerrarSesion } = useRitmo();
   const { theme, setTheme } = useTheme();
@@ -32,14 +34,27 @@ export default function AjustesPage() {
   const [backupInfo, setBackupInfo] = React.useState<{ at: string } | null>(null);
   const [importando, setImportando] = React.useState(false);
   const [previewDatos, setPreviewDatos] = React.useState<any>(null);
+  const [densidad, setDensidad] = React.useState<Densidad>("espaciosa");
   React.useEffect(() => {
     setDiasSinExportar(diasDesdeExportacion());
     const b = leerBackupLocal();
     setBackupInfo(b ? { at: b.at } : null);
   }, []);
+  React.useEffect(() => {
+    const guardada = window.localStorage.getItem("ritmo:densidad");
+    const proxima: Densidad = guardada === "compacta" ? "compacta" : "espaciosa";
+    setDensidad(proxima);
+    document.documentElement.dataset.densidad = proxima;
+  }, []);
   // g/kg por defecto según objetivo, para el placeholder del campo de proteína.
   const proteinaSugerida = String(form.objetivo === "perder" ? 2.0 : form.objetivo === "ganar" ? 1.8 : 1.6);
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }));
+
+  function cambiarDensidad(proxima: Densidad) {
+    setDensidad(proxima);
+    window.localStorage.setItem("ritmo:densidad", proxima);
+    document.documentElement.dataset.densidad = proxima;
+  }
 
   if (cargando) return <div className="flex flex-col gap-6"><Skeleton className="h-8 w-40" /><Skeleton className="h-64 w-full rounded-xl" /></div>;
 
@@ -263,6 +278,15 @@ export default function AjustesPage() {
                 {label}
               </button>
             ))}
+          </div>
+          <div className="mt-5 border-t border-border pt-5">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div><p className="text-sm font-semibold">Densidad visual</p><p className="mt-0.5 text-xs text-muted-foreground">Ajusta el espacio entre secciones y el aire de lectura.</p></div>
+              <span className="text-xs font-medium text-primary">{densidad === "compacta" ? "Compacta" : "Espaciosa"}</span>
+            </div>
+            <div className="mt-3 inline-flex rounded-xl bg-secondary p-1" role="group" aria-label="Densidad visual">
+              {(["compacta", "espaciosa"] as const).map((opcion) => <button key={opcion} type="button" onClick={() => cambiarDensidad(opcion)} aria-pressed={densidad === opcion} className={cn("rounded-lg px-4 py-2 text-sm font-medium transition-colors", densidad === opcion ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>{opcion === "compacta" ? "Compacta" : "Espaciosa"}</button>)}
+            </div>
           </div>
         </Card>
       </section>

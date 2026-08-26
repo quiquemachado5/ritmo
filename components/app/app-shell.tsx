@@ -145,7 +145,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Contenido */}
       <div className="md:pl-64">
-        <main className="mx-auto w-full max-w-6xl px-[clamp(1rem,3vw,2.75rem)] pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-5 md:pb-14 md:pt-9">
+        <main className="app-content mx-auto w-full max-w-6xl px-[clamp(1rem,3vw,2.75rem)] pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-5 md:pb-14 md:pt-9">
           <PageTransition>{children}</PageTransition>
         </main>
       </div>

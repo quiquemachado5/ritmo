@@ -82,7 +82,7 @@ export function MealLibrary({ fecha }: { fecha: string }) {
     const needle = q.trim().toLowerCase();
     return itemsCat.filter((c) => {
       const coincideTexto = !needle || c.texto.toLowerCase().includes(needle);
-      const coincideVista = vista === "todas" || vista === "favoritas" ? prefs.fav.includes(c.clave) : c.veces > 1;
+      const coincideVista = vista === "todas" ? true : vista === "favoritas" ? prefs.fav.includes(c.clave) : c.veces > 1;
       return coincideTexto && coincideVista;
     });
   }, [porCat, cat, q, vista, prefs.fav]);

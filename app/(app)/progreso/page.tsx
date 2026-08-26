@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
-import { detectarMeseta, pesajes as getPesajes, resumen, serieBalance, seriePesoDiaria } from "@/lib/model/analytics";
+import { detectarMeseta, energiaDe, pesajes as getPesajes, resumen, serieBalance, seriePesoDiaria } from "@/lib/model/analytics";
 import { hoy, sumarDias } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,6 +50,19 @@ export default function ProgresoPage() {
   // intervalo calibrado para hoy. La UI no debe asumir que ese rango existe.
   const intervaloHoy = r.prediccion.hoy ?? null;
   const hoyISO = hoy();
+
+  const lecturaModelo = React.useMemo(() => {
+    const acumulado = { validos: 0, sinHabitos: 0, incompletos: 0, imputados: 0, sinRegistro: 0 };
+    for (let i = 0; i < 14; i += 1) {
+      const energia = energiaDe(estado, sumarDias(hoyISO, -i));
+      if (energia.imputado) acumulado.imputados += 1;
+      else if (energia.sinRegistro) acumulado.sinRegistro += 1;
+      else if (energia.sinHabitosMarcados) acumulado.sinHabitos += 1;
+      else if (energia.ingestaIncompleta) acumulado.incompletos += 1;
+      else acumulado.validos += 1;
+    }
+    return acumulado;
+  }, [estado, hoyISO]);
 
   const historial = React.useMemo(() => {
     const puntos = getPesajes(estado);
@@ -250,6 +263,35 @@ export default function ProgresoPage() {
             </section>
           )}
 
+          <section aria-labelledby="confianza-modelo">
+            <div className="mb-3">
+              <h2 id="confianza-modelo" className="font-display text-xl font-bold">Confianza del modelo</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Así se han tratado los últimos 14 días. El modelo no rellena un déficit cuando el registro no lo respalda.</p>
+            </div>
+            <Card className="overflow-hidden p-0">
+              <div className="grid divide-y divide-border sm:grid-cols-[minmax(0,1.15fr)_minmax(14rem,.85fr)] sm:divide-x sm:divide-y-0">
+                <div className="p-5 sm:p-6">
+                  <p className="text-sm font-semibold">Días que sostienen la tendencia</p>
+                  <div className="mt-4 flex items-end gap-2">
+                    <span className="font-display text-5xl font-bold leading-none tabular text-weight">{lecturaModelo.validos}</span>
+                    <span className="mb-1 text-sm text-muted-foreground">días completos</span>
+                  </div>
+                  <p className="mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">Cuentan cuando hay comida completa y al menos un hábito marcado. Son los únicos días registrados que entran en el balance y en la tendencia.</p>
+                </div>
+                <div className="bg-secondary/35 p-5 sm:p-6">
+                  <p className="text-sm font-semibold">Lectura de la ventana</p>
+                  <dl className="mt-3 divide-y divide-border text-sm">
+                    <ModeloFila cantidad={lecturaModelo.sinHabitos} etiqueta="Excluidos" detalle="sin hábitos marcados" tone="warning" />
+                    <ModeloFila cantidad={lecturaModelo.incompletos} etiqueta="Excluidos" detalle="sin cena registrada" tone="energy" />
+                    <ModeloFila cantidad={lecturaModelo.sinRegistro} etiqueta="Sin datos" detalle="no cuentan ni se estiman" tone="muted" />
+                    <ModeloFila cantidad={lecturaModelo.imputados} etiqueta="Imputados" detalle="aplican tu regla de huecos" tone="body" />
+                  </dl>
+                </div>
+              </div>
+              <div className="border-t border-border bg-card px-5 py-3 text-xs leading-relaxed text-muted-foreground sm:px-6">Las notas contextuales —viaje, comida libre, enfermedad o entrenamiento especial— quedan visibles en Calendario para interpretar el día, pero no alteran calorías, hábitos ni la predicción.</div>
+            </Card>
+          </section>
+
           <section aria-labelledby="balance">
             <div className="mb-3">
               <h2 id="balance" className="font-display text-xl font-bold">Balance calórico</h2>
@@ -329,6 +371,11 @@ function PredCell({ etiqueta, iv, base }: { etiqueta: string; iv: { peso: number
     <p className="mt-3 font-display text-2xl font-bold leading-none tabular text-body">{iv ? fmtPeso(iv.peso) : "—"}<span className="ml-1 text-xs font-medium text-muted-foreground">kg</span></p>
     {iv && <><p className={cn("mt-2 text-xs font-semibold tabular", baja ? "text-weight" : "text-energy")}>{delta != null ? fmtSigno(delta, 1) : "—"} kg</p><p className="mt-1 text-[0.7rem] tabular text-muted-foreground">{fmtPeso(iv.minimo)}–{fmtPeso(iv.maximo)}</p></>}
   </div>;
+}
+
+function ModeloFila({ cantidad, etiqueta, detalle, tone }: { cantidad: number; etiqueta: string; detalle: string; tone: "warning" | "energy" | "body" | "muted" }) {
+  const color = tone === "warning" ? "bg-warning" : tone === "energy" ? "bg-energy" : tone === "body" ? "bg-body" : "bg-muted-foreground";
+  return <div className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"><span className={cn("size-2 shrink-0 rounded-full", color)} /><span className="min-w-0 flex-1"><span className="font-medium text-foreground">{etiqueta}</span><span className="text-muted-foreground"> · {detalle}</span></span><span className="font-semibold tabular text-foreground">{cantidad}</span></div>;
 }
 
 function DeltaTag({ delta }: { delta: number | null }) {
