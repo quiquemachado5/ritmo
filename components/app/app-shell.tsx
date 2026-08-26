@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, MoreHorizontal, Plus } from "lucide-react";
+import { LogOut, MoreHorizontal, Plus, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +24,7 @@ import { PageTransition } from "@/components/page-transition";
 import { UserCount } from "./user-count";
 import { TravelBanner } from "./travel-banner";
 
-function UserMenu() {
+function UserMenu({ compact = false }: { compact?: boolean }) {
   const { userEmail, cerrarSesion } = useRitmo();
   const inicial = (userEmail?.[0] ?? "R").toUpperCase();
   const secundarios = NAV_ITEMS.filter((i) => !i.primary);
@@ -32,11 +32,17 @@ function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="rounded-full" aria-label="Menú">
-          <span className="grid size-8 place-items-center rounded-full bg-primary/12 text-sm font-bold text-primary">
-            {inicial}
-          </span>
-        </Button>
+        {compact ? (
+          <Button variant="ghost" size="icon" className="size-9 rounded-xl" aria-label="Más opciones">
+            <MoreHorizontal className="size-5" />
+          </Button>
+        ) : (
+          <Button variant="ghost" size="icon" className="rounded-full" aria-label="Menú">
+            <span className="grid size-8 place-items-center rounded-full bg-primary/12 text-sm font-bold text-primary">
+              {inicial}
+            </span>
+          </Button>
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuLabel className="truncate">{userEmail ?? "Modo demo"}</DropdownMenuLabel>
@@ -90,8 +96,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-border bg-card px-4 py-5 md:flex">
         <div className="flex items-center justify-between gap-3 border-b border-border pb-4">
           <Link href="/" aria-label="RITMO — inicio" className="inline-flex">
-            <RitmoLogo />
+            <RitmoLogo wordmarkOnly wordmarkClassName="h-6" />
           </Link>
+          <UserCount compact className="rounded-full bg-secondary px-2.5 py-1.5" />
         </div>
         <Button
           onClick={() => abrir()}
@@ -117,20 +124,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           ))}
         </nav>
-        <div className="mt-2 flex flex-col gap-3 border-t border-border pt-4">
-          <div className="flex items-center justify-between">
-            <UserCount />
-            <div className="flex items-center gap-1">
-              <ThemeToggle />
-              <UserMenu />
-            </div>
+        <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+          <UserMenu />
+          <div className="flex items-center gap-1">
+            <Link href="/ajustes" aria-label="Ajustes" className="inline-flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
+              <Settings className="size-[1.1rem]" />
+            </Link>
+            <ThemeToggle />
           </div>
-          <p className="text-left text-[0.6rem] text-muted-foreground/40">
-            creado por{" "}
-            <a href="https://github.com/quiquemachado5" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground hover:underline">
-              quiquemachado5
-            </a>
-          </p>
         </div>
       </aside>
 
@@ -149,6 +150,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="md:pl-64">
         <main className="app-content mx-auto w-full max-w-6xl px-[clamp(1rem,3vw,2.75rem)] pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-5 md:pb-14 md:pt-9">
           <PageTransition>{children}</PageTransition>
+          <footer className="mt-10 border-t border-border pt-4 text-center text-[0.68rem] text-muted-foreground/60 md:text-left">
+            hecho por{" "}
+            <a href="https://github.com/quiquemachado5" target="_blank" rel="noopener noreferrer" className="font-medium text-muted-foreground transition-colors hover:text-foreground hover:underline">
+              quiquemachado5
+            </a>
+          </footer>
         </main>
       </div>
 

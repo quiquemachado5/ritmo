@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Users } from "lucide-react";
 
-export function UserCount({ className = "" }: { className?: string }) {
+export function UserCount({ className = "", compact = false }: { className?: string; compact?: boolean }) {
   const [count, setCount] = React.useState<number | null>(null);
   React.useEffect(() => {
     void fetch("/api/usuarios").then((r) => r.json()).then((data: { count?: unknown }) => {
@@ -11,5 +11,11 @@ export function UserCount({ className = "" }: { className?: string }) {
     }).catch(() => undefined);
   }, []);
   if (count == null) return null;
-  return <span className={`inline-flex items-center gap-1.5 text-[0.68rem] font-medium text-muted-foreground ${className}`}><Users className="size-3.5 text-primary" />{new Intl.NumberFormat("es-ES").format(count)} usuarios</span>;
+  const numero = new Intl.NumberFormat("es-ES").format(count);
+  return (
+    <span aria-label={numero + " usuarios en RITMO"} className={`inline-flex items-center gap-1.5 text-[0.68rem] font-medium text-muted-foreground ${className}`}>
+      <Users className="size-3.5 text-primary" />
+      {numero}{!compact && " usuarios"}
+    </span>
+  );
 }
