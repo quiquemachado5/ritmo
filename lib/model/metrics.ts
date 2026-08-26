@@ -553,6 +553,29 @@ export function energiaDia(
     num(d.peso) === null &&
     !Object.values(d.habitos || {}).some((v) => v === true);
 
+  // Cero hábitos no es neutral: el modelo lo trata como un día de superávit
+  // conservador. De esta forma jamás se transforma un día sin adherencia en
+  // un déficit por haber registrado solo una parte de la comida.
+  if (sinHabitosMarcados && !sinRegistro) {
+    const quemadas = outExplicito ?? tdeeBase;
+    const superavit = imputacion?.superavitKcal ?? 500;
+    const consumidas = Math.max(inExplicito ?? 0, quemadas + superavit);
+    return {
+      consumidas,
+      quemadas,
+      balance: consumidas - quemadas,
+      deficit: quemadas - consumidas,
+      deltaKg: kcalAKg(consumidas - quemadas),
+      estimado: true,
+      consumidasEstimadas: true,
+      quemadasEstimadas: outExplicito === null,
+      ingestaIncompleta,
+      sinHabitosMarcados: true,
+      sinRegistro,
+      imputado: sinRegistro,
+    };
+  }
+
   if (sinRegistro && imputacion && imputacion.activa && d.fecha && d.fecha >= imputacion.desde) {
     const quemadas = tdeeBase;
     const consumidas = tdeeBase + imputacion.superavitKcal;

@@ -98,7 +98,7 @@ export interface EnergiaDia {
   quemadasEstimadas: boolean;
   /** Hay comidas registradas, pero falta la cena: el modelo completa la ingesta con hábitos. */
   ingestaIncompleta: boolean;
-  /** Sin hábitos positivos no hay evidencia suficiente para clasificar un déficit. */
+  /** Sin hábitos positivos: el modelo aplica un superávit conservador. */
   sinHabitosMarcados: boolean;
   sinRegistro: boolean;
   imputado: boolean;

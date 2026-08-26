@@ -246,20 +246,17 @@ export default function AjustesPage() {
         </Card>
       </section>
 
-      {/* Días sin registro */}
+      {/* Días sin hábitos */}
       <section>
-        <SectionLabel>Días sin registro</SectionLabel>
+        <SectionLabel>Días sin hábitos</SectionLabel>
         <Card className="flex flex-col gap-4 p-5">
-          <Row label="Contar huecos como días malos">
-            <Switch
-              checked={form.imputarActiva !== false}
-              onCheckedChange={(v) => { set("imputarActiva", v); actualizarPerfil({ imputarActiva: v }); }}
-              aria-label="Contar huecos como días malos"
-            />
-          </Row>
+          <p className="text-sm font-semibold">Superávit conservador</p>
           <p className="text-xs text-muted-foreground">
-            Cuando está activo, un día sin registrar a partir de la fecha de corte se cuenta como un pequeño superávit ({p.imputarSuperavitKcal ?? 500} kcal), en lugar de ignorarse. Ensancha el rango de la predicción.
+            Con cero hábitos en un día registrado, RITMO aplica un superávit estimado de {p.imputarSuperavitKcal ?? 500} kcal. Así un día sin adherencia nunca se interpreta como déficit.
           </p>
+          <div className="border-t border-border pt-4"><Row label="Contar días totalmente vacíos">
+            <Switch checked={form.imputarActiva !== false} onCheckedChange={(v) => { set("imputarActiva", v); actualizarPerfil({ imputarActiva: v }); }} aria-label="Contar días totalmente vacíos" />
+          </Row><p className="mt-1.5 text-xs text-muted-foreground">También aplica ese superávit a huecos sin ningún dato desde la fecha de corte configurada.</p></div>
         </Card>
       </section>
 

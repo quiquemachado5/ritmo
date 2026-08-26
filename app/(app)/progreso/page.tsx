@@ -280,7 +280,7 @@ export default function ProgresoPage() {
                 <div className="bg-secondary/35 p-5 sm:p-6">
                   <p className="text-sm font-semibold">Lectura de la ventana</p>
                   <dl className="mt-3 divide-y divide-border text-sm">
-                    <ModeloFila cantidad={lecturaModelo.sinHabitos} etiqueta="Excluidos" detalle="sin hábitos marcados" tone="warning" />
+                    <ModeloFila cantidad={lecturaModelo.sinHabitos} etiqueta="Superávit" detalle="sin hábitos marcados" tone="warning" />
                     <ModeloFila cantidad={lecturaModelo.completadosPorHabitos} etiqueta="Estimados" detalle="comida parcial, ajustada por hábitos" tone="energy" />
                     <ModeloFila cantidad={lecturaModelo.sinRegistro} etiqueta="Sin datos" detalle="no cuentan ni se estiman" tone="muted" />
                     <ModeloFila cantidad={lecturaModelo.imputados} etiqueta="Imputados" detalle="aplican tu regla de huecos" tone="body" />
@@ -296,7 +296,7 @@ export default function ProgresoPage() {
               <h2 id="balance" className="font-display text-xl font-bold">Balance calórico</h2>
               <p className="mt-1 text-sm text-muted-foreground">El contexto energético que utiliza el modelo; los días imputados siguen visibles.</p>
             </div>
-            <Card className="p-4 sm:p-6"><BalanceChart data={datosBalance} /><p className="mt-3 text-xs text-muted-foreground">Verde = déficit · terracota = superávit · translúcido = día imputado. Sin hábitos marcados, el día no se usa para calcular el balance; una comida parcial se completa con el nivel de hábitos.</p></Card>
+            <Card className="p-4 sm:p-6"><BalanceChart data={datosBalance} /><p className="mt-3 text-xs text-muted-foreground">Verde = déficit · terracota = superávit · translúcido = día sin hábitos. Cero hábitos aplica un superávit conservador; una comida parcial se completa con el nivel de hábitos.</p></Card>
           </section>
 
           {(composicion || compSerie.length > 1 || ultimaMedicion) && (

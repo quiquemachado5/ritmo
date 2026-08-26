@@ -189,9 +189,9 @@ describe("Fechas", () => {
 describe("Energía de un día", () => {
   it("explícito, estimado y mixto", () => {
     const explicito = M.energiaDia({ kcalConsumidas: 1800, kcalQuemadas: 2500, habitos: {} });
-    casi(explicito.balance, -700);
-    igual(explicito.estimado, false);
-    casi(explicito.deltaKg, -700 / 7700, 1e-9);
+    casi(explicito.balance, 500);
+    igual(explicito.estimado, true);
+    casi(explicito.deltaKg, 500 / 7700, 1e-9);
 
     const est = M.energiaDia({ habitos: { comida: true, cena: true, noAlcohol: true } }, { kcalObjetivo: 1350 });
     igual(est.estimado, true);
@@ -218,7 +218,8 @@ describe("Energía de un día", () => {
       dias: { "2026-08-25": { fecha: "2026-08-25", habitos: {}, kcalConsumidas: 1100, comidas: [{ tipo: "desayuno" }, { tipo: "comida" }] } },
       composicion: [],
     });
-    igual(A.diasEvaluables(estadoParcial, "2026-08-25", "2026-08-25").length, 0);
+    igual(A.diasEvaluables(estadoParcial, "2026-08-25", "2026-08-25").length, 1);
+    expect(A.energiaDe(estadoParcial, "2026-08-25").balance).toBeGreaterThan(0);
 
     const parcialConHabito = estado({
       perfil: { kcalObjetivo: 2000 },

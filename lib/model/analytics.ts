@@ -101,7 +101,7 @@ export function diasEvaluables(estado: Estado, desde: string, hasta: string): Ar
   let guarda = 0;
   while (cursor <= hasta && guarda++ < 5000) {
     const e = energiaDe(estado, cursor);
-    if ((!e.sinRegistro && !e.sinHabitosMarcados) || e.imputado) salida.push({ fecha: cursor, energia: e });
+    if (!e.sinRegistro || e.imputado) salida.push({ fecha: cursor, energia: e });
     cursor = sumarDias(cursor, 1);
   }
   return salida;
@@ -187,7 +187,7 @@ export function seriePesoDiaria(estado: Estado, desde: string, hasta: string): P
     // El primer día es el propio pesaje inicial: no hay nada que acumular.
     if (salida.length > 0) {
       const e = energiaDe(estado, cursor);
-      if ((!e.sinRegistro && !e.sinHabitosMarcados) || e.imputado) ancla += e.balance / M.KCAL_POR_KG;
+      if (!e.sinRegistro || e.imputado) ancla += e.balance / M.KCAL_POR_KG;
     }
 
     const estimado = Math.round(ancla * 100) / 100;
@@ -365,7 +365,7 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
 
   for (let fecha = desde; fecha <= hoy(); fecha = sumarDias(fecha, 1)) {
     const energia = energiaDe(estado, fecha);
-    if ((energia.sinRegistro || energia.sinHabitosMarcados) && !energia.imputado) {
+    if (energia.sinRegistro && !energia.imputado) {
       diasDesconocidos++;
       errorKcalCuadrado += 850 ** 2;
       continue;
@@ -493,7 +493,7 @@ export function serieBalance(estado: Estado, ventanaDias = 30): Array<{ fecha: s
     const e = energiaDe(estado, fecha);
     salida.push({
       fecha,
-      balance: (e.sinRegistro || e.sinHabitosMarcados) && !e.imputado ? null : e.balance,
+      balance: e.sinRegistro && !e.imputado ? null : e.balance,
       imputado: e.imputado,
     });
   }
