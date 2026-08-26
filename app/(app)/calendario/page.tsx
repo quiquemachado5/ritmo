@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, ChevronRight, Dumbbell, HeartPulse, MessageSquareText, Plane, Plus, UtensilsCrossed } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Dumbbell, HeartPulse, MessageSquareText, Plane, Plus, UtensilsCrossed } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
 import { energiaDe } from "@/lib/model/analytics";
@@ -46,7 +46,7 @@ export default function CalendarioPage() {
         <h1 className="font-display text-2xl font-bold tracking-tight">Calendario</h1>
       </header>
 
-      <Card className="overflow-hidden p-0">
+      <Card className="w-full overflow-hidden p-0">
         <div className="flex items-center justify-between gap-4 border-b border-border bg-secondary/35 px-4 py-3.5 sm:px-5">
           <div><p className="font-display text-lg font-bold">{capitalizar(fmtMes(`${mes}-01`))}</p><p className="text-xs text-muted-foreground">{diasConRegistroMes} de {dias} días con datos</p></div>
           <div className="flex items-center gap-1">
@@ -124,17 +124,13 @@ export default function CalendarioPage() {
             <DiaMetric label="Peso" value={d.peso != null ? fmtPeso(d.peso) : "—"} tone="weight" />
             <DiaMetric label="Balance" value={energiaSel.sinRegistro && !energiaSel.imputado ? "—" : fmtSigno(energiaSel.balance, 0)} tone={energiaSel.balance > 0 ? "energy" : "weight"} />
           </div>
-          <div className="p-4 sm:p-6">
-          <div className={cn("flex items-start gap-3 rounded-xl border px-4 py-3.5", calidad.bg, calidad.border)}>
-            <span className={cn("mt-1.5 size-2 shrink-0 rounded-full", calidad.dot)} />
-            <div className="min-w-0"><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><p className={cn("text-sm font-semibold", calidad.ink)}>{calidad.titulo}</p>{energiaSel.imputado && <Chip tone="warning">regla de huecos</Chip>}</div><p className="mt-1 max-w-xl text-xs leading-relaxed text-muted-foreground">{calidad.detalle}</p></div>
+          <div className="p-3.5 sm:p-4">
+          <div className={cn("relative overflow-hidden rounded-xl border px-3.5 py-3", calidad.bg, calidad.border)}>
+            <span className={cn("absolute bottom-0 left-0 top-0 w-1", calidad.dot)} />
+            <div className="flex items-start justify-between gap-3 pl-1.5"><div className="min-w-0"><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><p className={cn("text-sm font-semibold", calidad.ink)}>{calidad.titulo}</p>{energiaSel.imputado && <Chip tone="warning">estimado</Chip>}</div><p className="mt-0.5 max-w-2xl text-xs leading-relaxed text-muted-foreground">{calidad.detalle}</p></div></div>
           </div>
-          {d.comidas && d.comidas.length > 0 && (
-            <div className="mt-4 border-t border-border pt-3 text-sm text-muted-foreground">
-              {d.comidas.length} comida{d.comidas.length > 1 ? "s" : ""} · {fmtKcal(d.kcalConsumidas ?? 0)} kcal
-            </div>
-          )}
-          {habHechos > 0 && <div className="mt-3 flex flex-wrap gap-1.5">
+          {(d.comidas?.length || habHechos > 0) && <div className="mt-3 flex flex-wrap gap-1.5">
+            {d.comidas && d.comidas.length > 0 && <span className="inline-flex h-7 items-center rounded-full bg-energy-wash px-2.5 text-xs font-medium text-energy-ink">{d.comidas.length} comida{d.comidas.length > 1 ? "s" : ""} · {fmtKcal(d.kcalConsumidas ?? 0)} kcal</span>}
             {HABITOS.filter((h) => d.habitos?.[h.clave]).map((h) => <Chip key={h.clave} tone="habit">{h.etiqueta}</Chip>)}
           </div>}
           <NotaContexto fecha={sel} inicial={d.notas} onGuardar={(notas) => actualizarDia(sel, { notas })} />
@@ -173,17 +169,21 @@ function NotaContexto({ fecha, inicial, onGuardar }: { fecha: string; inicial?: 
     }
   }
 
-  return <div className="mt-5 border-t border-border pt-5">
-    <div className="flex items-start justify-between gap-3">
-      <div className="flex items-start gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-body-wash text-body"><MessageSquareText className="size-4" /></span><div><label htmlFor={`nota-${fecha}`} className="text-sm font-semibold text-foreground">Contexto del día</label><p className="mt-0.5 max-w-lg text-xs leading-relaxed text-muted-foreground">Anota una excepción para recordarla al revisar tu progreso. No cambia el cálculo.</p></div></div>
-      <Chip tone={limpio ? "body" : "muted"}>{limpio ? "Con nota" : "Sin nota"}</Chip>
+  const activas = etiquetas.filter(({ etiqueta }) => limpio.includes(etiqueta)).map(({ etiqueta }) => etiqueta);
+
+  return <details className="group mt-3 overflow-hidden rounded-xl border border-border bg-secondary/25 open:bg-card">
+    <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-3 marker:hidden sm:px-3.5">
+      <div className="flex min-w-0 items-center gap-2.5"><span className="grid size-8 shrink-0 place-items-center rounded-lg bg-body-wash text-body"><MessageSquareText className="size-4" /></span><div className="min-w-0"><p className="text-sm font-semibold text-foreground">Contexto del día</p><p className="truncate text-xs text-muted-foreground">{activas.length ? activas.join(" · ") : limpio ? "Nota guardada" : "Añade una excepción si la hubo"}</p></div></div>
+      <div className="flex shrink-0 items-center gap-2"><Chip tone={limpio ? "body" : "muted"}>{limpio ? "Con nota" : "Opcional"}</Chip><ChevronDown className="size-4 text-muted-foreground transition-transform group-open:rotate-180" /></div>
+    </summary>
+    <div className="border-t border-border p-3 sm:p-3.5">
+      <div className="flex flex-wrap gap-1.5">
+        {etiquetas.map(({ etiqueta, icono: Icono }) => <button key={etiqueta} type="button" onClick={() => sumarEtiqueta(etiqueta)} className={cn("flex h-8 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors", texto.includes(etiqueta) ? "border-body-border bg-body-wash text-body-ink" : "border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground")}><Icono className="size-3.5 shrink-0" />{etiqueta}</button>)}
+      </div>
+      <Textarea id={`nota-${fecha}`} value={texto} onChange={(event) => setTexto(event.target.value)} placeholder="Ej.: cena fuera, viaje o entrenamiento especial…" className="mt-3 min-h-20 resize-y border-body-border/60 bg-body-wash/15 text-sm placeholder:text-muted-foreground" />
+      <div className="mt-2 flex items-center justify-between gap-3"><span className="text-xs text-muted-foreground">No altera tu balance ni la predicción.</span><Button size="sm" variant="secondary" disabled={!cambio || guardando} onClick={() => void guardar()} className="h-8 px-3 text-xs">{guardando ? "Guardando…" : "Guardar"}</Button></div>
     </div>
-    <div className="mt-4 grid grid-cols-2 gap-2">
-      {etiquetas.map(({ etiqueta, icono: Icono }) => <button key={etiqueta} type="button" onClick={() => sumarEtiqueta(etiqueta)} className={cn("flex min-h-10 items-center gap-2 rounded-lg border px-3 text-left text-xs font-medium transition-colors", texto.includes(etiqueta) ? "border-body-border bg-body-wash text-body-ink" : "border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground")}><Icono className="size-3.5 shrink-0" />{etiqueta}</button>)}
-    </div>
-    <Textarea id={`nota-${fecha}`} value={texto} onChange={(event) => setTexto(event.target.value)} placeholder="Añade lo que convenga recordar de este día…" className="mt-3 min-h-24 resize-y border-body-border/70 bg-body-wash/20 text-sm placeholder:text-muted-foreground" />
-    <div className="mt-2 flex items-center justify-between gap-3"><span className="text-xs text-muted-foreground">{limpio ? "Se guardará con este día" : "Puedes añadir una nota cuando haga falta"}</span><Button size="sm" variant="secondary" disabled={!cambio || guardando} onClick={() => void guardar()} className="h-8 px-3 text-xs">{guardando ? "Guardando…" : "Guardar contexto"}</Button></div>
-  </div>;
+  </details>;
 }
 
 function calidadDia(energia: EnergiaDia, habitos: number) {

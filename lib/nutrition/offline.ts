@@ -55,12 +55,13 @@ const DB: Alimento[] = [
   { claves: ["pan", "barra de pan", "tostada", "tostadas", "rebanada de pan", "picos", "biscote"], kcal: 265, p: 9, c: 49, g: 3.2, porcion: 50, unidades: { rebanada: 30, tostada: 30 } },
   { claves: ["avena", "copos de avena"], kcal: 379, p: 13, c: 68, g: 7, porcion: 40 },
   { claves: ["cereales"], kcal: 380, p: 7, c: 82, g: 3, porcion: 40 },
-  { claves: ["arroz"], kcal: 130, p: 2.7, c: 28, g: 0.3, porcion: 180, unidades: { plato: 200 } },
-  { claves: ["pasta", "espagueti", "espaguetis", "macarrones", "fideos"], kcal: 158, p: 5.8, c: 31, g: 0.9, porcion: 180, unidades: { plato: 200 } },
+  { claves: ["arroz", "arroz basmati"], kcal: 130, p: 2.7, c: 28, g: 0.3, porcion: 180, unidades: { plato: 200 } },
+  { claves: ["pasta penne rigate", "penne rigate", "pasta", "espagueti", "espaguetis", "macarrones", "fideos"], kcal: 158, p: 5.8, c: 31, g: 0.9, porcion: 180, unidades: { plato: 200 } },
   { claves: ["quinoa"], kcal: 120, p: 4.4, c: 21, g: 1.9, porcion: 150 },
   { claves: ["tortilla de patatas", "tortilla de patata"], kcal: 170, p: 6, c: 14, g: 10, porcion: 150, unidades: { porcion: 150, pincho: 120 } },
 
   /* --- Grasas --- */
+  { claves: ["aceite de sesamo", "aceite de sésamo"], kcal: 884, p: 0, c: 0, g: 100, porcion: 10, unidades: { cucharada: 10, cda: 10, chorro: 8, chorrito: 5 }, liquido: true },
   { claves: ["aceite de oliva", "aove", "aceite"], kcal: 884, p: 0, c: 0, g: 100, porcion: 10, unidades: { cucharada: 10, cda: 10, chorro: 8, chorrito: 5 }, liquido: true },
   { claves: ["mantequilla"], kcal: 717, p: 0.9, c: 0.1, g: 81, porcion: 10, unidades: { cucharada: 12 } },
   { claves: ["aguacate"], kcal: 160, p: 2, c: 9, g: 15, porcion: 150 },
@@ -73,6 +74,7 @@ const DB: Alimento[] = [
   { claves: ["pavo", "fiambre de pavo", "pechuga de pavo"], kcal: 104, p: 18, c: 2, g: 2.5, porcion: 50, unidades: { loncha: 20, lonchas: 20 } },
   { claves: ["jamon york", "jamón york", "jamon cocido", "jamón cocido"], kcal: 120, p: 18, c: 1.5, g: 4.5, porcion: 50, unidades: { loncha: 20 } },
   { claves: ["jamon serrano", "jamón serrano", "jamon iberico", "jamón ibérico", "jamon", "jamón"], kcal: 241, p: 31, c: 0.3, g: 13, porcion: 40, unidades: { loncha: 15 } },
+  { claves: ["contramuslo de pollo", "contramuslo"], kcal: 177, p: 24, c: 0, g: 9, porcion: 150 },
   { claves: ["pollo", "pechuga de pollo", "pechuga"], kcal: 165, p: 31, c: 0, g: 3.6, porcion: 150, unidades: { filete: 130 } },
   { claves: ["ternera", "filete de ternera", "carne picada", "carne"], kcal: 217, p: 26, c: 0, g: 12, porcion: 150, unidades: { filete: 140 } },
   { claves: ["cerdo", "lomo", "solomillo"], kcal: 242, p: 27, c: 0, g: 14, porcion: 150, unidades: { filete: 130 } },
@@ -96,10 +98,19 @@ const DB: Alimento[] = [
   { claves: ["yogur griego", "yogurt griego"], kcal: 97, p: 9, c: 4, g: 5, porcion: 125 },
   { claves: ["yogur", "yogurt"], kcal: 61, p: 3.5, c: 4.7, g: 3.3, porcion: 125, unidades: { unidad: 125 } },
   { claves: ["queso fresco", "requeson", "requesón", "burgos"], kcal: 98, p: 11, c: 3.4, g: 4.3, porcion: 80 },
+  { claves: ["queso pecorino", "pecorino"], kcal: 387, p: 28, c: 1, g: 31, porcion: 20 },
+  { claves: ["queso parmesano", "parmesano"], kcal: 431, p: 38, c: 4, g: 29, porcion: 15 },
+  { claves: ["queso de cabra", "cabra en rulo"], kcal: 364, p: 19, c: 1, g: 31, porcion: 40 },
+  { claves: ["queso mozzarella", "mozzarella"], kcal: 280, p: 22, c: 2, g: 21, porcion: 50 },
   { claves: ["queso curado", "queso manchego"], kcal: 390, p: 25, c: 1.5, g: 32, porcion: 30, unidades: { loncha: 20, cuna: 30 } },
   { claves: ["queso"], kcal: 350, p: 23, c: 2, g: 28, porcion: 30, unidades: { loncha: 20 } },
 
   /* --- Verduras, legumbres y fruta --- */
+  { claves: ["canónigos", "canonigos"], kcal: 21, p: 2, c: 1.7, g: 0.4, porcion: 80 },
+  { claves: ["esparragos", "espárragos"], kcal: 20, p: 2.2, c: 3.9, g: 0.1, porcion: 100 },
+  { claves: ["champinones", "champiñones"], kcal: 22, p: 3.1, c: 3.3, g: 0.3, porcion: 80 },
+  { claves: ["boniato", "batata"], kcal: 90, p: 2, c: 21, g: 0.1, porcion: 150 },
+  { claves: ["pimientos del padron", "pimientos del padrón"], kcal: 25, p: 1, c: 5, g: 0.2, porcion: 100 },
   { claves: ["ensalada", "lechuga", "verdura", "verduras", "espinacas", "brocoli", "brócoli"], kcal: 35, p: 2, c: 6, g: 0.4, porcion: 150, unidades: { plato: 200 } },
   { claves: ["tomate"], kcal: 18, p: 0.9, c: 3.9, g: 0.2, porcion: 120 },
   { claves: ["patata", "patatas", "papa"], kcal: 87, p: 2, c: 20, g: 0.1, porcion: 200 },
@@ -123,6 +134,10 @@ const DB: Alimento[] = [
   { claves: ["azucar", "azúcar"], kcal: 400, p: 0, c: 100, g: 0, porcion: 8, unidades: { cucharada: 12, cucharadita: 5, sobre: 8 } },
   { claves: ["miel"], kcal: 304, p: 0.3, c: 82, g: 0, porcion: 20, unidades: { cucharada: 21 } },
   { claves: ["mermelada"], kcal: 250, p: 0.4, c: 60, g: 0.1, porcion: 20, unidades: { cucharada: 20 } },
+  { claves: ["alioli", "alioli casero"], kcal: 680, p: 1, c: 2, g: 74, porcion: 30, unidades: { cucharada: 15 } },
+  { claves: ["mostaza antigua", "mostaza"], kcal: 66, p: 4, c: 5, g: 4, porcion: 10, unidades: { cucharada: 15 } },
+  { claves: ["tomates secos", "tomate seco"], kcal: 258, p: 14, c: 55, g: 3, porcion: 50 },
+  { claves: ["salsa de soja", "soja baja en sodio"], kcal: 53, p: 8, c: 5, g: 0.6, porcion: 15, liquido: true },
 
   /* --- Bebidas --- */
   { claves: ["cerveza", "caña", "cana", "tercio"], kcal: 43, p: 0.5, c: 3.6, g: 0, porcion: 330, unidades: { cana: 200, caña: 200, tercio: 330, jarra: 500 }, liquido: true },
@@ -204,6 +219,12 @@ interface Coincidencia {
   fin: number;
 }
 
+/** Valores por 100 g para cuando el texto aclara el peso en crudo. La base
+ * canónica guarda arroz y pasta ya cocidos, que es el caso más frecuente. */
+const SECOS_EN_CRUDO: Alimento = {
+  claves: [], kcal: 350, p: 12, c: 72, g: 1.5, porcion: 100,
+};
+
 /** Localiza alimentos en el texto sin solaparse, preferiendo la clave más larga. */
 function localizar(texto: string): Coincidencia[] {
   const encontradas: Coincidencia[] = [];
@@ -265,14 +286,16 @@ export function estimarOffline(texto: string): AnalisisNutricional {
     const contexto = `${prefijo} ${surface} ${sufijo}`;
 
     const gramos = Math.min(2000, Math.max(1, gramosDe(contexto, c.alimento)));
+    const esSecoEnCrudo = /\b(?:pasta|penne|arroz)\b/.test(surface) && /\bcrudo\b/.test(contexto);
+    const alimento = esSecoEnCrudo ? SECOS_EN_CRUDO : c.alimento;
     const f = gramos / 100;
 
     items.push({
       nombre: `${limpio.slice(c.inicio, c.fin)} · ${Math.round(gramos)} g`,
-      kcal: Math.round(c.alimento.kcal * f),
-      proteinas: Math.round(c.alimento.p * f),
-      carbohidratos: Math.round(c.alimento.c * f),
-      grasas: Math.round(c.alimento.g * f),
+      kcal: Math.round(alimento.kcal * f),
+      proteinas: Math.round(alimento.p * f),
+      carbohidratos: Math.round(alimento.c * f),
+      grasas: Math.round(alimento.g * f),
     });
   }
 

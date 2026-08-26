@@ -11,6 +11,7 @@ import { SocialLogin } from "@/components/social-login";
 import { ButtonRipple } from "@/components/button-ripple";
 import { loginRateLimiter, validateEmail } from "@/lib/validation";
 import { transitionCSS, springBezier, stagger } from "@/lib/transitions";
+import { rutaInternaSegura } from "@/lib/auth-redirect";
 
 export default function LoginPage() {
   return (
@@ -74,7 +75,9 @@ function LoginForm() {
       if (recordarme) localStorage.setItem("ritmo_recordarme", "true");
       else localStorage.removeItem("ritmo_recordarme");
 
-      router.push(params.get("next") || "/");
+      // El proveedor escucha el cambio de identidad y el layout se resuelve de
+      // nuevo en servidor, evitando reutilizar el onboarding de otra cuenta.
+      router.replace(rutaInternaSegura(params.get("next")));
       router.refresh();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -108,10 +111,10 @@ function LoginForm() {
         >
           <div className="h-0.5 bg-gradient-to-r from-primary via-primary/80 to-primary/60" />
 
-          <div className="px-7 py-6 space-y-5">
+          <div className="space-y-5 px-5 py-6 sm:px-7 sm:py-6">
             <div className="overflow-hidden">
               <h1
-                className="font-display text-3xl font-bold"
+                className="font-display text-2xl font-bold sm:text-3xl"
                 style={{ animation: `revealText 0.7s ${springBezier} forwards` }}
               >
                 Bienvenido
@@ -132,7 +135,7 @@ function LoginForm() {
               <div style={stagger(1)}>
                 <Label htmlFor="email" className="text-sm font-semibold mb-1.5 block">Email</Label>
                 <div className="relative">
-                  <Mail className={`absolute left-3 top-2.5 size-4 transition-all duration-200 ${
+                  <Mail className={`absolute left-3 top-3.5 size-4 transition-all duration-200 sm:top-2.5 ${
                     focusedField === "email" ? "text-primary" : "text-muted-foreground"
                   } ${validatedEmail && focusedField !== "email" ? "text-green-500" : ""}`} />
                   <Input
@@ -141,10 +144,10 @@ function LoginForm() {
                     onFocus={() => setFocusedField("email")}
                     onBlur={() => setFocusedField(null)}
                     placeholder="tu@correo.com" disabled={cargando}
-                    className="pl-9 h-10 text-sm rounded-lg border-2 transition-all focus:border-primary focus:ring-1 focus:ring-primary/20"
+                    className="h-12 rounded-lg border-2 pl-10 text-base transition-all focus:border-primary focus:ring-1 focus:ring-primary/20 sm:h-10 sm:pl-9 sm:text-sm"
                   />
                   {validatedEmail && focusedField !== "email" && (
-                    <Check className="absolute right-3 top-2.5 size-4 text-green-500"
+                    <Check className="absolute right-3 top-3.5 size-4 text-green-500 sm:top-2.5"
                       style={{ animation: `successPop 0.3s ${springBezier}` }} />
                   )}
                 </div>
@@ -153,7 +156,7 @@ function LoginForm() {
               <div style={stagger(2)}>
                 <Label htmlFor="password" className="text-sm font-semibold mb-1.5 block">Contraseña</Label>
                 <div className="relative">
-                  <Lock className={`absolute left-3 top-2.5 size-4 transition-all duration-200 ${
+                  <Lock className={`absolute left-3 top-3.5 size-4 transition-all duration-200 sm:top-2.5 ${
                     focusedField === "password" ? "text-primary" : "text-muted-foreground"
                   }`} />
                   <Input
@@ -162,20 +165,20 @@ function LoginForm() {
                     onFocus={() => setFocusedField("password")}
                     onBlur={() => setFocusedField(null)}
                     placeholder="••••••••" disabled={cargando}
-                    className="pl-9 pr-10 h-10 text-sm rounded-lg border-2 transition-all focus:border-primary focus:ring-1 focus:ring-primary/20"
+                    className="h-12 rounded-lg border-2 pl-10 pr-11 text-base transition-all focus:border-primary focus:ring-1 focus:ring-primary/20 sm:h-10 sm:pl-9 sm:pr-10 sm:text-sm"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={cargando}
-                    className="absolute right-3 top-2.5 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                    className="absolute right-3 top-3.5 text-muted-foreground transition-colors hover:text-primary sm:top-2.5"
                   >
                     {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between" style={stagger(3)}>
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:flex-nowrap sm:gap-0" style={stagger(3)}>
                 <label className="flex items-center gap-2 cursor-pointer group hover:bg-primary/5 px-2 py-1 rounded-lg transition-colors">
                   <input
                     type="checkbox" checked={recordarme}
@@ -192,7 +195,7 @@ function LoginForm() {
 
               <ButtonRipple
                 type="submit" disabled={cargando}
-                className="w-full h-10 text-sm font-semibold rounded-lg transition-all active:scale-95"
+                className="h-12 w-full rounded-lg text-base font-semibold transition-all active:scale-[0.98] sm:h-10 sm:text-sm sm:active:scale-95"
                 style={stagger(4)}
               >
                 {cargando ? (

@@ -38,7 +38,7 @@ export function RitmoWordmark({ className }: { className?: string }) {
     <img
       src="/brand/ritmo-wordmark-transparent.png"
       alt="RITMO"
-      className={cn("h-9 w-auto object-contain", className)}
+      className={cn("h-9 w-auto object-contain dark:brightness-0 dark:invert", className)}
     />
   );
 }

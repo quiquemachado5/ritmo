@@ -1,7 +1,7 @@
 import type { AnalisisNutricional, ItemNutricional } from "./types";
 
 const API_KEY = process.env.GEMINI_API_KEY || "";
-const MODEL = process.env.GEMINI_NUTRITION_MODEL || "gemini-2.5-flash";
+const MODEL = process.env.GEMINI_NUTRITION_MODEL || "gemini-3.6-flash";
 
 type GeminiItem = Partial<Record<"nombre" | "kcal" | "proteinas" | "carbohidratos" | "grasas", unknown>>;
 type GeminiPayload = Partial<Record<"items" | "kcal" | "proteinas" | "carbohidratos" | "grasas", unknown>>;
@@ -35,15 +35,25 @@ export async function analizarConGemini(texto: string): Promise<AnalisisNutricio
       systemInstruction: {
         parts: [{ text: [
           "Eres un analista nutricional prudente para una app española de registro.",
-          "Descompón la comida descrita en ingredientes razonables y estima energía y macronutrientes.",
-          "No inventes marcas, gramos ni ingredientes: cuando la cantidad sea ambigua, usa una ración habitual conservadora.",
+          "Descompón la comida descrita en todos sus ingredientes y estima energía y macronutrientes.",
+          "Respeta estrictamente los gramos y mililitros indicados. Cuenta siempre aceites, mantequilla, alioli, salsas, queso, frutos secos y aliños; no los omitas.",
+          "Distingue peso crudo de peso cocido cuando el texto lo especifique. Interpreta aceite en ml como aceite realmente consumido.",
+          "No inventes marcas, gramos ni ingredientes: cuando la cantidad sea ambigua, usa una ración habitual conservadora y deja esa incertidumbre dentro del valor del ingrediente.",
           "Responde solo JSON válido con esta forma exacta:",
           '{"items":[{"nombre":"string","kcal":0,"proteinas":0,"carbohidratos":0,"grasas":0}]}',
-          "Todas las cifras deben ser números no negativos, en gramos salvo kcal. No des consejos médicos ni texto adicional.",
+          "Todas las cifras deben ser números no negativos, en gramos salvo kcal. Revisa que las kcal sean coherentes con los macros antes de responder. No des consejos médicos ni texto adicional.",
         ].join(" ") }],
       },
       contents: [{ role: "user", parts: [{ text: `Comida: ${texto}` }] }],
-      generationConfig: { temperature: 0.1, responseMimeType: "application/json", maxOutputTokens: 1024 },
+      generationConfig: {
+        temperature: 0.1,
+        responseMimeType: "application/json",
+        maxOutputTokens: 1024,
+        // En Gemini 3, la nutrición estructurada no necesita razonamiento
+        // extendido: reservamos los tokens para el JSON final y reducimos la
+        // latencia de cada registro.
+        thinkingConfig: { thinkingLevel: "minimal" },
+      },
     }),
     signal: AbortSignal.timeout(10_000),
   });

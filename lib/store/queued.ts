@@ -48,13 +48,14 @@ export class QueuedAdapter implements Adapter {
   private key: string;
   private cola: Op[] = [];
   private flushing = false;
+  private readonly alVolverOnline = () => void this.flush();
 
   constructor(private inner: Adapter, userId: string) {
     this.key = `ritmo:writequeue:${userId}`;
     this.cola = this.leer();
     this.notificar();
     if (typeof window !== "undefined") {
-      window.addEventListener("online", () => void this.flush());
+      window.addEventListener("online", this.alVolverOnline);
       // Intento inicial por si quedó cola de una sesión anterior.
       if (navigator.onLine) void this.flush();
     }
@@ -150,4 +151,5 @@ export class QueuedAdapter implements Adapter {
   borrarTodo() { this.cola = []; this.escribir(); return this.inner.borrarTodo?.() ?? Promise.resolve(); }
   sembrar(data: StoreData) { return this.inner.sembrar?.(data) ?? Promise.resolve(); }
   subscribe(cb: () => void) { return this.inner.subscribe?.(cb) ?? (() => {}); }
+  dispose() { window.removeEventListener("online", this.alVolverOnline); }
 }

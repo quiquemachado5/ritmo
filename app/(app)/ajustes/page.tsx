@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
-import { Download, FileSpreadsheet, HistoryIcon, LogOut, Monitor, Moon, Plane, ShieldCheck, Sun, Trash2, Upload } from "lucide-react";
+import { Download, FileSpreadsheet, HistoryIcon, LogOut, Monitor, Moon, Plane, ShieldCheck, Sun, Trash2, Upload, UserRound } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { FACTORES_ACTIVIDAD } from "@/lib/model/metrics";
 import { Card } from "@/components/ui/card";
@@ -173,15 +173,16 @@ export default function AjustesPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="font-display text-2xl font-bold tracking-tight">Ajustes</h1>
+    <div className="flex flex-col gap-7">
+      <header className="flex flex-col gap-1 border-b border-border/70 pb-5"><h1 className="font-display text-2xl font-bold tracking-tight">Ajustes</h1><p className="text-sm text-muted-foreground">Perfil, preferencias, datos y cuenta en un único sistema ordenado.</p></header>
 
-      {/* Perfil */}
+      {/* Datos que alimentan el modelo, separados para una lectura más clara. */}
       <section>
-        <SectionLabel>Perfil</SectionLabel>
-        <Card className="flex flex-col gap-4 p-5">
+        <SectionLabel>Datos personales</SectionLabel>
+        <SettingsCard>
+          <SettingsSubhead title="Tu perfil" description="La base para calcular tus objetivos con precisión." />
           <Row label="Nombre" htmlFor="nombre">
-            <Input id="nombre" value={form.nombre ?? ""} onChange={(e) => set("nombre", e.target.value)} className="max-w-48 h-11" />
+            <Input id="nombre" value={form.nombre ?? ""} onChange={(e) => set("nombre", e.target.value)} className="h-11 w-full rounded-xl sm:w-56" />
           </Row>
           <Row label="Sexo biológico">
             <div className="flex gap-1.5">
@@ -191,18 +192,18 @@ export default function AjustesPage() {
             </div>
           </Row>
           <Row label="Edad" htmlFor="edad">
-            <Input id="edad" inputMode="numeric" value={String(form.edad ?? "")} onChange={(e) => set("edad", Number(e.target.value) as never)} className="max-w-24 tabular h-11" />
+            <Input id="edad" inputMode="numeric" value={String(form.edad ?? "")} onChange={(e) => set("edad", Number(e.target.value) as never)} className="h-11 w-full rounded-xl tabular sm:w-28" />
           </Row>
           <Row label="Altura (cm)" htmlFor="altura">
-            <Input id="altura" inputMode="numeric" value={String(form.alturaCm ?? "")} onChange={(e) => set("alturaCm", Number(e.target.value) as never)} className="max-w-24 tabular h-11" />
+            <Input id="altura" inputMode="numeric" value={String(form.alturaCm ?? "")} onChange={(e) => set("alturaCm", Number(e.target.value) as never)} className="h-11 w-full rounded-xl tabular sm:w-28" />
           </Row>
-        </Card>
+        </SettingsCard>
       </section>
 
-      {/* Objetivos */}
       <section>
-        <SectionLabel>Objetivos</SectionLabel>
-        <Card className="flex flex-col gap-4 p-5">
+        <SectionLabel>Objetivo y nutrición</SectionLabel>
+        <SettingsCard>
+          <SettingsSubhead title="Tu estrategia" description="Las referencias con las que RITMO interpreta tu evolución." />
           <Row label="Objetivo principal">
             <div className="flex flex-wrap gap-1.5">
               {(["perder", "mantener", "ganar"] as Objetivo[]).map((o) => (
@@ -213,10 +214,10 @@ export default function AjustesPage() {
             </div>
           </Row>
           <Row label="Peso objetivo (kg)" htmlFor="pesoObjetivo">
-            <Input id="pesoObjetivo" inputMode="decimal" value={String(form.pesoObjetivo ?? "")} onChange={(e) => set("pesoObjetivo", Number(e.target.value) as never)} className="max-w-24 tabular h-11" />
+            <Input id="pesoObjetivo" inputMode="decimal" value={String(form.pesoObjetivo ?? "")} onChange={(e) => set("pesoObjetivo", Number(e.target.value) as never)} className="h-11 w-full rounded-xl tabular sm:w-28" />
           </Row>
           <Row label="Calorías objetivo" htmlFor="kcalObjetivo">
-            <Input id="kcalObjetivo" inputMode="numeric" value={String(form.kcalObjetivo ?? "")} onChange={(e) => set("kcalObjetivo", Number(e.target.value) as never)} className="max-w-28 tabular h-11" />
+            <Input id="kcalObjetivo" inputMode="numeric" value={String(form.kcalObjetivo ?? "")} onChange={(e) => set("kcalObjetivo", Number(e.target.value) as never)} className="h-11 w-full rounded-xl tabular sm:w-32" />
           </Row>
           <div>
             <Row label="Proteína (g/kg)" htmlFor="proteinaObjetivo">
@@ -226,21 +227,21 @@ export default function AjustesPage() {
                 placeholder={proteinaSugerida}
                 value={form.proteinaObjetivo != null ? String(form.proteinaObjetivo) : ""}
                 onChange={(e) => set("proteinaObjetivo", (e.target.value === "" ? undefined : Number(e.target.value)) as never)}
-                className="max-w-24 tabular h-11"
+                className="h-11 w-full rounded-xl tabular sm:w-28"
               />
             </Row>
             <p className="mt-1.5 text-xs text-muted-foreground">
               Gramos de proteína por kg de peso. Vacío = automático ({proteinaSugerida} g/kg según tu objetivo).
             </p>
           </div>
-          <div>
-            <Label className="mb-2 block">Nivel de actividad</Label>
+          <div className="border-t border-border pt-4">
+            <Label className="mb-2 block text-sm">Nivel de actividad</Label>
             <div className="flex flex-col gap-1.5">
               {FACTORES_ACTIVIDAD.map((f) => (
                 <button
                   key={f.clave}
                   onClick={() => set("factorActividad", f.factor)}
-                  className={cn("flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm", form.factorActividad === f.factor ? "border-primary bg-primary/8" : "border-border")}
+                  className={cn("flex min-h-11 items-center justify-between gap-3 rounded-xl border px-3 text-left text-sm transition-colors", form.factorActividad === f.factor ? "border-primary bg-primary/8" : "border-border hover:bg-secondary/50")}
                 >
                   <span className="font-medium">{f.etiqueta}</span>
                   <span className="text-xs text-muted-foreground">{f.detalle}</span>
@@ -248,97 +249,101 @@ export default function AjustesPage() {
               ))}
             </div>
           </div>
-          <Button onClick={guardarPerfil} className="mt-1 self-start">Guardar cambios</Button>
-        </Card>
+          <Button onClick={guardarPerfil} className="mt-1 h-11 self-start rounded-xl px-5">Guardar cambios</Button>
+        </SettingsCard>
       </section>
 
-      {/* Días sin hábitos */}
+      {/* Reglas del modelo */}
       <section>
-        <SectionLabel>Días sin hábitos</SectionLabel>
-        <Card className="flex flex-col gap-4 p-5">
-          <p className="text-sm font-semibold">Superávit conservador</p>
-          <p className="text-xs text-muted-foreground">
+        <SectionLabel>Modelo y adherencia</SectionLabel>
+        <SettingsCard>
+          <SettingsSubhead title="Días sin hábitos" description="Cómo interpreta RITMO una jornada sin adherencia registrada." />
+          <div className="rounded-xl border border-warning-border bg-warning-wash/65 p-3.5">
+          <p className="text-sm font-semibold text-warning-ink">Superávit conservador</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             Con cero hábitos en un día registrado, RITMO aplica un superávit estimado de {p.imputarSuperavitKcal ?? 500} kcal. Así un día sin adherencia nunca se interpreta como déficit.
           </p>
+          </div>
           <div className="border-t border-border pt-4"><Row label="Contar días totalmente vacíos">
             <Switch checked={form.imputarActiva !== false} onCheckedChange={(v) => { set("imputarActiva", v); actualizarPerfil({ imputarActiva: v }); }} aria-label="Contar días totalmente vacíos" />
           </Row><p className="mt-1.5 text-xs text-muted-foreground">También aplica ese superávit a huecos sin ningún dato desde la fecha de corte configurada.</p></div>
-        </Card>
+        </SettingsCard>
       </section>
 
       <section>
-        <SectionLabel>Modo viaje / vacaciones</SectionLabel>
-        <Card className="p-5">
-          <div className="flex flex-wrap items-start justify-between gap-4"><div className="flex items-start gap-3"><span className="grid size-10 place-items-center rounded-xl bg-habit-wash text-habit"><Plane className="size-5" /></span><div><p className="text-sm font-semibold">{viaje.activo ? "Contexto de viaje activo" : "Mantén el contexto a la vista"}</p><p className="mt-1 max-w-lg text-xs leading-relaxed text-muted-foreground">Añade una señal visual mientras viajas o estás de vacaciones. No altera kcal, hábitos ni predicciones.</p></div></div>{viaje.activo && <Button variant="secondary" size="sm" onClick={() => guardarModoViaje({ ...viaje, activo: false })}>Finalizar</Button>}</div>
-          {!viaje.activo && <div className="mt-4 flex flex-col gap-2 sm:flex-row"><Input value={nombreViaje} onChange={(e) => setNombreViaje(e.target.value)} placeholder="Viaje a Lisboa" className="h-10 sm:max-w-xs" /><Input type="date" value={finViaje} onChange={(e) => setFinViaje(e.target.value)} className="h-10 sm:max-w-44" /><Button onClick={() => guardarModoViaje({ activo: true, etiqueta: nombreViaje.trim() || "Viaje", desde: new Date().toISOString().slice(0, 10), hasta: finViaje || undefined })}>Activar modo viaje</Button></div>}
-        </Card>
+        <SectionLabel>Contexto y viaje</SectionLabel>
+        <SettingsCard>
+          <SettingsSubhead title="Modo viaje / vacaciones" description="Un contexto visual para interpretar tus días sin alterar kcal, hábitos ni predicciones." />
+          <Row label="Estado actual">
+            <div className="flex items-center gap-2"><span className={cn("inline-flex h-9 items-center rounded-xl px-3 text-xs font-semibold", viaje.activo ? "bg-habit-wash text-habit-ink" : "bg-secondary text-muted-foreground")}>{viaje.activo ? viaje.etiqueta : "Sin viaje activo"}</span>{viaje.activo && <Button variant="secondary" size="sm" className="h-9 rounded-xl" onClick={() => guardarModoViaje({ ...viaje, activo: false })}>Finalizar</Button>}</div>
+          </Row>
+          {!viaje.activo && <div className="grid gap-2 border-t border-border pt-4 sm:grid-cols-[minmax(0,1fr)_11rem_auto]"><Input value={nombreViaje} onChange={(e) => setNombreViaje(e.target.value)} placeholder="Viaje a Lisboa" className="h-11 rounded-xl" /><Input type="date" value={finViaje} onChange={(e) => setFinViaje(e.target.value)} className="h-11 rounded-xl" /><Button className="h-11 rounded-xl px-4" onClick={() => guardarModoViaje({ activo: true, etiqueta: nombreViaje.trim() || "Viaje", desde: new Date().toISOString().slice(0, 10), hasta: finViaje || undefined })}><Plane className="size-4" /> Activar</Button></div>}
+        </SettingsCard>
       </section>
 
-      {/* Apariencia */}
+      {/* Preferencias de uso */}
       <section>
-        <SectionLabel>Apariencia</SectionLabel>
-        <Card className="p-5">
+        <SectionLabel>Experiencia</SectionLabel>
+        <SettingsCard>
+          <SettingsSubhead title="Apariencia" description="Elige el modo de color que mejor encaja con tu entorno." />
           <div className="flex gap-2">
             {([["light", "Claro", Sun], ["dark", "Oscuro", Moon], ["system", "Sistema", Monitor]] as const).map(([val, label, Icon]) => (
               <button
                 key={val}
                 onClick={() => setTheme(val)}
-                className={cn("flex flex-1 flex-col items-center gap-1.5 rounded-xl border py-3 text-sm", theme === val ? "border-primary bg-primary/8 text-foreground" : "border-border text-muted-foreground")}
+                className={cn("flex min-h-20 flex-1 flex-col items-center justify-center gap-1.5 rounded-xl border py-3 text-sm transition-colors", theme === val ? "border-primary bg-primary/8 text-foreground shadow-sm" : "border-border text-muted-foreground hover:bg-secondary/50")}
               >
                 <Icon className="size-5" />
                 {label}
               </button>
             ))}
           </div>
-          <div className="mt-5 border-t border-border pt-5">
+          <div className="border-t border-border pt-5">
             <div className="flex flex-wrap items-end justify-between gap-2">
               <div><p className="text-sm font-semibold">Densidad visual</p><p className="mt-0.5 text-xs text-muted-foreground">Ajusta el espacio entre secciones y el aire de lectura.</p></div>
               <span className="text-xs font-medium text-primary">{densidad === "compacta" ? "Compacta" : "Espaciosa"}</span>
             </div>
             <div className="mt-3 inline-flex rounded-xl bg-secondary p-1" role="group" aria-label="Densidad visual">
-              {(["compacta", "espaciosa"] as const).map((opcion) => <button key={opcion} type="button" onClick={() => cambiarDensidad(opcion)} aria-pressed={densidad === opcion} className={cn("rounded-lg px-4 py-2 text-sm font-medium transition-colors", densidad === opcion ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>{opcion === "compacta" ? "Compacta" : "Espaciosa"}</button>)}
+              {(["compacta", "espaciosa"] as const).map((opcion) => <button key={opcion} type="button" onClick={() => cambiarDensidad(opcion)} aria-pressed={densidad === opcion} className={cn("h-9 rounded-xl px-4 text-sm font-medium transition-colors", densidad === opcion ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>{opcion === "compacta" ? "Compacta" : "Espaciosa"}</button>)}
             </div>
           </div>
-        </Card>
+        </SettingsCard>
       </section>
 
-      {/* Datos */}
+      {/* Respaldo y portabilidad */}
       <section>
-        <SectionLabel>Datos</SectionLabel>
-        <Card className="flex flex-col gap-3 p-5">
+        <SectionLabel>Datos y respaldo</SectionLabel>
+        <SettingsCard className="gap-3.5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div><p className="text-sm font-semibold">Tu historial, siempre contigo</p><p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">Exporta, importa o recupera una copia sin salir de tu espacio.</p></div>
+            <div className="grid grid-cols-3 gap-1.5 sm:flex sm:shrink-0">
+              <Button variant="secondary" onClick={descargar} className="h-10 rounded-xl gap-1.5 px-2.5 text-xs sm:px-3 sm:text-sm"><Download className="size-4" /> JSON</Button>
+              <Button variant="secondary" onClick={descargarCSV} className="h-10 rounded-xl gap-1.5 px-2.5 text-xs sm:px-3 sm:text-sm"><FileSpreadsheet className="size-4" /> CSV</Button>
+              <Button variant="secondary" onClick={() => fileRef.current?.click()} className="h-10 rounded-xl gap-1.5 px-2.5 text-xs sm:px-3 sm:text-sm"><Upload className="size-4" /> Importar</Button>
+            </div>
+          </div>
           {/* Aviso si hace mucho de la última exportación manual */}
           {diasSinExportar != null && diasSinExportar >= 14 && (
-            <div className="flex items-start gap-2.5 rounded-lg bg-warning-wash px-3 py-2.5 text-xs text-warning-ink">
+            <div className="flex items-start gap-2.5 rounded-xl bg-warning-wash px-3 py-2.5 text-xs text-warning-ink">
               <ShieldCheck className="size-4 shrink-0" />
               <span>Hace <span className="font-semibold">{diasSinExportar} días</span> que no exportas una copia. Descarga un respaldo para tenerlo a salvo fuera de la nube.</span>
             </div>
           )}
-          <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" onClick={descargar} className="gap-2"><Download className="size-4" /> Exportar JSON</Button>
-            <Button variant="secondary" onClick={descargarCSV} className="gap-2"><FileSpreadsheet className="size-4" /> Exportar CSV</Button>
-            <Button variant="secondary" onClick={() => fileRef.current?.click()} className="gap-2"><Upload className="size-4" /> Importar</Button>
-            <input ref={fileRef} type="file" accept="application/json" hidden onChange={subirArchivo} />
-          </div>
-          <p className="text-xs text-muted-foreground">La exportación incluye tu perfil, todos los días y las mediciones. La importación fusiona sin borrar lo que el archivo no contenga.</p>
+          <input ref={fileRef} type="file" accept="application/json" hidden onChange={subirArchivo} />
 
           {/* Copia de seguridad local automática */}
-          <div className="mt-1 flex flex-col gap-2 border-t border-border pt-3">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <HistoryIcon className="size-4 shrink-0 text-weight" />
-              {backupInfo
-                ? <span>Copia local automática guardada · {fmtFechaCorta(backupInfo.at.slice(0, 10))}</span>
-                : <span>Aún no hay copia local automática.</span>}
+          <div className="flex flex-col gap-2.5 rounded-xl border border-border/70 bg-secondary/35 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
+              <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-card text-weight shadow-sm"><HistoryIcon className="size-3.5" /></span>
+              <span>{backupInfo ? <>Copia local guardada · {fmtFechaCorta(backupInfo.at.slice(0, 10))}</> : "Aún no hay copia local automática."}</span>
             </div>
             {backupInfo && (
-              <Button variant="ghost" size="sm" onClick={restaurarCopiaLocal} className="w-fit gap-2 text-xs">
+              <Button variant="ghost" size="sm" onClick={restaurarCopiaLocal} className="h-8 w-full rounded-lg gap-2 text-xs sm:w-auto">
                 <HistoryIcon className="size-3.5" /> Restaurar copia local
               </Button>
             )}
-            <p className="text-[0.7rem] text-muted-foreground/80">
-              RITMO guarda automáticamente una copia en este dispositivo cada vez que cambian tus datos. Es tu red de seguridad si la nube fallara.
-            </p>
           </div>
-        </Card>
+        </SettingsCard>
       </section>
 
       {/* Diálogo de confirmación de importación */}
@@ -377,21 +382,24 @@ export default function AjustesPage() {
 
       <section>
         <SectionLabel>Privacidad</SectionLabel>
-        <Card className="flex flex-col gap-4 p-5"><div><p className="text-sm font-semibold">Tus datos siguen siendo tuyos</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Exporta una copia antes de borrar. La estimación de comidas se envía a Gemini solo cuando eliges analizarla.</p></div><div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={() => { limpiarDatosLocales(); limpiarPreferenciasComidas(); toast.success("Datos locales eliminados"); }} className="gap-2"><Trash2 className="size-4" /> Limpiar este dispositivo</Button>{confirmarBorrado ? <><Button variant="destructive" onClick={() => void borrarDatos().then(() => { limpiarDatosLocales(); limpiarPreferenciasComidas(); toast.success("Datos de RITMO eliminados"); }).catch(() => toast.error("No se pudieron eliminar los datos."))}>Eliminar datos de RITMO</Button><Button variant="ghost" onClick={() => setConfirmarBorrado(false)}>Cancelar</Button></> : <Button variant="ghost" onClick={() => setConfirmarBorrado(true)} className="text-destructive hover:text-destructive">Eliminar mis datos…</Button>}</div>{confirmarBorrado && <p className="text-xs text-destructive">Esta acción borra perfil, días, comidas y mediciones de la nube. No elimina tu cuenta de acceso.</p>}</Card>
+        <SettingsCard className="gap-3.5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div><p className="text-sm font-semibold">Tus datos siguen siendo tuyos</p><p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">Gemini solo recibe una comida cuando eliges analizarla.</p></div>
+            <Button variant="secondary" onClick={() => { limpiarDatosLocales(); limpiarPreferenciasComidas(); toast.success("Datos locales eliminados"); }} className="h-10 w-full rounded-xl gap-2 sm:w-auto"><Trash2 className="size-4" /> Limpiar este dispositivo</Button>
+          </div>
+          {confirmarBorrado ? <div className="flex flex-col gap-3 rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs leading-relaxed text-destructive">Borra perfil, días, comidas y mediciones de la nube. Tu acceso seguirá existiendo.</p><div className="flex shrink-0 gap-1.5"><Button variant="ghost" size="sm" className="h-8 rounded-lg" onClick={() => setConfirmarBorrado(false)}>Cancelar</Button><Button variant="destructive" size="sm" className="h-8 rounded-lg" onClick={() => void borrarDatos().then(() => { limpiarDatosLocales(); limpiarPreferenciasComidas(); toast.success("Datos de RITMO eliminados"); }).catch(() => toast.error("No se pudieron eliminar los datos."))}>Eliminar</Button></div></div> : <button type="button" onClick={() => setConfirmarBorrado(true)} className="self-start text-xs font-medium text-destructive transition-opacity hover:opacity-75">Eliminar todos mis datos de RITMO…</button>}
+        </SettingsCard>
       </section>
 
       {/* Cuenta */}
       <section>
         <SectionLabel>Cuenta</SectionLabel>
-        <Card className="flex flex-wrap items-center justify-between gap-3 p-5">
-          <div>
-            <p className="text-sm font-medium">{userEmail ?? "Modo demo (local)"}</p>
-            <p className="text-xs text-muted-foreground">{modo === "nube" ? "Sincronizado con la nube" : "Datos en este dispositivo"}</p>
+        <SettingsCard className="gap-0">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><UserRound className="size-4" /></span><div className="min-w-0"><p className="truncate text-sm font-semibold">{userEmail ?? "Modo demo (local)"}</p><p className="mt-0.5 text-xs text-muted-foreground">{modo === "nube" ? "Cuenta sincronizada" : "Datos solo en este dispositivo"}</p></div></div>
+            <Button variant="ghost" onClick={() => void cerrarSesion()} className="h-10 w-full rounded-xl gap-2 text-muted-foreground hover:text-destructive sm:w-auto"><LogOut className="size-4" /> {modo === "nube" ? "Cerrar sesión" : "Salir"}</Button>
           </div>
-          <Button variant="ghost" onClick={() => void cerrarSesion()} className="gap-2 text-muted-foreground hover:text-destructive">
-            <LogOut className="size-4" /> {modo === "nube" ? "Cerrar sesión" : "Salir"}
-          </Button>
-        </Card>
+        </SettingsCard>
       </section>
     </div>
   );
@@ -399,9 +407,9 @@ export default function AjustesPage() {
 
 function Row({ label, children, htmlFor }: { label: string; children: React.ReactNode; htmlFor?: string }) {
   return (
-    <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-      <Label htmlFor={htmlFor} className="text-sm">{label}</Label>
-      {children}
+    <div className="grid gap-2 border-b border-border/70 pb-4 last:border-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_minmax(13rem,22rem)] sm:items-center sm:gap-8">
+      <Label htmlFor={htmlFor} className="text-sm font-medium">{label}</Label>
+      <div className="flex w-full justify-start sm:justify-end">{children}</div>
     </div>
   );
 }
@@ -410,9 +418,17 @@ function Pill({ children, activo, onClick }: { children: React.ReactNode; activo
   return (
     <button
       onClick={onClick}
-      className={cn("h-11 rounded-full border px-3 text-sm font-medium transition-colors", activo ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}
+      className={cn("h-10 rounded-xl border px-3 text-sm font-medium transition-colors", activo ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-secondary/50")}
     >
       {children}
     </button>
   );
+}
+
+function SettingsCard({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <Card className={cn("flex flex-col gap-5 rounded-2xl border-border/80 p-4 shadow-sm sm:p-5", className)}>{children}</Card>;
+}
+
+function SettingsSubhead({ title, description, className }: { title: string; description: string; className?: string }) {
+  return <div className={cn("border-b border-border/70 pb-3", className)}><p className="text-sm font-semibold">{title}</p><p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{description}</p></div>;
 }

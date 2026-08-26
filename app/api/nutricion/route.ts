@@ -9,6 +9,8 @@ export const runtime = "nodejs";
 
 /* Simple rate limiting: max 30 requests per minute per IP */
 const rateLimitMap = new Map<string, number[]>();
+const nutritionCache = new Map<string, { resultado: AnalisisNutricional; expira: number }>();
+const CACHE_MS = 10 * 60 * 1000;
 
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
@@ -75,26 +77,38 @@ export async function POST(request: Request) {
       );
     }
 
-    /* Análisis nutricional */
-    let resultado: AnalisisNutricional | null = null;
-
-    try {
-      resultado = await analizarConGemini(texto);
-    } catch (error) {
-      console.error("Gemini nutrición error:", error);
-    }
+    /* Análisis nutricional. Reutilizamos una estimación reciente de la misma
+     * descripción para no quemar cuota gratuita de Gemini al recalcular. */
+    const cacheKey = texto.toLocaleLowerCase("es-ES").replace(/\s+/g, " ");
+    const guardado = nutritionCache.get(cacheKey);
+    let resultado: AnalisisNutricional | null = guardado && guardado.expira > Date.now()
+      ? structuredClone(guardado.resultado)
+      : null;
+    if (guardado && guardado.expira <= Date.now()) nutritionCache.delete(cacheKey);
 
     if (!resultado) {
       try {
-        resultado = await analizarConEdamam(texto);
+        resultado = await analizarConGemini(texto);
       } catch (error) {
-        console.error("Edamam error:", error);
+        console.error("Gemini nutrición error:", error);
+      }
+
+      if (!resultado) {
+        try {
+          resultado = await analizarConEdamam(texto);
+        } catch (error) {
+          console.error("Edamam error:", error);
+        }
       }
     }
 
     /* Sanidad check: comida > 4000 kcal probablemente sea un error */
     if (resultado && (resultado.kcal <= 0 || resultado.kcal > 4000)) {
       resultado = null;
+    }
+
+    if (resultado && resultado.fuente !== "offline") {
+      nutritionCache.set(cacheKey, { resultado: structuredClone(resultado), expira: Date.now() + CACHE_MS });
     }
 
     /* Fallback offline */

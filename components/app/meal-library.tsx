@@ -120,9 +120,9 @@ export function MealLibrary({ fecha }: { fecha: string }) {
             {prefs.templates.map((plantilla) => <div key={plantilla.id} className="flex shrink-0 overflow-hidden rounded-xl border border-border bg-secondary/35"><button onClick={() => usarPlantilla(plantilla)} className="min-w-40 px-3 py-2.5 text-left transition-colors hover:bg-secondary"><p className="truncate text-sm font-semibold">{plantilla.nombre}</p><p className="mt-0.5 text-xs tabular text-muted-foreground">{fmtKcal(plantilla.kcal)} kcal · {capitalizar(plantilla.tipo)}</p></button><button onClick={() => quitarPlantilla(plantilla.id)} aria-label={`Eliminar plantilla ${plantilla.nombre}`} className="px-2 text-muted-foreground hover:bg-secondary hover:text-destructive"><X className="size-4" /></button></div>)}
           </div>
         </div>}
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">Para añadir a <span className="font-semibold text-foreground">{CATS.find((c) => c.id === cat)?.label.toLowerCase()}</span> en un toque.</p>
-          <div className="flex rounded-full bg-secondary p-0.5">
+          <div className="flex w-full overflow-x-auto rounded-full bg-secondary p-0.5 sm:w-auto">
             {([['todas', 'Todas'], ['favoritas', 'Favoritas'], ['frecuentes', 'Frecuentes']] as const).map(([id, label]) => <button key={id} onClick={() => setVista(id)} className={cn("h-7 rounded-full px-2.5 text-xs font-medium transition-colors", vista === id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}>{label}</button>)}
           </div>
         </div>
@@ -163,13 +163,13 @@ export function MealLibrary({ fecha }: { fecha: string }) {
               className="h-10 w-full rounded-xl border border-input bg-background pl-9 pr-3 text-sm outline-none transition-colors focus:border-ring"
             />
           </div>
-          <div className="flex shrink-0 gap-1 rounded-full bg-secondary p-0.5">
+          <div className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 sm:mx-0 sm:shrink-0 sm:px-0 sm:pb-0">
             {ORDENES.map((o) => (
               <button
                 key={o.id}
                 onClick={() => setOrden(o.id)}
                 className={cn(
-                  "flex h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-medium transition-colors",
+                  "flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-secondary px-3 text-xs font-medium transition-colors",
                   orden === o.id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
                 )}
                 aria-pressed={orden === o.id}
@@ -270,12 +270,12 @@ function TarjetaComida({
   return (
     <div
       className={cn(
-        "group flex items-center gap-2 px-3 py-3 transition-colors sm:px-4",
+        "group flex flex-col gap-2 px-3 py-3 transition-colors sm:flex-row sm:items-center sm:px-4",
         favorita ? "bg-habit/[0.06]" : "hover:bg-secondary/40",
       )}
     >
       {/* Región principal: añadir al día */}
-      <button onClick={onUsar} className="flex min-w-0 flex-1 items-center gap-3 text-left" aria-label={`Añadir ${item.texto}`}>
+      <button onClick={onUsar} className="flex min-w-0 w-full flex-1 items-center gap-3 text-left sm:w-auto" aria-label={`Añadir ${item.texto}`}>
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5 truncate text-sm font-medium">
             {favorita && <Star className="size-3.5 shrink-0 fill-habit text-habit" />}
@@ -298,7 +298,7 @@ function TarjetaComida({
       </button>
 
       {/* Acciones */}
-      <div className="flex shrink-0 items-center">
+      <div className="flex w-full shrink-0 items-center justify-end border-t border-border/70 pt-2 sm:w-auto sm:border-0 sm:pt-0">
         <IconBtn label={favorita ? "Quitar de favoritas" : "Marcar favorita"} onClick={onFav} activo={favorita}>
           <Star className={cn("size-4", favorita && "fill-habit text-habit")} />
         </IconBtn>
@@ -323,7 +323,7 @@ function IconBtn({ children, label, onClick, activo }: { children: React.ReactNo
       aria-label={label}
       title={label}
       className={cn(
-        "grid size-8 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+        "grid size-9 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
         activo && "text-habit",
       )}
     >

@@ -71,7 +71,7 @@ function RegistroForm() {
 
       if (data.session) {
         setEstado("exito");
-        setTimeout(() => { router.push("/"); router.refresh(); }, 1500);
+        setTimeout(() => { router.replace("/"); router.refresh(); }, 1500);
       } else {
         setEstado("confirmacion");
       }
@@ -133,9 +133,9 @@ function RegistroForm() {
         >
           <div className="h-0.5 bg-gradient-to-r from-primary via-primary/80 to-primary/60" />
 
-          <div className="px-7 py-6 space-y-4">
+          <div className="space-y-4 px-5 py-6 sm:px-7 sm:py-6">
             <div className="overflow-hidden">
-              <h1 className="font-display text-3xl font-bold" style={{ animation: `revealText 0.7s ${springBezier} forwards` }}>
+              <h1 className="font-display text-2xl font-bold sm:text-3xl" style={{ animation: `revealText 0.7s ${springBezier} forwards` }}>
                 Crear cuenta
               </h1>
             </div>
@@ -151,11 +151,11 @@ function RegistroForm() {
               <div style={stagger(1)}>
                 <Label htmlFor="email" className="text-sm font-semibold mb-1 block">Email</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
+                  <Mail className="absolute left-3 top-3.5 size-4 text-muted-foreground sm:top-2.5" />
                   <Input id="email" type="email" autoComplete="email" required
                     value={email} onChange={(e) => handleEmailChange(e.target.value)}
                     placeholder="tu@correo.com" disabled={cargando}
-                    className={`pl-9 h-10 text-sm rounded-lg border-2 transition-all focus:border-primary focus:ring-1 focus:ring-primary/20 ${emailError ? "border-destructive" : ""}`}
+                    className={`h-12 rounded-lg border-2 pl-10 text-base transition-all focus:border-primary focus:ring-1 focus:ring-primary/20 sm:h-10 sm:pl-9 sm:text-sm ${emailError ? "border-destructive" : ""}`}
                   />
                 </div>
                 {emailError && <p className="text-[0.65rem] text-destructive mt-0.5">{emailError}</p>}
@@ -164,17 +164,17 @@ function RegistroForm() {
               <div style={stagger(2)}>
                 <Label htmlFor="password" className="text-sm font-semibold mb-1 block">Contraseña</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
+                  <Lock className="absolute left-3 top-3.5 size-4 text-muted-foreground sm:top-2.5" />
                   <Input id="password" type={showPassword ? "text" : "password"} autoComplete="new-password" required
                     value={password} onChange={(e) => handlePasswordChange(e.target.value)}
                     placeholder="Mínimo 8 caracteres" disabled={cargando}
-                    className={`pl-9 pr-10 h-10 text-sm rounded-lg border-2 transition-all focus:border-primary focus:ring-1 focus:ring-primary/20 ${passwordErrors.length > 0 ? "border-destructive" : ""}`}
+                    className={`h-12 rounded-lg border-2 pl-10 pr-11 text-base transition-all focus:border-primary focus:ring-1 focus:ring-primary/20 sm:h-10 sm:pl-9 sm:pr-10 sm:text-sm ${passwordErrors.length > 0 ? "border-destructive" : ""}`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={cargando}
-                    className="absolute right-3 top-2.5 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                    className="absolute right-3 top-3.5 text-muted-foreground transition-colors hover:text-primary sm:top-2.5"
                   >
                     {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
@@ -194,17 +194,17 @@ function RegistroForm() {
               <div style={stagger(3)}>
                 <Label htmlFor="confirm" className="text-sm font-semibold mb-1 block">Confirmar</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
+                  <Lock className="absolute left-3 top-3.5 size-4 text-muted-foreground sm:top-2.5" />
                   <Input id="confirm" type={showConfirm ? "text" : "password"} autoComplete="new-password" required
                     value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Repite contraseña" disabled={cargando}
-                    className={`pl-9 pr-10 h-10 text-sm rounded-lg border-2 transition-all focus:border-primary focus:ring-1 focus:ring-primary/20 ${confirmPassword && password !== confirmPassword ? "border-destructive" : ""}`}
+                    className={`h-12 rounded-lg border-2 pl-10 pr-11 text-base transition-all focus:border-primary focus:ring-1 focus:ring-primary/20 sm:h-10 sm:pl-9 sm:pr-10 sm:text-sm ${confirmPassword && password !== confirmPassword ? "border-destructive" : ""}`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirm(!showConfirm)}
                     disabled={cargando}
-                    className="absolute right-3 top-2.5 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                    className="absolute right-3 top-3.5 text-muted-foreground transition-colors hover:text-primary sm:top-2.5"
                   >
                     {showConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
@@ -216,7 +216,7 @@ function RegistroForm() {
 
               <Button type="submit"
                 disabled={cargando || emailError !== null || passwordErrors.length > 0 || !confirmPassword}
-                className="w-full h-10 text-sm font-semibold rounded-lg transition-all active:scale-95"
+                className="h-12 w-full rounded-lg text-base font-semibold transition-all active:scale-[0.98] sm:h-10 sm:text-sm sm:active:scale-95"
                 style={stagger(4)}>
                 {cargando ? <><Loader2 className="size-3.5 animate-spin mr-1.5" />Creando...</> : "Crear cuenta"}
               </Button>

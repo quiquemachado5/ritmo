@@ -80,16 +80,16 @@ export default function NutricionPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Cabecera con navegación de día */}
-      <header className="flex flex-wrap items-center justify-between gap-3">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight">Nutrición</h1>
           <p className="mt-1 text-sm text-muted-foreground">Registra, revisa y ajusta cada estimación.</p>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex w-full items-center justify-between rounded-xl border border-border bg-card p-1 sm:w-auto sm:border-0 sm:bg-transparent sm:p-0">
           <Button variant="ghost" size="icon" onClick={() => setFecha((f) => sumarDias(f, -1))} aria-label="Día anterior">
             <ChevronLeft className="size-5" />
           </Button>
-          <button onClick={() => setFecha(hoy())} className="min-w-28 text-center text-sm font-medium">
+          <button onClick={() => setFecha(hoy())} className="min-w-0 flex-1 px-2 text-center text-sm font-medium sm:min-w-28 sm:flex-none">
             {fecha === hoy() ? "Hoy" : capitalizar(fmtFechaLarga(fecha))}
           </button>
           <Button variant="ghost" size="icon" onClick={() => setFecha((f) => sumarDias(f, 1))} disabled={esFuturo} aria-label="Día siguiente">
@@ -99,9 +99,9 @@ export default function NutricionPage() {
       </header>
 
       {/* Resumen del día */}
-      <Card className="p-5">
-        <div className="flex flex-col items-center gap-5 sm:flex-row sm:gap-7">
-          <Ring value={consumidas} max={objetivoKcal} colorVar="--energy" size={140} stroke={13}>
+      <Card className="p-4 sm:p-5">
+        <div className="flex flex-col items-center gap-4 sm:flex-row sm:gap-7">
+          <Ring value={consumidas} max={objetivoKcal} colorVar="--energy" size={132} stroke={12}>
             <div>
               <span className="block font-display text-3xl font-bold leading-none tabular text-energy">{fmtKcal(consumidas)}</span>
               <span className="text-xs text-muted-foreground">de {fmtKcal(objetivoKcal)} kcal</span>
@@ -134,14 +134,14 @@ export default function NutricionPage() {
             const kcalTipo = items.reduce((a, c) => a + c.kcal, 0);
             return (
               <section key={tipo.id}>
-                <Card className="overflow-hidden p-0">
+                <Card className="gap-0 overflow-hidden p-0">
                   <div className={`flex items-center justify-between gap-3 border-b border-border px-4 py-2.5 sm:px-5 ${tipo.wash}`}>
                     <h2 className="font-display text-base font-bold">{tipo.label}</h2>
                     <span className={`font-display text-base font-bold tabular ${tipo.ink}`}>{fmtKcal(kcalTipo)}<span className="ml-0.5 text-xs font-normal text-muted-foreground">kcal</span></span>
                   </div>
                   <div className="divide-y divide-border">
                   {items.map((c) => (
-                    <div key={c.id} className="group flex flex-col gap-3 px-4 pb-3.5 pt-0 transition-colors hover:bg-secondary/35 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                    <div key={c.id} className="group flex flex-col gap-2.5 px-4 py-3 transition-colors hover:bg-secondary/35 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                       <div className="flex min-w-0 items-start gap-3">
                         <span className={`mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl text-base ${tipo.wash}`} aria-hidden="true">{emojiComida(c.texto)}</span>
                         <div className="min-w-0">
@@ -154,7 +154,7 @@ export default function NutricionPage() {
                         </p>
                         </div>
                       </div>
-                      <div className="flex w-full items-center justify-between gap-1 sm:w-auto">
+                      <div className="flex w-full items-center justify-between border-t border-border/70 pt-2 sm:w-auto sm:border-0 sm:pt-0">
                         <span className="mr-1 font-display font-bold tabular text-energy">{fmtKcal(c.kcal)}</span>
                         {confirmBorrar === c.id ? (
                           <div className="flex items-center gap-1">

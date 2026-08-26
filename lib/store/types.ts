@@ -21,4 +21,6 @@ export interface Adapter {
   sembrar?(data: StoreData): Promise<void>;
   /** Cambios llegados de otra pestaña o dispositivo. */
   subscribe?(cb: () => void): () => void;
+  /** Libera listeners locales al cerrar sesión o cambiar de cuenta. */
+  dispose?(): void;
 }

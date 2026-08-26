@@ -1,10 +1,11 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
+import { rutaInternaSegura } from "@/lib/auth-redirect";
 
 const providers = [
   {
@@ -31,7 +32,6 @@ const providers = [
 ];
 
 export function SocialLogin() {
-  const router = useRouter();
   const params = useSearchParams();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +42,8 @@ export function SocialLogin() {
 
     try {
       const supabase = createClient();
-      const redirectTo = `${window.location.origin}/auth/callback?next=${params.get("next") || "/"}`;
+      const next = encodeURIComponent(rutaInternaSegura(params.get("next")));
+      const redirectTo = `${window.location.origin}/auth/callback?next=${next}`;
 
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider,

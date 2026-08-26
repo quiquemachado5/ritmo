@@ -71,6 +71,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [cargando, setCargando] = React.useState(true);
   const [sincronizando, setSincronizando] = React.useState(false);
   const [userEmail, setUserEmail] = React.useState<string | null>(null);
+  const [authUserId, setAuthUserId] = React.useState<string | null | undefined>(undefined);
+  const [supabase] = React.useState(createClient);
 
   const adapterRef = React.useRef<Adapter | null>(null);
   const dataRef = React.useRef<StoreData>(data);
@@ -90,20 +92,49 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   }, [aplicar]);
 
+  // Escucha el cambio de identidad, no solo el primer montaje. Así no se
+  // conserva en memoria el perfil de la cuenta anterior tras cerrar sesión.
+  React.useEffect(() => {
+    const client = supabase;
+    let vivo = true;
+    void client.auth.getUser().then(({ data }) => {
+      if (vivo) setAuthUserId(data.user?.id ?? null);
+    });
+    const { data: listener } = client.auth.onAuthStateChange((_evento, session) => {
+      setAuthUserId(session?.user?.id ?? null);
+    });
+    return () => {
+      vivo = false;
+      listener.subscription.unsubscribe();
+    };
+  }, [supabase]);
+
   React.useEffect(() => {
     let vivo = true;
     let desuscribir: (() => void) | undefined;
 
     (async () => {
+      if (authUserId === undefined) return;
+      // Mientras se resuelve la cuenta nueva, no mostramos ni datos ni estado
+      // de onboarding de la anterior.
+      adapterRef.current?.dispose?.();
+      adapterRef.current = null;
+      aplicar(clonar(VACIO));
+      setUserEmail(null);
+      setCargando(true);
+      if (!authUserId) {
+        if (vivo) setCargando(false);
+        return;
+      }
       let adapter: Adapter;
-      let modoDetectado: Modo = "nube";
+      const modoDetectado: Modo = "nube";
       let email: string | null = null;
 
       // RITMO requiere Supabase y sesión activa (la redirección a login ocurre en middleware.ts)
       try {
-        const client = createClient();
+        const client = supabase;
         const { data: sesion } = await client.auth.getUser();
-        if (!sesion.user) {
+        if (!sesion.user || sesion.user.id !== authUserId) {
           throw new Error("Sesión de Supabase requerida");
         }
         // Envuelto en la cola offline: los cambios sin red se guardan y se
@@ -112,9 +143,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         email = sesion.user.email ?? null;
       } catch (e) {
         console.error("Fallo al inicializar Supabase", e);
-        toast.error("Error de autenticación. Por favor, inicia sesión de nuevo.");
-        // Fallback seguro: mostrar pantalla de error sin usar localStorage
-        throw e;
+        if (vivo) {
+          setCargando(false);
+          toast.error("Error de autenticación. Por favor, inicia sesión de nuevo.");
+        }
+        return;
       }
 
       adapterRef.current = adapter;
@@ -141,7 +174,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       desuscribir?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authUserId, aplicar, recargar, supabase]);
 
   /** Escritura optimista: aplica en memoria, persiste, y revierte si falla. */
   const commit = React.useCallback(
@@ -344,10 +377,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   );
 
   const cerrarSesion = React.useCallback(async () => {
-    const client = createClient();
-    await client.auth.signOut();
-    window.location.href = "/login";
-  }, []);
+    adapterRef.current?.dispose?.();
+    adapterRef.current = null;
+    aplicar(clonar(VACIO));
+    setUserEmail(null);
+    await supabase.auth.signOut({ scope: "local" });
+    window.location.replace("/login");
+  }, [aplicar, supabase]);
 
   const borrarDatos = React.useCallback(async () => {
     if (!adapterRef.current?.borrarTodo) throw new Error("No se pudo preparar el borrado de datos.");
