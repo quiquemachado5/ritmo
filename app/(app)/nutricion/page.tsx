@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { AlertTriangle, Beef, ChevronLeft, ChevronRight, Pencil, Plus, RotateCcw, Sparkles, Trash2 } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
@@ -11,10 +12,15 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Ring, MacroBar, Chip, EmptyState } from "@/components/app/primitives";
-import { MealLibrary } from "@/components/app/meal-library";
 import { fmtKcal, fmtFechaLarga, capitalizar } from "@/lib/format";
 import { uid } from "@/lib/utils";
 import type { TipoComida } from "@/lib/model/types";
+
+// La biblioteca es rica pero secundaria al registro del día; cargarla al final
+// evita bloquear la primera interacción en móvil.
+const MealLibrary = dynamic(() => import("@/components/app/meal-library").then((m) => m.MealLibrary), {
+  loading: () => <Skeleton className="h-56 w-full rounded-xl" />,
+});
 
 const ORDEN = [
   { id: "desayuno", label: "Desayuno", wash: "bg-habit-wash", ink: "text-habit" },

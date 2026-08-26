@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import {
   AlertTriangle,
   ArrowDownRight,
@@ -19,10 +20,14 @@ import { hoy, sumarDias } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { WeightChart, BalanceChart, CompositionChart, type PuntoPeso } from "@/components/app/charts";
+import type { PuntoPeso } from "@/components/app/charts";
 import { Metric, SectionLabel, Chip, EmptyState } from "@/components/app/primitives";
 import { fmtPeso, fmtSigno, fmtNum, fmtFechaCorta, relativo } from "@/lib/format";
 import { cn } from "@/lib/utils";
+
+const WeightChart = dynamic(() => import("@/components/app/charts").then((m) => m.WeightChart), { loading: () => <Skeleton className="h-72 w-full rounded-xl" /> });
+const BalanceChart = dynamic(() => import("@/components/app/charts").then((m) => m.BalanceChart), { loading: () => <Skeleton className="h-56 w-full rounded-xl" /> });
+const CompositionChart = dynamic(() => import("@/components/app/charts").then((m) => m.CompositionChart), { loading: () => <Skeleton className="h-64 w-full rounded-xl" /> });
 
 const RANGOS = [
   { id: "1M", dias: 30 },

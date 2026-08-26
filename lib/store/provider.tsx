@@ -9,6 +9,8 @@ import { CloudAdapter } from "./cloud";
 import { QueuedAdapter } from "./queued";
 import type { Adapter, Modo, StoreData } from "./types";
 import { fusionarImport } from "./merge";
+import { analizarImportacion } from "./import";
+import { registrarDiagnostico } from "@/lib/observability";
 
 function clonar<T>(v: T): T {
   return typeof structuredClone === "function" ? structuredClone(v) : JSON.parse(JSON.stringify(v));
@@ -89,6 +91,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       aplicar(await adapterRef.current.load());
     } catch (e) {
       console.error("Fallo al recargar", e);
+      registrarDiagnostico("sync", "error", "recarga fallida");
     }
   }, [aplicar]);
 
@@ -143,6 +146,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         email = sesion.user.email ?? null;
       } catch (e) {
         console.error("Fallo al inicializar Supabase", e);
+        registrarDiagnostico("auth", "error", "inicio de sesión no disponible");
         if (vivo) {
           setCargando(false);
           toast.error("Error de autenticación. Por favor, inicia sesión de nuevo.");
@@ -157,8 +161,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         aplicar(cargado);
         setModo(modoDetectado);
         setUserEmail(email);
+        registrarDiagnostico("auth", "ok", "sesión restaurada");
       } catch (e) {
         console.error("Fallo al cargar datos", e);
+        registrarDiagnostico("sync", "error", "carga inicial fallida");
         toast.error("No se pudieron cargar los datos.");
       } finally {
         if (vivo) setCargando(false);
@@ -192,8 +198,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setSincronizando(true);
       try {
         await persistir(draft, adapter);
+        registrarDiagnostico("sync", "ok", "cambio guardado");
       } catch (e) {
         console.error(errMsg, e);
+        registrarDiagnostico("sync", "error", "cambio no sincronizado");
         aplicar(prev);
         toast.error(errMsg);
       } finally {
@@ -355,6 +363,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const importar = React.useCallback(
     async (datos: Partial<StoreData>) => {
       const prev = dataRef.current;
+      const analisis = analizarImportacion(datos, prev);
+      if (!analisis.valido) {
+        registrarDiagnostico("import", "warning", analisis.error);
+        throw new Error(analisis.error);
+      }
       const next = fusionarImport(prev, datos);
       const { dias } = next;
       aplicar(next);
@@ -364,9 +377,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         else {
           for (const d of Object.values(dias)) await adapterRef.current?.guardarDia(d);
         }
+        registrarDiagnostico("import", "ok", "respaldo fusionado");
         toast.success("Datos importados.");
       } catch (e) {
         console.error("Fallo al importar", e);
+        registrarDiagnostico("import", "error", "falló la importación");
         aplicar(prev);
         toast.error("No se pudieron importar los datos.");
       } finally {
@@ -381,6 +396,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     adapterRef.current = null;
     aplicar(clonar(VACIO));
     setUserEmail(null);
+    registrarDiagnostico("auth", "ok", "sesión cerrada");
     await supabase.auth.signOut({ scope: "local" });
     window.location.replace("/login");
   }, [aplicar, supabase]);

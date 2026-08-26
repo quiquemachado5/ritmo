@@ -16,6 +16,7 @@ import { Ring, MacroBar, Metric, SectionLabel } from "@/components/app/primitive
 import { fmtPeso, fmtKcal, fmtSigno, relativo, capitalizar } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { WeeklyShare } from "@/components/app/weekly-share";
+import { MonthlyShare } from "@/components/app/monthly-share";
 import { RitmoDisclosure } from "@/components/ui/ritmo-disclosure";
 
 function saludo(): string {
@@ -471,7 +472,7 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
 
   return (
     <section>
-      <SectionLabel action={<WeeklyShare adherencia={adh} comidas={estaSemana.comidas} dias={estaSemana.diasConDatos} titulo={v.titulo} />}>Esta semana</SectionLabel>
+      <SectionLabel action={<div className="flex items-center gap-1.5"><MonthlyShare meses={meses} estado={estado} /><WeeklyShare adherencia={adh} comidas={estaSemana.comidas} dias={estaSemana.diasConDatos} titulo={v.titulo} /></div>}>Esta semana</SectionLabel>
       <Card className="flex flex-col gap-0 overflow-hidden p-0">
         <div className="p-5 sm:p-7">
           <div className="flex items-start justify-between gap-4">

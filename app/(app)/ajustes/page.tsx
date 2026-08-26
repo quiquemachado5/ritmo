@@ -19,6 +19,7 @@ import { fmtFechaCorta } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Objetivo, Sexo } from "@/lib/model/types";
 import { guardarModoViaje, useModoViaje } from "@/lib/travel-mode";
+import { analizarImportacion, type ArchivoRitmo, type ResumenImportacion } from "@/lib/store/import";
 
 type Densidad = "compacta" | "espaciosa";
 
@@ -36,7 +37,8 @@ export default function AjustesPage() {
   const [diasSinExportar, setDiasSinExportar] = React.useState<number | null>(null);
   const [backupInfo, setBackupInfo] = React.useState<{ at: string } | null>(null);
   const [importando, setImportando] = React.useState(false);
-  const [previewDatos, setPreviewDatos] = React.useState<any>(null);
+  const [previewDatos, setPreviewDatos] = React.useState<ArchivoRitmo | null>(null);
+  const [resumenImportacion, setResumenImportacion] = React.useState<ResumenImportacion | null>(null);
   const [densidad, setDensidad] = React.useState<Densidad>("espaciosa");
   const [nombreViaje, setNombreViaje] = React.useState(viaje.etiqueta);
   const [finViaje, setFinViaje] = React.useState(viaje.hasta ?? "");
@@ -144,15 +146,20 @@ export default function AjustesPage() {
       toast.error("No hay copia local guardada.");
       return;
     }
-    setPreviewDatos(b.data);
+    const analisis = analizarImportacion(b.data, { perfil: estado.perfil, dias: estado.dias, composicion: estado.composicion });
+    if (!analisis.valido) { toast.error(analisis.error); return; }
+    setPreviewDatos(b.data as ArchivoRitmo); setResumenImportacion(analisis);
   }
 
   async function subirArchivo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const datos = JSON.parse(await file.text());
-      setPreviewDatos(datos);
+      const datos: unknown = JSON.parse(await file.text());
+      const analisis = analizarImportacion(datos, { perfil: estado.perfil, dias: estado.dias, composicion: estado.composicion });
+      if (!analisis.valido) { toast.error(analisis.error); return; }
+      setPreviewDatos(datos as ArchivoRitmo);
+      setResumenImportacion(analisis);
     } catch {
       toast.error("Archivo no válido.");
     }
@@ -165,7 +172,7 @@ export default function AjustesPage() {
     try {
       await importar(previewDatos);
       toast.success("Datos importados");
-      setPreviewDatos(null);
+      setPreviewDatos(null); setResumenImportacion(null);
     } catch (err) {
       toast.error("Error al importar");
     }
@@ -352,17 +359,19 @@ export default function AjustesPage() {
           <Card className="w-full max-w-sm rounded-t-2xl border-t p-5 sm:rounded-2xl">
             <div className="mb-4">
               <h2 className="font-display text-lg font-bold">Confirmar importación</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Se fusionarán los datos del archivo con tu cuenta.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Revisa lo que se añadirá antes de fusionarlo con tu cuenta.</p>
             </div>
-            <div className="mb-5 space-y-2 rounded-lg bg-secondary/50 p-3 text-xs">
-              {previewDatos.perfil?.nombre && <div>👤 {previewDatos.perfil.nombre}</div>}
-              {previewDatos.dias && <div>📅 {Object.keys(previewDatos.dias || {}).length} días</div>}
-              {previewDatos.cuerpo && Object.keys(previewDatos.cuerpo || {}).length > 0 && <div>📏 Mediciones de cuerpo</div>}
+            <div className="mb-5 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border text-xs">
+              <ImportMetric label="Días nuevos" value={resumenImportacion?.diasNuevos ?? 0} />
+              <ImportMetric label="Días existentes" value={resumenImportacion?.diasCoincidentes ?? 0} detail="se fusionan" />
+              <ImportMetric label="Mediciones nuevas" value={resumenImportacion?.medicionesNuevas ?? 0} />
+              <ImportMetric label="Coincidencias" value={resumenImportacion?.medicionesCoincidentes ?? 0} detail="se completan" />
             </div>
+            <p className="mb-5 text-xs leading-relaxed text-muted-foreground">{resumenImportacion?.comidas ?? 0} comidas · versión {resumenImportacion?.version ?? "anterior"}{resumenImportacion?.exportado ? ` · copia del ${fmtFechaCorta(resumenImportacion.exportado.slice(0, 10))}` : ""}. Los duplicados se detectan por fecha: no se crean dos días ni dos mediciones iguales.</p>
             <div className="flex gap-2">
               <Button
                 variant="secondary"
-                onClick={() => setPreviewDatos(null)}
+                onClick={() => { setPreviewDatos(null); setResumenImportacion(null); }}
                 disabled={importando}
                 className="flex-1"
               >
@@ -403,6 +412,10 @@ export default function AjustesPage() {
       </section>
     </div>
   );
+}
+
+function ImportMetric({ label, value, detail }: { label: string; value: number; detail?: string }) {
+  return <div className="bg-card px-3 py-2.5"><p className="font-display text-xl font-bold tabular">{value}</p><p className="mt-0.5 text-[0.65rem] text-muted-foreground">{label}{detail ? ` · ${detail}` : ""}</p></div>;
 }
 
 function Row({ label, children, htmlFor }: { label: string; children: React.ReactNode; htmlFor?: string }) {

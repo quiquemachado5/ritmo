@@ -289,6 +289,28 @@ export function balanceMedio(estado: Estado, ventanaDias = 14): number | null {
   return suma / evaluables.length;
 }
 
+/**
+ * Balance reciente que distingue evidencia de suposiciones. Un día con comidas
+ * completas pesa más que uno imputado; los hábitos siguen contando, pero no
+ * pueden dominar por sí solos un historial con pesajes reales.
+ */
+export function balanceMedioPonderado(estado: Estado, ventanaDias = 21): number | null {
+  let total = 0;
+  let pesoTotal = 0;
+  for (let i = 0; i < ventanaDias; i++) {
+    const fecha = sumarDias(hoy(), -i);
+    const dia = estado.dias[fecha];
+    const energia = energiaDe(estado, fecha);
+    if (energia.sinRegistro && !energia.imputado) continue;
+    const habitos = Object.values(dia?.habitos || {}).filter(Boolean).length;
+    const tieneKcal = M.num(dia?.kcalConsumidas) !== null;
+    const peso = energia.imputado ? 0.18 : tieneKcal && !energia.ingestaIncompleta ? 1 : energia.ingestaIncompleta ? 0.62 : 0.35 + (habitos / TOTAL_HABITOS) * 0.45;
+    total += energia.balance * peso;
+    pesoTotal += peso;
+  }
+  return pesoTotal > 0 ? total / pesoTotal : null;
+}
+
 /** Tendencia de peso en kg/semana sobre los últimos N días. */
 export function tendencia(estado: Estado, ventanaDias = 28) {
   const p = pesajes(estado);
@@ -326,6 +348,8 @@ export interface ModeloProyeccion {
   kgSemana: number;
   calibrado: boolean;
   tdee: number;
+  /** La señal energética se contrasta con la tendencia real cuando la hay. */
+  equilibrioConBascula: boolean;
 }
 
 export interface ProyeccionConfiable {
@@ -376,8 +400,28 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
     if (energia.imputado) diasImputados++;
   }
 
-  const pesoHoy = ultimo.peso + balanceDesdeBascula / M.KCAL_POR_KG;
-  const balanceDiario = balanceMedio(estado, 14) ?? 0;
+  const pesoEnergetico = ultimo.peso + balanceDesdeBascula / M.KCAL_POR_KG;
+  const tendenciaReciente = tendenciaRobusta && diasSinPesaje <= 21 ? tendenciaRobusta : null;
+  const pesoTendencia = tendenciaReciente
+    ? tendenciaReciente.intercepto + tendenciaReciente.pendiente * hoyDia
+    : null;
+  // La báscula robusta corrige suavemente la energía acumulada cuando ambas
+  // señales existen. Nunca sustituye el último pesaje ni oculta la divergencia:
+  // cuanto más lejos está la báscula, más peso adquiere y más se abre el rango.
+  const mezclaBascula = pesoTendencia !== null ? Math.min(0.35, (diasSinPesaje / 21) * 0.35) : 0;
+  const pesoHoy = pesoTendencia === null ? pesoEnergetico : pesoEnergetico * (1 - mezclaBascula) + pesoTendencia * mezclaBascula;
+  if (pesoTendencia !== null) errorKcalCuadrado += ((pesoEnergetico - pesoTendencia) * M.KCAL_POR_KG * 0.35) ** 2;
+
+  const balanceEnergetico = balanceMedioPonderado(estado, 21) ?? balanceMedio(estado, 14) ?? 0;
+  const balanceTendencia = tendenciaReciente ? (tendenciaReciente.kgSemana / 7) * M.KCAL_POR_KG : null;
+  // Con al menos tres pesajes repartidos en dos semanas, la pendiente robusta
+  // es una segunda fuente de verdad. Se mezcla con prudencia para amortiguar
+  // registros de kcal imperfectos sin convertir variaciones de agua en grasa.
+  const pesoTendenciaEnBalance = balanceTendencia !== null && tendenciaReciente && tendenciaReciente.puntos >= 3 && tendenciaReciente.spanDias >= 14;
+  const mezclaBalance = pesoTendenciaEnBalance ? (calibracion ? 0.45 : 0.25) : 0;
+  const balanceDiario = balanceTendencia === null
+    ? balanceEnergetico
+    : balanceEnergetico * (1 - mezclaBalance) + balanceTendencia * mezclaBalance;
   const evaluablesRecientes = diasEvaluables(estado, sumarDias(hoy(), -13), hoy());
   const errorDiario = evaluablesRecientes.length
     ? evaluablesRecientes.reduce((suma, d) => suma + incertidumbreEnergia(d.energia), 0) / evaluablesRecientes.length
@@ -415,6 +459,7 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
       kgSemana: redondearPeso((balanceDiario * 7) / M.KCAL_POR_KG),
       calibrado: Boolean(calibracion),
       tdee: tdeeVigente(estado),
+      equilibrioConBascula: mezclaBalance > 0,
     },
     diasSinPesaje,
     pesajes: puntos.length,

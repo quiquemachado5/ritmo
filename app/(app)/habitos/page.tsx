@@ -3,6 +3,7 @@
 import { fmtFechaCorta } from "@/lib/format";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { Check, Flame } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { resumen, adherenciaPorHabito } from "@/lib/model/analytics";
@@ -10,9 +11,12 @@ import { HABITOS } from "@/lib/model/config";
 import { DIAS_SEMANA, diaSemanaLunes, hoy, sumarDias } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Heatmap } from "@/components/app/heatmap";
 import { SectionLabel } from "@/components/app/primitives";
 import { cn } from "@/lib/utils";
+
+const Heatmap = dynamic(() => import("@/components/app/heatmap").then((m) => m.Heatmap), {
+  loading: () => <Skeleton className="h-36 w-full rounded-xl" />,
+});
 
 const ESCALA_CUMPLIMIENTO = [
   { superficie: "border-destructive/25 bg-destructive/5", barra: "bg-destructive", tinta: "text-destructive" },

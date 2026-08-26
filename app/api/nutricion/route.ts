@@ -4,6 +4,7 @@ import type { AnalisisNutricional } from "@/lib/nutrition/types";
 import { analizarConEdamam } from "@/lib/nutrition/edamam";
 import { analizarConGemini } from "@/lib/nutrition/gemini";
 import { createClient } from "@/lib/supabase/server";
+import { registrarDiagnostico } from "@/lib/observability";
 
 export const runtime = "nodejs";
 
@@ -91,6 +92,7 @@ export async function POST(request: Request) {
         resultado = await analizarConGemini(texto);
       } catch (error) {
         console.error("Gemini nutrición error:", error);
+        registrarDiagnostico("nutrition", "warning", "Gemini no respondió; se usa respaldo");
       }
 
       if (!resultado) {
@@ -98,6 +100,7 @@ export async function POST(request: Request) {
           resultado = await analizarConEdamam(texto);
         } catch (error) {
           console.error("Edamam error:", error);
+          registrarDiagnostico("nutrition", "warning", "respaldo nutricional no disponible");
         }
       }
     }
@@ -114,12 +117,15 @@ export async function POST(request: Request) {
     /* Fallback offline */
     if (!resultado) {
       resultado = estimarOffline(texto);
+      registrarDiagnostico("nutrition", "warning", "estimación local");
       resultado.aviso = "Estimación local aproximada. Puedes editar los valores.";
     } else {
       resultado.aviso = resultado.fuente === "gemini"
         ? "Estimado con Gemini · comprueba la etiqueta o cantidades si las conoces."
         : "Estimado · puedes editarlo";
     }
+
+    if (resultado.fuente === "gemini") registrarDiagnostico("nutrition", "ok", "Gemini respondió");
 
     return NextResponse.json(resultado, {
       headers: {
@@ -129,6 +135,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("API nutricion error:", error);
+    registrarDiagnostico("nutrition", "error", "error interno de nutrición");
     return NextResponse.json(
       { error: "Error interno del servidor" },
       { status: 500 }
