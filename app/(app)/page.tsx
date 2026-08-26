@@ -367,10 +367,10 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
 
   return (
     <section>
-      <SectionLabel action={<WeeklyShare adherencia={adh} comidas={estaSemana.comidas} dias={estaSemana.diasConDatos} titulo={v.titulo} />}>Resumen y records</SectionLabel>
+      <SectionLabel action={<WeeklyShare adherencia={adh} comidas={estaSemana.comidas} dias={estaSemana.diasConDatos} titulo={v.titulo} />}>Resumen semanal</SectionLabel>
       <Card className="flex flex-col gap-0 overflow-hidden p-0">
         {/* Veredicto semanal */}
-        <div className="grid lg:grid-cols-[minmax(15rem,.72fr)_1fr]">
+        <div className="grid lg:grid-cols-[minmax(14rem,.62fr)_1fr]">
           <div className="relative overflow-hidden bg-secondary/45 p-5 sm:p-7">
             <span className={cn("absolute left-0 top-0 h-full w-1", v.punto)} />
             <div className="relative"><p className={cn("font-display text-2xl font-bold", v.clase)}>{v.titulo}</p><p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">{cabecera}</p></div>
@@ -380,7 +380,7 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
             <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">Lo importante ahora</p>
             {lineas.length > 0 ? (
               <div className="grid gap-3">
-                {lineas.map((l, i) => (
+                {lineas.slice(0, 1).map((l, i) => (
                   <div key={i} className="flex items-start gap-3 border-b border-border pb-3 last:border-0 last:pb-0">
                     <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg bg-secondary">{l.icon}</span><span className="text-sm leading-5 text-muted-foreground">{l.text}</span>
                   </div>
@@ -399,6 +399,8 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
           </div>
         </div>
 
+        <details className="group border-t border-border">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 text-sm font-semibold transition-colors hover:bg-secondary/35 sm:px-7">Ver patrones y mejores marcas <span className="text-xs font-medium text-muted-foreground group-open:hidden">Abrir</span><span className="hidden text-xs font-medium text-muted-foreground group-open:inline">Cerrar</span></summary>
         {patrones.length > 0 && <div className="border-t border-border bg-secondary/25 px-5 py-5 sm:px-7"><h3 className="font-display text-xl font-bold">Patrones que aparecen</h3><p className="mt-1 text-sm text-muted-foreground">Relaciones observadas en tus últimos registros; describen tendencia, no demuestran causa.</p><div className="mt-4 grid gap-2">{patrones.map((patron) => { const etiqueta = HABITOS.find((h) => h.clave === patron.clave)?.etiqueta ?? patron.clave; const favorable = patron.diferencia > 0; return <div key={patron.clave} className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3 last:border-0 last:pb-0"><p className="text-sm text-muted-foreground">Con <span className="font-semibold text-foreground">{etiqueta.toLowerCase()}</span>, tu balance medio fue <span className="font-semibold text-foreground tabular">{Math.abs(patron.diferencia)} kcal</span> {favorable ? "más bajo" : "más alto"}.</p><span className={cn("text-xs font-semibold tabular", favorable ? "text-weight" : "text-energy")}>{patron.muestra} días</span></div>; })}</div></div>}
 
         {/* Records personales */}
@@ -441,6 +443,7 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
             </div>
           );
         })()}
+        </details>
       </Card>
     </section>
   );
