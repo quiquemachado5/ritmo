@@ -369,35 +369,12 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
     <section>
       <SectionLabel action={<WeeklyShare adherencia={adh} comidas={estaSemana.comidas} dias={estaSemana.diasConDatos} titulo={v.titulo} />}>Resumen semanal</SectionLabel>
       <Card className="flex flex-col gap-0 overflow-hidden p-0">
-        {/* Veredicto semanal */}
-        <div className="grid lg:grid-cols-[minmax(14rem,.62fr)_1fr]">
-          <div className="relative overflow-hidden bg-secondary/45 p-5 sm:p-7">
-            <span className={cn("absolute left-0 top-0 h-full w-1", v.punto)} />
-            <div className="relative"><p className={cn("font-display text-2xl font-bold", v.clase)}>{v.titulo}</p><p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">{cabecera}</p></div>
-            <div className="relative mt-7 flex items-end justify-between"><div><p className="text-xs text-muted-foreground">Constancia esta semana</p><p className={cn("font-display text-4xl font-bold tabular", v.clase)}>{adh}%</p></div><span className={cn("grid size-11 place-items-center rounded-2xl bg-card shadow-sm", v.clase)}><Award className="size-5" /></span></div>
-          </div>
-          <div className="flex flex-col justify-center gap-3 p-5 sm:p-7">
-            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">Lo importante ahora</p>
-            {lineas.length > 0 ? (
-              <div className="grid gap-3">
-                {lineas.slice(0, 1).map((l, i) => (
-                  <div key={i} className="flex items-start gap-3 border-b border-border pb-3 last:border-0 last:pb-0">
-                    <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg bg-secondary">{l.icon}</span><span className="text-sm leading-5 text-muted-foreground">{l.text}</span>
-                  </div>
-                ))}
-              </div>
-            ) : <p className="text-sm text-muted-foreground">Registra unos días más para que RITMO pueda darte una lectura de tu semana.</p>}
-          </div>
+        <div className="grid lg:grid-cols-[minmax(0,1.25fr)_minmax(15rem,.75fr)]">
+          <div className="p-5 sm:p-7"><div className="flex items-start justify-between gap-4"><div><h2 className={cn("font-display text-3xl font-bold", v.clase)}>{v.titulo}</h2><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">{cabecera}</p></div><span className={cn("mt-1 size-2 shrink-0 rounded-full", v.punto)} /></div>{lineas.length > 0 ? <div className="mt-6 flex items-start gap-3 border-t border-border pt-4"><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-secondary">{lineas[0].icon}</span><div><p className="text-xs font-semibold text-foreground">Tu foco ahora</p><p className="mt-1 text-sm leading-5 text-muted-foreground">{lineas[0].text}</p></div></div> : <p className="mt-6 border-t border-border pt-4 text-sm text-muted-foreground">Registra unos días más para que RITMO pueda darte una lectura de tu semana.</p>}</div>
+          <div className="border-t border-border bg-secondary/35 p-5 lg:border-l lg:border-t-0 sm:p-7"><p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">Tu semana</p><div className="mt-4 flex items-end justify-between gap-4"><p className={cn("font-display text-6xl font-bold leading-none tabular", v.clase)}>{adh}%</p><Award className={cn("mb-1 size-6", v.clase)} /></div><p className="mt-3 text-sm text-muted-foreground">{estaSemana.diasConDatos} de 7 días registrados · {estaSemana.comidas} comidas</p><div className="mt-6 flex items-center justify-between border-t border-border pt-4"><span className="text-xs text-muted-foreground">frente a la anterior</span><span className={cn("font-display text-xl font-bold tabular", deltaSemana >= 0 ? "text-weight" : "text-energy")}>{deltaSemana >= 0 ? "+" : ""}{deltaSemana} pts</span></div></div>
         </div>
 
-        <div className="border-t border-border px-5 py-5 sm:px-7">
-          <div className="flex flex-wrap items-end justify-between gap-3"><div><h3 className="font-display text-xl font-bold">Frente a la semana anterior</h3><p className="mt-1 text-sm text-muted-foreground">Una comparación de tus últimos siete días.</p></div><span className={cn("font-display text-lg font-bold tabular", deltaSemana >= 0 ? "text-weight" : "text-energy")}>{deltaSemana >= 0 ? "+" : ""}{deltaSemana} pts</span></div>
-          <div className="mt-5 grid grid-cols-3 divide-x divide-border rounded-xl border border-border bg-secondary/25">
-            <SemanaMetric label="Constancia" actual={`${estaSemana.adherencia}%`} previo={`${semanaAnterior.adherencia}%`} />
-            <SemanaMetric label="Comidas" actual={`${estaSemana.comidas}`} previo={`${semanaAnterior.comidas}`} />
-            <SemanaMetric label="Días con registro" actual={`${estaSemana.diasConDatos}`} previo={`${semanaAnterior.diasConDatos}`} />
-          </div>
-        </div>
+        <div className="grid grid-cols-3 divide-x divide-border border-t border-border bg-card"><SemanaMetric label="Constancia" actual={`${estaSemana.adherencia}%`} previo={`${semanaAnterior.adherencia}%`} /><SemanaMetric label="Comidas" actual={`${estaSemana.comidas}`} previo={`${semanaAnterior.comidas}`} /><SemanaMetric label="Días con datos" actual={`${estaSemana.diasConDatos}`} previo={`${semanaAnterior.diasConDatos}`} /></div>
 
         <details className="group border-t border-border">
           <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 text-sm font-semibold transition-colors hover:bg-secondary/35 sm:px-7">Ver patrones y mejores marcas <span className="text-xs font-medium text-muted-foreground group-open:hidden">Abrir</span><span className="hidden text-xs font-medium text-muted-foreground group-open:inline">Cerrar</span></summary>
