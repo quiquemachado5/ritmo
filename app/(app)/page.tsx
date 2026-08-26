@@ -57,8 +57,7 @@ export default function HoyPage() {
 
   const habitosHechos = HABITOS.filter((h) => diaHoy.habitos?.[h.clave]).length;
   const tendKg = r.prediccion.modelo?.kgSemana ?? r.tendencia?.kgSemana ?? null;
-  const faltaCena = !comidas.some((comida) => comida.tipo === "cena");
-  const necesitaRevision = new Date().getHours() >= 18 && (faltaCena || habitosHechos === 0);
+  const necesitaRevision = new Date().getHours() >= 18 && habitosHechos === 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -153,8 +152,8 @@ export default function HoyPage() {
         <section aria-labelledby="revision-dia">
           <Card className="overflow-hidden p-0">
             <div className="flex flex-col gap-4 bg-secondary/35 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-              <div><h2 id="revision-dia" className="font-display text-xl font-bold">Antes de cerrar el día</h2><p className="mt-1 max-w-xl text-sm text-muted-foreground">{faltaCena ? "Falta registrar la cena; sin ella RITMO no usará el día para estimar tu balance." : "Revisa los hábitos de hoy para que el registro represente cómo fue el día."}</p></div>
-              <div className="flex shrink-0 flex-wrap gap-2"><Button variant="secondary" onClick={() => abrir("habitos")} className="gap-2"><Target className="size-4" /> Revisar hábitos</Button>{faltaCena && <Button onClick={() => abrir("comida")} className="gap-2"><Utensils className="size-4" /> Registrar cena</Button>}</div>
+              <div><h2 id="revision-dia" className="font-display text-xl font-bold">Antes de cerrar el día</h2><p className="mt-1 max-w-xl text-sm text-muted-foreground">Marca al menos un hábito para que el modelo pueda interpretar cómo fue el día.</p></div>
+              <div className="flex shrink-0 flex-wrap gap-2"><Button variant="secondary" onClick={() => abrir("habitos")} className="gap-2"><Target className="size-4" /> Revisar hábitos</Button></div>
             </div>
           </Card>
         </section>

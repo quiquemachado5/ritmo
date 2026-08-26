@@ -122,7 +122,7 @@ export default function CalendarioPage() {
           <div className="grid grid-cols-3 border-b border-border bg-secondary/35">
             <DiaMetric label="Hábitos" value={`${habHechos}`} unit={`/${TOTAL_HABITOS}`} tone="habit" />
             <DiaMetric label="Peso" value={d.peso != null ? fmtPeso(d.peso) : "—"} tone="weight" />
-            <DiaMetric label="Balance" value={energiaSel.sinRegistro || energiaSel.ingestaIncompleta || energiaSel.sinHabitosMarcados ? "—" : fmtSigno(energiaSel.balance, 0)} tone={energiaSel.balance > 0 ? "energy" : "weight"} />
+            <DiaMetric label="Balance" value={energiaSel.sinRegistro || energiaSel.sinHabitosMarcados ? "—" : fmtSigno(energiaSel.balance, 0)} tone={energiaSel.balance > 0 ? "energy" : "weight"} />
           </div>
           <div className="p-4 sm:p-6">
           <div className={cn("flex items-start gap-3 rounded-xl border px-4 py-3.5", calidad.bg, calidad.border)}>
@@ -190,7 +190,7 @@ function calidadDia(energia: EnergiaDia, habitos: number) {
   if (energia.imputado) return { titulo: "Día imputado", detalle: "No hubo registro; el modelo aplica la regla de huecos configurada.", bg: "bg-warning-wash", border: "border-warning-border", dot: "bg-warning", ink: "text-warning-ink" };
   if (energia.sinRegistro) return { titulo: "Sin datos suficientes", detalle: "Añade comidas o hábitos para que este día empiece a contar.", bg: "bg-secondary", border: "border-border", dot: "bg-muted-foreground", ink: "text-foreground" };
   if (habitos === 0) return { titulo: "Registro sin validar", detalle: "Hay datos de comida, pero sin hábitos RITMO no calcula déficit ni superávit.", bg: "bg-warning-wash", border: "border-warning-border", dot: "bg-warning", ink: "text-warning-ink" };
-  if (energia.ingestaIncompleta) return { titulo: "Registro parcial", detalle: "Falta la cena; el balance queda fuera del modelo hasta completar el día.", bg: "bg-energy-wash", border: "border-energy-border", dot: "bg-energy", ink: "text-energy-ink" };
+  if (energia.ingestaIncompleta) return { titulo: "Estimación ajustada por hábitos", detalle: `${habitos}/6 hábitos marcados. La comida registrada suma información; el modelo completa lo que falta con tus hábitos.`, bg: "bg-energy-wash", border: "border-energy-border", dot: "bg-energy", ink: "text-energy-ink" };
   return { titulo: "Día válido para el modelo", detalle: "Los hábitos y la ingesta permiten usar este día en las tendencias.", bg: "bg-weight-wash", border: "border-weight-border", dot: "bg-weight", ink: "text-weight-ink" };
 }
 

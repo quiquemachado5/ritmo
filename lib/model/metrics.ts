@@ -502,26 +502,15 @@ export function estimarKcalConsumidas(
   kcalObjetivo = 1350,
 ): { kcal: number; plan: string; estimado: true } {
   const h = habitos || {};
-  const comida = h.comida === true;
-  const cena = h.cena === true;
-  const sinAlcohol = h.noAlcohol === true;
   const objetivo = num(kcalObjetivo) === null ? 1350 : kcalObjetivo;
-
-  let kcal: number;
-  let plan: string;
-  if (comida && cena) {
-    kcal = objetivo;
-    plan = "completo";
-    if (!sinAlcohol) kcal += 550;
-  } else if (comida || cena) {
-    kcal = comida ? 1950 : 2100;
-    plan = "parcial";
-    if (!sinAlcohol) kcal += 400;
-  } else {
-    kcal = 2450;
-    plan = "libre";
-    if (!sinAlcohol) kcal += 300;
-  }
+  const cumplidos = Object.values(h).filter((valor) => valor === true).length;
+  // Los seis hábitos describen el nivel de control del día. El objetivo ya
+  // representa la ingesta de un día perfecto; cada hábito ausente desplaza la
+  // estimación de forma gradual hacia mantenimiento/superávit, nunca convierte
+  // un registro incompleto en un déficit artificial.
+  const ajustePorHabitoFaltante = [0, 850, 650, 450, 300, 150, 0][Math.min(6, cumplidos)] ?? 0;
+  const kcal = objetivo + ajustePorHabitoFaltante;
+  const plan = `${cumplidos}/6 hábitos`;
   return { kcal, plan, estimado: true };
 }
 
@@ -554,8 +543,8 @@ export function energiaDia(
   const inExplicito = num(d.kcalConsumidas);
   const outExplicito = num(d.kcalQuemadas);
   const sinHabitosMarcados = !Object.values(d.habitos || {}).some((valor) => valor === true);
-  // Las kcal se derivan automáticamente de las comidas guardadas. Si falta la
-  // cena, esa suma es solo un mínimo: usarla como total inventaría un déficit.
+  // Si faltan registros de comida, la suma guardada es solo un mínimo. No se
+  // bloquea el día: los hábitos completan la estimación energética.
   const ingestaIncompleta = Boolean(d.comidas?.length) && !d.comidas!.some((comida) => comida.tipo === "cena");
 
   const sinRegistro =
@@ -583,10 +572,13 @@ export function energiaDia(
     };
   }
 
+  const estimacionIngesta = estimarKcalConsumidas(d.habitos, kcalObjetivo);
   const inn =
-    inExplicito !== null
+    inExplicito !== null && !ingestaIncompleta
       ? { kcal: inExplicito, estimado: false as const }
-      : estimarKcalConsumidas(d.habitos, kcalObjetivo);
+      : inExplicito !== null
+        ? { kcal: Math.max(inExplicito, estimacionIngesta.kcal), estimado: true as const }
+        : estimacionIngesta;
 
   const out =
     outExplicito !== null

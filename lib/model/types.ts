@@ -96,7 +96,7 @@ export interface EnergiaDia {
   estimado: boolean;
   consumidasEstimadas: boolean;
   quemadasEstimadas: boolean;
-  /** Hay comidas registradas, pero falta la cena: no representa el día completo. */
+  /** Hay comidas registradas, pero falta la cena: el modelo completa la ingesta con hábitos. */
   ingestaIncompleta: boolean;
   /** Sin hábitos positivos no hay evidencia suficiente para clasificar un déficit. */
   sinHabitosMarcados: boolean;

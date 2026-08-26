@@ -195,7 +195,10 @@ describe("Energía de un día", () => {
 
     const est = M.energiaDia({ habitos: { comida: true, cena: true, noAlcohol: true } }, { kcalObjetivo: 1350 });
     igual(est.estimado, true);
-    casi(est.consumidas, 1350);
+    casi(est.consumidas, 1800);
+    const conUnHabito = M.estimarKcalConsumidas({ comida: true }, 2000);
+    const conSeisHabitos = M.estimarKcalConsumidas({ comida: true, cena: true, noAlcohol: true, deporte: true, beberAgua: true, dormirBien: true }, 2000);
+    expect(conUnHabito.kcal).toBeGreaterThan(conSeisHabitos.kcal);
 
     const mixto = M.energiaDia({ kcalConsumidas: 1500, habitos: { deporte: true } }, { tdeeBase: 2400 });
     igual(mixto.consumidasEstimadas, false);
@@ -216,6 +219,17 @@ describe("Energía de un día", () => {
       composicion: [],
     });
     igual(A.diasEvaluables(estadoParcial, "2026-08-25", "2026-08-25").length, 0);
+
+    const parcialConHabito = estado({
+      perfil: { kcalObjetivo: 2000 },
+      dias: { "2026-08-25": { fecha: "2026-08-25", habitos: { comida: true }, kcalConsumidas: 1100, comidas: [{ tipo: "desayuno" }, { tipo: "comida" }] } },
+      composicion: [],
+    });
+    const energiaParcialConHabito = A.energiaDe(parcialConHabito, "2026-08-25");
+    igual(A.diasEvaluables(parcialConHabito, "2026-08-25", "2026-08-25").length, 1);
+    igual(energiaParcialConHabito.ingestaIncompleta, true);
+    igual(energiaParcialConHabito.sinHabitosMarcados, false);
+    expect(energiaParcialConHabito.consumidas).toBeGreaterThan(1100);
 
     const completoSinHabitos = M.energiaDia({ kcalConsumidas: 2600, habitos: {}, comidas: [{ tipo: "cena" }] });
     igual(completoSinHabitos.sinHabitosMarcados, true);

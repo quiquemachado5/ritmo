@@ -52,14 +52,13 @@ export default function ProgresoPage() {
   const hoyISO = hoy();
 
   const lecturaModelo = React.useMemo(() => {
-    const acumulado = { validos: 0, sinHabitos: 0, incompletos: 0, imputados: 0, sinRegistro: 0 };
+    const acumulado = { validos: 0, completadosPorHabitos: 0, sinHabitos: 0, imputados: 0, sinRegistro: 0 };
     for (let i = 0; i < 14; i += 1) {
       const energia = energiaDe(estado, sumarDias(hoyISO, -i));
       if (energia.imputado) acumulado.imputados += 1;
       else if (energia.sinRegistro) acumulado.sinRegistro += 1;
       else if (energia.sinHabitosMarcados) acumulado.sinHabitos += 1;
-      else if (energia.ingestaIncompleta) acumulado.incompletos += 1;
-      else acumulado.validos += 1;
+      else { acumulado.validos += 1; if (energia.ingestaIncompleta) acumulado.completadosPorHabitos += 1; }
     }
     return acumulado;
   }, [estado, hoyISO]);
@@ -276,13 +275,13 @@ export default function ProgresoPage() {
                     <span className="font-display text-5xl font-bold leading-none tabular text-weight">{lecturaModelo.validos}</span>
                     <span className="mb-1 text-sm text-muted-foreground">días completos</span>
                   </div>
-                  <p className="mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">Cuentan cuando hay comida completa y al menos un hábito marcado. Son los únicos días registrados que entran en el balance y en la tendencia.</p>
+                  <p className="mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">Cuentan desde que marcas algún hábito. Las comidas afinan el cálculo; si faltan, el modelo completa la estimación con el nivel de hábitos.</p>
                 </div>
                 <div className="bg-secondary/35 p-5 sm:p-6">
                   <p className="text-sm font-semibold">Lectura de la ventana</p>
                   <dl className="mt-3 divide-y divide-border text-sm">
                     <ModeloFila cantidad={lecturaModelo.sinHabitos} etiqueta="Excluidos" detalle="sin hábitos marcados" tone="warning" />
-                    <ModeloFila cantidad={lecturaModelo.incompletos} etiqueta="Excluidos" detalle="sin cena registrada" tone="energy" />
+                    <ModeloFila cantidad={lecturaModelo.completadosPorHabitos} etiqueta="Estimados" detalle="comida parcial, ajustada por hábitos" tone="energy" />
                     <ModeloFila cantidad={lecturaModelo.sinRegistro} etiqueta="Sin datos" detalle="no cuentan ni se estiman" tone="muted" />
                     <ModeloFila cantidad={lecturaModelo.imputados} etiqueta="Imputados" detalle="aplican tu regla de huecos" tone="body" />
                   </dl>
@@ -297,7 +296,7 @@ export default function ProgresoPage() {
               <h2 id="balance" className="font-display text-xl font-bold">Balance calórico</h2>
               <p className="mt-1 text-sm text-muted-foreground">El contexto energético que utiliza el modelo; los días imputados siguen visibles.</p>
             </div>
-            <Card className="p-4 sm:p-6"><BalanceChart data={datosBalance} /><p className="mt-3 text-xs text-muted-foreground">Verde = déficit · terracota = superávit · translúcido = día imputado. Sin hábitos marcados o sin cena, el día no se usa para calcular el balance.</p></Card>
+            <Card className="p-4 sm:p-6"><BalanceChart data={datosBalance} /><p className="mt-3 text-xs text-muted-foreground">Verde = déficit · terracota = superávit · translúcido = día imputado. Sin hábitos marcados, el día no se usa para calcular el balance; una comida parcial se completa con el nivel de hábitos.</p></Card>
           </section>
 
           {(composicion || compSerie.length > 1 || ultimaMedicion) && (
