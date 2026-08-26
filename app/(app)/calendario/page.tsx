@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, ChevronRight, MessageSquareText, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Dumbbell, HeartPulse, MessageSquareText, Plane, Plus, UtensilsCrossed } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
 import { energiaDe } from "@/lib/model/analytics";
@@ -119,27 +119,24 @@ export default function CalendarioPage() {
           {sel === hoyISO ? "Hoy" : capitalizar(fmtFechaLarga(sel))}
         </SectionLabel>
         <Card className="overflow-hidden p-0">
-          <div className="grid grid-cols-3 divide-x divide-border border-b border-border bg-secondary/25">
-            <DiaMetric label="Hábitos" value={`${habHechos}`} unit={`/${TOTAL_HABITOS}`} />
+          <div className="grid grid-cols-3 border-b border-border bg-secondary/35">
+            <DiaMetric label="Hábitos" value={`${habHechos}`} unit={`/${TOTAL_HABITOS}`} tone="habit" />
             <DiaMetric label="Peso" value={d.peso != null ? fmtPeso(d.peso) : "—"} tone="weight" />
             <DiaMetric label="Balance" value={energiaSel.sinRegistro || energiaSel.ingestaIncompleta || energiaSel.sinHabitosMarcados ? "—" : fmtSigno(energiaSel.balance, 0)} tone={energiaSel.balance > 0 ? "energy" : "weight"} />
           </div>
-          <div className="flex flex-col gap-3 p-5">
-          <div className={cn("flex items-start gap-3 rounded-xl px-3 py-3", calidad.bg)}>
-            <span className={cn("mt-1 size-2 shrink-0 rounded-full", calidad.dot)} />
-            <div><p className={cn("text-sm font-semibold", calidad.ink)}>{calidad.titulo}</p><p className="mt-0.5 text-xs text-muted-foreground">{calidad.detalle}</p></div>
+          <div className="p-4 sm:p-6">
+          <div className={cn("flex items-start gap-3 rounded-xl border px-4 py-3.5", calidad.bg, calidad.border)}>
+            <span className={cn("mt-1.5 size-2 shrink-0 rounded-full", calidad.dot)} />
+            <div className="min-w-0"><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><p className={cn("text-sm font-semibold", calidad.ink)}>{calidad.titulo}</p>{energiaSel.imputado && <Chip tone="warning">regla de huecos</Chip>}</div><p className="mt-1 max-w-xl text-xs leading-relaxed text-muted-foreground">{calidad.detalle}</p></div>
           </div>
           {d.comidas && d.comidas.length > 0 && (
-            <div className="border-t border-border pt-3 text-sm text-muted-foreground">
+            <div className="mt-4 border-t border-border pt-3 text-sm text-muted-foreground">
               {d.comidas.length} comida{d.comidas.length > 1 ? "s" : ""} · {fmtKcal(d.kcalConsumidas ?? 0)} kcal
             </div>
           )}
-          <div className="flex flex-wrap gap-1.5">
-            {HABITOS.filter((h) => d.habitos?.[h.clave]).map((h) => (
-              <Chip key={h.clave} tone="habit">{h.etiqueta}</Chip>
-            ))}
-            {energiaSel.imputado && <Chip tone="warning">día imputado</Chip>}
-          </div>
+          {habHechos > 0 && <div className="mt-3 flex flex-wrap gap-1.5">
+            {HABITOS.filter((h) => d.habitos?.[h.clave]).map((h) => <Chip key={h.clave} tone="habit">{h.etiqueta}</Chip>)}
+          </div>}
           <NotaContexto fecha={sel} inicial={d.notas} onGuardar={(notas) => actualizarDia(sel, { notas })} />
           </div>
         </Card>
@@ -156,7 +153,12 @@ function NotaContexto({ fecha, inicial, onGuardar }: { fecha: string; inicial?: 
 
   const limpio = texto.trim();
   const cambio = limpio !== (inicial ?? "").trim();
-  const etiquetas = ["Viaje", "Comida libre", "Enfermedad", "Entrenamiento especial"];
+  const etiquetas = [
+    { etiqueta: "Viaje", icono: Plane },
+    { etiqueta: "Comida libre", icono: UtensilsCrossed },
+    { etiqueta: "Enfermedad", icono: HeartPulse },
+    { etiqueta: "Entrenamiento especial", icono: Dumbbell },
+  ];
 
   function sumarEtiqueta(etiqueta: string) {
     setTexto((actual) => actual.includes(etiqueta) ? actual : `${actual.trim()}${actual.trim() ? " · " : ""}${etiqueta}`);
@@ -171,30 +173,28 @@ function NotaContexto({ fecha, inicial, onGuardar }: { fecha: string; inicial?: 
     }
   }
 
-  return <div className="border-t border-border pt-4">
-    <div className="flex items-start gap-2.5">
-      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-body-wash text-body"><MessageSquareText className="size-4" /></span>
-      <div className="min-w-0 flex-1">
-        <label htmlFor={`nota-${fecha}`} className="text-sm font-semibold text-foreground">Contexto del día</label>
-        <p className="mt-0.5 text-xs text-muted-foreground">Una observación para recordar qué pasó; no modifica los cálculos.</p>
-      </div>
+  return <div className="mt-5 border-t border-border pt-5">
+    <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-body-wash text-body"><MessageSquareText className="size-4" /></span><div><label htmlFor={`nota-${fecha}`} className="text-sm font-semibold text-foreground">Contexto del día</label><p className="mt-0.5 max-w-lg text-xs leading-relaxed text-muted-foreground">Anota una excepción para recordarla al revisar tu progreso. No cambia el cálculo.</p></div></div>
+      <Chip tone={limpio ? "body" : "muted"}>{limpio ? "Con nota" : "Sin nota"}</Chip>
     </div>
-    <div className="mt-3 flex flex-wrap gap-1.5">
-      {etiquetas.map((etiqueta) => <button key={etiqueta} type="button" onClick={() => sumarEtiqueta(etiqueta)} className={cn("rounded-full border px-2.5 py-1 text-xs font-medium transition-colors", texto.includes(etiqueta) ? "border-body-border bg-body-wash text-body-ink" : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground")}>{etiqueta}</button>)}
+    <div className="mt-4 grid grid-cols-2 gap-2">
+      {etiquetas.map(({ etiqueta, icono: Icono }) => <button key={etiqueta} type="button" onClick={() => sumarEtiqueta(etiqueta)} className={cn("flex min-h-10 items-center gap-2 rounded-lg border px-3 text-left text-xs font-medium transition-colors", texto.includes(etiqueta) ? "border-body-border bg-body-wash text-body-ink" : "border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground")}><Icono className="size-3.5 shrink-0" />{etiqueta}</button>)}
     </div>
-    <Textarea id={`nota-${fecha}`} value={texto} onChange={(event) => setTexto(event.target.value)} placeholder="Ej.: viaje, cena fuera, fiebre o sesión de fuerza." className="mt-3 min-h-20 resize-y bg-card text-sm" />
-    <div className="mt-2 flex items-center justify-between gap-3"><span className="text-xs text-muted-foreground">{limpio ? "Nota privada del día" : "Sin contexto añadido"}</span><Button size="sm" variant="secondary" disabled={!cambio || guardando} onClick={() => void guardar()} className="h-8 px-3 text-xs">{guardando ? "Guardando…" : "Guardar nota"}</Button></div>
+    <Textarea id={`nota-${fecha}`} value={texto} onChange={(event) => setTexto(event.target.value)} placeholder="Añade lo que convenga recordar de este día…" className="mt-3 min-h-24 resize-y border-body-border/70 bg-body-wash/20 text-sm placeholder:text-muted-foreground" />
+    <div className="mt-2 flex items-center justify-between gap-3"><span className="text-xs text-muted-foreground">{limpio ? "Se guardará con este día" : "Puedes añadir una nota cuando haga falta"}</span><Button size="sm" variant="secondary" disabled={!cambio || guardando} onClick={() => void guardar()} className="h-8 px-3 text-xs">{guardando ? "Guardando…" : "Guardar contexto"}</Button></div>
   </div>;
 }
 
 function calidadDia(energia: EnergiaDia, habitos: number) {
-  if (energia.imputado) return { titulo: "Día imputado", detalle: "No hubo registro; el modelo aplica la regla de huecos configurada.", bg: "bg-warning-wash", dot: "bg-warning", ink: "text-warning-ink" };
-  if (energia.sinRegistro) return { titulo: "Sin datos suficientes", detalle: "Añade comidas o hábitos para que este día empiece a contar.", bg: "bg-secondary", dot: "bg-muted-foreground", ink: "text-foreground" };
-  if (habitos === 0) return { titulo: "Registro sin validar", detalle: "Hay datos de comida, pero sin hábitos RITMO no calcula déficit ni superávit.", bg: "bg-warning-wash", dot: "bg-warning", ink: "text-warning-ink" };
-  if (energia.ingestaIncompleta) return { titulo: "Registro parcial", detalle: "Falta la cena; el balance queda fuera del modelo hasta completar el día.", bg: "bg-energy-wash", dot: "bg-energy", ink: "text-energy-ink" };
-  return { titulo: "Día válido para el modelo", detalle: "Los hábitos y la ingesta permiten usar este día en las tendencias.", bg: "bg-weight-wash", dot: "bg-weight", ink: "text-weight-ink" };
+  if (energia.imputado) return { titulo: "Día imputado", detalle: "No hubo registro; el modelo aplica la regla de huecos configurada.", bg: "bg-warning-wash", border: "border-warning-border", dot: "bg-warning", ink: "text-warning-ink" };
+  if (energia.sinRegistro) return { titulo: "Sin datos suficientes", detalle: "Añade comidas o hábitos para que este día empiece a contar.", bg: "bg-secondary", border: "border-border", dot: "bg-muted-foreground", ink: "text-foreground" };
+  if (habitos === 0) return { titulo: "Registro sin validar", detalle: "Hay datos de comida, pero sin hábitos RITMO no calcula déficit ni superávit.", bg: "bg-warning-wash", border: "border-warning-border", dot: "bg-warning", ink: "text-warning-ink" };
+  if (energia.ingestaIncompleta) return { titulo: "Registro parcial", detalle: "Falta la cena; el balance queda fuera del modelo hasta completar el día.", bg: "bg-energy-wash", border: "border-energy-border", dot: "bg-energy", ink: "text-energy-ink" };
+  return { titulo: "Día válido para el modelo", detalle: "Los hábitos y la ingesta permiten usar este día en las tendencias.", bg: "bg-weight-wash", border: "border-weight-border", dot: "bg-weight", ink: "text-weight-ink" };
 }
 
-function DiaMetric({ label, value, unit, tone }: { label: string; value: string; unit?: string; tone?: "weight" | "energy" }) {
-  return <div className="min-w-0 px-3 py-4 text-center sm:px-5"><p className="truncate text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p><p className={cn("mt-1 font-display text-xl font-bold tabular", tone === "weight" ? "text-weight" : tone === "energy" ? "text-energy" : "text-foreground")}>{value}{unit && <span className="text-xs font-medium text-muted-foreground">{unit}</span>}</p></div>;
+function DiaMetric({ label, value, unit, tone }: { label: string; value: string; unit?: string; tone?: "weight" | "energy" | "habit" }) {
+  const color = tone === "weight" ? "text-weight" : tone === "energy" ? "text-energy" : tone === "habit" ? "text-habit" : "text-foreground";
+  return <div className="min-w-0 px-3 py-4 text-center first:border-r last:border-l first:border-border last:border-border sm:px-5 sm:py-5"><p className="truncate text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{label}</p><p className={cn("mt-1.5 font-display text-2xl font-bold leading-none tabular", color)}>{value}{unit && <span className="ml-0.5 text-xs font-medium text-muted-foreground">{unit}</span>}</p></div>;
 }
