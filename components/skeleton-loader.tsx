@@ -45,31 +45,35 @@ export function Skeleton({
 
 export function CardSkeleton() {
   return (
-    <style>{transitionCSS}</style>
-    <div className="space-y-4">
-      <Skeleton height="24px" />
-      <div className="space-y-2">
-        <Skeleton height="16px" />
-        <Skeleton height="16px" width="90%" />
+    <>
+      <style>{transitionCSS}</style>
+      <div className="space-y-4">
+        <Skeleton height="24px" />
+        <div className="space-y-2">
+          <Skeleton height="16px" />
+          <Skeleton height="16px" width="90%" />
+        </div>
+        <Skeleton height="12px" width="60%" />
       </div>
-      <Skeleton height="12px" width="60%" />
-    </div>
+    </>
   );
 }
 
 export function ListSkeleton({ count = 3 }: { count?: number }) {
   return (
-    <style>{transitionCSS}</style>
-    <div className="space-y-4">
-      {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="flex gap-3">
-          <Skeleton width="60px" height="60px" borderRadius="12px" />
-          <div className="flex-1 space-y-2">
-            <Skeleton height="16px" width="70%" />
-            <Skeleton height="14px" width="50%" />
+    <>
+      <style>{transitionCSS}</style>
+      <div className="space-y-4">
+        {Array.from({ length: count }).map((_, i) => (
+          <div key={i} className="flex gap-3">
+            <Skeleton width="60px" height="60px" borderRadius="12px" />
+            <div className="flex-1 space-y-2">
+              <Skeleton height="16px" width="70%" />
+              <Skeleton height="14px" width="50%" />
+            </div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </>
   );
 }

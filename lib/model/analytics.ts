@@ -554,6 +554,7 @@ export function resumen(estado: Estado) {
       objetivoKcal: perfil.kcalObjetivo ?? null,
     },
     prediccion: {
+      hoy: proyeccionConfiable.hoy ?? null,
       manana: proyeccionConfiable.manana ?? null,
       semana: proyeccionConfiable.semana ?? null,
       quincena: proyeccionConfiable.quincena ?? null,

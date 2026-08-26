@@ -29,7 +29,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         />
         <div className="mb-4 relative z-10">
           <Link href="/" aria-label="RITMO">
-            <RitmoLogo size={28} />
+            <RitmoLogo />
           </Link>
         </div>
         <div className="w-full max-w-md relative z-10">{children}</div>
