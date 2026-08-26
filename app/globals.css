@@ -280,6 +280,21 @@
 .animate-check-ring {
   animation: check-ring 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
+
+/* Fondo de autenticación: un campo de color vivo detrás de una superficie de
+   lectura estable. La atmósfera acompaña, nunca compite con el formulario. */
+.auth-atmosphere {
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 14% 12%, color-mix(in oklab, var(--habit) 22%, transparent), transparent 28rem),
+    radial-gradient(circle at 88% 88%, color-mix(in oklab, var(--energy) 17%, transparent), transparent 30rem),
+    linear-gradient(135deg, color-mix(in oklab, var(--background) 92%, var(--primary)) 0%, var(--background) 52%, color-mix(in oklab, var(--background) 94%, var(--body)) 100%);
+}
+.auth-orb { position: absolute; z-index: -1; border-radius: 9999px; filter: blur(28px); opacity: .45; pointer-events: none; }
+.auth-orb-one { width: 26rem; height: 26rem; left: -10rem; top: 12%; background: color-mix(in oklab, var(--primary) 42%, transparent); animation: auth-drift 18s cubic-bezier(.16,1,.3,1) infinite alternate; }
+.auth-orb-two { width: 22rem; height: 22rem; right: -8rem; bottom: 8%; background: color-mix(in oklab, var(--body) 30%, transparent); animation: auth-drift 22s cubic-bezier(.16,1,.3,1) infinite alternate-reverse; }
+.auth-grain { position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .16; background-image: radial-gradient(color-mix(in oklab, var(--foreground) 14%, transparent) .55px, transparent .55px); background-size: 5px 5px; mask-image: linear-gradient(to bottom, transparent, black 18%, black 82%, transparent); }
+@keyframes auth-drift { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(4rem, -2rem, 0) scale(1.16); } }
 @media (prefers-reduced-motion: reduce) {
-  .animate-check-pop, .animate-check-ring { animation: none; }
+  .animate-check-pop, .animate-check-ring, .auth-orb { animation: none; }
 }
