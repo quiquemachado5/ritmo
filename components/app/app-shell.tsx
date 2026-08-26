@@ -96,7 +96,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-border bg-card px-4 py-5 md:flex">
         <div className="flex items-center justify-between gap-3 border-b border-border pb-4">
           <Link href="/" aria-label="RITMO — inicio" className="inline-flex">
-            <RitmoLogo wordmarkOnly wordmarkClassName="h-6" />
+            <RitmoLogo wordmarkClassName="h-10" />
           </Link>
           <UserCount compact className="rounded-full bg-secondary px-2.5 py-1.5" />
         </div>
