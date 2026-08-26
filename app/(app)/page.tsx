@@ -16,6 +16,7 @@ import { Ring, MacroBar, Metric, SectionLabel } from "@/components/app/primitive
 import { fmtPeso, fmtKcal, fmtSigno, relativo, capitalizar } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { WeeklyShare } from "@/components/app/weekly-share";
+import { RitmoDisclosure } from "@/components/ui/ritmo-disclosure";
 
 function saludo(): string {
   const h = new Date().getHours();
@@ -376,8 +377,7 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
 
         <div className="grid grid-cols-3 divide-x divide-border border-t border-border bg-card"><SemanaMetric label="Constancia" actual={`${estaSemana.adherencia}%`} previo={`${semanaAnterior.adherencia}%`} /><SemanaMetric label="Comidas" actual={`${estaSemana.comidas}`} previo={`${semanaAnterior.comidas}`} /><SemanaMetric label="Días con datos" actual={`${estaSemana.diasConDatos}`} previo={`${semanaAnterior.diasConDatos}`} /></div>
 
-        <details className="group border-t border-border">
-          <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 text-sm font-semibold transition-colors hover:bg-secondary/35 sm:px-7">Ver patrones y mejores marcas <span className="text-xs font-medium text-muted-foreground group-open:hidden">Abrir</span><span className="hidden text-xs font-medium text-muted-foreground group-open:inline">Cerrar</span></summary>
+        <RitmoDisclosure title="Ver patrones y mejores marcas">
         {patrones.length > 0 && <div className="border-t border-border bg-secondary/25 px-5 py-5 sm:px-7"><h3 className="font-display text-xl font-bold">Patrones que aparecen</h3><p className="mt-1 text-sm text-muted-foreground">Relaciones observadas en tus últimos registros; describen tendencia, no demuestran causa.</p><div className="mt-4 grid gap-2">{patrones.map((patron) => { const etiqueta = HABITOS.find((h) => h.clave === patron.clave)?.etiqueta ?? patron.clave; const favorable = patron.diferencia > 0; return <div key={patron.clave} className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3 last:border-0 last:pb-0"><p className="text-sm text-muted-foreground">Con <span className="font-semibold text-foreground">{etiqueta.toLowerCase()}</span>, tu balance medio fue <span className="font-semibold text-foreground tabular">{Math.abs(patron.diferencia)} kcal</span> {favorable ? "más bajo" : "más alto"}.</p><span className={cn("text-xs font-semibold tabular", favorable ? "text-weight" : "text-energy")}>{patron.muestra} días</span></div>; })}</div></div>}
 
         {/* Records personales */}
@@ -420,7 +420,7 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
             </div>
           );
         })()}
-        </details>
+        </RitmoDisclosure>
       </Card>
     </section>
   );
