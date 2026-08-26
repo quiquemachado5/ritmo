@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
-import { Download, FileSpreadsheet, HistoryIcon, LogOut, Monitor, Moon, ShieldCheck, Sun, Upload } from "lucide-react";
+import { Download, FileSpreadsheet, HistoryIcon, LogOut, Monitor, Moon, Plane, ShieldCheck, Sun, Trash2, Upload } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { FACTORES_ACTIVIDAD } from "@/lib/model/metrics";
 import { Card } from "@/components/ui/card";
@@ -13,16 +13,19 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SectionLabel } from "@/components/app/primitives";
-import { marcarExportacion, diasDesdeExportacion, leerBackupLocal } from "@/lib/backup";
+import { limpiarDatosLocales, marcarExportacion, diasDesdeExportacion, leerBackupLocal } from "@/lib/backup";
+import { limpiarPreferenciasComidas } from "@/lib/meal-prefs";
 import { fmtFechaCorta } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Objetivo, Sexo } from "@/lib/model/types";
+import { guardarModoViaje, useModoViaje } from "@/lib/travel-mode";
 
 type Densidad = "compacta" | "espaciosa";
 
 export default function AjustesPage() {
-  const { estado, cargando, modo, userEmail, actualizarPerfil, exportar, importar, cerrarSesion } = useRitmo();
+  const { estado, cargando, modo, userEmail, actualizarPerfil, exportar, importar, cerrarSesion, borrarDatos } = useRitmo();
   const { theme, setTheme } = useTheme();
+  const viaje = useModoViaje();
   const fileRef = React.useRef<HTMLInputElement>(null);
 
   const p = estado.perfil;
@@ -35,6 +38,9 @@ export default function AjustesPage() {
   const [importando, setImportando] = React.useState(false);
   const [previewDatos, setPreviewDatos] = React.useState<any>(null);
   const [densidad, setDensidad] = React.useState<Densidad>("espaciosa");
+  const [nombreViaje, setNombreViaje] = React.useState(viaje.etiqueta);
+  const [finViaje, setFinViaje] = React.useState(viaje.hasta ?? "");
+  const [confirmarBorrado, setConfirmarBorrado] = React.useState(false);
   React.useEffect(() => {
     setDiasSinExportar(diasDesdeExportacion());
     const b = leerBackupLocal();
@@ -260,6 +266,14 @@ export default function AjustesPage() {
         </Card>
       </section>
 
+      <section>
+        <SectionLabel>Modo viaje / vacaciones</SectionLabel>
+        <Card className="p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4"><div className="flex items-start gap-3"><span className="grid size-10 place-items-center rounded-xl bg-habit-wash text-habit"><Plane className="size-5" /></span><div><p className="text-sm font-semibold">{viaje.activo ? "Contexto de viaje activo" : "Mantén el contexto a la vista"}</p><p className="mt-1 max-w-lg text-xs leading-relaxed text-muted-foreground">Añade una señal visual mientras viajas o estás de vacaciones. No altera kcal, hábitos ni predicciones.</p></div></div>{viaje.activo && <Button variant="secondary" size="sm" onClick={() => guardarModoViaje({ ...viaje, activo: false })}>Finalizar</Button>}</div>
+          {!viaje.activo && <div className="mt-4 flex flex-col gap-2 sm:flex-row"><Input value={nombreViaje} onChange={(e) => setNombreViaje(e.target.value)} placeholder="Viaje a Lisboa" className="h-10 sm:max-w-xs" /><Input type="date" value={finViaje} onChange={(e) => setFinViaje(e.target.value)} className="h-10 sm:max-w-44" /><Button onClick={() => guardarModoViaje({ activo: true, etiqueta: nombreViaje.trim() || "Viaje", desde: new Date().toISOString().slice(0, 10), hasta: finViaje || undefined })}>Activar modo viaje</Button></div>}
+        </Card>
+      </section>
+
       {/* Apariencia */}
       <section>
         <SectionLabel>Apariencia</SectionLabel>
@@ -360,6 +374,11 @@ export default function AjustesPage() {
           </Card>
         </div>
       )}
+
+      <section>
+        <SectionLabel>Privacidad</SectionLabel>
+        <Card className="flex flex-col gap-4 p-5"><div><p className="text-sm font-semibold">Tus datos siguen siendo tuyos</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Exporta una copia antes de borrar. La estimación de comidas se envía a Gemini solo cuando eliges analizarla.</p></div><div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={() => { limpiarDatosLocales(); limpiarPreferenciasComidas(); toast.success("Datos locales eliminados"); }} className="gap-2"><Trash2 className="size-4" /> Limpiar este dispositivo</Button>{confirmarBorrado ? <><Button variant="destructive" onClick={() => void borrarDatos().then(() => { limpiarDatosLocales(); limpiarPreferenciasComidas(); toast.success("Datos de RITMO eliminados"); }).catch(() => toast.error("No se pudieron eliminar los datos."))}>Eliminar datos de RITMO</Button><Button variant="ghost" onClick={() => setConfirmarBorrado(false)}>Cancelar</Button></> : <Button variant="ghost" onClick={() => setConfirmarBorrado(true)} className="text-destructive hover:text-destructive">Eliminar mis datos…</Button>}</div>{confirmarBorrado && <p className="text-xs text-destructive">Esta acción borra perfil, días, comidas y mediciones de la nube. No elimina tu cuenta de acceso.</p>}</Card>
+      </section>
 
       {/* Cuenta */}
       <section>

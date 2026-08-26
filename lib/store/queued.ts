@@ -147,6 +147,7 @@ export class QueuedAdapter implements Adapter {
   guardarMedicion(m: Composicion) { return this.intentar({ type: "guardarMedicion", payload: m }); }
   borrarMedicion(fecha: string) { return this.intentar({ type: "borrarMedicion", payload: fecha }); }
   guardarPerfil(perfil: Perfil) { return this.intentar({ type: "guardarPerfil", payload: perfil }); }
+  borrarTodo() { this.cola = []; this.escribir(); return this.inner.borrarTodo?.() ?? Promise.resolve(); }
   sembrar(data: StoreData) { return this.inner.sembrar?.(data) ?? Promise.resolve(); }
   subscribe(cb: () => void) { return this.inner.subscribe?.(cb) ?? (() => {}); }
 }

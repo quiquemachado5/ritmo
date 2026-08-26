@@ -30,16 +30,23 @@ export interface ComidaCatalogo {
   creado: string;
 }
 
+/** Una plantilla es una comida reutilizable con nombre propio y macros fijadas. */
+export interface PlantillaComida extends ComidaCatalogo {
+  id: string;
+  nombre: string;
+}
+
 export interface MealPrefs {
   fav: string[];
   hidden: string[];
   overrides: Record<string, OverrideComida>;
   catalog: ComidaCatalogo[];
+  templates: PlantillaComida[];
   updatedAt: number;
 }
 
 const KEY = "ritmo:mealprefs";
-const VACIO: MealPrefs = { fav: [], hidden: [], overrides: {}, catalog: [], updatedAt: 0 };
+const VACIO: MealPrefs = { fav: [], hidden: [], overrides: {}, catalog: [], templates: [], updatedAt: 0 };
 
 function normalizar(p: Partial<MealPrefs> | null | undefined): MealPrefs {
   return {
@@ -47,6 +54,7 @@ function normalizar(p: Partial<MealPrefs> | null | undefined): MealPrefs {
     hidden: p?.hidden ?? [],
     overrides: p?.overrides ?? {},
     catalog: p?.catalog ?? [],
+    templates: p?.templates ?? [],
     updatedAt: p?.updatedAt ?? 0,
   };
 }
@@ -174,6 +182,25 @@ export function quitarCatalogo(clave: string) {
   const p = snapshot();
   if (!p.catalog.some((x) => x.clave === clave)) return;
   escribir({ ...p, catalog: p.catalog.filter((x) => x.clave !== clave) });
+}
+
+export function agregarPlantilla(base: Omit<PlantillaComida, "id" | "creado">) {
+  const p = snapshot();
+  const plantilla: PlantillaComida = { ...base, id: crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`, creado: new Date().toISOString() };
+  escribir({ ...p, templates: [plantilla, ...p.templates.filter((x) => x.nombre !== plantilla.nombre)].slice(0, 24) });
+  return plantilla;
+}
+
+export function quitarPlantilla(id: string) {
+  const p = snapshot();
+  escribir({ ...p, templates: p.templates.filter((x) => x.id !== id) });
+}
+
+export function limpiarPreferenciasComidas() {
+  cache = VACIO;
+  try { localStorage.removeItem(KEY); } catch {}
+  emitir();
+  void empujarNube();
 }
 
 /** Hook reactivo. Dispara la carga inicial desde la nube una sola vez. */

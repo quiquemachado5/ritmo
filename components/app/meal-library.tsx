@@ -2,12 +2,12 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { Apple, ArrowDownAZ, Check, EyeOff, Flame, Moon, Pencil, Plus, Repeat2, Search, Star, Sun, Trash2, Utensils, X } from "lucide-react";
+import { Apple, ArrowDownAZ, BookmarkPlus, Check, EyeOff, Flame, Moon, Pencil, Plus, Repeat2, Search, Star, Sun, Trash2, Utensils, X } from "lucide-react";
 import { cn, uid } from "@/lib/utils";
 import { useRitmo } from "@/lib/store/provider";
 import { bibliotecaComidas, type ComidaGuardada, type OrdenBiblioteca } from "@/lib/model/analytics";
 import { fmtKcal, capitalizar } from "@/lib/format";
-import { useMealPrefs, toggleFavorito, toggleOculta, setOverride, agregarCatalogo, quitarCatalogo } from "@/lib/meal-prefs";
+import { useMealPrefs, toggleFavorito, toggleOculta, setOverride, agregarCatalogo, agregarPlantilla, quitarCatalogo, quitarPlantilla } from "@/lib/meal-prefs";
 import { SectionLabel } from "./primitives";
 import type { Comida, TipoComida } from "@/lib/model/types";
 
@@ -103,6 +103,10 @@ export function MealLibrary({ fecha }: { fecha: string }) {
     toast.success(`${capitalizar(item.texto)} · ${fmtKcal(item.kcal)} kcal`, { description: "Añadida al día" });
   }
 
+  async function usarPlantilla(item: { tipo: string; texto: string; kcal: number; proteinas: number; carbohidratos: number; grasas: number; nombre: string }) {
+    await usar({ clave: `plantilla:${item.nombre}`, tipo: item.tipo as TipoComida, texto: item.texto, kcal: item.kcal, proteinas: item.proteinas, carbohidratos: item.carbohidratos, grasas: item.grasas, veces: 0, ultima: new Date().toISOString() });
+  }
+
   return (
     <section>
       <SectionLabel action={<span className="text-xs text-muted-foreground tabular">{total} guardadas</span>}>
@@ -110,6 +114,12 @@ export function MealLibrary({ fecha }: { fecha: string }) {
       </SectionLabel>
 
       <div className="flex flex-col gap-4 overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+        {prefs.templates.length > 0 && <div className="border-b border-border pb-4">
+          <div className="mb-2 flex items-center justify-between gap-3"><p className="text-sm font-semibold">Plantillas rápidas</p><span className="text-xs text-muted-foreground">{prefs.templates.length} guardadas</span></div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {prefs.templates.map((plantilla) => <div key={plantilla.id} className="flex shrink-0 overflow-hidden rounded-xl border border-border bg-secondary/35"><button onClick={() => usarPlantilla(plantilla)} className="min-w-40 px-3 py-2.5 text-left transition-colors hover:bg-secondary"><p className="truncate text-sm font-semibold">{plantilla.nombre}</p><p className="mt-0.5 text-xs tabular text-muted-foreground">{fmtKcal(plantilla.kcal)} kcal · {capitalizar(plantilla.tipo)}</p></button><button onClick={() => quitarPlantilla(plantilla.id)} aria-label={`Eliminar plantilla ${plantilla.nombre}`} className="px-2 text-muted-foreground hover:bg-secondary hover:text-destructive"><X className="size-4" /></button></div>)}
+          </div>
+        </div>}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm text-muted-foreground">Para añadir a <span className="font-semibold text-foreground">{CATS.find((c) => c.id === cat)?.label.toLowerCase()}</span> en un toque.</p>
           <div className="flex rounded-full bg-secondary p-0.5">
@@ -211,6 +221,7 @@ export function MealLibrary({ fecha }: { fecha: string }) {
                     onUsar={() => usar(item)}
                     onFav={() => toggleFavorito(item.clave)}
                     onEdit={() => setEditando(item.clave)}
+                    onTemplate={() => { agregarPlantilla({ nombre: capitalizar(item.texto), clave: item.clave, texto: item.texto, tipo: item.tipo, kcal: item.kcal, proteinas: item.proteinas, carbohidratos: item.carbohidratos, grasas: item.grasas }); toast.success("Guardada como plantilla"); }}
                     onHide={() =>
                       item.esCatalogo
                         ? (quitarCatalogo(item.clave), toast("Comida quitada de la biblioteca"))
@@ -243,6 +254,7 @@ function TarjetaComida({
   onUsar,
   onFav,
   onEdit,
+  onTemplate,
   onHide,
   hideTitle,
 }: {
@@ -251,6 +263,7 @@ function TarjetaComida({
   onUsar: () => void;
   onFav: () => void;
   onEdit: () => void;
+  onTemplate: () => void;
   onHide: () => void;
   hideTitle: string;
 }) {
@@ -291,6 +304,9 @@ function TarjetaComida({
         </IconBtn>
         <IconBtn label="Editar comida" onClick={onEdit}>
           <Pencil className="size-4" />
+        </IconBtn>
+        <IconBtn label="Guardar como plantilla" onClick={onTemplate}>
+          <BookmarkPlus className="size-4" />
         </IconBtn>
         <IconBtn label={hideTitle} onClick={onHide}>
           {item.esCatalogo ? <Trash2 className="size-4" /> : <EyeOff className="size-4" />}

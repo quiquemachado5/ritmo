@@ -16,6 +16,7 @@ export interface Adapter {
   guardarMedicion(m: Composicion): Promise<void>;
   borrarMedicion(fecha: string): Promise<void>;
   guardarPerfil(perfil: Perfil): Promise<void>;
+  borrarTodo?(): Promise<void>;
   /** Sube en bloque (migración / importación). */
   sembrar?(data: StoreData): Promise<void>;
   /** Cambios llegados de otra pestaña o dispositivo. */

@@ -51,6 +51,7 @@ export interface RitmoContextValue {
   importar: (datos: Partial<StoreData>) => Promise<void>;
   recargar: () => Promise<void>;
   cerrarSesion: () => Promise<void>;
+  borrarDatos: () => Promise<void>;
 }
 
 const Ctx = React.createContext<RitmoContextValue | null>(null);
@@ -348,6 +349,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     window.location.href = "/login";
   }, []);
 
+  const borrarDatos = React.useCallback(async () => {
+    if (!adapterRef.current?.borrarTodo) throw new Error("No se pudo preparar el borrado de datos.");
+    await adapterRef.current.borrarTodo();
+    aplicar(clonar(VACIO));
+  }, [aplicar]);
+
   const estado = React.useMemo<Estado>(
     () => ({ perfil: data.perfil, dias: data.dias, composicion: data.composicion, version }),
     [data, version],
@@ -374,8 +381,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       importar,
       recargar,
       cerrarSesion,
+      borrarDatos,
     }),
-    [estado, modo, cargando, sincronizando, userEmail, dia, medicion, alternarHabito, actualizarDia, registrarComida, editarComida, borrarComida, guardarMedicion, borrarMedicion, actualizarPerfil, exportar, importar, recargar, cerrarSesion],
+    [estado, modo, cargando, sincronizando, userEmail, dia, medicion, alternarHabito, actualizarDia, registrarComida, editarComida, borrarComida, guardarMedicion, borrarMedicion, actualizarPerfil, exportar, importar, recargar, cerrarSesion, borrarDatos],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

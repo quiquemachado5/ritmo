@@ -160,6 +160,16 @@ export class CloudAdapter implements Adapter {
     const { error } = await this.client.from("perfiles").upsert(fila, { onConflict: "user_id" });
     if (error) throw error;
   }
+  async borrarTodo() {
+    const resultados = await Promise.all([
+      this.client.from("dias").delete().eq("user_id", this.userId),
+      this.client.from("composicion").delete().eq("user_id", this.userId),
+      this.client.from("user_prefs").delete().eq("user_id", this.userId),
+      this.client.from("perfiles").delete().eq("user_id", this.userId),
+    ]);
+    const fallo = resultados.find((r) => r.error)?.error;
+    if (fallo) throw fallo;
+  }
 
   async sembrar(data: StoreData) {
     await this.guardarPerfil(data.perfil);

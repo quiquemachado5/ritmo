@@ -470,6 +470,25 @@ export function adherenciaPorHabito<T extends { clave: string }>(
     .sort((a, b) => b.pct - a.pct);
 }
 
+/** Relación descriptiva (no causal) entre hábitos y balance reciente. */
+export function patronesHabitos(estado: Estado, ventanaDias = 28): Array<{ clave: string; con: number; sin: number; diferencia: number; muestra: number }> {
+  const salida: Array<{ clave: string; con: number; sin: number; diferencia: number; muestra: number }> = [];
+  for (const clave of ["comida", "cena", "noAlcohol", "deporte", "beberAgua", "dormirBien"]) {
+    const con: number[] = []; const sin: number[] = [];
+    for (let i = 0; i < ventanaDias; i++) {
+      const fecha = sumarDias(hoy(), -i); const d = estado.dias[fecha];
+      if (!d) continue;
+      const e = energiaDe(estado, fecha); if (e.sinRegistro && !e.imputado) continue;
+      (d.habitos?.[clave] ? con : sin).push(e.balance);
+    }
+    if (con.length >= 2 && sin.length >= 2) {
+      const media = (v: number[]) => v.reduce((a, n) => a + n, 0) / v.length;
+      salida.push({ clave, con: Math.round(media(con)), sin: Math.round(media(sin)), diferencia: Math.round(media(sin) - media(con)), muestra: con.length + sin.length });
+    }
+  }
+  return salida.sort((a, b) => Math.abs(b.diferencia) - Math.abs(a.diferencia)).slice(0, 2);
+}
+
 /** Serie de peso con media móvil, lista para el gráfico. */
 export function seriePeso(estado: Estado, ventanaDias = 120): { puntos: Pesaje[]; suavizado: Pesaje[] } {
   const p = pesajes(estado);

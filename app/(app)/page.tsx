@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Award, Flame, Plus, Target, TrendingDown, TrendingUp, Utensils } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
-import { resumen, adherenciaPorHabito, recordsPersonales, resumenPorMes } from "@/lib/model/analytics";
+import { resumen, adherenciaPorHabito, patronesHabitos, recordsPersonales, resumenPorMes } from "@/lib/model/analytics";
 import { macrosObjetivo } from "@/lib/model/metrics";
 import { HABITOS } from "@/lib/model/config";
 import { hoy, sumarDias } from "@/lib/model/dates";
@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Ring, MacroBar, Metric, SectionLabel } from "@/components/app/primitives";
 import { fmtPeso, fmtKcal, fmtSigno, relativo, capitalizar } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { WeeklyShare } from "@/components/app/weekly-share";
 
 function saludo(): string {
   const h = new Date().getHours();
@@ -285,6 +286,7 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
   );
   const rec = React.useMemo(() => recordsPersonales(estado), [estado]);
   const meses = React.useMemo(() => resumenPorMes(estado), [estado]);
+  const patrones = React.useMemo(() => patronesHabitos(estado), [estado]);
 
   const adh = r.habitos.adherencia7;
   const racha = r.habitos.rachaActual.longitud;
@@ -365,7 +367,7 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
 
   return (
     <section>
-      <SectionLabel>Resumen y records</SectionLabel>
+      <SectionLabel action={<WeeklyShare adherencia={adh} comidas={estaSemana.comidas} dias={estaSemana.diasConDatos} titulo={v.titulo} />}>Resumen y records</SectionLabel>
       <Card className="flex flex-col gap-0 overflow-hidden p-0">
         {/* Veredicto semanal */}
         <div className="grid lg:grid-cols-[minmax(15rem,.72fr)_1fr]">
@@ -396,6 +398,8 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
             <SemanaMetric label="Días con registro" actual={`${estaSemana.diasConDatos}`} previo={`${semanaAnterior.diasConDatos}`} />
           </div>
         </div>
+
+        {patrones.length > 0 && <div className="border-t border-border bg-secondary/25 px-5 py-5 sm:px-7"><h3 className="font-display text-xl font-bold">Patrones que aparecen</h3><p className="mt-1 text-sm text-muted-foreground">Relaciones observadas en tus últimos registros; describen tendencia, no demuestran causa.</p><div className="mt-4 grid gap-2">{patrones.map((patron) => { const etiqueta = HABITOS.find((h) => h.clave === patron.clave)?.etiqueta ?? patron.clave; const favorable = patron.diferencia > 0; return <div key={patron.clave} className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3 last:border-0 last:pb-0"><p className="text-sm text-muted-foreground">Con <span className="font-semibold text-foreground">{etiqueta.toLowerCase()}</span>, tu balance medio fue <span className="font-semibold text-foreground tabular">{Math.abs(patron.diferencia)} kcal</span> {favorable ? "más bajo" : "más alto"}.</p><span className={cn("text-xs font-semibold tabular", favorable ? "text-weight" : "text-energy")}>{patron.muestra} días</span></div>; })}</div></div>}
 
         {/* Records personales */}
         {hayRecords && (

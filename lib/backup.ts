@@ -53,6 +53,10 @@ export function diasDesdeExportacion(): number | null {
   return Math.floor((Date.now() - d.getTime()) / 86400000);
 }
 
+export function limpiarDatosLocales(): void {
+  try { localStorage.removeItem(BACKUP_KEY); localStorage.removeItem(LAST_EXPORT_KEY); localStorage.removeItem(CLOUD_MARK); } catch {}
+}
+
 /* ------------------------------------------------------------- backup nube */
 
 const CLOUD_MARK = "ritmo:lastCloudBackup";
