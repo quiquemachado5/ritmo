@@ -504,18 +504,18 @@ export function estimarKcalConsumidas(
 ): { kcal: number; plan: string; estimado: true } {
   const h = habitos || {};
   const objetivo = num(kcalObjetivo) === null ? 1350 : kcalObjetivo;
+  const diaControlado = Math.min(objetivo, 1450);
   const usaPerfil = Boolean(habitosActivos?.length);
   const claves = usaPerfil ? habitosActivos! : Object.keys(h);
   const total = usaPerfil ? claves.length : TOTAL_HABITOS;
   const cumplidos = claves.filter((clave) => h[clave] === true).length;
-  // Los seis hábitos describen el nivel de control del día. El objetivo ya
-  // representa la ingesta de un día perfecto; cada hábito ausente desplaza la
-  // estimación de forma gradual hacia mantenimiento/superávit, nunca convierte
-  // un registro incompleto en un déficit artificial.
+  // Los hábitos describen el nivel de control del día. En pérdida de peso, un
+  // día perfecto no equivale a "solo lo registrado": RITMO usa una ingesta
+  // controlada de referencia y desplaza hacia superávit cuando faltan hábitos.
   const ajustePorHabitoFaltante = usaPerfil
     ? Math.round(850 * (1 - Math.min(1, cumplidos / total)) ** 1.15)
     : ([0, 850, 650, 450, 300, 150, 0][Math.min(6, cumplidos)] ?? 0);
-  const kcal = objetivo + ajustePorHabitoFaltante;
+  const kcal = diaControlado + ajustePorHabitoFaltante;
   const plan = `${cumplidos}/${total} hábitos`;
   return { kcal, plan, estimado: true };
 }

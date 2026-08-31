@@ -143,14 +143,56 @@ export default function HabitosPage() {
         </Card>
       </section>
 
-      {/* Heatmap */}
+      {/* Constancia histórica */}
       <section>
         <SectionLabel>Constancia</SectionLabel>
-        <Card className="p-5">
-          <Heatmap estado={estado} />
-          <p className="mt-2 text-xs text-muted-foreground">
-            Cada casilla es un día; cuanto más intensa, más hábitos cumpliste. Desplázate en horizontal para ver todo el histórico.
-          </p>
+        <Card className="overflow-hidden p-0">
+          <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_18rem]">
+            <div className="p-4 sm:p-5">
+              <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h2 className="font-display text-xl font-bold">Histórico de hábitos</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">Cada casilla resume un día completo de tu año.</p>
+                </div>
+                <div className="flex items-center gap-1.5 rounded-full bg-secondary px-2 py-1 text-[0.68rem] text-muted-foreground">
+                  <span className="size-2 rounded-full bg-destructive" />
+                  <span>0</span>
+                  <span className="h-px w-8 bg-gradient-to-r from-destructive via-warning to-primary" />
+                  <span className="size-2 rounded-full bg-primary" />
+                  <span>{activos.length}/{activos.length}</span>
+                </div>
+              </div>
+              <Heatmap estado={estado} />
+              <p className="mt-2 text-xs text-muted-foreground">
+                Desplázate en horizontal para ver todo el histórico. El color sube de rojo a verde según hábitos cumplidos.
+              </p>
+            </div>
+            <div className="border-t border-border bg-secondary/25 p-4 sm:p-5 lg:border-l lg:border-t-0">
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">Este mes</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Últimos 30 días</p>
+                </div>
+                <p className={cn("font-display text-4xl font-bold leading-none tabular", tonoCumplimiento(r.habitos.adherencia30, 100).tinta)}>{r.habitos.adherencia30}%</p>
+              </div>
+              <div className="mt-5 grid gap-3">
+                {porHabito.slice(0, 5).map((h) => {
+                  const tono = tonoCumplimiento(h.pct, 100);
+                  return (
+                    <div key={h.clave} className="min-w-0">
+                      <div className="flex items-center justify-between gap-3 text-xs">
+                        <span className="truncate font-medium text-foreground">{h.etiqueta}</span>
+                        <span className={cn("font-semibold tabular", tono.tinta)}>{h.pct}%</span>
+                      </div>
+                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-card">
+                        <div className={cn("h-full rounded-full transition-[width] duration-700", tono.barra)} style={{ width: `${h.pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </Card>
       </section>
     </div>

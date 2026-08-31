@@ -67,38 +67,38 @@
 }
 
 .dark {
-  --background: #0f120f;          /* carbón cálido con matiz verde */
-  --foreground: #eae7dd;
-  --card: #171b16;
+  --background: #0b0f0d;          /* carbón cálido con matiz verde */
+  --foreground: #f0eee6;
+  --card: #151a16;
   --card-foreground: #eae7dd;
-  --popover: #1a1f18;
+  --popover: #181f1a;
   --popover-foreground: #eae7dd;
 
   --primary: #37a978;            /* verde vivo legible sobre oscuro */
   --primary-foreground: #06140d;
-  --secondary: #23281f;
-  --secondary-foreground: #d9d5c8;
-  --muted: #1d221b;
-  --muted-foreground: #9b988b;
-  --accent: #1c2a22;
+  --secondary: #20271f;
+  --secondary-foreground: #e3dfd3;
+  --muted: #1b211c;
+  --muted-foreground: #b5b1a5;
+  --accent: #1a2b22;
   --accent-foreground: #a9e4ca;
   --destructive: #e0674a;
   --destructive-foreground: #1a0b07;
 
-  --border: #2a2f27;
-  --input: #30352c;
+  --border: #30382f;
+  --input: #384033;
   --ring: #37a978;
 
-  --weight: #37a978;   --weight-foreground: #06140d;
-  --weight-soft: #2e6b53; --weight-wash: #16241e; --weight-border: #2c4a3c; --weight-ink: #7fd3b0;
-  --habit: #d3a24e;    --habit-foreground: #1c1405;
-  --habit-soft: #7a5f2c; --habit-wash: #241f13; --habit-border: #48401f; --habit-ink: #e8c988;
-  --energy: #e07a52;   --energy-foreground: #1c0d06;
-  --energy-soft: #85472f; --energy-wash: #251611; --energy-border: #4d2d1f; --energy-ink: #f0ab8c;
-  --body: #bd8fb2;     --body-foreground: #1c0f19;
-  --body-soft: #6e4a67; --body-wash: #221a20; --body-border: #443341; --body-ink: #d8bcd2;
-  --water: #64a8c4;    --water-foreground: #06171e;
-  --water-soft: #3a6577; --water-wash: #142127; --water-border: #2c4652; --water-ink: #a6d2e2;
+  --weight: #3bb981;   --weight-foreground: #06140d;
+  --weight-soft: #34775c; --weight-wash: #152820; --weight-border: #355946; --weight-ink: #95e0c0;
+  --habit: #e0b35d;    --habit-foreground: #1c1405;
+  --habit-soft: #876a33; --habit-wash: #2b2414; --habit-border: #594924; --habit-ink: #f0d395;
+  --energy: #ee855c;   --energy-foreground: #1c0d06;
+  --energy-soft: #934f35; --energy-wash: #2e1912; --energy-border: #633421; --energy-ink: #f5b79b;
+  --body: #c99cbe;     --body-foreground: #1c0f19;
+  --body-soft: #76516e; --body-wash: #2a1d27; --body-border: #553d50; --body-ink: #e6c8df;
+  --water: #73b8d2;    --water-foreground: #06171e;
+  --water-soft: #426f82; --water-wash: #152832; --water-border: #365766; --water-ink: #bee2ee;
   --warning: #d4a250;  --warning-foreground: #1c1405;
   --warning-wash: #241f13; --warning-border: #48401f; --warning-ink: #e8c988;
   --streak: #f0854a;

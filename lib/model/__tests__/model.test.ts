@@ -206,7 +206,7 @@ describe("Energía de un día", () => {
     );
     // Los hábitos no activos se conservan en el histórico, pero no cambian el
     // balance ni la recalibración configurada por la persona.
-    casi(perfilPersonal.consumidas, 2000);
+    casi(perfilPersonal.consumidas, 1450);
 
     const mixto = M.energiaDia({ kcalConsumidas: 1500, habitos: { deporte: true } }, { tdeeBase: 2400 });
     igual(mixto.consumidasEstimadas, false);

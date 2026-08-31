@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { HABITOS, TOTAL_HABITOS } from "@/lib/model/config";
+import { habitosModelo } from "@/lib/model/config";
 import { nivelDia } from "@/lib/model/metrics";
 import { DIAS_SEMANA, diaSemanaLunes, hoy, sumarDias } from "@/lib/model/dates";
 import { capitalizar, fmtFechaLarga } from "@/lib/format";
@@ -14,18 +14,20 @@ interface Celda {
   futuro: boolean;
   cumplidos: number;
   hechos: string[];
+  total: number;
 }
 
 function etiquetaDia(c: Celda): string {
-  const base = `${c.fecha} · ${c.cumplidos}/${TOTAL_HABITOS} hábitos`;
+  const base = `${c.fecha} · ${c.cumplidos}/${c.total} hábitos`;
   return c.hechos.length ? `${base}: ${c.hechos.join(", ")}` : `${base} (ninguno)`;
 }
 
 const NIVEL_COLOR = [
-  "bg-secondary",
-  "bg-primary/25",
-  "bg-primary/45",
-  "bg-primary/70",
+  "bg-destructive/18",
+  "bg-energy/25",
+  "bg-warning/35",
+  "bg-habit/45",
+  "bg-primary/80",
   "bg-primary",
 ];
 
@@ -45,6 +47,8 @@ export function Heatmap({
 
   const { columnas, meses, totalSemanas } = React.useMemo(() => {
     const hoyISO = hoy();
+    const activos = habitosModelo(estado.perfil);
+    const total = Math.max(1, activos.length);
 
     // Sin `semanas` explícitas, el mapa arranca en el primer día registrado:
     // recortarlo a una ventana fija escondía el histórico importado.
@@ -71,8 +75,9 @@ export function Heatmap({
         const fecha = cursor;
         const dia = estado.dias[fecha];
         const futuro = fecha > hoyISO;
-        const hechos = HABITOS.filter((h) => dia?.habitos?.[h.clave] === true).map((h) => h.etiqueta);
-        col.push({ fecha, nivel: nivelDia(dia?.habitos, TOTAL_HABITOS), futuro, cumplidos: hechos.length, hechos });
+        const habitosActivos = Object.fromEntries(activos.map((h) => [h.clave, dia?.habitos?.[h.clave] === true]));
+        const hechos = activos.filter((h) => dia?.habitos?.[h.clave] === true).map((h) => h.etiqueta);
+        col.push({ fecha, nivel: nivelDia(habitosActivos, total), futuro, cumplidos: hechos.length, hechos, total });
         if (dow === 0) {
           const prev = etiquetasMes[etiquetasMes.length - 1];
           const label = new Intl.DateTimeFormat("es-ES", { month: "short" }).format(new Date(fecha));
@@ -150,7 +155,7 @@ export function Heatmap({
               <span className="font-medium text-foreground">{capitalizar(fmtFechaLarga(activo.fecha))}</span>
               <span className="text-muted-foreground">
                 {" · "}
-                {activo.cumplidos}/{TOTAL_HABITOS} hábitos
+                {activo.cumplidos}/{activo.total} hábitos
                 {activo.hechos.length > 0 && ` · ${activo.hechos.join(", ")}`}
               </span>
             </span>

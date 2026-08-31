@@ -1,5 +1,4 @@
 import {
-  CalendarDays,
   Flame,
   Home,
   Settings,
@@ -21,6 +20,5 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/nutricion", label: "Nutrición", icon: UtensilsCrossed, primary: true },
   { href: "/habitos", label: "Hábitos", icon: Flame, primary: true },
   { href: "/progreso", label: "Progreso", icon: TrendingUp, primary: true },
-  { href: "/calendario", label: "Calendario", icon: CalendarDays, primary: false },
   { href: "/ajustes", label: "Ajustes", icon: Settings, primary: false },
 ];

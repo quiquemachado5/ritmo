@@ -7,7 +7,7 @@ import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
 import { resumen, adherenciaPorHabito, patronesHabitos, recordsPersonales, resumenPorMes } from "@/lib/model/analytics";
 import { macrosObjetivo } from "@/lib/model/metrics";
-import { HABITOS, habitosModelo } from "@/lib/model/config";
+import { habitosModelo } from "@/lib/model/config";
 import { hoy, sumarDias } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -206,11 +206,11 @@ export default function HoyPage() {
       {/* Hábitos de hoy */}
       <section>
         <SectionLabel action={<Link href="/habitos" className="text-xs font-medium text-primary hover:underline">Ver hábitos</Link>}>
-          Hábitos de hoy · {habitosHechos}/{HABITOS.length}
+          Hábitos de hoy · {habitosHechos}/{habitosActivos.length}
         </SectionLabel>
         <Card className="p-4">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {HABITOS.map((h) => {
+            {habitosActivos.map((h) => {
               const hecho = diaHoy.habitos?.[h.clave] === true;
               return (
                 <button
@@ -283,7 +283,7 @@ const VEREDICTO: Record<Veredicto, { titulo: string; clase: string; punto: strin
 
 function WeeklyInsightsLegacy({ r, estado }: { r: ReturnType<typeof resumen>; estado: typeof r extends never ? never : Parameters<typeof resumen>[0] }) {
   const porHabito = React.useMemo(
-    () => [...adherenciaPorHabito(estado, HABITOS, 7)].sort((a, b) => b.pct - a.pct),
+    () => [...adherenciaPorHabito(estado, habitosModelo(estado.perfil), 7)].sort((a, b) => b.pct - a.pct),
     [estado],
   );
   const rec = React.useMemo(() => recordsPersonales(estado), [estado]);
@@ -334,7 +334,7 @@ function WeeklyInsightsLegacy({ r, estado }: { r: ReturnType<typeof resumen>; es
   if (racha >= 3) {
     lineas.push({
       icon: <Award className="size-4 shrink-0 text-streak" />,
-      text: `${racha} días seguidos con los 6 hábitos. No rompas la cadena.`,
+      text: `${racha} días seguidos con todos tus hábitos activos. No rompas la cadena.`,
     });
   } else if (racha === 0 && mejorRacha >= 3) {
     lineas.push({
@@ -379,7 +379,7 @@ function WeeklyInsightsLegacy({ r, estado }: { r: ReturnType<typeof resumen>; es
         <div className="grid grid-cols-3 divide-x divide-border border-t border-border bg-card"><SemanaMetric label="Constancia" actual={`${estaSemana.adherencia}%`} previo={`${semanaAnterior.adherencia}%`} /><SemanaMetric label="Comidas" actual={`${estaSemana.comidas}`} previo={`${semanaAnterior.comidas}`} /><SemanaMetric label="Días con datos" actual={`${estaSemana.diasConDatos}`} previo={`${semanaAnterior.diasConDatos}`} /></div>
 
         <RitmoDisclosure title="Ver patrones y mejores marcas">
-        {patrones.length > 0 && <div className="border-t border-border bg-secondary/25 px-5 py-5 sm:px-7"><h3 className="font-display text-xl font-bold">Patrones que aparecen</h3><p className="mt-1 text-sm text-muted-foreground">Relaciones observadas en tus últimos registros; describen tendencia, no demuestran causa.</p><div className="mt-4 grid gap-2">{patrones.map((patron) => { const etiqueta = HABITOS.find((h) => h.clave === patron.clave)?.etiqueta ?? patron.clave; const favorable = patron.diferencia > 0; return <div key={patron.clave} className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3 last:border-0 last:pb-0"><p className="text-sm text-muted-foreground">Con <span className="font-semibold text-foreground">{etiqueta.toLowerCase()}</span>, tu balance medio fue <span className="font-semibold text-foreground tabular">{Math.abs(patron.diferencia)} kcal</span> {favorable ? "más bajo" : "más alto"}.</p><span className={cn("text-xs font-semibold tabular", favorable ? "text-weight" : "text-energy")}>{patron.muestra} días</span></div>; })}</div></div>}
+        {patrones.length > 0 && <div className="border-t border-border bg-secondary/25 px-5 py-5 sm:px-7"><h3 className="font-display text-xl font-bold">Patrones que aparecen</h3><p className="mt-1 text-sm text-muted-foreground">Relaciones observadas en tus últimos registros; describen tendencia, no demuestran causa.</p><div className="mt-4 grid gap-2">{patrones.map((patron) => { const etiqueta = habitosModelo(estado.perfil).find((h) => h.clave === patron.clave)?.etiqueta ?? patron.clave; const favorable = patron.diferencia > 0; return <div key={patron.clave} className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3 last:border-0 last:pb-0"><p className="text-sm text-muted-foreground">Con <span className="font-semibold text-foreground">{etiqueta.toLowerCase()}</span>, tu balance medio fue <span className="font-semibold text-foreground tabular">{Math.abs(patron.diferencia)} kcal</span> {favorable ? "más bajo" : "más alto"}.</p><span className={cn("text-xs font-semibold tabular", favorable ? "text-weight" : "text-energy")}>{patron.muestra} días</span></div>; })}</div></div>}
 
         {/* Records personales */}
         {hayRecords && (
@@ -429,7 +429,7 @@ function WeeklyInsightsLegacy({ r, estado }: { r: ReturnType<typeof resumen>; es
 
 function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: Parameters<typeof resumen>[0] }) {
   const porHabito = React.useMemo(
-    () => [...adherenciaPorHabito(estado, HABITOS, 7)].sort((a, b) => b.pct - a.pct),
+    () => [...adherenciaPorHabito(estado, habitosModelo(estado.perfil), 7)].sort((a, b) => b.pct - a.pct),
     [estado],
   );
   const rec = React.useMemo(() => recordsPersonales(estado), [estado]);
@@ -537,7 +537,7 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
                 <p className="mt-1 text-sm text-muted-foreground">Relaciones observadas en tus últimos registros; describen tendencia, no demuestran causa.</p>
                 <div className="mt-4 grid gap-3">
                   {patrones.map((patron) => {
-                    const etiqueta = HABITOS.find((h) => h.clave === patron.clave)?.etiqueta ?? patron.clave;
+                    const etiqueta = habitosModelo(estado.perfil).find((h) => h.clave === patron.clave)?.etiqueta ?? patron.clave;
                     const favorable = patron.diferencia > 0;
                     return (
                       <div key={patron.clave} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border pb-3 last:border-0 last:pb-0">
@@ -595,14 +595,15 @@ function WeekComparisonCompact({ label, actual, previo, tone = "text-foreground"
 }
 
 function resumenSemana(estado: Parameters<typeof resumen>[0], hasta: string) {
+  const habitosActivos = habitosModelo(estado.perfil);
   let habitos = 0; let comidas = 0; let diasConDatos = 0;
   for (let i = 0; i < 7; i++) {
     const d = estado.dias[sumarDias(hasta, -i)];
-    const hechos = Object.values(d?.habitos || {}).filter(Boolean).length;
+    const hechos = habitosActivos.filter((h) => d?.habitos?.[h.clave]).length;
     habitos += hechos; comidas += d?.comidas?.length ?? 0;
     if (hechos > 0 || (d?.comidas?.length ?? 0) > 0 || d?.peso != null) diasConDatos++;
   }
-  return { adherencia: Math.round((habitos / (HABITOS.length * 7)) * 100), comidas, diasConDatos };
+  return { adherencia: Math.round((habitos / (habitosActivos.length * 7)) * 100), comidas, diasConDatos };
 }
 
 function SemanaMetric({ label, actual, previo }: { label: string; actual: string; previo: string }) {

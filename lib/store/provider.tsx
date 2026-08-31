@@ -81,7 +81,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   dataRef.current = data;
 
   const aplicar = React.useCallback((next: StoreData) => {
-    setData(next);
+    setData({
+      perfil: { ...PERFIL_DEFECTO, ...(next.perfil || {}) },
+      dias: next.dias || {},
+      composicion: next.composicion || [],
+    });
     setVersion((v) => v + 1);
   }, []);
 

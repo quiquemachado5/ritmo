@@ -28,7 +28,9 @@ export function habitosUsuario(perfil?: Pick<Perfil, "habitosPersonalizados"> | 
 /** Hábitos que participan en constancia, balance y recalibración de peso. */
 export function habitosModelo(perfil?: Pick<Perfil, "habitosPersonalizados" | "habitosDesactivados"> | null): DefHabito[] {
   const desactivados = new Set(perfil?.habitosDesactivados || []);
-  return habitosUsuario(perfil).filter((h) => !desactivados.has(h.clave));
+  const todos = habitosUsuario(perfil);
+  const activos = todos.filter((h) => !desactivados.has(h.clave));
+  return activos.length ? activos : todos.slice(0, 1);
 }
 
 export function totalHabitosPerfil(perfil?: Pick<Perfil, "habitosPersonalizados" | "habitosDesactivados"> | null) {
