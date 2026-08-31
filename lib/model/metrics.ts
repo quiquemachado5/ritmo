@@ -618,10 +618,23 @@ export function energiaDia(
       ? { kcal: outExplicito, estimado: false as const }
       : estimarKcalQuemadas(d.habitos, tdeeBase);
 
-  const balance = balanceNeto(inn.kcal, out.kcal) as number;
+  const cumplidosActivos = clavesHabitos
+    ? clavesHabitos.filter((clave) => d.habitos?.[clave] === true).length
+    : Object.values(d.habitos || {}).filter((v) => v === true).length;
+  const totalActivos = clavesHabitos?.length ?? TOTAL_HABITOS;
+  const ratioHabitos = totalActivos > 0 ? cumplidosActivos / totalActivos : 0;
+  const deficitMaximoEstimado = inn.estimado && ratioHabitos >= 1
+    ? 1100
+    : inn.estimado && ratioHabitos >= 0.8
+      ? 900
+      : null;
+  const consumoAjustado = deficitMaximoEstimado !== null
+    ? Math.max(inn.kcal, out.kcal - deficitMaximoEstimado)
+    : inn.kcal;
+  const balance = balanceNeto(consumoAjustado, out.kcal) as number;
 
   return {
-    consumidas: inn.kcal,
+    consumidas: consumoAjustado,
     quemadas: out.kcal,
     balance,
     deficit: -balance,

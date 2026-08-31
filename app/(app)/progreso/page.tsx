@@ -296,19 +296,44 @@ export default function ProgresoPage() {
           <section aria-labelledby="historial">
             <SectionLabel action={<span className="text-xs text-muted-foreground tabular">{historial.length} registros</span>}><span id="historial">Historial de mediciones</span></SectionLabel>
             <Card className="overflow-hidden p-0">
-              <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border bg-secondary/35 px-5 py-4 sm:px-6">
-                <div><p className="text-sm font-semibold">Registro cronológico</p><p className="mt-0.5 text-xs text-muted-foreground">Cada punto es un pesaje real guardado por ti.</p></div>
-                <span className="rounded-full bg-card px-3 py-1.5 text-xs font-semibold tabular text-weight shadow-sm">{historial.length} mediciones reales</span>
+              <div className="grid gap-4 border-b border-border bg-secondary/30 px-4 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-6">
+                <div>
+                  <p className="font-display text-xl font-bold">Pesajes reales</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Ordenados de más reciente a más antiguo, sin estimaciones mezcladas.</p>
+                </div>
+                <div className="grid grid-cols-3 gap-1 overflow-hidden rounded-xl border border-border bg-card p-1 text-center shadow-sm">
+                  <HistorialPill label="Actual" value={fmtPeso(historial[historial.length - 1]?.peso)} />
+                  <HistorialPill label="Inicio" value={fmtPeso(historial[0]?.peso)} />
+                  <HistorialPill label="Cambio" value={statsWin.cambio != null ? fmtSigno(statsWin.cambio, 1) : "—"} tone={statsWin.cambio != null && statsWin.cambio <= 0 ? "text-weight" : "text-energy"} />
+                </div>
               </div>
-              <div className="max-h-[30rem] overflow-y-auto px-4 py-1 sm:px-6">
+              <div className="max-h-[31rem] overflow-y-auto p-2 sm:p-3">
               {[...historial].reverse().map((registro, index, registros) => (
-                <div key={registro.fecha} className="relative grid grid-cols-[.8rem_minmax(0,1fr)_auto] items-center gap-2.5 py-3 first:pt-4 last:pb-4 sm:gap-3">
-                  <div className="relative flex self-stretch justify-center pt-2">
-                    <span className="z-10 size-3 rounded-full border-2 border-card bg-weight shadow-[0_0_0_1px_var(--weight-border)]" />
-                    {index < registros.length - 1 && <span className="absolute bottom-[-.75rem] top-4 w-px bg-weight-border" />}
+                <div key={registro.fecha} className="group grid grid-cols-[2.3rem_minmax(0,1fr)_auto] items-center gap-2.5 rounded-xl px-2.5 py-2 transition-colors hover:bg-secondary/45 sm:grid-cols-[3rem_minmax(0,1fr)_auto] sm:px-3">
+                  <div className="relative flex h-full items-center justify-center">
+                    {index < registros.length - 1 && <span className="absolute bottom-[-1rem] top-1/2 w-px bg-weight-border" />}
+                    <span className="relative z-10 grid size-8 place-items-center rounded-full border border-weight-border bg-weight-wash text-weight shadow-sm sm:size-9">
+                      <Scale className="size-4" />
+                    </span>
                   </div>
-                  <div className="min-w-0"><div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1"><p className="text-sm font-semibold tabular">{fmtFechaCorta(registro.fecha)}</p><DeltaTag delta={registro.delta} /></div><div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground"><span>{relativo(registro.fecha, hoyISO)} · dato real</span>{registro.grasaPct != null && <Chip tone="body">{fmtNum(registro.grasaPct, 1)}% grasa</Chip>}</div></div>
-                  <div className="flex items-center gap-1.5"><span className="rounded-lg bg-weight-wash px-2.5 py-2 font-display text-lg font-bold tabular text-weight sm:px-3 sm:text-xl">{fmtPeso(registro.peso)}<span className="ml-0.5 text-[0.65rem] font-normal text-muted-foreground">kg</span></span>{confirmBorrar === registro.fecha ? <div className="flex items-center gap-1"><Button variant="destructive" size="sm" className="h-8 gap-1 px-2 text-xs" onClick={() => borrarPesaje(registro.fecha)}><AlertTriangle className="size-3" /> Borrar</Button><Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={() => setConfirmBorrar(null)}>No</Button></div> : <><Button variant="ghost" size="icon" className="size-8 text-muted-foreground" onClick={() => abrir("peso", registro.fecha)} aria-label={`Editar pesaje del ${fmtFechaCorta(registro.fecha)}`}><Pencil className="size-3.5" /></Button><Button variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-destructive" onClick={() => setConfirmBorrar(registro.fecha)} aria-label={`Eliminar pesaje del ${fmtFechaCorta(registro.fecha)}`}><Trash2 className="size-3.5" /></Button></>}</div>
+                  <div className="min-w-0">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <p className="truncate text-sm font-semibold tabular">{fmtFechaCorta(registro.fecha)}</p>
+                      <DeltaTag delta={registro.delta} />
+                    </div>
+                    <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                      <span className="truncate">{relativo(registro.fecha, hoyISO)}</span>
+                      <span>dato real</span>
+                      {registro.grasaPct != null && <Chip tone="body">{fmtNum(registro.grasaPct, 1)}% grasa</Chip>}
+                    </div>
+                  </div>
+                  <div className="flex min-w-[6.8rem] items-center justify-end gap-1 sm:min-w-[9.5rem]">
+                    <div className="mr-0.5 text-right">
+                      <p className="font-display text-xl font-bold leading-none tabular text-weight sm:text-2xl">{fmtPeso(registro.peso)}</p>
+                      <p className="mt-0.5 text-[0.65rem] text-muted-foreground">kg</p>
+                    </div>
+                    {confirmBorrar === registro.fecha ? <div className="flex items-center gap-1"><Button variant="destructive" size="sm" className="h-8 gap-1 rounded-lg px-2 text-xs" onClick={() => borrarPesaje(registro.fecha)}><AlertTriangle className="size-3" /> Borrar</Button><Button variant="ghost" size="sm" className="h-8 rounded-lg px-2 text-xs" onClick={() => setConfirmBorrar(null)}>No</Button></div> : <div className="flex items-center gap-0.5 opacity-80 transition-opacity group-hover:opacity-100"><Button variant="ghost" size="icon" className="size-8 rounded-lg text-muted-foreground hover:text-weight" onClick={() => abrir("peso", registro.fecha)} aria-label={`Editar pesaje del ${fmtFechaCorta(registro.fecha)}`}><Pencil className="size-3.5" /></Button><Button variant="ghost" size="icon" className="size-8 rounded-lg text-muted-foreground hover:text-destructive" onClick={() => setConfirmBorrar(registro.fecha)} aria-label={`Eliminar pesaje del ${fmtFechaCorta(registro.fecha)}`}><Trash2 className="size-3.5" /></Button></div>}
+                  </div>
                 </div>
               ))}
               </div>
@@ -340,6 +365,15 @@ function DeltaTag({ delta }: { delta: number | null }) {
   const cero = Math.abs(delta) < 0.05;
   const baja = delta < 0;
   return <span className={cn("inline-flex items-center gap-0.5 rounded-full px-2 py-1 text-xs font-semibold tabular", cero ? "bg-secondary text-muted-foreground" : baja ? "bg-weight-wash text-weight" : "bg-energy-wash text-energy")}>{cero ? <Minus className="size-3" /> : baja ? <ArrowDownRight className="size-3" /> : <ArrowUpRight className="size-3" />}{cero ? "0" : fmtSigno(delta, 1)} kg</span>;
+}
+
+function HistorialPill({ label, value, tone = "text-foreground" }: { label: string; value: string; tone?: string }) {
+  return (
+    <div className="min-w-0 rounded-lg px-3 py-2">
+      <p className="truncate text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{label}</p>
+      <p className={cn("mt-1 font-display text-lg font-bold leading-none tabular", tone)}>{value}</p>
+    </div>
+  );
 }
 
 function RangoGrasa({ valor, rango }: { valor: number; rango: { min: number; max: number; atleta: number } }) {

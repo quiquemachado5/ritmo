@@ -33,6 +33,7 @@ export default function HoyPage() {
   const hoyISO = hoy();
 
   const r = React.useMemo(() => resumen(estado), [estado]);
+  const habitosActivos = React.useMemo(() => habitosModelo(estado.perfil), [estado.perfil]);
   const diaHoy = dia(hoyISO);
 
   if (cargando) return <CargandoHoy />;
@@ -58,7 +59,6 @@ export default function HoyPage() {
     proteinaGkg: estado.perfil.proteinaObjetivo,
   });
 
-  const habitosActivos = React.useMemo(() => habitosModelo(estado.perfil), [estado.perfil]);
   const habitosHechos = habitosActivos.filter((h) => diaHoy.habitos?.[h.clave]).length;
   const tendKg = r.prediccion.modelo?.kgSemana ?? r.tendencia?.kgSemana ?? null;
   const necesitaRevision = new Date().getHours() >= 18 && habitosHechos === 0;

@@ -23,11 +23,10 @@ function etiquetaDia(c: Celda): string {
 }
 
 const NIVEL_COLOR = [
-  "bg-destructive/18",
-  "bg-energy/25",
-  "bg-warning/35",
-  "bg-habit/45",
-  "bg-primary/80",
+  "bg-destructive/30",
+  "bg-energy/35",
+  "bg-warning/45",
+  "bg-primary/45",
   "bg-primary",
 ];
 

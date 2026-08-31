@@ -208,6 +208,12 @@ describe("Energía de un día", () => {
     // balance ni la recalibración configurada por la persona.
     casi(perfilPersonal.consumidas, 1450);
 
+    const seisDeSeis = M.energiaDia(
+      { habitos: { comida: true, cena: true, noAlcohol: true, deporte: true, beberAgua: true, dormirBien: true } },
+      { kcalObjetivo: 2000, tdeeBase: 3200, habitosActivos: ["comida", "cena", "noAlcohol", "deporte", "beberAgua", "dormirBien"] },
+    );
+    expect(seisDeSeis.deficit).toBeLessThanOrEqual(1100);
+
     const mixto = M.energiaDia({ kcalConsumidas: 1500, habitos: { deporte: true } }, { tdeeBase: 2400 });
     igual(mixto.consumidasEstimadas, false);
     igual(mixto.quemadasEstimadas, true);
