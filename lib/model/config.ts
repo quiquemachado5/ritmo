@@ -19,10 +19,20 @@ export const HABITOS: DefHabito[] = [
 
 export const TOTAL_HABITOS = HABITOS.length;
 
-/** Hábitos visibles de una persona; los base siguen siendo los del modelo. */
+/** Todos los hábitos que una persona puede gestionar. */
 export function habitosUsuario(perfil?: Pick<Perfil, "habitosPersonalizados"> | null): DefHabito[] {
   const extras = (perfil?.habitosPersonalizados || []).filter((h) => h && h.clave && h.etiqueta && !HABITOS.some((base) => base.clave === h.clave));
   return [...HABITOS, ...extras];
+}
+
+/** Hábitos que participan en constancia, balance y recalibración de peso. */
+export function habitosModelo(perfil?: Pick<Perfil, "habitosPersonalizados" | "habitosDesactivados"> | null): DefHabito[] {
+  const desactivados = new Set(perfil?.habitosDesactivados || []);
+  return habitosUsuario(perfil).filter((h) => !desactivados.has(h.clave));
+}
+
+export function totalHabitosPerfil(perfil?: Pick<Perfil, "habitosPersonalizados" | "habitosDesactivados"> | null) {
+  return Math.max(1, habitosModelo(perfil).length);
 }
 
 export const PERFIL_DEFECTO: Perfil = {

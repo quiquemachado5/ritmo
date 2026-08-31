@@ -78,8 +78,10 @@ export interface Perfil {
   imputarActiva?: boolean;
   imputarDesde?: string;
   imputarSuperavitKcal?: number;
-  /** Seguimiento adicional: no altera las seis señales energéticas base. */
+  /** Hábitos configurables por persona; los activos alimentan el modelo. */
   habitosPersonalizados?: HabitoPersonalizado[];
+  /** Claves que se conservan en el historial pero se excluyen del modelo. */
+  habitosDesactivados?: string[];
   onboardingCompleto?: boolean;
 }
 

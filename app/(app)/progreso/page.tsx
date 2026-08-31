@@ -7,6 +7,7 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Minus,
+  Pencil,
   Scale,
   Trash2,
   TrendingDown,
@@ -202,7 +203,7 @@ export default function ProgresoPage() {
                   <div className="mt-5 border-t border-body-border pt-4 text-xs leading-relaxed text-muted-foreground">
                     Una medición nueva recalibra el modelo. Esta cifra orienta: no sustituye a la báscula.
                   </div>
-                  {r.prediccion.disponible && <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4"><PredCell etiqueta="Mañana" iv={r.prediccion.manana} base={r.peso.estimadoHoy} /><PredCell etiqueta="1 semana" iv={r.prediccion.semana} base={r.peso.estimadoHoy} /><PredCell etiqueta="15 días" iv={r.prediccion.quincena} base={r.peso.estimadoHoy} /><PredCell etiqueta="1 mes" iv={r.prediccion.mes} base={r.peso.estimadoHoy} /></div>}
+                  {r.prediccion.disponible && <div className="mt-4 flex snap-x snap-mandatory gap-2 overflow-x-auto pr-0 [scrollbar-width:none] sm:grid sm:grid-cols-4 sm:overflow-visible"><PredCell etiqueta="Mañana" iv={r.prediccion.manana} base={r.peso.estimadoHoy} /><PredCell etiqueta="3 días" iv={r.prediccion.tresDias} base={r.peso.estimadoHoy} /><PredCell etiqueta="1 semana" iv={r.prediccion.semana} base={r.peso.estimadoHoy} /><PredCell etiqueta="1 mes" iv={r.prediccion.mes} base={r.peso.estimadoHoy} /></div>}
                 </div>
               </div>
             </Card>
@@ -301,19 +302,13 @@ export default function ProgresoPage() {
               </div>
               <div className="max-h-[30rem] overflow-y-auto px-4 py-1 sm:px-6">
               {[...historial].reverse().map((registro, index, registros) => (
-                <div key={registro.fecha} className="relative grid grid-cols-[1.1rem_minmax(0,1fr)] gap-3 py-4 first:pt-5 last:pb-5">
-                  <div className="relative flex justify-center pt-1.5">
+                <div key={registro.fecha} className="relative grid grid-cols-[.8rem_minmax(0,1fr)_auto] items-center gap-2.5 py-3 first:pt-4 last:pb-4 sm:gap-3">
+                  <div className="relative flex self-stretch justify-center pt-2">
                     <span className="z-10 size-3 rounded-full border-2 border-card bg-weight shadow-[0_0_0_1px_var(--weight-border)]" />
-                    {index < registros.length - 1 && <span className="absolute bottom-[-1.25rem] top-4 w-px bg-weight-border" />}
+                    {index < registros.length - 1 && <span className="absolute bottom-[-.75rem] top-4 w-px bg-weight-border" />}
                   </div>
-                  <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0"><p className="text-sm font-semibold tabular">{fmtFechaCorta(registro.fecha)}</p><p className="mt-0.5 text-xs text-muted-foreground">{relativo(registro.fecha, hoyISO)} · dato real</p>{registro.grasaPct != null && <Chip tone="body" className="mt-2">{fmtNum(registro.grasaPct, 1)}% grasa corporal</Chip>}</div>
-                    <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                      <DeltaTag delta={registro.delta} />
-                      <span className="rounded-xl bg-weight-wash px-3 py-2 font-display text-xl font-bold tabular text-weight">{fmtPeso(registro.peso)}<span className="ml-0.5 text-xs font-normal text-muted-foreground">kg</span></span>
-                      {confirmBorrar === registro.fecha ? <div className="flex items-center gap-1"><Button variant="destructive" size="sm" className="h-9 gap-1 px-2 text-xs" onClick={() => borrarPesaje(registro.fecha)}><AlertTriangle className="size-3" /> Borrar</Button><Button variant="ghost" size="sm" className="h-9 px-2 text-xs" onClick={() => setConfirmBorrar(null)}>No</Button></div> : <Button variant="ghost" size="icon" className="size-9 text-muted-foreground hover:text-destructive" onClick={() => setConfirmBorrar(registro.fecha)} aria-label={`Eliminar pesaje del ${fmtFechaCorta(registro.fecha)}`}><Trash2 className="size-4" /></Button>}
-                    </div>
-                  </div>
+                  <div className="min-w-0"><div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1"><p className="text-sm font-semibold tabular">{fmtFechaCorta(registro.fecha)}</p><DeltaTag delta={registro.delta} /></div><div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground"><span>{relativo(registro.fecha, hoyISO)} · dato real</span>{registro.grasaPct != null && <Chip tone="body">{fmtNum(registro.grasaPct, 1)}% grasa</Chip>}</div></div>
+                  <div className="flex items-center gap-1.5"><span className="rounded-lg bg-weight-wash px-2.5 py-2 font-display text-lg font-bold tabular text-weight sm:px-3 sm:text-xl">{fmtPeso(registro.peso)}<span className="ml-0.5 text-[0.65rem] font-normal text-muted-foreground">kg</span></span>{confirmBorrar === registro.fecha ? <div className="flex items-center gap-1"><Button variant="destructive" size="sm" className="h-8 gap-1 px-2 text-xs" onClick={() => borrarPesaje(registro.fecha)}><AlertTriangle className="size-3" /> Borrar</Button><Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={() => setConfirmBorrar(null)}>No</Button></div> : <><Button variant="ghost" size="icon" className="size-8 text-muted-foreground" onClick={() => abrir("peso", registro.fecha)} aria-label={`Editar pesaje del ${fmtFechaCorta(registro.fecha)}`}><Pencil className="size-3.5" /></Button><Button variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-destructive" onClick={() => setConfirmBorrar(registro.fecha)} aria-label={`Eliminar pesaje del ${fmtFechaCorta(registro.fecha)}`}><Trash2 className="size-3.5" /></Button></>}</div>
                 </div>
               ))}
               </div>
@@ -328,7 +323,7 @@ export default function ProgresoPage() {
 function PredCell({ etiqueta, iv, base }: { etiqueta: string; iv: { peso: number; minimo: number; maximo: number } | null; base?: number | null }) {
   const delta = iv && base != null ? iv.peso - base : null;
   const baja = delta != null && delta <= 0;
-  return <div className="rounded-xl border border-body-border bg-card/75 p-3 text-center sm:p-4">
+  return <div className="w-[calc(100%-2.5rem)] shrink-0 snap-start rounded-xl border border-body-border bg-card/75 p-3 text-center sm:w-auto sm:p-4">
     <p className="text-xs font-semibold text-muted-foreground">{etiqueta}</p>
     <p className="mt-3 font-display text-2xl font-bold leading-none tabular text-body">{iv ? fmtPeso(iv.peso) : "—"}<span className="ml-1 text-xs font-medium text-muted-foreground">kg</span></p>
     {iv && <><p className={cn("mt-2 text-xs font-semibold tabular", baja ? "text-weight" : "text-energy")}>{delta != null ? fmtSigno(delta, 1) : "—"} kg</p><p className="mt-1 text-[0.7rem] tabular text-muted-foreground">{fmtPeso(iv.minimo)}–{fmtPeso(iv.maximo)}</p></>}

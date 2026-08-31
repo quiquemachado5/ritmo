@@ -70,6 +70,7 @@ export function Ring({
   stroke = 12,
   colorVar = "--weight",
   trackVar = "--secondary",
+  segments,
   children,
   className,
   ariaLabel,
@@ -80,6 +81,7 @@ export function Ring({
   stroke?: number;
   colorVar?: string;
   trackVar?: string;
+  segments?: Array<{ value: number; max: number; colorVar: string }>;
   children?: React.ReactNode;
   className?: string;
   ariaLabel?: string;
@@ -100,7 +102,15 @@ export function Ring({
     >
       <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={`var(${trackVar})`} strokeWidth={stroke} />
-        <circle
+        {segments?.length ? (() => {
+          let offset = 0;
+          return segments.map((segment, index) => {
+            const length = Math.max(0, Math.min(c, c * Math.min(1, segment.value / Math.max(1, segment.max)) - 2));
+            const circle = <circle key={segment.colorVar + index} cx={size / 2} cy={size / 2} r={r} fill="none" stroke={`var(${segment.colorVar})`} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={`${length} ${c - length}`} strokeDashoffset={-offset} className="transition-[stroke-dasharray,stroke-dashoffset] duration-700 ease-out" />;
+            offset += length + 2;
+            return circle;
+          });
+        })() : <circle
           cx={size / 2}
           cy={size / 2}
           r={r}
@@ -110,7 +120,7 @@ export function Ring({
           strokeLinecap="round"
           strokeDasharray={`${dash} ${c - dash}`}
           className="transition-[stroke-dasharray] duration-700 ease-out"
-        />
+        />}
       </svg>
       <div className="absolute inset-0 grid place-items-center text-center">{children}</div>
     </div>

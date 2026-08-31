@@ -500,17 +500,23 @@ export function mejorRacha(
 export function estimarKcalConsumidas(
   habitos: Habitos | undefined,
   kcalObjetivo = 1350,
+  habitosActivos?: string[],
 ): { kcal: number; plan: string; estimado: true } {
   const h = habitos || {};
   const objetivo = num(kcalObjetivo) === null ? 1350 : kcalObjetivo;
-  const cumplidos = Object.values(h).filter((valor) => valor === true).length;
+  const usaPerfil = Boolean(habitosActivos?.length);
+  const claves = usaPerfil ? habitosActivos! : Object.keys(h);
+  const total = usaPerfil ? claves.length : TOTAL_HABITOS;
+  const cumplidos = claves.filter((clave) => h[clave] === true).length;
   // Los seis hábitos describen el nivel de control del día. El objetivo ya
   // representa la ingesta de un día perfecto; cada hábito ausente desplaza la
   // estimación de forma gradual hacia mantenimiento/superávit, nunca convierte
   // un registro incompleto en un déficit artificial.
-  const ajustePorHabitoFaltante = [0, 850, 650, 450, 300, 150, 0][Math.min(6, cumplidos)] ?? 0;
+  const ajustePorHabitoFaltante = usaPerfil
+    ? Math.round(850 * (1 - Math.min(1, cumplidos / total)) ** 1.15)
+    : ([0, 850, 650, 450, 300, 150, 0][Math.min(6, cumplidos)] ?? 0);
   const kcal = objetivo + ajustePorHabitoFaltante;
-  const plan = `${cumplidos}/6 hábitos`;
+  const plan = `${cumplidos}/${total} hábitos`;
   return { kcal, plan, estimado: true };
 }
 
@@ -530,6 +536,7 @@ export interface OpcionesEnergia {
   kcalObjetivo?: number;
   tdeeBase?: number;
   imputacion?: { activa: boolean; desde: string; superavitKcal: number } | null;
+  habitosActivos?: string[];
 }
 
 /** Energía resuelta de un día: valores explícitos si existen; si no, estimación. */
@@ -537,12 +544,15 @@ export function energiaDia(
   dia: { fecha?: string; habitos?: Habitos; peso?: number; kcalConsumidas?: number; kcalQuemadas?: number; comidas?: Array<{ tipo?: string }> },
   opciones: OpcionesEnergia = {},
 ): EnergiaDia {
-  const { kcalObjetivo = 1350, tdeeBase = 2450, imputacion = null } = opciones;
+  const { kcalObjetivo = 1350, tdeeBase = 2450, imputacion = null, habitosActivos } = opciones;
   const d = dia || {};
 
   const inExplicito = num(d.kcalConsumidas);
   const outExplicito = num(d.kcalQuemadas);
-  const sinHabitosMarcados = !Object.values(d.habitos || {}).some((valor) => valor === true);
+  const clavesHabitos = habitosActivos?.length ? habitosActivos : undefined;
+  const sinHabitosMarcados = clavesHabitos
+    ? !clavesHabitos.some((clave) => d.habitos?.[clave] === true)
+    : !Object.values(d.habitos || {}).some((valor) => valor === true);
   // Si faltan registros de comida, la suma guardada es solo un mínimo. No se
   // bloquea el día: los hábitos completan la estimación energética.
   const ingestaIncompleta = Boolean(d.comidas?.length) && !d.comidas!.some((comida) => comida.tipo === "cena");
@@ -595,7 +605,7 @@ export function energiaDia(
     };
   }
 
-  const estimacionIngesta = estimarKcalConsumidas(d.habitos, kcalObjetivo);
+  const estimacionIngesta = estimarKcalConsumidas(d.habitos, kcalObjetivo, clavesHabitos);
   const inn =
     inExplicito !== null && !ingestaIncompleta
       ? { kcal: inExplicito, estimado: false as const }

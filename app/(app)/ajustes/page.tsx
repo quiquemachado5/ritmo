@@ -20,7 +20,7 @@ import { cn, uid } from "@/lib/utils";
 import type { Objetivo, Sexo } from "@/lib/model/types";
 import { guardarModoViaje, useModoViaje } from "@/lib/travel-mode";
 import { analizarImportacion, type ArchivoRitmo, type ResumenImportacion } from "@/lib/store/import";
-import { HABITOS, habitosUsuario } from "@/lib/model/config";
+import { HABITOS, habitosModelo, habitosUsuario } from "@/lib/model/config";
 
 type Densidad = "compacta" | "espaciosa";
 
@@ -78,6 +78,18 @@ export default function AjustesPage() {
   async function quitarHabitoPersonal(clave: string) {
     const siguiente = (form.habitosPersonalizados || []).filter((h) => h.clave !== clave);
     set("habitosPersonalizados", siguiente as never); await actualizarPerfil({ habitosPersonalizados: siguiente });
+  }
+
+  async function alternarHabitoModelo(clave: string) {
+    const actuales = new Set(form.habitosDesactivados || []);
+    if (!actuales.has(clave) && habitosModelo(form).length <= 1) {
+      toast.error("Mantén al menos un hábito activo para que RITMO pueda interpretar tus días.");
+      return;
+    }
+    actuales.has(clave) ? actuales.delete(clave) : actuales.add(clave);
+    const habitosDesactivados = [...actuales];
+    set("habitosDesactivados", habitosDesactivados as never);
+    await actualizarPerfil({ habitosDesactivados });
   }
 
   if (cargando) return <div className="flex flex-col gap-6"><Skeleton className="h-8 w-40" /><Skeleton className="h-64 w-full rounded-xl" /></div>;
@@ -296,8 +308,8 @@ export default function AjustesPage() {
       <section>
         <SectionLabel>Hábitos personales</SectionLabel>
         <SettingsCard className="gap-4">
-          <SettingsSubhead title="Tu seguimiento extra" description="Los seis hábitos de RITMO siguen siendo los que alimentan el modelo; estos aparecen en tu día y no cambian el déficit o superávit." />
-          <div className="flex flex-wrap gap-2">{habitosUsuario(form).filter((h) => !HABITOS.some((base) => base.clave === h.clave)).map((h) => <span key={h.clave} className="inline-flex h-9 items-center gap-1 rounded-xl bg-secondary pl-3 pr-1 text-xs font-medium"><span>{h.etiqueta}</span><button type="button" onClick={() => void quitarHabitoPersonal(h.clave)} className="grid size-7 place-items-center rounded-lg text-muted-foreground hover:bg-card hover:text-destructive" aria-label={`Eliminar ${h.etiqueta}`}>×</button></span>)}</div>
+          <SettingsSubhead title="Qué cuenta en tu modelo" description={`Los ${habitosModelo(form).length} hábitos activos definen tu constancia, el balance estimado y cada recalibración del peso. Desactiva los que no quieras usar.`} />
+          <div className="grid gap-2 sm:grid-cols-2">{habitosUsuario(form).map((h) => { const activo = !(form.habitosDesactivados || []).includes(h.clave); const esBase = HABITOS.some((base) => base.clave === h.clave); return <div key={h.clave} className={cn("flex min-h-12 items-center gap-2 rounded-xl border px-3", activo ? "border-primary/25 bg-primary/5" : "border-border bg-secondary/30 text-muted-foreground")}><button type="button" onClick={() => void alternarHabitoModelo(h.clave)} className="min-w-0 flex-1 text-left text-sm font-medium" aria-pressed={activo}>{h.etiqueta}<span className="mt-0.5 block text-[0.68rem] font-normal text-muted-foreground">{activo ? "Activo en el modelo" : "No cuenta en el modelo"}</span></button><Switch checked={activo} onCheckedChange={() => void alternarHabitoModelo(h.clave)} aria-label={`${activo ? "Desactivar" : "Activar"} ${h.etiqueta}`} />{!esBase && <button type="button" onClick={() => void quitarHabitoPersonal(h.clave)} className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-card hover:text-destructive" aria-label={`Eliminar ${h.etiqueta}`}>×</button>}</div>; })}</div>
           <div className="flex flex-col gap-2 sm:flex-row"><Input value={nuevoHabito} onChange={(e) => setNuevoHabito(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void anadirHabitoPersonal(); } }} placeholder="Ej. Caminar 8.000 pasos" maxLength={28} className="h-11 rounded-xl" /><Button type="button" onClick={() => void anadirHabitoPersonal()} variant="secondary" className="h-11 shrink-0 rounded-xl">Añadir hábito</Button></div>
         </SettingsCard>
       </section>

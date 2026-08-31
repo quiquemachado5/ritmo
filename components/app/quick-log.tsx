@@ -26,7 +26,7 @@ import {
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { useIsDesktop } from "@/hooks/use-media-query";
 import { useRitmo } from "@/lib/store/provider";
-import { habitosUsuario } from "@/lib/model/config";
+import { habitosModelo } from "@/lib/model/config";
 import { comidasFrecuentes } from "@/lib/model/analytics";
 import { analizarComida } from "@/lib/nutrition/client";
 import type { AnalisisNutricional } from "@/lib/nutrition/types";
@@ -316,7 +316,7 @@ function PanelComida({ fecha, onDone, comidaEdit }: { fecha: string; onDone: () 
 function PanelHabitos({ fecha }: { fecha: string }) {
   const { dia, alternarHabito, estado } = useRitmo();
   const habitos = dia(fecha).habitos || {};
-  const lista = habitosUsuario(estado.perfil);
+  const lista = habitosModelo(estado.perfil);
 
   return (
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">

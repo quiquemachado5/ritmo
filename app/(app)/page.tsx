@@ -7,7 +7,7 @@ import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
 import { resumen, adherenciaPorHabito, patronesHabitos, recordsPersonales, resumenPorMes } from "@/lib/model/analytics";
 import { macrosObjetivo } from "@/lib/model/metrics";
-import { HABITOS } from "@/lib/model/config";
+import { HABITOS, habitosModelo } from "@/lib/model/config";
 import { hoy, sumarDias } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,7 +58,8 @@ export default function HoyPage() {
     proteinaGkg: estado.perfil.proteinaObjetivo,
   });
 
-  const habitosHechos = HABITOS.filter((h) => diaHoy.habitos?.[h.clave]).length;
+  const habitosActivos = React.useMemo(() => habitosModelo(estado.perfil), [estado.perfil]);
+  const habitosHechos = habitosActivos.filter((h) => diaHoy.habitos?.[h.clave]).length;
   const tendKg = r.prediccion.modelo?.kgSemana ?? r.tendencia?.kgSemana ?? null;
   const necesitaRevision = new Date().getHours() >= 18 && habitosHechos === 0;
 
@@ -86,23 +87,22 @@ export default function HoyPage() {
         <SectionLabel action={<Link href="/nutricion" className="text-xs font-medium text-primary hover:underline">Ver nutrición</Link>}>
           Energía de hoy
         </SectionLabel>
-        <Card className="p-5">
-          <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center sm:gap-7">
-            <Ring value={consumidas} max={objetivoKcal} colorVar="--energy" size={140} stroke={13} ariaLabel={`Energía de hoy: ${fmtKcal(consumidas)} de ${fmtKcal(objetivoKcal)} kcal`}>
+        <Card className="p-4 sm:p-5">
+          <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] items-center gap-3 sm:flex sm:gap-7">
+            <Ring value={consumidas} max={objetivoKcal} colorVar="--energy" segments={[{ value: macros.p, max: objMacros.proteinas, colorVar: "--weight" }, { value: macros.c, max: objMacros.carbohidratos, colorVar: "--habit" }, { value: macros.g, max: objMacros.grasas, colorVar: "--energy" }]} size={116} stroke={11} className="sm:[width:140px] sm:[height:140px]" ariaLabel={`Energía de hoy: ${fmtKcal(consumidas)} de ${fmtKcal(objetivoKcal)} kcal`}>
               <div><span className="block font-display text-3xl font-bold leading-none tabular">{fmtKcal(Math.abs(restanteKcal))}</span><span className="text-xs text-muted-foreground">{restanteKcal >= 0 ? "kcal restantes" : "kcal de más"}</span></div>
             </Ring>
-            <div className="grid w-full flex-1 gap-3">
+            <div className="grid w-full flex-1 gap-2 sm:gap-3">
               <div className="flex justify-between text-sm"><span className="text-muted-foreground"><span className="font-semibold tabular text-foreground">{fmtKcal(consumidas)}</span> de {fmtKcal(objetivoKcal)} kcal</span></div>
-              <MacroBar label="Proteínas" value={macros.p} max={objMacros.proteinas} colorVar="--weight" />
-              <MacroBar label="Carbohidratos" value={macros.c} max={objMacros.carbohidratos} colorVar="--habit" />
-              <MacroBar label="Grasas" value={macros.g} max={objMacros.grasas} colorVar="--energy" />
+              <div className="grid grid-cols-3 gap-1.5 text-center text-[0.68rem] sm:hidden"><span className="rounded-lg bg-weight-wash py-1 font-semibold text-weight">P {Math.round(macros.p)}g</span><span className="rounded-lg bg-habit-wash py-1 font-semibold text-habit-ink">C {Math.round(macros.c)}g</span><span className="rounded-lg bg-energy-wash py-1 font-semibold text-energy-ink">G {Math.round(macros.g)}g</span></div>
+              <div className="hidden gap-3 sm:grid"><MacroBar label="Proteínas" value={macros.p} max={objMacros.proteinas} colorVar="--weight" /><MacroBar label="Carbohidratos" value={macros.c} max={objMacros.carbohidratos} colorVar="--habit" /><MacroBar label="Grasas" value={macros.g} max={objMacros.grasas} colorVar="--energy" /></div>
             </div>
           </div>
 
           {/* Balance del día — basado en hábitos */}
           {(() => {
             const marcados = habitosHechos;
-            const total = HABITOS.length;
+            const total = habitosActivos.length;
             const pct = total > 0 ? marcados / total : 0;
             const tonos = pct >= 0.83
               ? { text: "text-primary", border: "border-primary/20", bg: "bg-primary/5", bar: "bg-primary" }
@@ -120,7 +120,7 @@ export default function HoyPage() {
                   : "Aún no has cumplido ningún hábito";
             const kcalWarning = restanteKcal < 0 && habitosHechos >= 4;
             return (
-              <div className={cn("mt-4 flex flex-col gap-2 rounded-xl border px-4 py-3", tonos.border, tonos.bg)}>
+              <div className={cn("mt-3 flex flex-col gap-2 rounded-xl border px-3 py-2.5 sm:mt-4 sm:px-4 sm:py-3", tonos.border, tonos.bg)}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <Target className={cn("size-5", tonos.text)} />
@@ -472,7 +472,7 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
 
   return (
     <section>
-      <SectionLabel action={<div className="flex items-center gap-1.5"><MonthlyShare meses={meses} estado={estado} /><span className="hidden sm:block"><WeeklyShare adherencia={adh} comidas={estaSemana.comidas} dias={estaSemana.diasConDatos} titulo={v.titulo} /></span></div>}>Esta semana</SectionLabel>
+      <SectionLabel action={<MonthlyShare meses={meses} estado={estado} />}>Esta semana</SectionLabel>
       <Card className="flex flex-col gap-0 overflow-hidden p-0">
         <div className="p-5 sm:p-7">
           <div className="flex items-start justify-between gap-4">

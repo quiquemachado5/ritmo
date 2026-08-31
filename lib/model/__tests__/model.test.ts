@@ -200,6 +200,14 @@ describe("Energía de un día", () => {
     const conSeisHabitos = M.estimarKcalConsumidas({ comida: true, cena: true, noAlcohol: true, deporte: true, beberAgua: true, dormirBien: true }, 2000);
     expect(conUnHabito.kcal).toBeGreaterThan(conSeisHabitos.kcal);
 
+    const perfilPersonal = M.energiaDia(
+      { habitos: { comida: true, cena: true } },
+      { kcalObjetivo: 2000, habitosActivos: ["comida"] },
+    );
+    // Los hábitos no activos se conservan en el histórico, pero no cambian el
+    // balance ni la recalibración configurada por la persona.
+    casi(perfilPersonal.consumidas, 2000);
+
     const mixto = M.energiaDia({ kcalConsumidas: 1500, habitos: { deporte: true } }, { tdeeBase: 2400 });
     igual(mixto.consumidasEstimadas, false);
     igual(mixto.quemadasEstimadas, true);

@@ -7,7 +7,7 @@
 
 import * as M from "./metrics";
 import { diaAbsoluto, diasEntre, hoy, sumarDias } from "./dates";
-import { TOTAL_HABITOS } from "./config";
+import { habitosModelo, totalHabitosPerfil } from "./config";
 import type {
   Comida,
   Composicion,
@@ -90,6 +90,7 @@ export function energiaDe(estado: Estado, fecha: string): EnergiaDia {
       kcalObjetivo: perfil.kcalObjetivo,
       tdeeBase: tdeeVigente(estado),
       imputacion: reglaImputacion(estado),
+      habitosActivos: habitosModelo(perfil).map((h) => h.clave),
     },
   );
 }
@@ -258,7 +259,7 @@ export function tdeeDesdeHistorial(estado: Estado, ventanaDias = 60): TdeeHistor
   const perfil = estado.perfil || ({} as Estado["perfil"]);
   const consumos = enRango.map((d) => {
     const explicito = M.num(d.kcalConsumidas);
-    return explicito !== null ? explicito : M.estimarKcalConsumidas(d.habitos, perfil.kcalObjetivo).kcal;
+    return explicito !== null ? explicito : M.estimarKcalConsumidas(d.habitos, perfil.kcalObjetivo, habitosModelo(perfil).map((h) => h.clave)).kcal;
   });
   const media = consumos.reduce((a, b) => a + b, 0) / consumos.length;
 
@@ -302,9 +303,10 @@ export function balanceMedioPonderado(estado: Estado, ventanaDias = 21): number 
     const dia = estado.dias[fecha];
     const energia = energiaDe(estado, fecha);
     if (energia.sinRegistro && !energia.imputado) continue;
-    const habitos = Object.values(dia?.habitos || {}).filter(Boolean).length;
+    const activos = habitosModelo(estado.perfil).map((h) => h.clave);
+    const habitos = activos.filter((clave) => dia?.habitos?.[clave] === true).length;
     const tieneKcal = M.num(dia?.kcalConsumidas) !== null;
-    const peso = energia.imputado ? 0.18 : tieneKcal && !energia.ingestaIncompleta ? 1 : energia.ingestaIncompleta ? 0.62 : 0.35 + (habitos / TOTAL_HABITOS) * 0.45;
+    const peso = energia.imputado ? 0.18 : tieneKcal && !energia.ingestaIncompleta ? 1 : energia.ingestaIncompleta ? 0.62 : 0.35 + (habitos / totalHabitosPerfil(estado.perfil)) * 0.45;
     total += energia.balance * peso;
     pesoTotal += peso;
   }
@@ -364,6 +366,7 @@ export interface ProyeccionConfiable {
   balanceDiario?: number;
   hoy?: PesoIntervalo;
   manana?: PesoIntervalo;
+  tresDias?: PesoIntervalo;
   semana?: PesoIntervalo;
   quincena?: PesoIntervalo;
   mes?: PesoIntervalo;
@@ -429,9 +432,10 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
   // Cualquier hábito marcado ya valida el día; cuantos más haya, más sólida es
   // la señal que el modelo usa para su estimación energética.
   let diasConHabitos = 0;
+  const clavesActivas = new Set(habitosModelo(estado.perfil).map((h) => h.clave));
   for (let f = sumarDias(hoy(), -27); f <= hoy(); f = sumarDias(f, 1)) {
     const d = (estado.dias || {})[f];
-    if (d && Object.values(d.habitos || {}).some((v) => v === true)) diasConHabitos++;
+    if (d && Object.entries(d.habitos || {}).some(([clave, v]) => clavesActivas.has(clave) && v === true)) diasConHabitos++;
   }
   const adherenciaHabitos = diasConHabitos / 28;
 
@@ -469,6 +473,7 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
     balanceDiario,
     hoy: pesoConIntervalo(pesoHoy, errorKcalCuadrado),
     manana: pronosticar(1),
+    tresDias: pronosticar(3),
     semana: pronosticar(7),
     quincena: pronosticar(14),
     mes: pronosticar(30),
@@ -478,9 +483,10 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
 
 /** Días con su recuento de hábitos cumplidos, para rachas. */
 function diasConCumplidos(estado: Estado): Array<{ fecha: string; cumplidos: number }> {
+  const activos = new Set(habitosModelo(estado.perfil).map((h) => h.clave));
   return diasOrdenados(estado).map((d) => ({
     fecha: d.fecha,
-    cumplidos: Object.values(d.habitos || {}).filter((v) => v === true).length,
+    cumplidos: Object.entries(d.habitos || {}).filter(([clave, v]) => activos.has(clave) && v === true).length,
   }));
 }
 
@@ -491,7 +497,7 @@ export function adherencia(estado: Estado, ventanaDias = 30): number {
   let suma = 0;
   for (let i = 0; i < ventanaDias; i++) {
     const fecha = sumarDias(desde, i);
-    suma += M.adherenciaDia((mapa[fecha] || {}).habitos, TOTAL_HABITOS);
+    suma += M.adherenciaDia((mapa[fecha] || {}).habitos, totalHabitosPerfil(estado.perfil));
   }
   return Math.round((suma / ventanaDias) * 10) / 10;
 }
@@ -518,7 +524,7 @@ export function adherenciaPorHabito<T extends { clave: string }>(
 /** Relación descriptiva (no causal) entre hábitos y balance reciente. */
 export function patronesHabitos(estado: Estado, ventanaDias = 28): Array<{ clave: string; con: number; sin: number; diferencia: number; muestra: number }> {
   const salida: Array<{ clave: string; con: number; sin: number; diferencia: number; muestra: number }> = [];
-  for (const clave of ["comida", "cena", "noAlcohol", "deporte", "beberAgua", "dormirBien"]) {
+  for (const { clave } of habitosModelo(estado.perfil)) {
     const con: number[] = []; const sin: number[] = [];
     for (let i = 0; i < ventanaDias; i++) {
       const fecha = sumarDias(hoy(), -i); const d = estado.dias[fecha];
@@ -620,6 +626,7 @@ export function resumen(estado: Estado) {
     prediccion: {
       hoy: proyeccionConfiable.hoy ?? null,
       manana: proyeccionConfiable.manana ?? null,
+      tresDias: proyeccionConfiable.tresDias ?? null,
       semana: proyeccionConfiable.semana ?? null,
       quincena: proyeccionConfiable.quincena ?? null,
       mes: proyeccionConfiable.mes ?? null,
@@ -647,9 +654,9 @@ export function resumen(estado: Estado) {
     habitos: {
       adherencia30: adherencia(estado, 30),
       adherencia7: adherencia(estado, 7),
-      // La racha exige los 6 hábitos del día: es el compromiso, no una media.
-      rachaActual: M.rachaActual(cumplidos, TOTAL_HABITOS, hoy()),
-      mejorRacha: M.mejorRacha(cumplidos, TOTAL_HABITOS),
+      // La racha exige todos los hábitos activos configurados por la persona.
+      rachaActual: M.rachaActual(cumplidos, totalHabitosPerfil(perfil), hoy()),
+      mejorRacha: M.mejorRacha(cumplidos, totalHabitosPerfil(perfil)),
       diasRegistrados: cumplidos.length,
     },
   };
@@ -713,7 +720,7 @@ export function resumenPorMes(estado: Estado): ResumenMes[] {
   const salida: ResumenMes[] = [];
   for (const [clave, { dias: ds, pesos: ps }] of porMes) {
     const conReg = ds.filter((d) => Object.values(d.habitos || {}).some(Boolean) || (d.comidas?.length ?? 0) > 0 || d.peso != null);
-    const adhSuma = ds.reduce((a, d) => a + M.adherenciaDia(d.habitos, TOTAL_HABITOS), 0);
+    const adhSuma = ds.reduce((a, d) => a + M.adherenciaDia(d.habitos, totalHabitosPerfil(estado.perfil)), 0);
     const [y, m] = clave.split("-");
     const cambioPeso = ps.length >= 2 ? Math.round((ps[ps.length - 1].peso - ps[0].peso) * 10) / 10 : null;
     salida.push({
