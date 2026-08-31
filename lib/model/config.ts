@@ -4,15 +4,9 @@
    estimación de energía y el histórico sembrado dependen de ellas.
    ========================================================================= */
 
-import type { Perfil } from "./types";
+import type { HabitoPersonalizado, Perfil } from "./types";
 
-export interface DefHabito {
-  clave: string;
-  etiqueta: string;
-  codigo: string;
-  /** Nombre de icono lucide (se resuelve en la UI). */
-  icono: string;
-}
+export interface DefHabito extends HabitoPersonalizado {}
 
 export const HABITOS: DefHabito[] = [
   { clave: "comida", etiqueta: "Comida", codigo: "COM", icono: "UtensilsCrossed" },
@@ -24,6 +18,12 @@ export const HABITOS: DefHabito[] = [
 ];
 
 export const TOTAL_HABITOS = HABITOS.length;
+
+/** Hábitos visibles de una persona; los base siguen siendo los del modelo. */
+export function habitosUsuario(perfil?: Pick<Perfil, "habitosPersonalizados"> | null): DefHabito[] {
+  const extras = (perfil?.habitosPersonalizados || []).filter((h) => h && h.clave && h.etiqueta && !HABITOS.some((base) => base.clave === h.clave));
+  return [...HABITOS, ...extras];
+}
 
 export const PERFIL_DEFECTO: Perfil = {
   alturaCm: 175,

@@ -6,7 +6,7 @@ import { AlertTriangle, Beef, ChevronLeft, ChevronRight, Pencil, Plus, RotateCcw
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
 import { macrosObjetivo } from "@/lib/model/metrics";
-import { resumen } from "@/lib/model/analytics";
+import { resumen, serieBalance } from "@/lib/model/analytics";
 import { hoy, sumarDias, diasEntre } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,9 @@ import type { TipoComida } from "@/lib/model/types";
 // La biblioteca es rica pero secundaria al registro del día; cargarla al final
 // evita bloquear la primera interacción en móvil.
 const MealLibrary = dynamic(() => import("@/components/app/meal-library").then((m) => m.MealLibrary), {
+  loading: () => <Skeleton className="h-56 w-full rounded-xl" />,
+});
+const BalanceChart = dynamic(() => import("@/components/app/charts").then((m) => m.BalanceChart), {
   loading: () => <Skeleton className="h-56 w-full rounded-xl" />,
 });
 
@@ -66,6 +69,7 @@ export default function NutricionPage() {
   );
   const obj = macrosObjetivo({ kcal: objetivoKcal, pesoKg: r.peso.estimadoHoy, objetivo: estado.perfil.objetivo, proteinaGkg: estado.perfil.proteinaObjetivo });
   const esFuturo = diasEntre(fecha, hoy()) < 0;
+  const balanceReciente = React.useMemo(() => serieBalance(estado, 30).map((b) => ({ label: fmtFechaLarga(b.fecha), balance: b.balance, imputado: b.imputado })), [estado]);
 
   // Coach de proteína: la proteína protege la masa muscular en déficit. Avisa
   // cuando el día ya lleva calorías pero la proteína va por detrás de su ritmo,
@@ -126,6 +130,11 @@ export default function NutricionPage() {
           </div>
         </div>
       </Card>
+
+      <section>
+        <div className="mb-3"><h2 className="font-display text-xl font-bold">Balance calórico</h2><p className="mt-1 text-sm text-muted-foreground">Tu energía reciente. Los días con poca información se muestran como estimaciones.</p></div>
+        <Card className="p-4 sm:p-5"><BalanceChart data={balanceReciente} /><p className="mt-3 text-xs text-muted-foreground">Verde = déficit · terracota = superávit · translúcido = día sin hábitos. Un día sin hábitos nunca se interpreta como déficit.</p></Card>
+      </section>
 
       {/* Comidas por tipo */}
       {comidas.length === 0 ? (

@@ -9,6 +9,13 @@ export type TipoComida = "desayuno" | "comida" | "cena" | "snack";
 
 export type Habitos = Record<string, boolean>;
 
+export interface HabitoPersonalizado {
+  clave: string;
+  etiqueta: string;
+  codigo: string;
+  icono: string;
+}
+
 /** Una entrada de nutrición en lenguaje natural, ya resuelta a macros. */
 export interface Comida {
   id: string;
@@ -71,6 +78,8 @@ export interface Perfil {
   imputarActiva?: boolean;
   imputarDesde?: string;
   imputarSuperavitKcal?: number;
+  /** Seguimiento adicional: no altera las seis señales energéticas base. */
+  habitosPersonalizados?: HabitoPersonalizado[];
   onboardingCompleto?: boolean;
 }
 

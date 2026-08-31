@@ -26,7 +26,7 @@ import {
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { useIsDesktop } from "@/hooks/use-media-query";
 import { useRitmo } from "@/lib/store/provider";
-import { HABITOS } from "@/lib/model/config";
+import { habitosUsuario } from "@/lib/model/config";
 import { comidasFrecuentes } from "@/lib/model/analytics";
 import { analizarComida } from "@/lib/nutrition/client";
 import type { AnalisisNutricional } from "@/lib/nutrition/types";
@@ -44,6 +44,15 @@ const TABS: { id: QuickTab; label: string; icon: typeof Scale }[] = [
 export function QuickLog() {
   const { abierto, cerrar, tab, setTab, fecha, comidaEdit } = useQuickLog();
   const isDesktop = useIsDesktop();
+  const [tecladoAbierto, setTecladoAbierto] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!abierto || isDesktop || !window.visualViewport) { setTecladoAbierto(false); return; }
+    const viewport = window.visualViewport;
+    const actualizar = () => setTecladoAbierto(window.innerHeight - viewport.height > 140);
+    actualizar(); viewport.addEventListener("resize", actualizar); viewport.addEventListener("scroll", actualizar);
+    return () => { viewport.removeEventListener("resize", actualizar); viewport.removeEventListener("scroll", actualizar); };
+  }, [abierto, isDesktop]);
 
   const pestanas = (
     <div className="flex gap-1.5">
@@ -96,13 +105,13 @@ export function QuickLog() {
 
   return (
     <Drawer open={abierto} onOpenChange={(o) => !o && cerrar()}>
-      <DrawerContent className="max-h-[92vh]">
+      <DrawerContent className={cn("max-h-[92dvh]", tecladoAbierto && "max-h-[100dvh] rounded-none")}>
         <DrawerHeader className="shrink-0 text-left">
           <DrawerTitle className="font-display text-xl">{titulo}</DrawerTitle>
           <DrawerDescription>{sub}</DrawerDescription>
           <div className="pt-3">{pestanas}</div>
         </DrawerHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-8">{panel}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-[calc(2rem+env(safe-area-inset-bottom))]">{panel}</div>
       </DrawerContent>
     </Drawer>
   );
@@ -305,12 +314,13 @@ function PanelComida({ fecha, onDone, comidaEdit }: { fecha: string; onDone: () 
 /* -------------------------------------------------------------- HÁBITOS */
 
 function PanelHabitos({ fecha }: { fecha: string }) {
-  const { dia, alternarHabito } = useRitmo();
+  const { dia, alternarHabito, estado } = useRitmo();
   const habitos = dia(fecha).habitos || {};
+  const lista = habitosUsuario(estado.perfil);
 
   return (
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-      {HABITOS.map((h) => {
+      {lista.map((h) => {
         const hecho = habitos[h.clave] === true;
         return (
           <button

@@ -16,10 +16,11 @@ import { SectionLabel } from "@/components/app/primitives";
 import { limpiarDatosLocales, marcarExportacion, diasDesdeExportacion, leerBackupLocal } from "@/lib/backup";
 import { limpiarPreferenciasComidas } from "@/lib/meal-prefs";
 import { fmtFechaCorta } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import { cn, uid } from "@/lib/utils";
 import type { Objetivo, Sexo } from "@/lib/model/types";
 import { guardarModoViaje, useModoViaje } from "@/lib/travel-mode";
 import { analizarImportacion, type ArchivoRitmo, type ResumenImportacion } from "@/lib/store/import";
+import { HABITOS, habitosUsuario } from "@/lib/model/config";
 
 type Densidad = "compacta" | "espaciosa";
 
@@ -43,6 +44,7 @@ export default function AjustesPage() {
   const [nombreViaje, setNombreViaje] = React.useState(viaje.etiqueta);
   const [finViaje, setFinViaje] = React.useState(viaje.hasta ?? "");
   const [confirmarBorrado, setConfirmarBorrado] = React.useState(false);
+  const [nuevoHabito, setNuevoHabito] = React.useState("");
   React.useEffect(() => {
     setDiasSinExportar(diasDesdeExportacion());
     const b = leerBackupLocal();
@@ -62,6 +64,20 @@ export default function AjustesPage() {
     setDensidad(proxima);
     window.localStorage.setItem("ritmo:densidad", proxima);
     document.documentElement.dataset.densidad = proxima;
+  }
+
+  async function anadirHabitoPersonal() {
+    const etiqueta = nuevoHabito.trim().slice(0, 28);
+    if (!etiqueta) return;
+    const actuales = form.habitosPersonalizados || [];
+    if (actuales.some((h) => h.etiqueta.toLocaleLowerCase("es-ES") === etiqueta.toLocaleLowerCase("es-ES"))) { toast.error("Ese hábito ya existe."); return; }
+    const siguiente = [...actuales, { clave: `personal-${uid()}`, etiqueta, codigo: etiqueta.slice(0, 3).toUpperCase(), icono: "Check" }];
+    set("habitosPersonalizados", siguiente as never); setNuevoHabito(""); await actualizarPerfil({ habitosPersonalizados: siguiente });
+  }
+
+  async function quitarHabitoPersonal(clave: string) {
+    const siguiente = (form.habitosPersonalizados || []).filter((h) => h.clave !== clave);
+    set("habitosPersonalizados", siguiente as never); await actualizarPerfil({ habitosPersonalizados: siguiente });
   }
 
   if (cargando) return <div className="flex flex-col gap-6"><Skeleton className="h-8 w-40" /><Skeleton className="h-64 w-full rounded-xl" /></div>;
@@ -274,6 +290,15 @@ export default function AjustesPage() {
           <div className="border-t border-border pt-4"><Row label="Contar días totalmente vacíos">
             <Switch checked={form.imputarActiva !== false} onCheckedChange={(v) => { set("imputarActiva", v); actualizarPerfil({ imputarActiva: v }); }} aria-label="Contar días totalmente vacíos" />
           </Row><p className="mt-1.5 text-xs text-muted-foreground">También aplica ese superávit a huecos sin ningún dato desde la fecha de corte configurada.</p></div>
+        </SettingsCard>
+      </section>
+
+      <section>
+        <SectionLabel>Hábitos personales</SectionLabel>
+        <SettingsCard className="gap-4">
+          <SettingsSubhead title="Tu seguimiento extra" description="Los seis hábitos de RITMO siguen siendo los que alimentan el modelo; estos aparecen en tu día y no cambian el déficit o superávit." />
+          <div className="flex flex-wrap gap-2">{habitosUsuario(form).filter((h) => !HABITOS.some((base) => base.clave === h.clave)).map((h) => <span key={h.clave} className="inline-flex h-9 items-center gap-1 rounded-xl bg-secondary pl-3 pr-1 text-xs font-medium"><span>{h.etiqueta}</span><button type="button" onClick={() => void quitarHabitoPersonal(h.clave)} className="grid size-7 place-items-center rounded-lg text-muted-foreground hover:bg-card hover:text-destructive" aria-label={`Eliminar ${h.etiqueta}`}>×</button></span>)}</div>
+          <div className="flex flex-col gap-2 sm:flex-row"><Input value={nuevoHabito} onChange={(e) => setNuevoHabito(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void anadirHabitoPersonal(); } }} placeholder="Ej. Caminar 8.000 pasos" maxLength={28} className="h-11 rounded-xl" /><Button type="button" onClick={() => void anadirHabitoPersonal()} variant="secondary" className="h-11 shrink-0 rounded-xl">Añadir hábito</Button></div>
         </SettingsCard>
       </section>
 

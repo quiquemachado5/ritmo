@@ -90,5 +90,11 @@ export async function analizarConGemini(texto: string): Promise<AnalisisNutricio
     { kcal: 0, proteinas: 0, carbohidratos: 0, grasas: 0 },
   );
 
+  // Una respuesta que no cuadra energía con macros suele indicar que Gemini ha
+  // omitido aceite/una ración o ha devuelto texto parcialmente estructurado.
+  // En vez de guardar una cifra caprichosa, activamos el respaldo verificable.
+  const kcalDeMacros = total.proteinas * 4 + total.carbohidratos * 4 + total.grasas * 9;
+  if (kcalDeMacros > 80 && Math.abs(total.kcal - kcalDeMacros) / kcalDeMacros > 0.28) return null;
+
   return { resumen: texto, items, ...total, fuente: "gemini" };
 }
