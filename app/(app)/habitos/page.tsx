@@ -19,13 +19,13 @@ const Heatmap = dynamic(() => import("@/components/app/heatmap").then((m) => m.H
 });
 
 const ESCALA_CUMPLIMIENTO = [
-  { superficie: "border-destructive/25 bg-destructive/5", barra: "bg-destructive", tinta: "text-destructive" },
+  { superficie: "border-destructive/30 bg-destructive/5", barra: "bg-destructive", tinta: "text-destructive" },
   { superficie: "border-energy-border bg-energy-wash", barra: "bg-energy", tinta: "text-energy" },
-  { superficie: "border-energy-border bg-energy-wash", barra: "bg-energy", tinta: "text-energy" },
+  { superficie: "border-warning-border bg-warning-wash", barra: "bg-warning", tinta: "text-warning-ink" },
   { superficie: "border-habit-border bg-habit-wash", barra: "bg-habit", tinta: "text-habit-ink" },
-  { superficie: "border-habit-border bg-habit-wash", barra: "bg-habit", tinta: "text-habit-ink" },
-  { superficie: "border-weight-border bg-weight-wash", barra: "bg-primary", tinta: "text-weight" },
-  { superficie: "border-weight-border bg-weight-wash", barra: "bg-primary", tinta: "text-weight" },
+  { superficie: "border-primary/20 bg-primary/8", barra: "bg-primary/55", tinta: "text-weight" },
+  { superficie: "border-primary/35 bg-primary/12", barra: "bg-primary/75", tinta: "text-weight" },
+  { superficie: "border-primary/45 bg-weight-wash", barra: "bg-primary", tinta: "text-primary" },
 ] as const;
 
 function tonoCumplimiento(valor: number, maximo: number) {
@@ -148,7 +148,7 @@ export default function HabitosPage() {
         <SectionLabel>Constancia</SectionLabel>
         <Card className="overflow-hidden p-0">
           <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_18rem]">
-            <div className="p-4 sm:p-5">
+            <div className="min-w-0 p-4 sm:p-5">
               <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
                 <div>
                   <h2 className="font-display text-xl font-bold">Histórico de hábitos</h2>
@@ -157,7 +157,7 @@ export default function HabitosPage() {
                 <div className="flex items-center gap-1.5 rounded-full bg-secondary px-2 py-1 text-[0.68rem] text-muted-foreground">
                   <span className="size-2 rounded-full bg-destructive" />
                   <span>0</span>
-                  <span className="h-px w-8 bg-gradient-to-r from-destructive via-warning to-primary" />
+                  <span className="h-1.5 w-12 rounded-full bg-gradient-to-r from-destructive via-warning to-primary" />
                   <span className="size-2 rounded-full bg-primary" />
                   <span>{activos.length}/{activos.length}</span>
                 </div>

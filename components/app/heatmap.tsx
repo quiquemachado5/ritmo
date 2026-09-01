@@ -3,7 +3,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { habitosModelo } from "@/lib/model/config";
-import { nivelDia } from "@/lib/model/metrics";
 import { DIAS_SEMANA, diaSemanaLunes, hoy, sumarDias } from "@/lib/model/dates";
 import { capitalizar, fmtFechaLarga } from "@/lib/format";
 import type { Estado } from "@/lib/model/types";
@@ -23,12 +22,20 @@ function etiquetaDia(c: Celda): string {
 }
 
 const NIVEL_COLOR = [
-  "bg-destructive/30",
-  "bg-energy/35",
-  "bg-warning/45",
-  "bg-primary/45",
-  "bg-primary",
+  "bg-destructive/35 ring-1 ring-destructive/10",
+  "bg-energy/35 ring-1 ring-energy/10",
+  "bg-warning/42 ring-1 ring-warning/10",
+  "bg-habit/42 ring-1 ring-habit/10",
+  "bg-primary/38 ring-1 ring-primary/12",
+  "bg-primary/68 ring-1 ring-primary/18",
+  "bg-primary ring-1 ring-primary/30",
 ];
+
+function colorCumplimiento(cumplidos: number, total: number) {
+  const max = NIVEL_COLOR.length - 1;
+  const nivel = Math.round((cumplidos / Math.max(1, total)) * max);
+  return NIVEL_COLOR[Math.max(0, Math.min(max, nivel))];
+}
 
 /** Mapa de calor de constancia, estilo GitHub Contributions. */
 export function Heatmap({
@@ -76,7 +83,7 @@ export function Heatmap({
         const futuro = fecha > hoyISO;
         const habitosActivos = Object.fromEntries(activos.map((h) => [h.clave, dia?.habitos?.[h.clave] === true]));
         const hechos = activos.filter((h) => dia?.habitos?.[h.clave] === true).map((h) => h.etiqueta);
-        col.push({ fecha, nivel: nivelDia(habitosActivos, total), futuro, cumplidos: hechos.length, hechos, total });
+        col.push({ fecha, nivel: hechos.length, futuro, cumplidos: hechos.length, hechos, total });
         if (dow === 0) {
           const prev = etiquetasMes[etiquetasMes.length - 1];
           const label = new Intl.DateTimeFormat("es-ES", { month: "short" }).format(new Date(fecha));
@@ -98,9 +105,9 @@ export function Heatmap({
   return (
     <div
       ref={scroller}
-      className="overflow-x-auto pb-2 [scrollbar-color:var(--border)_transparent] [scrollbar-width:thin]"
+      className="max-w-full touch-pan-x overflow-x-auto overscroll-x-contain pb-2 [-webkit-overflow-scrolling:touch] [scrollbar-color:var(--border)_transparent] [scrollbar-width:thin]"
     >
-      <div className="inline-flex flex-col gap-2">
+      <div className="inline-flex min-w-max flex-col gap-2 pr-3">
         <div className="flex gap-1 text-xs text-muted-foreground">
           <div className="mr-2 w-9 shrink-0" />
           {columnas.map((_, i) => {
@@ -135,7 +142,7 @@ export function Heatmap({
                     onBlur={() => setActivo(null)}
                     className={cn(
                       "size-5 cursor-default rounded-[4px] outline-none transition-shadow sm:size-6",
-                      NIVEL_COLOR[cell.nivel],
+                      colorCumplimiento(cell.cumplidos, cell.total),
                       activo?.fecha === cell.fecha && "ring-2 ring-foreground/50",
                     )}
                   />
@@ -165,7 +172,7 @@ export function Heatmap({
         <div className="mt-2 flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
           <span>menos</span>
           {NIVEL_COLOR.map((c, i) => (
-            <span key={i} className={cn("size-4 rounded-[4px]", c)} />
+            <span key={i} className={cn("size-4 rounded-[4px]", c)} title={`${i}/${NIVEL_COLOR.length - 1}`} />
           ))}
           <span>más</span>
         </div>
