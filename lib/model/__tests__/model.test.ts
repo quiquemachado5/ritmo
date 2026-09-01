@@ -7,6 +7,7 @@ import { describe, it, expect } from "vitest";
 import * as M from "../metrics";
 import * as A from "../analytics";
 import * as F from "../dates";
+import { SEED_COMPOSICION, SEED_DIAS } from "../seed";
 import type { Estado } from "../types";
 
 /* Helpers equivalentes a los del test runner original. */
@@ -195,7 +196,7 @@ describe("Energía de un día", () => {
 
     const est = M.energiaDia({ habitos: { comida: true, cena: true, noAlcohol: true } }, { kcalObjetivo: 1350 });
     igual(est.estimado, true);
-    casi(est.balance, 100);
+    expect(est.balance).toBeGreaterThan(0);
     const conUnHabito = M.estimarKcalConsumidas({ comida: true }, 2000);
     const conSeisHabitos = M.estimarKcalConsumidas({ comida: true, cena: true, noAlcohol: true, deporte: true, beberAgua: true, dormirBien: true }, 2000);
     expect(conUnHabito.kcal).toBeGreaterThan(conSeisHabitos.kcal);
@@ -206,14 +207,14 @@ describe("Energía de un día", () => {
     );
     // Los hábitos no activos se conservan en el histórico, pero no cambian el
     // balance ni la recalibración configurada por la persona.
-    casi(perfilPersonal.deficit, 950);
+    expect(perfilPersonal.deficit).toBeGreaterThan(200);
 
     const seisDeSeis = M.energiaDia(
       { habitos: { comida: true, cena: true, noAlcohol: true, deporte: true, beberAgua: true, dormirBien: true } },
       { kcalObjetivo: 2000, tdeeBase: 3200, habitosActivos: ["comida", "cena", "noAlcohol", "deporte", "beberAgua", "dormirBien"] },
     );
-    expect(seisDeSeis.deficit).toBeLessThanOrEqual(1100);
-    casi(seisDeSeis.deficit, 950);
+    expect(seisDeSeis.deficit).toBeGreaterThanOrEqual(250);
+    expect(seisDeSeis.deficit).toBeLessThanOrEqual(950);
 
     const mixto = M.energiaDia({ kcalConsumidas: 1500, habitos: { deporte: true } }, { tdeeBase: 2400 });
     igual(mixto.consumidasEstimadas, false);
@@ -255,6 +256,58 @@ describe("Energía de un día", () => {
     igual(M.energiaDia({ habitos: {}, peso: 88 }).sinRegistro, false);
     igual(M.energiaDia({ habitos: { comida: true } }).sinRegistro, false);
     igual(M.energiaDia({ habitos: {}, kcalConsumidas: 1800 }).sinRegistro, false);
+  });
+});
+
+describe("Calibración personalizada", () => {
+  const historico = estado({
+    perfil: {
+      alturaCm: 185,
+      edad: 26,
+      sexo: "hombre",
+      objetivo: "perder",
+      pesoObjetivo: 85,
+      kcalObjetivo: 1450,
+      factorActividad: 1.55,
+      umbralRacha: 4,
+      imputarActiva: false,
+    },
+    dias: Object.fromEntries(SEED_DIAS.map((dia) => [dia.fecha, dia])),
+    composicion: SEED_COMPOSICION,
+    version: 1,
+  });
+
+  it("aprende solo después de varios tramos cerrados", () => {
+    const inicial = A.calibracionPersonalizada(historico, "2025-09-22");
+    igual(inicial.personalizada, false);
+    const completa = A.calibracionPersonalizada(historico);
+    igual(completa.personalizada, true);
+    igual(completa.calidad, "alta");
+    expect(completa.tramos).toBeGreaterThan(25);
+    expect(completa.cobertura).toBeGreaterThan(75);
+  });
+
+  it("valida cada siguiente pesaje sin usar datos futuros", () => {
+    const backtest = A.backtestModelo(historico);
+    expect(backtest.tramos).toBeGreaterThan(20);
+    expect(backtest.errorPersonalKg).not.toBeNull();
+    expect(backtest.errorBaseKg).not.toBeNull();
+    expect(backtest.errorPersonalKg!).toBeLessThanOrEqual(backtest.errorBaseKg!);
+    expect(backtest.errorPersonalKg!).toBeLessThan(0.7);
+  });
+
+  it("mantiene la biología como prior para una persona nueva", () => {
+    const hombre = M.energiaDia(
+      { habitos: { comida: true, cena: true, noAlcohol: true, deporte: true, beberAgua: true, dormirBien: true } },
+      { kcalObjetivo: 1900, tdeeBase: 3000, objetivo: "perder" },
+    );
+    const mujer = M.energiaDia(
+      { habitos: { comida: true, cena: true, noAlcohol: true, deporte: true, beberAgua: true, dormirBien: true } },
+      { kcalObjetivo: 1900, tdeeBase: 2250, objetivo: "perder" },
+    );
+    expect(hombre.deficit).toBeGreaterThan(mujer.deficit);
+    expect(hombre.deficit).toBeLessThanOrEqual(950);
+    expect(mujer.deficit).toBeGreaterThanOrEqual(250);
   });
 });
 

@@ -136,7 +136,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Cabecera — móvil */}
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/85 px-4 backdrop-blur-md md:hidden">
+      <header className="sticky top-0 z-30 flex min-h-14 items-center justify-between border-b border-border bg-background/92 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-md md:hidden">
         <Link href="/" aria-label="RITMO — inicio">
           <RitmoLogo />
         </Link>
@@ -148,7 +148,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Contenido */}
       <div className="md:pl-64">
-        <main className="app-content mx-auto w-full max-w-6xl px-[clamp(1rem,3vw,2.75rem)] pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-5 md:pb-14 md:pt-9">
+        <main className="app-content mx-auto w-full max-w-[88rem] px-[clamp(1rem,3vw,3.5rem)] pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-5 md:pb-14 md:pt-9">
           <PageTransition>{children}</PageTransition>
           <footer className="mt-10 border-t border-border pt-4 text-center text-[0.68rem] text-muted-foreground/60 md:text-left">
             hecho por{" "}

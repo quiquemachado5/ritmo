@@ -17,4 +17,16 @@ describe("estimador offline de comidas detalladas", () => {
     const resultado = estimarOffline("100 g de garbanzos, 120 g de pechuga de pollo, 40 g de queso de cabra y 15 ml de AOVE con 8 g de mostaza antigua");
     expect(resultado.kcal).toBeGreaterThan(550);
   });
+
+  it("descompone una frase larga, cuenta dos cucharadas de AOVE y no duplica ensalada de lechuga", () => {
+    const resultado = estimarOffline(
+      "ensalada de lechuga con atun esparragos y un aliño de 1 cda de aove con 2 filetes de pollo a la plancha con especias y 1 cda de aove",
+    );
+
+    expect(resultado.items.filter((item) => item.nombre.startsWith("aove"))).toHaveLength(2);
+    expect(resultado.items.filter((item) => /ensalada|lechuga/.test(item.nombre))).toHaveLength(1);
+    expect(resultado.items.some((item) => item.nombre.startsWith("pollo") && item.nombre.includes("260 g"))).toBe(true);
+    expect(resultado.kcal).toBeGreaterThan(750);
+    expect(resultado.kcal).toBeLessThan(950);
+  });
 });

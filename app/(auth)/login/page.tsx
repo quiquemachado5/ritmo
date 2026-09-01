@@ -107,7 +107,7 @@ function LoginForm() {
       <div style={{ animation: `fadeScale 0.5s ${springBezier} forwards` }}>
         <div
           className="bg-background border border-border/50 rounded-2xl shadow-lg overflow-hidden"
-          style={{ animation: shaking ? `shake 0.5s cubic-bezier(0.36, 0, 0.66, -0.56)` : "none" }}
+          style={{ animation: shaking ? `shake 0.42s cubic-bezier(0.22, 1, 0.36, 1)` : "none" }}
         >
           <div className="h-0.5 bg-gradient-to-r from-primary via-primary/80 to-primary/60" />
 
@@ -135,19 +135,19 @@ function LoginForm() {
               <div style={stagger(1)}>
                 <Label htmlFor="email" className="text-sm font-semibold mb-1.5 block">Email</Label>
                 <div className="relative">
-                  <Mail className={`absolute left-3 top-3.5 size-4 transition-all duration-200 sm:top-2.5 ${
+                  <Mail className={`absolute left-3 top-3.5 size-4 transition-colors duration-200 sm:top-2.5 ${
                     focusedField === "email" ? "text-primary" : "text-muted-foreground"
-                  } ${validatedEmail && focusedField !== "email" ? "text-green-500" : ""}`} />
+                  } ${validatedEmail && focusedField !== "email" ? "text-weight" : ""}`} />
                   <Input
                     id="email" type="email" autoComplete="email" required
                     value={email} onChange={(e) => handleEmailChange(e.target.value)}
                     onFocus={() => setFocusedField("email")}
                     onBlur={() => setFocusedField(null)}
                     placeholder="tu@correo.com" disabled={cargando}
-                    className="h-12 rounded-lg border-2 pl-10 text-base transition-all focus:border-primary focus:ring-1 focus:ring-primary/20 sm:h-10 sm:pl-9 sm:text-sm"
+                    className="h-12 rounded-lg border-2 pl-10 text-base transition-[border-color,box-shadow] focus:border-primary focus:ring-1 focus:ring-primary/20 sm:h-10 sm:pl-9 sm:text-sm"
                   />
                   {validatedEmail && focusedField !== "email" && (
-                    <Check className="absolute right-3 top-3.5 size-4 text-green-500 sm:top-2.5"
+                    <Check className="absolute right-3 top-3.5 size-4 text-weight sm:top-2.5"
                       style={{ animation: `successPop 0.3s ${springBezier}` }} />
                   )}
                 </div>
@@ -156,7 +156,7 @@ function LoginForm() {
               <div style={stagger(2)}>
                 <Label htmlFor="password" className="text-sm font-semibold mb-1.5 block">Contraseña</Label>
                 <div className="relative">
-                  <Lock className={`absolute left-3 top-3.5 size-4 transition-all duration-200 sm:top-2.5 ${
+                  <Lock className={`absolute left-3 top-3.5 size-4 transition-colors duration-200 sm:top-2.5 ${
                     focusedField === "password" ? "text-primary" : "text-muted-foreground"
                   }`} />
                   <Input
@@ -165,13 +165,14 @@ function LoginForm() {
                     onFocus={() => setFocusedField("password")}
                     onBlur={() => setFocusedField(null)}
                     placeholder="••••••••" disabled={cargando}
-                    className="h-12 rounded-lg border-2 pl-10 pr-11 text-base transition-all focus:border-primary focus:ring-1 focus:ring-primary/20 sm:h-10 sm:pl-9 sm:pr-10 sm:text-sm"
+                    className="h-12 rounded-lg border-2 pl-10 pr-11 text-base transition-[border-color,box-shadow] focus:border-primary focus:ring-1 focus:ring-primary/20 sm:h-10 sm:pl-9 sm:pr-10 sm:text-sm"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={cargando}
-                    className="absolute right-3 top-3.5 text-muted-foreground transition-colors hover:text-primary sm:top-2.5"
+                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    className="absolute right-0 top-0 grid size-12 place-items-center text-muted-foreground transition-colors hover:text-primary sm:size-10"
                   >
                     {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
@@ -184,7 +185,7 @@ function LoginForm() {
                     type="checkbox" checked={recordarme}
                     onChange={(e) => setRecordarme(e.target.checked)}
                     disabled={cargando}
-                    className="size-4 rounded border-2 border-primary/30 accent-primary cursor-pointer transition-all group-hover:border-primary disabled:opacity-60"
+                    className="size-4 cursor-pointer rounded border-2 border-primary/30 accent-primary transition-colors group-hover:border-primary disabled:opacity-60"
                   />
                   <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">Recuérdame</span>
                 </label>
@@ -195,7 +196,7 @@ function LoginForm() {
 
               <ButtonRipple
                 type="submit" disabled={cargando}
-                className="h-12 w-full rounded-lg text-base font-semibold transition-all active:scale-[0.98] sm:h-10 sm:text-sm sm:active:scale-95"
+                className="h-12 w-full rounded-lg text-base font-semibold transition-[background-color,color,box-shadow,transform] active:scale-[0.98] sm:h-10 sm:text-sm sm:active:scale-95"
                 style={stagger(4)}
               >
                 {cargando ? (

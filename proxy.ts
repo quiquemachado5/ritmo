@@ -1,5 +1,4 @@
 import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
 /** Refresca la sesión de Supabase y protege las rutas privadas (Next 16 "proxy"). */
@@ -9,7 +8,9 @@ export async function proxy(request: NextRequest) {
   /* Security headers */
   response.headers.set('X-DNS-Prefetch-Control', 'on');
   response.headers.set('X-UA-Compatible', 'IE=edge');
-  response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
+  if (process.env.NODE_ENV === 'production') {
+    response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
+  }
 
   /* CORS para API */
   if (request.nextUrl.pathname.startsWith('/api/')) {

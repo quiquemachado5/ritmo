@@ -61,8 +61,8 @@ const DB: Alimento[] = [
   { claves: ["tortilla de patatas", "tortilla de patata"], kcal: 170, p: 6, c: 14, g: 10, porcion: 150, unidades: { porcion: 150, pincho: 120 } },
 
   /* --- Grasas --- */
-  { claves: ["aceite de sesamo", "aceite de sésamo"], kcal: 884, p: 0, c: 0, g: 100, porcion: 10, unidades: { cucharada: 10, cda: 10, chorro: 8, chorrito: 5 }, liquido: true },
-  { claves: ["aceite de oliva", "aove", "aceite"], kcal: 884, p: 0, c: 0, g: 100, porcion: 10, unidades: { cucharada: 10, cda: 10, chorro: 8, chorrito: 5 }, liquido: true },
+  { claves: ["aceite de sesamo", "aceite de sésamo"], kcal: 884, p: 0, c: 0, g: 100, porcion: 13.5, unidades: { cucharada: 13.5, cda: 13.5, chorro: 8, chorrito: 5 }, liquido: true },
+  { claves: ["aceite de oliva", "aove", "aceite"], kcal: 884, p: 0, c: 0, g: 100, porcion: 13.5, unidades: { cucharada: 13.5, cda: 13.5, chorro: 8, chorrito: 5 }, liquido: true },
   { claves: ["mantequilla"], kcal: 717, p: 0.9, c: 0.1, g: 81, porcion: 10, unidades: { cucharada: 12 } },
   { claves: ["aguacate"], kcal: 160, p: 2, c: 9, g: 15, porcion: 150 },
   { claves: ["almendras"], kcal: 579, p: 21, c: 22, g: 50, porcion: 30, unidades: { punado: 25, puñado: 25 } },
@@ -255,7 +255,15 @@ function localizar(texto: string): Coincidencia[] {
     }
   }
 
-  return encontradas.sort((a, b) => a.inicio - b.inicio);
+  const ordenadas = encontradas.sort((a, b) => a.inicio - b.inicio);
+  // "ensalada de lechuga" activa dos sinónimos del mismo alimento. Conservamos
+  // el término específico y evitamos duplicar toda la guarnición.
+  return ordenadas.filter((actual, indice) => {
+    const siguiente = ordenadas[indice + 1];
+    if (!siguiente || siguiente.alimento !== actual.alimento) return true;
+    const puente = texto.slice(actual.fin, siguiente.inicio).trim();
+    return puente !== "" && puente !== "de";
+  });
 }
 
 const SEPARADOR = /\s*(?:,|\by\b|\bcon\b|\bmas\b|\+|\n|;)\s*/;
@@ -292,6 +300,8 @@ export function estimarOffline(texto: string): AnalisisNutricional {
 
     items.push({
       nombre: `${limpio.slice(c.inicio, c.fin)} · ${Math.round(gramos)} g`,
+      cantidad: `${Math.round(gramos)} g`,
+      cantidadEstimada: !new RegExp(`${CANTIDAD}\\s*(?:kg|kilos?|g|gr|grs|gramos?|l|litros?|ml|cl|cucharadas?|cda|cucharaditas?|cdta|lonchas?|rebanadas?|filetes?|vasos?|tazas?|latas?|piezas?|unidades?)\\b`).test(contexto),
       kcal: Math.round(alimento.kcal * f),
       proteinas: Math.round(alimento.p * f),
       carbohidratos: Math.round(alimento.c * f),

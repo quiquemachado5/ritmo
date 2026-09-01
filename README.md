@@ -24,6 +24,14 @@ La app anterior (vanilla JS, en `legacy/composicion/`) tenía un modelo de cálc
 
 **El modelo es la joya:** no predice con `peso + kcal/7700` ingenuo. Usa la pendiente mediana de **Theil–Sen** (robusta al ruido de báscula), calibra el gasto con tu **TDEE observado** real, y abre un **intervalo de confianza** que crece cuanto más tiempo llevas sin pesarte. Se personaliza por usuario y se recalibra con cada registro nuevo.
 
+La predicción combina tres capas verificables:
+
+1. **Prior biológico:** Mifflin–St Jeor usa peso, altura, edad, sexo y actividad; el objetivo y las kcal configuradas determinan el balance de un día plenamente adherente.
+2. **Calibración personal:** cada tramo entre dos pesajes compara el cambio real con el esperado por los hábitos. Un ajuste ridge robusto aprende el sesgo y la respuesta individual, recortando saltos extremos de agua y glucógeno.
+3. **Validación walk-forward:** cada siguiente pesaje se evalúa usando únicamente tramos anteriores. La app muestra el error medio histórico y la mejora frente al prior sin personalizar, en lugar de prometer una precisión imposible.
+
+Los días con kcal completas prevalecen sobre cualquier estimación. Cero hábitos registrados sigue siendo un superávit conservador; los hábitos personalizados solo entran en el histórico desde su primera aparición.
+
 ---
 
 ## 2. Arranque rápido (modo demo)

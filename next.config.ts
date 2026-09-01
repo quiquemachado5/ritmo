@@ -17,6 +17,20 @@ const nextConfig: NextConfig = {
 
   /* Security headers */
   async headers() {
+    const desarrollo = process.env.NODE_ENV !== 'production';
+    const contentSecurityPolicy = [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "object-src 'none'",
+      "frame-ancestors 'self'",
+      "form-action 'self'",
+      "img-src 'self' data: blob:",
+      "font-src 'self' data:",
+      "style-src 'self' 'unsafe-inline'",
+      `script-src 'self' 'unsafe-inline'${desarrollo ? " 'unsafe-eval'" : ''}`,
+      `connect-src 'self' https://*.supabase.co wss://*.supabase.co${desarrollo ? ' ws:' : ''}`,
+      desarrollo ? '' : "upgrade-insecure-requests",
+    ].filter(Boolean).join('; ');
     return [
       {
         source: '/(.*)',
@@ -31,7 +45,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'X-XSS-Protection',
-            value: '1; mode=block',
+            value: '0',
           },
           {
             key: 'Referrer-Policy',
@@ -40,6 +54,18 @@ const nextConfig: NextConfig = {
           {
             key: 'Permissions-Policy',
             value: 'geolocation=(), microphone=(), camera=()',
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: contentSecurityPolicy,
+          },
+          {
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin',
+          },
+          {
+            key: 'Cross-Origin-Resource-Policy',
+            value: 'same-origin',
           },
         ],
       },

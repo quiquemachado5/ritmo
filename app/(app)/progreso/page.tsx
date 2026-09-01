@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
-import { energiaDe, pesajes as getPesajes, resumen, seriePesoDiaria } from "@/lib/model/analytics";
+import { curvaBalanceModelo, energiaDe, pesajes as getPesajes, resumen, seriePesoDiaria } from "@/lib/model/analytics";
 import { hoy, sumarDias } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,6 @@ import type { PuntoPeso } from "@/components/app/charts";
 import { Metric, SectionLabel, Chip, EmptyState } from "@/components/app/primitives";
 import { capitalizar, fmtPeso, fmtSigno, fmtNum, fmtFechaCorta, relativo } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { BALANCE_HABITOS_KCAL } from "@/lib/model/calibration";
 
 const WeightChart = dynamic(() => import("@/components/app/charts").then((m) => m.WeightChart), { loading: () => <Skeleton className="h-72 w-full rounded-xl" /> });
 const CompositionChart = dynamic(() => import("@/components/app/charts").then((m) => m.CompositionChart), { loading: () => <Skeleton className="h-64 w-full rounded-xl" /> });
@@ -50,6 +49,7 @@ export default function ProgresoPage() {
   const [rango, setRango] = React.useState<(typeof RANGOS)[number]["id"]>("1A");
   const [confirmBorrar, setConfirmBorrar] = React.useState<string | null>(null);
   const r = React.useMemo(() => resumen(estado), [estado]);
+  const curvaModelo = React.useMemo(() => curvaBalanceModelo(estado), [estado]);
   // Algunos historiales pueden ofrecer proyecciones futuras antes de tener un
   // intervalo calibrado para hoy. La UI no debe asumir que ese rango existe.
   const intervaloHoy = r.prediccion.hoy ?? null;
@@ -280,7 +280,7 @@ export default function ProgresoPage() {
 
           <section aria-labelledby="confianza-modelo">
             <details className="group overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-              <summary id="confianza-modelo" className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4"><span><span className="font-display text-lg font-bold">Confianza del modelo</span><span className="mt-0.5 block text-xs text-muted-foreground">Cómo ha tratado los últimos 14 días.</span></span><Chip tone={CALIDAD_TONE[r.prediccion.modelo?.calidad ?? "inicial"]}>{CALIDAD_LABEL[r.prediccion.modelo?.calidad ?? "inicial"]}</Chip></summary>
+              <summary id="confianza-modelo" className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 py-4"><span><span className="font-display text-lg font-bold">Confianza del modelo</span><span className="mt-0.5 block text-xs text-muted-foreground">Biología, histórico y calidad de los días que sostienen la estimación.</span></span><Chip tone={CALIDAD_TONE[r.prediccion.modelo?.calidad ?? "inicial"]}>{CALIDAD_LABEL[r.prediccion.modelo?.calidad ?? "inicial"]}</Chip></summary>
               <div className="grid divide-y divide-border sm:grid-cols-[minmax(0,1.15fr)_minmax(14rem,.85fr)] sm:divide-x sm:divide-y-0">
                 <div className="p-5 sm:p-6">
                   <p className="text-sm font-semibold">Días que sostienen la tendencia</p>
@@ -300,13 +300,18 @@ export default function ProgresoPage() {
                   </dl>
                 </div>
               </div>
-              <div className="border-t border-border bg-card px-5 py-4 sm:px-6">
-                <p className="text-xs leading-relaxed text-muted-foreground">Curva histórica usada por la predicción cuando el día depende de hábitos: 0/6 sube, 6/6 baja. Si registras kcal completas, ese dato manda.</p>
-                <div className="mt-3 grid grid-cols-7 gap-1.5">
-                  {BALANCE_HABITOS_KCAL.map((balance, i) => (
-                    <div key={i} className={cn("rounded-lg border px-1 py-2 text-center", balance > 0 ? "border-energy-border bg-energy-wash text-energy" : "border-weight-border bg-weight-wash text-weight")}>
-                      <p className="text-[0.6rem] font-semibold tabular">{i}/6</p>
-                      <p className="mt-1 text-[0.62rem] font-bold tabular">{fmtSigno(balance, 0)}</p>
+              <div className="border-t border-border bg-card px-5 py-5 sm:px-6">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <ModeloDato label="Calibración personal" value={r.prediccion.modelo?.personalizado ? `${r.prediccion.modelo.tramosCalibracion} tramos` : "En aprendizaje"} detail={r.prediccion.modelo?.personalizado ? `${r.prediccion.modelo.coberturaHistorica}% de cobertura histórica` : "Necesita al menos 4 pesajes"} />
+                  <ModeloDato label="Error al anticipar" value={r.prediccion.modelo?.errorHistoricoKg != null ? `±${fmtPeso(r.prediccion.modelo.errorHistoricoKg)} kg` : "—"} detail="media walk-forward, sin mirar el futuro" />
+                  <ModeloDato label="Mejora aprendida" value={r.prediccion.modelo?.mejoraHistoricaPct != null ? `${fmtSigno(r.prediccion.modelo.mejoraHistoricaPct, 0)}%` : "—"} detail="frente al prior sin personalizar" />
+                </div>
+                <p className="mt-5 text-xs leading-relaxed text-muted-foreground">El punto de partida usa sexo, edad, altura, actividad y objetivo. Después, cada pesaje cerrado corrige cómo respondes tú a los hábitos. Las kcal completas siempre tienen prioridad.</p>
+                <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:thin]" aria-label="Balance diario estimado según hábitos cumplidos">
+                  {curvaModelo.map(({ balance, cumplidos, total }) => (
+                    <div key={cumplidos} className={cn("min-w-16 flex-1 rounded-lg border px-1.5 py-2 text-center", balance > 0 ? "border-energy-border bg-energy-wash text-energy-ink" : "border-weight-border bg-weight-wash text-weight-ink")}>
+                      <p className="text-[0.65rem] font-semibold tabular">{cumplidos}/{total}</p>
+                      <p className="mt-1 text-[0.68rem] font-bold tabular">{fmtSigno(balance, 0)} kcal</p>
                     </div>
                   ))}
                 </div>
@@ -348,7 +353,7 @@ export default function ProgresoPage() {
             <SectionLabel action={<span className="text-xs text-muted-foreground tabular">{historial.length} registros</span>}><span id="historial">Historial de mediciones</span></SectionLabel>
             <Card className="overflow-hidden p-0">
               <div className="grid border-b border-border lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,.8fr)] lg:divide-x lg:divide-border">
-                <div className="relative overflow-hidden bg-[radial-gradient(circle_at_16%_10%,hsl(var(--weight)/.18),transparent_28%),linear-gradient(135deg,hsl(var(--weight-wash)),hsl(var(--card))_52%,hsl(var(--secondary)))] px-4 py-5 sm:px-6 sm:py-6">
+                <div className="trajectory-surface relative overflow-hidden px-4 py-5 sm:px-6 sm:py-6">
                   <div className="relative z-10 max-w-xl">
                     <p className="font-display text-2xl font-bold tracking-tight">Tu trayectoria real</p>
                     <p className="mt-1 text-sm leading-relaxed text-muted-foreground">Cada punto viene de una medición tuya. La escala inferior sitúa cada pesaje entre tu mínimo y máximo registrados.</p>
@@ -419,6 +424,10 @@ function PredCell({ etiqueta, iv, base }: { etiqueta: string; iv: { peso: number
 function ModeloFila({ cantidad, etiqueta, detalle, tone }: { cantidad: number; etiqueta: string; detalle: string; tone: "warning" | "energy" | "body" | "muted" }) {
   const color = tone === "warning" ? "bg-warning" : tone === "energy" ? "bg-energy" : tone === "body" ? "bg-body" : "bg-muted-foreground";
   return <div className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"><span className={cn("size-2 shrink-0 rounded-full", color)} /><span className="min-w-0 flex-1"><span className="font-medium text-foreground">{etiqueta}</span><span className="text-muted-foreground"> · {detalle}</span></span><span className="font-semibold tabular text-foreground">{cantidad}</span></div>;
+}
+
+function ModeloDato({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return <div className="rounded-xl bg-secondary/55 px-3.5 py-3"><p className="text-[0.68rem] font-semibold text-muted-foreground">{label}</p><p className="mt-1 font-display text-xl font-bold tabular text-foreground">{value}</p><p className="mt-1 text-[0.68rem] leading-snug text-muted-foreground">{detail}</p></div>;
 }
 
 function DeltaTag({ delta, compact = false }: { delta: number | null; compact?: boolean }) {
@@ -493,8 +502,8 @@ function PesajeTimelineRow({
           </div>
         ) : (
           <div className="flex items-center gap-0.5 rounded-lg bg-secondary/45 p-0.5 opacity-90 transition-opacity group-hover:opacity-100">
-            <Button variant="ghost" size="icon" className="size-7 rounded-md text-muted-foreground hover:bg-card hover:text-weight sm:size-8" onClick={onEditar} aria-label={`Editar pesaje del ${fmtFechaCorta(registro.fecha)}`}><Pencil className="size-3.5" /></Button>
-            <Button variant="ghost" size="icon" className="size-7 rounded-md text-muted-foreground hover:bg-card hover:text-destructive sm:size-8" onClick={onPedirBorrar} aria-label={`Eliminar pesaje del ${fmtFechaCorta(registro.fecha)}`}><Trash2 className="size-3.5" /></Button>
+            <Button variant="ghost" size="icon" className="size-11 rounded-md text-muted-foreground hover:bg-card hover:text-weight sm:size-8" onClick={onEditar} aria-label={`Editar pesaje del ${fmtFechaCorta(registro.fecha)}`}><Pencil className="size-3.5" /></Button>
+            <Button variant="ghost" size="icon" className="size-11 rounded-md text-muted-foreground hover:bg-card hover:text-destructive sm:size-8" onClick={onPedirBorrar} aria-label={`Eliminar pesaje del ${fmtFechaCorta(registro.fecha)}`}><Trash2 className="size-3.5" /></Button>
           </div>
         )}
       </div>

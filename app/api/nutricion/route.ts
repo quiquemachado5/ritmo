@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 import { estimarOffline } from "@/lib/nutrition/offline";
 import type { AnalisisNutricional } from "@/lib/nutrition/types";
 import { analizarConEdamam } from "@/lib/nutrition/edamam";
@@ -8,23 +9,31 @@ import { registrarDiagnostico } from "@/lib/observability";
 
 export const runtime = "nodejs";
 
-/* Simple rate limiting: max 30 requests per minute per IP */
-const rateLimitMap = new Map<string, number[]>();
+interface RateBucket { count: number; resetAt: number }
+const rateLimitMap = new Map<string, RateBucket>();
 const nutritionCache = new Map<string, { resultado: AnalisisNutricional; expira: number }>();
 const CACHE_MS = 10 * 60 * 1000;
+const MAX_CACHE = 200;
 
-function isRateLimited(ip: string): boolean {
+function isRateLimited(key: string, limite: number): boolean {
   const now = Date.now();
-  const timestamps = rateLimitMap.get(ip) || [];
-  const recentRequests = timestamps.filter((t) => now - t < 60000);
-
-  if (recentRequests.length >= 30) {
-    return true;
+  const actual = rateLimitMap.get(key);
+  if (!actual || actual.resetAt <= now) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + 60_000 });
+  } else {
+    actual.count++;
+    if (actual.count > limite) return true;
   }
-
-  recentRequests.push(now);
-  rateLimitMap.set(ip, recentRequests);
+  if (rateLimitMap.size > 2_000) {
+    for (const [bucketKey, bucket] of rateLimitMap) {
+      if (bucket.resetAt <= now) rateLimitMap.delete(bucketKey);
+    }
+  }
   return false;
+}
+
+function claveCache(userId: string, texto: string): string {
+  return createHash("sha256").update(userId).update("\0").update(texto).digest("hex");
 }
 
 export async function POST(request: Request) {
@@ -35,7 +44,7 @@ export async function POST(request: Request) {
       request.headers.get("x-real-ip") ||
       "unknown";
 
-    if (isRateLimited(ip)) {
+    if (isRateLimited(`ip:${ip}`, 60)) {
       return NextResponse.json(
         { error: "Demasiadas solicitudes. Intenta más tarde." },
         { status: 429 }
@@ -50,6 +59,18 @@ export async function POST(request: Request) {
 
     if (!user) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
+    if (isRateLimited(`user:${user.id}`, 30)) {
+      return NextResponse.json(
+        { error: "Has alcanzado el límite temporal de análisis. Prueba de nuevo en un minuto." },
+        { status: 429 },
+      );
+    }
+
+    const contentType = request.headers.get("content-type") || "";
+    if (!contentType.toLowerCase().includes("application/json")) {
+      return NextResponse.json({ error: "El contenido debe enviarse como JSON." }, { status: 415 });
     }
 
     /* Parse y validación */
@@ -71,16 +92,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "El texto no puede estar vacío" }, { status: 400 });
     }
 
-    if (texto.length > 600) {
+    if (texto.length > 2_500) {
       return NextResponse.json(
-        { error: "La descripción es demasiado larga (máximo 600 caracteres)" },
+        { error: "La descripción es demasiado larga (máximo 2.500 caracteres)" },
         { status: 400 }
       );
     }
 
     /* Análisis nutricional. Reutilizamos una estimación reciente de la misma
      * descripción para no quemar cuota gratuita de Gemini al recalcular. */
-    const cacheKey = texto.toLocaleLowerCase("es-ES").replace(/\s+/g, " ");
+    const normalizado = texto.toLocaleLowerCase("es-ES").replace(/\s+/g, " ");
+    const cacheKey = claveCache(user.id, normalizado);
     const guardado = nutritionCache.get(cacheKey);
     let resultado: AnalisisNutricional | null = guardado && guardado.expira > Date.now()
       ? structuredClone(guardado.resultado)
@@ -105,12 +127,17 @@ export async function POST(request: Request) {
       }
     }
 
-    /* Sanidad check: comida > 4000 kcal probablemente sea un error */
-    if (resultado && (resultado.kcal <= 0 || resultado.kcal > 4000)) {
+    /* Admite platos largos o registros de una comida compartida; un resultado
+     * fuera de este margen sí suele señalar una cantidad mal interpretada. */
+    if (resultado && (resultado.kcal <= 0 || resultado.kcal > 6_000)) {
       resultado = null;
     }
 
     if (resultado && resultado.fuente !== "offline") {
+      if (nutritionCache.size >= MAX_CACHE) {
+        const primera = nutritionCache.keys().next().value;
+        if (primera) nutritionCache.delete(primera);
+      }
       nutritionCache.set(cacheKey, { resultado: structuredClone(resultado), expira: Date.now() + CACHE_MS });
     }
 
@@ -121,7 +148,7 @@ export async function POST(request: Request) {
       resultado.aviso = "Estimación local aproximada. Puedes editar los valores.";
     } else {
       resultado.aviso = resultado.fuente === "gemini"
-        ? "Estimado con Gemini · comprueba la etiqueta o cantidades si las conoces."
+        ? `Gemini · confianza ${resultado.confianza ?? "media"}. Revisa solo las cantidades marcadas como estimadas.`
         : "Estimado · puedes editarlo";
     }
 

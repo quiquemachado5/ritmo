@@ -14,7 +14,6 @@ import {
 import { cn, uid } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -45,13 +44,29 @@ export function QuickLog() {
   const { abierto, cerrar, tab, setTab, fecha, comidaEdit } = useQuickLog();
   const isDesktop = useIsDesktop();
   const [tecladoAbierto, setTecladoAbierto] = React.useState(false);
+  const [viewportMovil, setViewportMovil] = React.useState<{ alto: number; insetInferior: number } | null>(null);
+  const alturaBase = React.useRef(0);
 
   React.useEffect(() => {
-    if (!abierto || isDesktop || !window.visualViewport) { setTecladoAbierto(false); return; }
+    if (!abierto || isDesktop || !window.visualViewport) return;
     const viewport = window.visualViewport;
-    const actualizar = () => setTecladoAbierto(window.innerHeight - viewport.height > 140);
-    actualizar(); viewport.addEventListener("resize", actualizar); viewport.addEventListener("scroll", actualizar);
-    return () => { viewport.removeEventListener("resize", actualizar); viewport.removeEventListener("scroll", actualizar); };
+    alturaBase.current = Math.max(window.innerHeight, viewport.height);
+    const actualizar = () => {
+      const reduccion = Math.max(0, alturaBase.current - viewport.height);
+      const insetInferior = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+      const abiertoAhora = Math.max(reduccion, insetInferior) > 140;
+      setTecladoAbierto(abiertoAhora);
+      setViewportMovil({ alto: Math.round(viewport.height), insetInferior: Math.round(insetInferior) });
+      if (!abiertoAhora) alturaBase.current = Math.max(alturaBase.current, window.innerHeight, viewport.height);
+    };
+    const frame = window.requestAnimationFrame(actualizar);
+    viewport.addEventListener("resize", actualizar);
+    viewport.addEventListener("scroll", actualizar);
+    return () => {
+      viewport.removeEventListener("resize", actualizar);
+      viewport.removeEventListener("scroll", actualizar);
+      window.cancelAnimationFrame(frame);
+    };
   }, [abierto, isDesktop]);
 
   const pestanas = (
@@ -61,7 +76,7 @@ export function QuickLog() {
           key={t.id}
           onClick={() => setTab(t.id)}
           className={cn(
-            "flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium transition-colors",
+            "flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             tab === t.id
               ? "bg-primary text-primary-foreground"
               : "bg-secondary text-secondary-foreground hover:bg-secondary/70",
@@ -76,8 +91,8 @@ export function QuickLog() {
 
   const panel = (
     <>
-      {tab === "comida" && <PanelComida fecha={fecha} onDone={cerrar} comidaEdit={comidaEdit} />}
-      {tab === "peso" && <PanelPeso fecha={fecha} onDone={cerrar} />}
+      {tab === "comida" && <PanelComida fecha={fecha} onDone={cerrar} comidaEdit={comidaEdit} movil={!isDesktop} />}
+      {tab === "peso" && <PanelPeso fecha={fecha} onDone={cerrar} movil={!isDesktop} />}
       {tab === "habitos" && <PanelHabitos fecha={fecha} />}
     </>
   );
@@ -104,14 +119,46 @@ export function QuickLog() {
   }
 
   return (
-    <Drawer open={abierto} onOpenChange={(o) => !o && cerrar()}>
-      <DrawerContent className={cn("max-h-[92dvh]", tecladoAbierto && "max-h-[100dvh] rounded-none")}>
-        <DrawerHeader className="shrink-0 text-left">
-          <DrawerTitle className="font-display text-xl">{titulo}</DrawerTitle>
-          <DrawerDescription>{sub}</DrawerDescription>
-          <div className="pt-3">{pestanas}</div>
+    <Drawer
+      open={abierto}
+      onOpenChange={(o) => {
+        if (!o) {
+          setTecladoAbierto(false);
+          setViewportMovil(null);
+          cerrar();
+        }
+      }}
+      repositionInputs={false}
+    >
+      <DrawerContent
+        className={cn(
+          "max-h-[92dvh] rounded-t-2xl",
+          tecladoAbierto && "max-h-none rounded-none [&>div:first-child]:hidden",
+        )}
+        style={tecladoAbierto && viewportMovil ? {
+          height: `${viewportMovil.alto}px`,
+          maxHeight: `${viewportMovil.alto}px`,
+          bottom: `${viewportMovil.insetInferior}px`,
+        } : undefined}
+      >
+        <DrawerHeader className={cn("shrink-0 border-b border-border text-left", tecladoAbierto ? "px-4 py-2.5" : "px-4 pt-3 pb-4")}>
+          <div className="flex items-baseline justify-between gap-3">
+            <DrawerTitle className={cn("font-display", tecladoAbierto ? "text-base" : "text-xl")}>{titulo}</DrawerTitle>
+            <DrawerDescription className={cn("shrink-0 text-xs", !tecladoAbierto && "hidden")}>{sub}</DrawerDescription>
+          </div>
+          {!tecladoAbierto && <DrawerDescription>{sub}</DrawerDescription>}
+          {!tecladoAbierto && <div className="pt-3">{pestanas}</div>}
         </DrawerHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-[calc(2rem+env(safe-area-inset-bottom))]">{panel}</div>
+        <div
+          className={cn(
+            "min-h-0 flex-1 overscroll-contain overflow-y-auto overflow-x-hidden px-4 pt-4",
+            tab === "habitos"
+              ? "pb-[calc(2rem+env(safe-area-inset-bottom))]"
+              : "pb-[calc(6.5rem+env(safe-area-inset-bottom))]",
+          )}
+        >
+          {panel}
+        </div>
       </DrawerContent>
     </Drawer>
   );
@@ -126,7 +173,17 @@ const TIPOS: { id: TipoComida; label: string }[] = [
   { id: "snack", label: "Snack" },
 ];
 
-function PanelComida({ fecha, onDone, comidaEdit }: { fecha: string; onDone: () => void; comidaEdit?: Comida | null }) {
+function PanelComida({
+  fecha,
+  onDone,
+  comidaEdit,
+  movil = false,
+}: {
+  fecha: string;
+  onDone: () => void;
+  comidaEdit?: Comida | null;
+  movil?: boolean;
+}) {
   const { registrarComida, editarComida, estado } = useRitmo();
   const editando = comidaEdit != null;
   const frecuentes = React.useMemo(() => (editando ? [] : comidasFrecuentes(estado, 6)), [estado, editando]);
@@ -203,16 +260,19 @@ function PanelComida({ fecha, onDone, comidaEdit }: { fecha: string; onDone: () 
   }
 
   const setM = (k: "kcal" | "p" | "c" | "g", v: string) => setManual((m) => ({ ...(m ?? { kcal: "0", p: "0", c: "0", g: "0" }), [k]: v }));
+  const etiquetaTipo = TIPOS.find((t) => t.id === tipo)?.label.toLowerCase() ?? "comida";
+  const listoParaGuardar = (analisis != null || editando) && manual != null;
+  const ejecutarPrincipal = listoParaGuardar ? guardar : analizar;
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap gap-1.5">
+    <div className="flex min-h-full flex-col gap-3">
+      <div className="grid grid-cols-4 gap-1.5">
         {TIPOS.map((t) => (
           <button
             key={t.id}
             onClick={() => setTipo(t.id)}
             className={cn(
-              "h-9 rounded-full border px-3 text-sm font-medium transition-colors",
+              "h-11 rounded-xl border px-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               tipo === t.id ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground",
             )}
           >
@@ -224,13 +284,20 @@ function PanelComida({ fecha, onDone, comidaEdit }: { fecha: string; onDone: () 
         value={texto}
         onChange={(e) => setTexto(e.target.value)}
         placeholder="Escribe lo que has comido: 2 huevos revueltos, tostada integral y café con leche…"
-        rows={3}
-        className="resize-none text-base"
+        rows={4}
+        maxLength={2_500}
+        className="min-h-28 resize-none rounded-xl bg-card text-base leading-relaxed"
       />
-      <Button onClick={analizar} disabled={analizando || !texto.trim()} variant="secondary" className="gap-2">
-        {analizando ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4 text-primary" />}
-        {analizando ? "Analizando…" : editando ? "Recalcular con IA" : "Calcular calorías y macros"}
-      </Button>
+      <div className="flex items-start justify-between gap-3 text-xs text-muted-foreground">
+        <p className="max-w-[52ch]">Describe el plato completo. RITMO separa ingredientes, cantidades y aliños.</p>
+        <span className="shrink-0 tabular">{texto.length}/2.500</span>
+      </div>
+      {editando && (
+        <Button onClick={analizar} disabled={analizando || !texto.trim()} variant="secondary" className="gap-2">
+          {analizando ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4 text-primary" />}
+          {analizando ? "Analizando…" : "Recalcular ingredientes"}
+        </Button>
+      )}
 
       {/* Recientes: registro de un toque, sin volver a analizar */}
       {!editando && !analisis && frecuentes.length > 0 && (
@@ -269,21 +336,20 @@ function PanelComida({ fecha, onDone, comidaEdit }: { fecha: string; onDone: () 
             <Field label="Carbohidratos (g)" value={manual.c} onChange={(v) => setM("c", v)} placeholder="40" />
             <Field label="Grasas (g)" value={manual.g} onChange={(v) => setM("g", v)} placeholder="15" />
           </div>
-          <Button onClick={guardar} className="mt-4 w-full gap-2">
-            <Check className="size-4" /> Guardar cambios
-          </Button>
         </div>
       )}
 
       {analisis && (
-        <div className="rounded-xl border border-border bg-secondary/40 p-4">
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <span className="font-display text-2xl font-bold tabular text-energy">
               {analisis.kcal}
               <span className="ml-1 text-sm font-medium text-muted-foreground">kcal</span>
             </span>
-            <Chip tone={analisis.fuente === "offline" ? "warning" : "weight"}>
-              {analisis.fuente === "gemini" ? "Gemini" : analisis.fuente === "edamam" ? "Edamam" : analisis.fuente === "claude" ? "IA" : "local"}
+            <Chip tone={analisis.fuente === "offline" || analisis.confianza === "baja" ? "warning" : "weight"}>
+              {analisis.fuente === "gemini"
+                ? `Gemini · ${analisis.confianza ?? "media"}`
+                : analisis.fuente === "edamam" ? "Edamam" : analisis.fuente === "claude" ? "IA" : "local"}
             </Chip>
           </div>
           <div className="grid grid-cols-3 gap-3">
@@ -292,21 +358,50 @@ function PanelComida({ fecha, onDone, comidaEdit }: { fecha: string; onDone: () 
             <MacroBar label="Grasas" value={analisis.grasas} colorVar="--energy" />
           </div>
           {analisis.items.length > 0 && (
-            <ul className="mt-3 space-y-1 border-t border-border pt-3 text-sm text-muted-foreground">
+            <ul className="mt-4 divide-y divide-border border-y border-border text-sm">
               {analisis.items.map((it, i) => (
-                <li key={i} className="flex justify-between gap-2">
-                  <span className="truncate">{it.nombre}</span>
-                  <span className="tabular shrink-0">{it.kcal} kcal</span>
+                <li key={i} className="flex items-center justify-between gap-3 py-2.5">
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium text-foreground">{it.nombre}</span>
+                    {it.cantidad && (
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {it.cantidad}{it.cantidadEstimada ? " · estimada" : ""}
+                      </span>
+                    )}
+                  </span>
+                  <span className="shrink-0 font-medium tabular text-foreground">{it.kcal} kcal</span>
                 </li>
               ))}
             </ul>
           )}
-          {analisis.aviso && <p className="mt-3 text-xs text-warning-ink">{analisis.aviso}</p>}
-          <Button onClick={guardar} className="mt-4 w-full gap-2">
-            <Check className="size-4" /> {editando ? "Guardar cambios" : `Añadir a ${TIPOS.find((t) => t.id === tipo)?.label.toLowerCase()}`}
-          </Button>
+          {analisis.observaciones && analisis.observaciones.length > 0 && (
+            <div className="mt-3 space-y-1 text-xs leading-relaxed text-muted-foreground">
+              {analisis.observaciones.map((observacion, i) => <p key={i}>{observacion}</p>)}
+            </div>
+          )}
+          {analisis.aviso && <p className="mt-3 text-xs font-medium text-warning-ink">{analisis.aviso}</p>}
         </div>
       )}
+
+      <div
+        className={cn(
+          "mt-auto",
+          movil && "absolute inset-x-0 bottom-0 z-20 border-t border-border bg-background/96 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_30px_-22px_hsl(var(--foreground)/0.45)] backdrop-blur-md",
+        )}
+      >
+        <Button
+          onClick={() => void ejecutarPrincipal()}
+          disabled={analizando || (listoParaGuardar ? !manual : !texto.trim())}
+          className="h-12 w-full gap-2 rounded-xl"
+        >
+          {analizando ? <Loader2 className="size-4 animate-spin" /> : listoParaGuardar ? <Check className="size-4" /> : <Sparkles className="size-4" />}
+          {analizando
+            ? "Analizando plato completo…"
+            : listoParaGuardar
+              ? editando ? "Guardar cambios" : `Añadir a ${etiquetaTipo}`
+              : "Analizar ingredientes"}
+        </Button>
+      </div>
     </div>
   );
 }
@@ -351,7 +446,7 @@ function PanelHabitos({ fecha }: { fecha: string }) {
 
 /* ----------------------------------------------------------------- PESO */
 
-function PanelPeso({ fecha, onDone }: { fecha: string; onDone: () => void }) {
+function PanelPeso({ fecha, onDone, movil = false }: { fecha: string; onDone: () => void; movil?: boolean }) {
   const { medicion, guardarMedicion } = useRitmo();
   const m = medicion(fecha);
   const [campos, setCampos] = React.useState({
@@ -434,9 +529,11 @@ function PanelPeso({ fecha, onDone }: { fecha: string; onDone: () => void }) {
         </div>
       </div>
 
-      <Button onClick={guardar} className="mt-1 gap-2">
-        <Check className="size-4" /> Guardar medición
-      </Button>
+      <div className={cn("mt-1", movil && "absolute inset-x-0 bottom-0 z-20 border-t border-border bg-background/96 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md")}>
+        <Button onClick={guardar} className="h-12 w-full gap-2 rounded-xl">
+          <Check className="size-4" /> Guardar medición
+        </Button>
+      </div>
     </div>
   );
 }
@@ -455,7 +552,7 @@ function Field({
   return (
     <label className="flex flex-col gap-1.5">
       <span className="text-sm font-medium text-foreground/80">{label}</span>
-      <Input inputMode="decimal" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="tabular" />
+      <Input inputMode="decimal" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="h-11 rounded-xl tabular" />
     </label>
   );
 }

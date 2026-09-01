@@ -11,8 +11,8 @@
    ========================================================================= */
 
 import { TOTAL_HABITOS } from "./config";
-import { balanceCalibradoPorHabitos } from "./calibration";
-import type { EnergiaDia, Habitos, PesoIntervalo, Sexo } from "./types";
+import { balanceBasePorPerfil } from "./calibration";
+import type { EnergiaDia, Habitos, Objetivo, PesoIntervalo, Sexo } from "./types";
 
 /** Equivalente energético de 1 kg de tejido adiposo (regla de Wishnofsky). */
 export const KCAL_POR_KG = 7700;
@@ -536,6 +536,7 @@ export function estimarKcalQuemadas(
 export interface OpcionesEnergia {
   kcalObjetivo?: number;
   tdeeBase?: number;
+  objetivo?: Objetivo;
   imputacion?: { activa: boolean; desde: string; superavitKcal: number } | null;
   habitosActivos?: string[];
 }
@@ -545,7 +546,7 @@ export function energiaDia(
   dia: { fecha?: string; habitos?: Habitos; peso?: number; kcalConsumidas?: number; kcalQuemadas?: number; comidas?: Array<{ tipo?: string }> },
   opciones: OpcionesEnergia = {},
 ): EnergiaDia {
-  const { kcalObjetivo = 1350, tdeeBase = 2450, imputacion = null, habitosActivos } = opciones;
+  const { kcalObjetivo = 1350, tdeeBase = 2450, objetivo = "perder", imputacion = null, habitosActivos } = opciones;
   const d = dia || {};
 
   const inExplicito = num(d.kcalConsumidas);
@@ -623,9 +624,8 @@ export function energiaDia(
     ? clavesHabitos.filter((clave) => d.habitos?.[clave] === true).length
     : Object.values(d.habitos || {}).filter((v) => v === true).length;
   const totalActivos = clavesHabitos?.length ?? TOTAL_HABITOS;
-  const ratioHabitos = totalActivos > 0 ? cumplidosActivos / totalActivos : 0;
   const balanceHistorico = inn.estimado && out.estimado
-    ? balanceCalibradoPorHabitos(cumplidosActivos, totalActivos)
+    ? balanceBasePorPerfil(cumplidosActivos, totalActivos, { kcalObjetivo, tdee: out.kcal, objetivo })
     : null;
   const consumoAjustado = balanceHistorico !== null
     ? Math.max(inn.kcal, out.kcal + balanceHistorico)

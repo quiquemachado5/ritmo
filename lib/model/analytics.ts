@@ -7,7 +7,7 @@
 
 import * as M from "./metrics";
 import { diaAbsoluto, diasEntre, hoy, sumarDias } from "./dates";
-import { habitosModelo, totalHabitosPerfil } from "./config";
+import { HABITOS, habitosModelo, totalHabitosPerfil } from "./config";
 import type {
   Comida,
   Composicion,
@@ -82,6 +82,38 @@ export function reglaImputacion(estado: Estado): ReglaImputacion {
 
 /** Energía de un día concreto, con los parámetros del perfil aplicados. */
 export function energiaDe(estado: Estado, fecha: string): EnergiaDia {
+  const base = energiaBaseDe(estado, fecha);
+  if (
+    base.imputado
+    || base.sinHabitosMarcados
+    || !base.consumidasEstimadas
+    || !base.quemadasEstimadas
+  ) return base;
+
+  const calibracion = calibracionPersonalizada(estado);
+  if (!calibracion.personalizada) return base;
+  const dia = (estado.dias || {})[fecha];
+  const activos = habitosModelo(estado.perfil).map((h) => h.clave);
+  const cumplidos = activos.filter((clave) => dia?.habitos?.[clave] === true).length;
+  const ratio = cumplidos / Math.max(1, activos.length);
+  const ajuste = ajusteCalibracion(calibracion, ratio);
+  const balancePropuesto = base.balance + ajuste;
+  const balanceSeguro = estado.perfil.objetivo === "perder" && ratio >= 0.999
+    ? Math.min(-150, balancePropuesto)
+    : balancePropuesto;
+  const consumidas = Math.max(base.consumidas, base.quemadas + balanceSeguro);
+  const balance = consumidas - base.quemadas;
+  return {
+    ...base,
+    consumidas,
+    balance,
+    deficit: -balance,
+    deltaKg: M.kcalAKg(balance),
+  };
+}
+
+/** Cálculo diario sin la corrección aprendida, usado como prior biológico. */
+function energiaBaseDe(estado: Estado, fecha: string): EnergiaDia {
   const dia = (estado.dias || {})[fecha] || { fecha, habitos: {} };
   const perfil = estado.perfil || ({} as Estado["perfil"]);
   return M.energiaDia(
@@ -89,6 +121,7 @@ export function energiaDe(estado: Estado, fecha: string): EnergiaDia {
     {
       kcalObjetivo: perfil.kcalObjetivo,
       tdeeBase: tdeeVigente(estado),
+      objetivo: perfil.objetivo,
       imputacion: reglaImputacion(estado),
       habitosActivos: habitosModelo(perfil).map((h) => h.clave),
     },
@@ -282,6 +315,266 @@ export function tdeeDesdeHistorial(estado: Estado, ventanaDias = 60): TdeeHistor
   };
 }
 
+export interface CalibracionPersonal {
+  personalizada: boolean;
+  calidad: "inicial" | "media" | "alta";
+  tramos: number;
+  dias: number;
+  cobertura: number;
+  sesgoKcal: number;
+  pendienteKcal: number;
+  errorMedioKg: number | null;
+}
+
+interface TramoCalibracion {
+  desde: string;
+  hasta: string;
+  dias: number;
+  cobertura: number;
+  ratioHabitos: number;
+  balanceBase: number;
+  balanceReal: number;
+  deltaRealKg: number;
+}
+
+const CALIBRACION_INICIAL: CalibracionPersonal = {
+  personalizada: false,
+  calidad: "inicial",
+  tramos: 0,
+  dias: 0,
+  cobertura: 0,
+  sesgoKcal: 0,
+  pendienteKcal: 0,
+  errorMedioKg: null,
+};
+
+const cacheCalibracion = new WeakMap<Estado, { version: number; valor: CalibracionPersonal }>();
+const cacheBacktest = new WeakMap<Estado, { version: number; valor: BacktestModelo }>();
+
+function tdeeTeoricoHistorico(estado: Estado, peso: number): number {
+  const perfil = estado.perfil || ({} as Estado["perfil"]);
+  return M.tdeeTeorico({
+    peso,
+    alturaCm: perfil.alturaCm,
+    edad: perfil.edad,
+    sexo: perfil.sexo,
+    factorActividad: perfil.factorActividad,
+  }) ?? 2450;
+}
+
+function tramosCalibracion(estado: Estado, hastaFecha?: string): TramoCalibracion[] {
+  const puntos = pesajes(estado).filter((p) => !hastaFecha || p.fecha <= hastaFecha);
+  const activos = habitosModelo(estado.perfil).map((h) => h.clave);
+  const clavesBase = new Set(HABITOS.map((h) => h.clave));
+  const primeraAparicion = new Map<string, string>();
+  for (const dia of diasOrdenados(estado)) {
+    for (const clave of activos) {
+      if (!clavesBase.has(clave) && Object.prototype.hasOwnProperty.call(dia.habitos || {}, clave) && !primeraAparicion.has(clave)) {
+        primeraAparicion.set(clave, dia.fecha);
+      }
+    }
+  }
+  const salida: TramoCalibracion[] = [];
+
+  for (let i = 1; i < puntos.length; i++) {
+    const inicio = puntos[i - 1];
+    const fin = puntos[i];
+    const dias = diasEntre(inicio.fecha, fin.fecha);
+    if (dias < 2 || dias > 90) continue;
+    const tdee = tdeeTeoricoHistorico(estado, inicio.peso);
+    let sumaBalance = 0;
+    let sumaRatio = 0;
+    let registrados = 0;
+
+    for (let paso = 1; paso <= dias; paso++) {
+      const fecha = sumarDias(inicio.fecha, paso);
+      const dia = estado.dias[fecha];
+      if (dia) registrados++;
+      const habitos = dia?.habitos || {};
+      const activosEseDia = activos.filter((clave) => clavesBase.has(clave) || (primeraAparicion.get(clave) ?? "9999-12-31") <= fecha);
+      const clavesDia = activosEseDia.length ? activosEseDia : activos.filter((clave) => clavesBase.has(clave));
+      const totalDia = Math.max(1, clavesDia.length);
+      const cumplidos = clavesDia.filter((clave) => habitos[clave] === true).length;
+      sumaRatio += cumplidos / totalDia;
+      const energia = M.energiaDia(
+        dia || { fecha, habitos: {} },
+        {
+          kcalObjetivo: estado.perfil.kcalObjetivo,
+          tdeeBase: tdee,
+          objetivo: estado.perfil.objetivo,
+          imputacion: null,
+          habitosActivos: clavesDia,
+        },
+      );
+      sumaBalance += energia.balance;
+    }
+
+    const cobertura = registrados / dias;
+    // Con menos de la mitad de días observados, el siguiente peso sí informa
+    // de la tendencia, pero no permite atribuirla honestamente a los hábitos.
+    if (cobertura < 0.5) continue;
+    const deltaRealKg = fin.peso - inicio.peso;
+    salida.push({
+      desde: inicio.fecha,
+      hasta: fin.fecha,
+      dias,
+      cobertura,
+      ratioHabitos: sumaRatio / dias,
+      balanceBase: sumaBalance / dias,
+      balanceReal: (deltaRealKg * M.KCAL_POR_KG) / dias,
+      deltaRealKg,
+    });
+  }
+  return salida;
+}
+
+function resolverCalibracion(tramos: TramoCalibracion[]): CalibracionPersonal {
+  if (tramos.length < 3) return { ...CALIBRACION_INICIAL, tramos: tramos.length, dias: tramos.reduce((s, t) => s + t.dias, 0) };
+
+  // Ridge robusto de dos parámetros sobre el error del prior:
+  // error = sesgo + pendiente × (adherencia - 50 %).
+  // El recorte evita aprender como grasa los saltos de agua de pesajes cortos.
+  const lambda = 10;
+  let s00 = lambda;
+  let s01 = 0;
+  let s11 = lambda;
+  let sy0 = 0;
+  let sy1 = 0;
+  let dias = 0;
+  let coberturaPonderada = 0;
+
+  for (const tramo of tramos) {
+    const x = tramo.ratioHabitos - 0.5;
+    const peso = Math.min(14, tramo.dias) * (0.5 + tramo.cobertura / 2);
+    const residual = Math.max(-500, Math.min(500, tramo.balanceReal - tramo.balanceBase));
+    s00 += peso;
+    s01 += peso * x;
+    s11 += peso * x * x;
+    sy0 += peso * residual;
+    sy1 += peso * x * residual;
+    dias += tramo.dias;
+    coberturaPonderada += tramo.cobertura * tramo.dias;
+  }
+
+  const determinante = s00 * s11 - s01 * s01;
+  const sesgoKcal = determinante === 0 ? 0 : (sy0 * s11 - sy1 * s01) / determinante;
+  const pendienteKcal = determinante === 0 ? 0 : (s00 * sy1 - s01 * sy0) / determinante;
+  const erroresKg = tramos.map((tramo) => {
+    const ajuste = Math.max(-500, Math.min(500, sesgoKcal + pendienteKcal * (tramo.ratioHabitos - 0.5)));
+    const predicho = ((tramo.balanceBase + ajuste) * tramo.dias) / M.KCAL_POR_KG;
+    return Math.abs(predicho - tramo.deltaRealKg);
+  });
+  const errorMedioKg = erroresKg.reduce((s, e) => s + e, 0) / erroresKg.length;
+  const cobertura = dias > 0 ? coberturaPonderada / dias : 0;
+  const calidad = tramos.length >= 12 && dias >= 120 && cobertura >= 0.75
+    ? "alta"
+    : tramos.length >= 6 && dias >= 45
+      ? "media"
+      : "inicial";
+
+  return {
+    personalizada: true,
+    calidad,
+    tramos: tramos.length,
+    dias,
+    cobertura: Math.round(cobertura * 100),
+    sesgoKcal: Math.round(sesgoKcal),
+    pendienteKcal: Math.round(pendienteKcal),
+    errorMedioKg: redondearPeso(errorMedioKg),
+  };
+}
+
+/** Aprende la respuesta individual a los hábitos usando solo tramos cerrados. */
+export function calibracionPersonalizada(estado: Estado, hastaFecha?: string): CalibracionPersonal {
+  if (hastaFecha) return resolverCalibracion(tramosCalibracion(estado, hastaFecha));
+  const guardado = cacheCalibracion.get(estado);
+  if (guardado && guardado.version === (estado.version ?? 0)) return guardado.valor;
+  const valor = resolverCalibracion(tramosCalibracion(estado));
+  cacheCalibracion.set(estado, { version: estado.version ?? 0, valor });
+  return valor;
+}
+
+function ajusteCalibracion(calibracion: CalibracionPersonal, ratioHabitos: number): number {
+  if (!calibracion.personalizada) return 0;
+  return Math.round(Math.max(-500, Math.min(500, calibracion.sesgoKcal + calibracion.pendienteKcal * (ratioHabitos - 0.5))));
+}
+
+/** Curva que la interfaz puede explicar con los hábitos activos de la persona. */
+export function curvaBalanceModelo(estado: Estado): Array<{ cumplidos: number; total: number; balance: number }> {
+  const activos = habitosModelo(estado.perfil).map((h) => h.clave);
+  const total = Math.max(1, activos.length);
+  const tdee = tdeeVigente(estado);
+  const calibracion = calibracionPersonalizada(estado);
+  return Array.from({ length: total + 1 }, (_, cumplidos) => {
+    if (cumplidos === 0) {
+      return { cumplidos, total, balance: reglaImputacion(estado).superavitKcal };
+    }
+    const habitos = Object.fromEntries(activos.map((clave, i) => [clave, i < cumplidos]));
+    const base = M.energiaDia(
+      { fecha: hoy(), habitos, peso: pesoActual(estado)?.peso },
+      {
+        kcalObjetivo: estado.perfil.kcalObjetivo,
+        tdeeBase: tdee,
+        objetivo: estado.perfil.objetivo,
+        imputacion: null,
+        habitosActivos: activos,
+      },
+    );
+    const ratio = cumplidos / total;
+    let balance = base.balance + ajusteCalibracion(calibracion, ratio);
+    if (estado.perfil.objetivo === "perder" && cumplidos === total) balance = Math.min(-150, balance);
+    return { cumplidos, total, balance: Math.round(balance) };
+  });
+}
+
+export interface BacktestModelo {
+  tramos: number;
+  errorBaseKg: number | null;
+  errorPersonalKg: number | null;
+  mejoraPct: number | null;
+  dentroMedioKg: number;
+}
+
+/**
+ * Validación walk-forward: para cada siguiente pesaje, la calibración solo ve
+ * los tramos que ya habían terminado en aquel momento.
+ */
+export function backtestModelo(estado: Estado): BacktestModelo {
+  const guardado = cacheBacktest.get(estado);
+  if (guardado && guardado.version === (estado.version ?? 0)) return guardado.valor;
+  const tramos = tramosCalibracion(estado);
+  let errorBase = 0;
+  let errorPersonal = 0;
+  let evaluados = 0;
+  let dentroMedioKg = 0;
+
+  for (let i = 3; i < tramos.length; i++) {
+    const tramo = tramos[i];
+    const calibracion = calibracionPersonalizada(estado, tramo.desde);
+    const ajuste = ajusteCalibracion(calibracion, tramo.ratioHabitos);
+    const deltaBase = (tramo.balanceBase * tramo.dias) / M.KCAL_POR_KG;
+    const deltaPersonal = ((tramo.balanceBase + ajuste) * tramo.dias) / M.KCAL_POR_KG;
+    const errorB = Math.abs(deltaBase - tramo.deltaRealKg);
+    const errorP = Math.abs(deltaPersonal - tramo.deltaRealKg);
+    errorBase += errorB;
+    errorPersonal += errorP;
+    if (errorP <= 0.5) dentroMedioKg++;
+    evaluados++;
+  }
+
+  const base = evaluados ? errorBase / evaluados : null;
+  const personal = evaluados ? errorPersonal / evaluados : null;
+  const valor: BacktestModelo = {
+    tramos: evaluados,
+    errorBaseKg: base === null ? null : redondearPeso(base),
+    errorPersonalKg: personal === null ? null : redondearPeso(personal),
+    mejoraPct: base && personal !== null ? Math.round((1 - personal / base) * 100) : null,
+    dentroMedioKg,
+  };
+  cacheBacktest.set(estado, { version: estado.version ?? 0, valor });
+  return valor;
+}
+
 /** Balance medio diario de los últimos N días CON registro. */
 export function balanceMedio(estado: Estado, ventanaDias = 14): number | null {
   const evaluables = diasEvaluables(estado, sumarDias(hoy(), -365), hoy()).slice(-ventanaDias);
@@ -391,6 +684,11 @@ export interface ModeloProyeccion {
   tdee: number;
   /** La señal energética se contrasta con la tendencia real cuando la hay. */
   equilibrioConBascula: boolean;
+  personalizado: boolean;
+  tramosCalibracion: number;
+  coberturaHistorica: number;
+  errorHistoricoKg: number | null;
+  mejoraHistoricaPct: number | null;
 }
 
 export interface ProyeccionConfiable {
@@ -422,9 +720,12 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
   const diasSinPesaje = Math.max(0, hoyDia - ultimo.dia);
   const tendenciaRobusta = M.tendenciaRobustaPeso(puntos);
   const calibracion = tdeeDesdeHistorial(estado);
+  const personalizacion = calibracionPersonalizada(estado);
+  const validacion = backtestModelo(estado);
   const desde = sumarDias(ultimo.fecha, 1);
   let balanceDesdeBascula = 0;
-  let errorKcalCuadrado = (0.25 * M.KCAL_POR_KG) ** 2;
+  const errorHistorico = personalizacion.errorMedioKg ?? 0.25;
+  let errorKcalCuadrado = (Math.max(0.25, errorHistorico * 0.7) * M.KCAL_POR_KG) ** 2;
   let diasConDato = 0;
   let diasImputados = 0;
   let diasDesconocidos = 0;
@@ -511,9 +812,14 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
       puntos: puntos.length,
       spanDias: tendenciaRobusta ? tendenciaRobusta.spanDias : 0,
       kgSemana: redondearPeso((balanceDiario * 7) / M.KCAL_POR_KG),
-      calibrado: true,
+      calibrado: Boolean(calibracion) || personalizacion.personalizada,
       tdee: tdeeVigente(estado),
       equilibrioConBascula: mezclaBalance > 0,
+      personalizado: personalizacion.personalizada,
+      tramosCalibracion: personalizacion.tramos,
+      coberturaHistorica: personalizacion.cobertura,
+      errorHistoricoKg: validacion.errorPersonalKg,
+      mejoraHistoricaPct: validacion.mejoraPct,
     },
     diasSinPesaje,
     pesajes: puntos.length,
