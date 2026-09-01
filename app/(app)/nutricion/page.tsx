@@ -56,6 +56,7 @@ export default function NutricionPage() {
     toast.success(fecha === hoy() ? "Comida duplicada" : "Añadida a hoy");
   }
   const r = React.useMemo(() => resumen(estado), [estado]);
+  const balanceReciente = React.useMemo(() => serieBalance(estado, 30).map((b) => ({ label: fmtFechaLarga(b.fecha), balance: b.balance, imputado: b.imputado })), [estado]);
 
   if (cargando) return <div className="flex flex-col gap-6"><Skeleton className="h-8 w-40" /><Skeleton className="h-56 w-full rounded-xl" /></div>;
 
@@ -69,7 +70,6 @@ export default function NutricionPage() {
   );
   const obj = macrosObjetivo({ kcal: objetivoKcal, pesoKg: r.peso.estimadoHoy, objetivo: estado.perfil.objetivo, proteinaGkg: estado.perfil.proteinaObjetivo });
   const esFuturo = diasEntre(fecha, hoy()) < 0;
-  const balanceReciente = React.useMemo(() => serieBalance(estado, 30).map((b) => ({ label: fmtFechaLarga(b.fecha), balance: b.balance, imputado: b.imputado })), [estado]);
 
   // Coach de proteína: la proteína protege la masa muscular en déficit. Avisa
   // cuando el día ya lleva calorías pero la proteína va por detrás de su ritmo,

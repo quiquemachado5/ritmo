@@ -195,7 +195,7 @@ describe("Energía de un día", () => {
 
     const est = M.energiaDia({ habitos: { comida: true, cena: true, noAlcohol: true } }, { kcalObjetivo: 1350 });
     igual(est.estimado, true);
-    casi(est.consumidas, 1800);
+    casi(est.balance, 100);
     const conUnHabito = M.estimarKcalConsumidas({ comida: true }, 2000);
     const conSeisHabitos = M.estimarKcalConsumidas({ comida: true, cena: true, noAlcohol: true, deporte: true, beberAgua: true, dormirBien: true }, 2000);
     expect(conUnHabito.kcal).toBeGreaterThan(conSeisHabitos.kcal);
@@ -206,13 +206,14 @@ describe("Energía de un día", () => {
     );
     // Los hábitos no activos se conservan en el histórico, pero no cambian el
     // balance ni la recalibración configurada por la persona.
-    casi(perfilPersonal.consumidas, 1450);
+    casi(perfilPersonal.deficit, 950);
 
     const seisDeSeis = M.energiaDia(
       { habitos: { comida: true, cena: true, noAlcohol: true, deporte: true, beberAgua: true, dormirBien: true } },
       { kcalObjetivo: 2000, tdeeBase: 3200, habitosActivos: ["comida", "cena", "noAlcohol", "deporte", "beberAgua", "dormirBien"] },
     );
     expect(seisDeSeis.deficit).toBeLessThanOrEqual(1100);
+    casi(seisDeSeis.deficit, 950);
 
     const mixto = M.energiaDia({ kcalConsumidas: 1500, habitos: { deporte: true } }, { tdeeBase: 2400 });
     igual(mixto.consumidasEstimadas, false);

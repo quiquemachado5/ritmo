@@ -11,6 +11,7 @@
    ========================================================================= */
 
 import { TOTAL_HABITOS } from "./config";
+import { balanceCalibradoPorHabitos } from "./calibration";
 import type { EnergiaDia, Habitos, PesoIntervalo, Sexo } from "./types";
 
 /** Equivalente energético de 1 kg de tejido adiposo (regla de Wishnofsky). */
@@ -623,15 +624,15 @@ export function energiaDia(
     : Object.values(d.habitos || {}).filter((v) => v === true).length;
   const totalActivos = clavesHabitos?.length ?? TOTAL_HABITOS;
   const ratioHabitos = totalActivos > 0 ? cumplidosActivos / totalActivos : 0;
-  const deficitMaximoEstimado = inn.estimado && ratioHabitos >= 1
-    ? 1100
-    : inn.estimado && ratioHabitos >= 0.8
-      ? 900
-      : null;
-  const consumoAjustado = deficitMaximoEstimado !== null
-    ? Math.max(inn.kcal, out.kcal - deficitMaximoEstimado)
+  const balanceHistorico = inn.estimado && out.estimado
+    ? balanceCalibradoPorHabitos(cumplidosActivos, totalActivos)
+    : null;
+  const consumoAjustado = balanceHistorico !== null
+    ? Math.max(inn.kcal, out.kcal + balanceHistorico)
     : inn.kcal;
-  const balance = balanceNeto(consumoAjustado, out.kcal) as number;
+  const balance = balanceHistorico !== null
+    ? consumoAjustado - out.kcal
+    : balanceNeto(consumoAjustado, out.kcal) as number;
 
   return {
     consumidas: consumoAjustado,

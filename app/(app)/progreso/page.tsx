@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PuntoPeso } from "@/components/app/charts";
 import { Metric, SectionLabel, Chip, EmptyState } from "@/components/app/primitives";
-import { fmtPeso, fmtSigno, fmtNum, fmtFechaCorta, relativo } from "@/lib/format";
+import { capitalizar, fmtPeso, fmtSigno, fmtNum, fmtFechaCorta, relativo } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const WeightChart = dynamic(() => import("@/components/app/charts").then((m) => m.WeightChart), { loading: () => <Skeleton className="h-72 w-full rounded-xl" /> });
@@ -88,6 +88,8 @@ export default function ProgresoPage() {
     () => [...estado.composicion].sort((a, b) => (a.fecha < b.fecha ? 1 : -1))[0],
     [estado.composicion],
   );
+  const historialDesc = React.useMemo(() => [...historial].reverse(), [historial]);
+  const cambioTotal = historial.length > 1 ? Math.round((historial[historial.length - 1].peso - historial[0].peso) * 10) / 10 : null;
 
   const { datosPeso, statsWin } = React.useMemo(() => {
     const dias = RANGOS.find((x) => x.id === rango)!.dias;
@@ -304,12 +306,18 @@ export default function ProgresoPage() {
                 <div className="grid grid-cols-3 gap-1 overflow-hidden rounded-xl border border-border bg-card p-1 text-center shadow-sm">
                   <HistorialPill label="Actual" value={fmtPeso(historial[historial.length - 1]?.peso)} />
                   <HistorialPill label="Inicio" value={fmtPeso(historial[0]?.peso)} />
-                  <HistorialPill label="Cambio" value={statsWin.cambio != null ? fmtSigno(statsWin.cambio, 1) : "—"} tone={statsWin.cambio != null && statsWin.cambio <= 0 ? "text-weight" : "text-energy"} />
+                  <HistorialPill label="Cambio" value={cambioTotal != null ? fmtSigno(cambioTotal, 1) : "—"} tone={cambioTotal != null && cambioTotal <= 0 ? "text-weight" : "text-energy"} />
                 </div>
               </div>
               <div className="max-h-[31rem] overflow-y-auto p-2 sm:p-3">
-              {[...historial].reverse().map((registro, index, registros) => (
-                <div key={registro.fecha} className="group grid grid-cols-[2.3rem_minmax(0,1fr)_auto] items-center gap-2.5 rounded-xl px-2.5 py-2 transition-colors hover:bg-secondary/45 sm:grid-cols-[3rem_minmax(0,1fr)_auto] sm:px-3">
+              {historialDesc.map((registro, index, registros) => {
+                const mes = capitalizar(new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric" }).format(new Date(`${registro.fecha}T00:00:00`)));
+                const anterior = registros[index - 1];
+                const mesAnterior = anterior ? capitalizar(new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric" }).format(new Date(`${anterior.fecha}T00:00:00`))) : null;
+                const abreMes = mes !== mesAnterior;
+                return <React.Fragment key={registro.fecha}>
+                {abreMes && <div className="sticky top-0 z-10 -mx-2 mb-1 mt-2 flex items-center gap-2 bg-card/95 px-3 py-2 text-xs font-semibold text-muted-foreground backdrop-blur sm:-mx-3"><span className="h-px flex-1 bg-border" /><span>{mes}</span><span className="h-px flex-1 bg-border" /></div>}
+                <div className="group grid grid-cols-[2.3rem_minmax(0,1fr)_auto] items-center gap-2.5 rounded-xl px-2.5 py-2 transition-colors hover:bg-secondary/45 sm:grid-cols-[3rem_minmax(0,1fr)_auto] sm:px-3">
                   <div className="relative flex h-full items-center justify-center">
                     {index < registros.length - 1 && <span className="absolute bottom-[-1rem] top-1/2 w-px bg-weight-border" />}
                     <span className="relative z-10 grid size-8 place-items-center rounded-full border border-weight-border bg-weight-wash text-weight shadow-sm sm:size-9">
@@ -335,7 +343,8 @@ export default function ProgresoPage() {
                     {confirmBorrar === registro.fecha ? <div className="flex items-center gap-1"><Button variant="destructive" size="sm" className="h-8 gap-1 rounded-lg px-2 text-xs" onClick={() => borrarPesaje(registro.fecha)}><AlertTriangle className="size-3" /> Borrar</Button><Button variant="ghost" size="sm" className="h-8 rounded-lg px-2 text-xs" onClick={() => setConfirmBorrar(null)}>No</Button></div> : <div className="flex items-center gap-0.5 opacity-80 transition-opacity group-hover:opacity-100"><Button variant="ghost" size="icon" className="size-8 rounded-lg text-muted-foreground hover:text-weight" onClick={() => abrir("peso", registro.fecha)} aria-label={`Editar pesaje del ${fmtFechaCorta(registro.fecha)}`}><Pencil className="size-3.5" /></Button><Button variant="ghost" size="icon" className="size-8 rounded-lg text-muted-foreground hover:text-destructive" onClick={() => setConfirmBorrar(registro.fecha)} aria-label={`Eliminar pesaje del ${fmtFechaCorta(registro.fecha)}`}><Trash2 className="size-3.5" /></Button></div>}
                   </div>
                 </div>
-              ))}
+                </React.Fragment>;
+              })}
               </div>
             </Card>
           </section>
