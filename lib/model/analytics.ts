@@ -313,6 +313,45 @@ export function balanceMedioPonderado(estado: Estado, ventanaDias = 21): number 
   return pesoTotal > 0 ? total / pesoTotal : null;
 }
 
+/** Señal corta de adherencia actual. Sirve para que varios días 6/6 cambien la
+ * proyección desde el último pesaje, sin esperar a que una ventana larga lo
+ * diluya. No sustituye la calibración histórica: solo decide hacia dónde va el
+ * tramo vivo hasta el próximo pesaje.
+ */
+export function balanceRitmoActual(estado: Estado, ventanaDias = 3): { balance: number; dias: number; perfectosSeguidos: number } | null {
+  const activos = habitosModelo(estado.perfil).map((h) => h.clave);
+  const total = Math.max(1, totalHabitosPerfil(estado.perfil));
+  let suma = 0;
+  let pesos = 0;
+  let dias = 0;
+  let perfectosSeguidos = 0;
+  let rachaAbierta = true;
+
+  for (let i = 0; i < ventanaDias; i++) {
+    const fecha = sumarDias(hoy(), -i);
+    const dia = estado.dias[fecha];
+    if (!dia) {
+      rachaAbierta = false;
+      continue;
+    }
+    const cumplidos = activos.filter((clave) => dia.habitos?.[clave] === true).length;
+    if (cumplidos === 0) {
+      rachaAbierta = false;
+      continue;
+    }
+    if (rachaAbierta && cumplidos >= total) perfectosSeguidos++;
+    else rachaAbierta = false;
+
+    const energia = energiaDe(estado, fecha);
+    const peso = i === 0 ? 1 : i === 1 ? 0.72 : 0.48;
+    suma += energia.balance * peso;
+    pesos += peso;
+    dias++;
+  }
+
+  return pesos > 0 ? { balance: suma / pesos, dias, perfectosSeguidos } : null;
+}
+
 /** Tendencia de peso en kg/semana sobre los últimos N días. */
 export function tendencia(estado: Estado, ventanaDias = 28) {
   const p = pesajes(estado);
@@ -415,7 +454,18 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
   const pesoHoy = pesoTendencia === null ? pesoEnergetico : pesoEnergetico * (1 - mezclaBascula) + pesoTendencia * mezclaBascula;
   if (pesoTendencia !== null) errorKcalCuadrado += ((pesoEnergetico - pesoTendencia) * M.KCAL_POR_KG * 0.35) ** 2;
 
-  const balanceEnergetico = balanceMedioPonderado(estado, 21) ?? balanceMedio(estado, 14) ?? 0;
+  const balanceEnergeticoBase = balanceMedioPonderado(estado, 21) ?? balanceMedio(estado, 14) ?? 0;
+  const ritmoActual = balanceRitmoActual(estado, 3);
+  const pesoRitmoActual = ritmoActual
+    ? ritmoActual.perfectosSeguidos >= 2
+      ? 0.78
+      : ritmoActual.perfectosSeguidos === 1
+        ? 0.64
+        : 0.48
+    : 0;
+  const balanceEnergetico = ritmoActual
+    ? balanceEnergeticoBase * (1 - pesoRitmoActual) + ritmoActual.balance * pesoRitmoActual
+    : balanceEnergeticoBase;
   const balanceTendencia = tendenciaReciente ? (tendenciaReciente.kgSemana / 7) * M.KCAL_POR_KG : null;
   // Con al menos tres pesajes repartidos en dos semanas, la pendiente robusta
   // es una segunda fuente de verdad. Se mezcla con prudencia para amortiguar

@@ -39,6 +39,7 @@ const RANGOS = [
 
 const CALIDAD_LABEL = { inicial: "inicial", media: "media", alta: "alta" } as const;
 const CALIDAD_TONE = { inicial: "muted", media: "habit", alta: "weight" } as const;
+type HistorialRegistro = { fecha: string; peso: number; delta: number | null; grasaPct: number | null };
 /**
  * Pantalla única de evolución corporal. Los datos de báscula y composición son
  * hechos registrados; el modelo ocupa deliberadamente su propio bloque.
@@ -74,7 +75,7 @@ export default function ProgresoPage() {
       peso: punto.peso,
       delta: i > 0 ? Math.round((punto.peso - puntos[i - 1].peso) * 10) / 10 : null,
       grasaPct: compPorFecha.get(punto.fecha) ?? null,
-    }));
+    })) satisfies HistorialRegistro[];
   }, [estado]);
 
   const compSerie = React.useMemo(
@@ -91,6 +92,43 @@ export default function ProgresoPage() {
   );
   const historialDesc = React.useMemo(() => [...historial].reverse(), [historial]);
   const cambioTotal = historial.length > 1 ? Math.round((historial[historial.length - 1].peso - historial[0].peso) * 10) / 10 : null;
+  const historialPorMes = React.useMemo(() => {
+    const grupos: Array<{ mes: string; registros: HistorialRegistro[]; cambio: number | null }> = [];
+    for (const registro of historialDesc) {
+      const mes = capitalizar(new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric" }).format(new Date(`${registro.fecha}T00:00:00`)));
+      let grupo = grupos[grupos.length - 1];
+      if (!grupo || grupo.mes !== mes) {
+        grupo = { mes, registros: [], cambio: null };
+        grupos.push(grupo);
+      }
+      grupo.registros.push(registro);
+    }
+    return grupos.map((grupo) => {
+      const primero = grupo.registros[grupo.registros.length - 1];
+      const ultimo = grupo.registros[0];
+      return {
+        ...grupo,
+        cambio: grupo.registros.length > 1 ? Math.round((ultimo.peso - primero.peso) * 10) / 10 : null,
+      };
+    });
+  }, [historialDesc]);
+  const lecturaHistorial = React.useMemo(() => {
+    const pesos = historial.map((x) => x.peso);
+    const minimo = pesos.length ? Math.min(...pesos) : null;
+    const maximo = pesos.length ? Math.max(...pesos) : null;
+    const mejorBajada = historial.reduce<HistorialRegistro | null>((mejor, actual) => {
+      if (actual.delta == null || actual.delta >= 0) return mejor;
+      if (!mejor || (mejor.delta != null && actual.delta < mejor.delta)) return actual;
+      return mejor;
+    }, null);
+    return {
+      primero: historial[0] ?? null,
+      ultimo: historial[historial.length - 1] ?? null,
+      minimo,
+      maximo,
+      mejorBajada,
+    };
+  }, [historial]);
 
   const { datosPeso, statsWin } = React.useMemo(() => {
     const dias = RANGOS.find((x) => x.id === rango)!.dias;
@@ -309,53 +347,56 @@ export default function ProgresoPage() {
           <section aria-labelledby="historial">
             <SectionLabel action={<span className="text-xs text-muted-foreground tabular">{historial.length} registros</span>}><span id="historial">Historial de mediciones</span></SectionLabel>
             <Card className="overflow-hidden p-0">
-              <div className="grid gap-4 border-b border-border bg-secondary/30 px-4 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-6">
-                <div>
-                  <p className="font-display text-xl font-bold">Pesajes reales</p>
-                  <p className="mt-1 text-sm text-muted-foreground">Ordenados de más reciente a más antiguo, sin estimaciones mezcladas.</p>
+              <div className="grid border-b border-border lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,.8fr)] lg:divide-x lg:divide-border">
+                <div className="relative overflow-hidden bg-[radial-gradient(circle_at_16%_10%,hsl(var(--weight)/.18),transparent_28%),linear-gradient(135deg,hsl(var(--weight-wash)),hsl(var(--card))_52%,hsl(var(--secondary)))] px-4 py-5 sm:px-6 sm:py-6">
+                  <div className="relative z-10 max-w-xl">
+                    <p className="font-display text-2xl font-bold tracking-tight">Tu trayectoria real</p>
+                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">Cada punto viene de una medición tuya. La escala inferior sitúa cada pesaje entre tu mínimo y máximo registrados.</p>
+                    <div className="mt-6 flex flex-wrap items-end gap-x-3 gap-y-2">
+                      <span className="font-display text-6xl font-bold leading-none tracking-tight text-weight tabular sm:text-7xl">{fmtPeso(lecturaHistorial.ultimo?.peso)}</span>
+                      <span className="mb-2 text-sm font-semibold text-muted-foreground">kg actuales</span>
+                      <DeltaTag delta={cambioTotal} />
+                    </div>
+                  </div>
+                  <div aria-hidden className="absolute -right-20 -top-16 size-48 rounded-full bg-card/50 blur-3xl" />
                 </div>
-                <div className="grid grid-cols-3 gap-1 overflow-hidden rounded-xl border border-border bg-card p-1 text-center shadow-sm">
-                  <HistorialPill label="Actual" value={fmtPeso(historial[historial.length - 1]?.peso)} />
-                  <HistorialPill label="Inicio" value={fmtPeso(historial[0]?.peso)} />
-                  <HistorialPill label="Cambio" value={cambioTotal != null ? fmtSigno(cambioTotal, 1) : "—"} tone={cambioTotal != null && cambioTotal <= 0 ? "text-weight" : "text-energy"} />
+                <div className="grid grid-cols-2 gap-px bg-border text-sm sm:grid-cols-4 lg:grid-cols-2">
+                  <HistorialStat label="Inicio" value={fmtPeso(lecturaHistorial.primero?.peso)} detail={lecturaHistorial.primero ? fmtFechaCorta(lecturaHistorial.primero.fecha) : "—"} />
+                  <HistorialStat label="Mínimo" value={fmtPeso(lecturaHistorial.minimo)} detail="mejor lectura" tone="text-weight" />
+                  <HistorialStat label="Máximo" value={fmtPeso(lecturaHistorial.maximo)} detail="pico registrado" tone="text-energy" />
+                  <HistorialStat label="Mejor salto" value={lecturaHistorial.mejorBajada?.delta != null ? fmtSigno(lecturaHistorial.mejorBajada.delta, 1) : "—"} detail={lecturaHistorial.mejorBajada ? fmtFechaCorta(lecturaHistorial.mejorBajada.fecha) : "sin tramo"} tone="text-weight" />
                 </div>
               </div>
-              <div className="max-h-[31rem] overflow-y-auto p-2 sm:p-3">
-              {historialDesc.map((registro, index, registros) => {
-                const mes = capitalizar(new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric" }).format(new Date(`${registro.fecha}T00:00:00`)));
-                const anterior = registros[index - 1];
-                const mesAnterior = anterior ? capitalizar(new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric" }).format(new Date(`${anterior.fecha}T00:00:00`))) : null;
-                const abreMes = mes !== mesAnterior;
-                return <React.Fragment key={registro.fecha}>
-                {abreMes && <div className="sticky top-0 z-10 -mx-2 mb-1 mt-2 flex items-center gap-2 bg-card/95 px-3 py-2 text-xs font-semibold text-muted-foreground backdrop-blur sm:-mx-3"><span className="h-px flex-1 bg-border" /><span>{mes}</span><span className="h-px flex-1 bg-border" /></div>}
-                <div className="group grid grid-cols-[2.3rem_minmax(0,1fr)_auto] items-center gap-2.5 rounded-xl px-2.5 py-2 transition-colors hover:bg-secondary/45 sm:grid-cols-[3rem_minmax(0,1fr)_auto] sm:px-3">
-                  <div className="relative flex h-full items-center justify-center">
-                    {index < registros.length - 1 && <span className="absolute bottom-[-1rem] top-1/2 w-px bg-weight-border" />}
-                    <span className="relative z-10 grid size-8 place-items-center rounded-full border border-weight-border bg-weight-wash text-weight shadow-sm sm:size-9">
-                      <Scale className="size-4" />
-                    </span>
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <p className="truncate text-sm font-semibold tabular">{fmtFechaCorta(registro.fecha)}</p>
-                      <DeltaTag delta={registro.delta} />
+              <div className="max-h-[46rem] overflow-y-auto bg-card [scrollbar-width:thin]">
+                {historialPorMes.map((grupo) => (
+                  <section key={grupo.mes} className="grid border-b border-border last:border-b-0 md:grid-cols-[11.5rem_minmax(0,1fr)]">
+                    <div className="sticky top-0 z-20 flex items-center justify-between gap-3 bg-secondary/80 px-4 py-3 backdrop-blur md:block md:border-r md:border-border md:bg-card/92 md:px-5 md:py-5">
+                      <div>
+                        <h3 className="font-display text-base font-bold">{grupo.mes}</h3>
+                        <p className="mt-0.5 text-xs text-muted-foreground">{grupo.registros.length} medición{grupo.registros.length === 1 ? "" : "es"}</p>
+                      </div>
+                      <div className="mt-0 md:mt-4">
+                        <DeltaTag delta={grupo.cambio} />
+                      </div>
                     </div>
-                    <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                      <span className="truncate">{relativo(registro.fecha, hoyISO)}</span>
-                      <span>dato real</span>
-                      {registro.grasaPct != null && <Chip tone="body">{fmtNum(registro.grasaPct, 1)}% grasa</Chip>}
+                    <div className="divide-y divide-border">
+                      {grupo.registros.map((registro) => (
+                        <PesajeTimelineRow
+                          key={registro.fecha}
+                          registro={registro}
+                          minimo={lecturaHistorial.minimo}
+                          maximo={lecturaHistorial.maximo}
+                          hoyISO={hoyISO}
+                          confirmando={confirmBorrar === registro.fecha}
+                          onEditar={() => abrir("peso", registro.fecha)}
+                          onPedirBorrar={() => setConfirmBorrar(registro.fecha)}
+                          onCancelarBorrar={() => setConfirmBorrar(null)}
+                          onBorrar={() => borrarPesaje(registro.fecha)}
+                        />
+                      ))}
                     </div>
-                  </div>
-                  <div className="flex min-w-[6.8rem] items-center justify-end gap-1 sm:min-w-[9.5rem]">
-                    <div className="mr-0.5 text-right">
-                      <p className="font-display text-xl font-bold leading-none tabular text-weight sm:text-2xl">{fmtPeso(registro.peso)}</p>
-                      <p className="mt-0.5 text-[0.65rem] text-muted-foreground">kg</p>
-                    </div>
-                    {confirmBorrar === registro.fecha ? <div className="flex items-center gap-1"><Button variant="destructive" size="sm" className="h-8 gap-1 rounded-lg px-2 text-xs" onClick={() => borrarPesaje(registro.fecha)}><AlertTriangle className="size-3" /> Borrar</Button><Button variant="ghost" size="sm" className="h-8 rounded-lg px-2 text-xs" onClick={() => setConfirmBorrar(null)}>No</Button></div> : <div className="flex items-center gap-0.5 opacity-80 transition-opacity group-hover:opacity-100"><Button variant="ghost" size="icon" className="size-8 rounded-lg text-muted-foreground hover:text-weight" onClick={() => abrir("peso", registro.fecha)} aria-label={`Editar pesaje del ${fmtFechaCorta(registro.fecha)}`}><Pencil className="size-3.5" /></Button><Button variant="ghost" size="icon" className="size-8 rounded-lg text-muted-foreground hover:text-destructive" onClick={() => setConfirmBorrar(registro.fecha)} aria-label={`Eliminar pesaje del ${fmtFechaCorta(registro.fecha)}`}><Trash2 className="size-3.5" /></Button></div>}
-                  </div>
-                </div>
-                </React.Fragment>;
-              })}
+                  </section>
+                ))}
               </div>
             </Card>
           </section>
@@ -380,19 +421,84 @@ function ModeloFila({ cantidad, etiqueta, detalle, tone }: { cantidad: number; e
   return <div className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"><span className={cn("size-2 shrink-0 rounded-full", color)} /><span className="min-w-0 flex-1"><span className="font-medium text-foreground">{etiqueta}</span><span className="text-muted-foreground"> · {detalle}</span></span><span className="font-semibold tabular text-foreground">{cantidad}</span></div>;
 }
 
-function DeltaTag({ delta }: { delta: number | null }) {
-  if (delta == null) return <span className="rounded-full bg-secondary px-2 py-1 text-xs text-muted-foreground">Sin cambio</span>;
+function DeltaTag({ delta, compact = false }: { delta: number | null; compact?: boolean }) {
+  if (delta == null) return <span className={cn("rounded-full bg-secondary text-muted-foreground", compact ? "px-1.5 py-0.5 text-[0.65rem]" : "px-2 py-1 text-xs")}>Sin cambio</span>;
   const cero = Math.abs(delta) < 0.05;
   const baja = delta < 0;
-  return <span className={cn("inline-flex items-center gap-0.5 rounded-full px-2 py-1 text-xs font-semibold tabular", cero ? "bg-secondary text-muted-foreground" : baja ? "bg-weight-wash text-weight" : "bg-energy-wash text-energy")}>{cero ? <Minus className="size-3" /> : baja ? <ArrowDownRight className="size-3" /> : <ArrowUpRight className="size-3" />}{cero ? "0" : fmtSigno(delta, 1)} kg</span>;
+  return <span className={cn("inline-flex items-center gap-0.5 rounded-full font-semibold tabular", compact ? "px-1.5 py-0.5 text-[0.65rem]" : "px-2 py-1 text-xs", cero ? "bg-secondary text-muted-foreground" : baja ? "bg-weight-wash text-weight" : "bg-energy-wash text-energy")}>{cero ? <Minus className="size-3" /> : baja ? <ArrowDownRight className="size-3" /> : <ArrowUpRight className="size-3" />}{cero ? "0" : fmtSigno(delta, 1)} kg</span>;
 }
 
-function HistorialPill({ label, value, tone = "text-foreground" }: { label: string; value: string; tone?: string }) {
+function HistorialStat({ label, value, detail, tone = "text-foreground" }: { label: string; value: string; detail: string; tone?: string }) {
   return (
-    <div className="min-w-0 rounded-lg px-3 py-2">
-      <p className="truncate text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{label}</p>
-      <p className={cn("mt-1 font-display text-lg font-bold leading-none tabular", tone)}>{value}</p>
+    <div className="min-w-0 bg-card px-4 py-4 sm:px-5">
+      <p className="truncate text-[0.62rem] font-semibold uppercase tracking-[0.1em] text-muted-foreground">{label}</p>
+      <p className={cn("mt-1 font-display text-2xl font-bold leading-none tabular", tone)}>{value}</p>
+      <p className="mt-1 truncate text-[0.68rem] text-muted-foreground">{detail}</p>
     </div>
+  );
+}
+
+function PesajeTimelineRow({
+  registro,
+  minimo,
+  maximo,
+  hoyISO,
+  confirmando,
+  onEditar,
+  onPedirBorrar,
+  onCancelarBorrar,
+  onBorrar,
+}: {
+  registro: HistorialRegistro;
+  minimo: number | null;
+  maximo: number | null;
+  hoyISO: string;
+  confirmando: boolean;
+  onEditar: () => void;
+  onPedirBorrar: () => void;
+  onCancelarBorrar: () => void;
+  onBorrar: () => void;
+}) {
+  const fecha = new Date(`${registro.fecha}T00:00:00`);
+  const dia = new Intl.DateTimeFormat("es-ES", { day: "2-digit" }).format(fecha);
+  const mes = new Intl.DateTimeFormat("es-ES", { month: "short" }).format(fecha).replace(".", "");
+  const rango = minimo != null && maximo != null ? Math.max(0.1, maximo - minimo) : 1;
+  const posicion = minimo != null && maximo != null ? Math.min(100, Math.max(0, ((registro.peso - minimo) / rango) * 100)) : 50;
+
+  return (
+    <article className="group grid grid-cols-[2.55rem_minmax(0,1fr)_auto] items-center gap-2.5 px-3 py-2.5 transition-colors hover:bg-secondary/35 sm:grid-cols-[3.4rem_minmax(0,1fr)_auto] sm:gap-3 sm:px-5 sm:py-3.5">
+      <div className="rounded-lg border border-border bg-background px-1.5 py-1.5 text-center shadow-sm sm:rounded-xl sm:px-2 sm:py-2">
+        <p className="font-display text-base font-bold leading-none tabular sm:text-lg">{dia}</p>
+        <p className="mt-0.5 text-[0.56rem] font-semibold uppercase tracking-[0.06em] text-muted-foreground sm:mt-1 sm:text-[0.62rem] sm:tracking-[0.08em]">{mes}</p>
+      </div>
+      <div className="min-w-0">
+        <div className="flex min-w-0 items-baseline gap-x-1.5 overflow-hidden sm:flex-wrap sm:gap-x-2 sm:gap-y-1">
+          <p className="shrink-0 font-display text-xl font-bold leading-none tabular text-weight sm:text-3xl">{fmtPeso(registro.peso)}<span className="ml-0.5 text-[0.62rem] font-medium text-muted-foreground sm:ml-1 sm:text-xs">kg</span></p>
+          <DeltaTag delta={registro.delta} compact />
+          {registro.grasaPct != null ? <Chip tone="body">{fmtNum(registro.grasaPct, 1)}% grasa</Chip> : null}
+        </div>
+        <div className="mt-1.5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:mt-2 sm:gap-3">
+          <div className="relative h-1.5 overflow-hidden rounded-full bg-secondary sm:h-2">
+            <div className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-weight/25 via-weight/45 to-energy/45" style={{ width: `${posicion}%` }} />
+            <span className="absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-card bg-weight shadow-sm sm:size-3" style={{ left: `${posicion}%` }} />
+          </div>
+          <span className="hidden text-[0.68rem] text-muted-foreground sm:inline">{relativo(registro.fecha, hoyISO)}</span>
+        </div>
+      </div>
+      <div className="flex items-center justify-end gap-1">
+        {confirmando ? (
+          <div className="flex items-center gap-1 rounded-lg bg-card">
+            <Button variant="destructive" size="sm" className="h-8 gap-1 rounded-lg px-2 text-xs" onClick={onBorrar}><AlertTriangle className="size-3" /><span className="hidden sm:inline">Borrar</span></Button>
+            <Button variant="ghost" size="sm" className="h-8 rounded-lg px-2 text-xs" onClick={onCancelarBorrar}>No</Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-0.5 rounded-lg bg-secondary/45 p-0.5 opacity-90 transition-opacity group-hover:opacity-100">
+            <Button variant="ghost" size="icon" className="size-7 rounded-md text-muted-foreground hover:bg-card hover:text-weight sm:size-8" onClick={onEditar} aria-label={`Editar pesaje del ${fmtFechaCorta(registro.fecha)}`}><Pencil className="size-3.5" /></Button>
+            <Button variant="ghost" size="icon" className="size-7 rounded-md text-muted-foreground hover:bg-card hover:text-destructive sm:size-8" onClick={onPedirBorrar} aria-label={`Eliminar pesaje del ${fmtFechaCorta(registro.fecha)}`}><Trash2 className="size-3.5" /></Button>
+          </div>
+        )}
+      </div>
+    </article>
   );
 }
 

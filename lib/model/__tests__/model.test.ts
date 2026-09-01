@@ -344,6 +344,30 @@ describe("Imputación y arrastre", () => {
     casi(arrSin.pesoEstimado, 90);
     igual(A.balanceMedio(estado({ perfil: { ...perfilBase, imputarActiva: false }, dias: {}, composicion: [] }), 14), null);
   });
+
+  it("dos días 6/6 tras el último pesaje inclinan la predicción a bajada", () => {
+    const habitos6 = {
+      comida: true,
+      cena: true,
+      noAlcohol: true,
+      deporte: true,
+      beberAgua: true,
+      dormirBien: true,
+    };
+    const st = estado({
+      perfil: { ...perfilBase, imputarActiva: false },
+      dias: {
+        [F.sumarDias(HOY, -1)]: { fecha: F.sumarDias(HOY, -1), peso: 95.3, habitos: habitos6 },
+        [HOY]: { fecha: HOY, habitos: habitos6 },
+      },
+      composicion: [],
+    });
+
+    const proy = A.proyeccionPesoConfiable(st);
+    igual(proy.disponible, true);
+    expect(proy.modelo!.kgSemana).toBeLessThan(-0.5);
+    expect(proy.semana!.peso).toBeLessThan(proy.hoy!.peso);
+  });
 });
 
 describe("Integración: resumen sobre estado completo", () => {
