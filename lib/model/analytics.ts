@@ -461,7 +461,7 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
       puntos: puntos.length,
       spanDias: tendenciaRobusta ? tendenciaRobusta.spanDias : 0,
       kgSemana: redondearPeso((balanceDiario * 7) / M.KCAL_POR_KG),
-      calibrado: Boolean(calibracion),
+      calibrado: true,
       tdee: tdeeVigente(estado),
       equilibrioConBascula: mezclaBalance > 0,
     },

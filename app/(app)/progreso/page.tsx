@@ -24,6 +24,7 @@ import type { PuntoPeso } from "@/components/app/charts";
 import { Metric, SectionLabel, Chip, EmptyState } from "@/components/app/primitives";
 import { capitalizar, fmtPeso, fmtSigno, fmtNum, fmtFechaCorta, relativo } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { BALANCE_HABITOS_KCAL } from "@/lib/model/calibration";
 
 const WeightChart = dynamic(() => import("@/components/app/charts").then((m) => m.WeightChart), { loading: () => <Skeleton className="h-72 w-full rounded-xl" /> });
 const CompositionChart = dynamic(() => import("@/components/app/charts").then((m) => m.CompositionChart), { loading: () => <Skeleton className="h-64 w-full rounded-xl" /> });
@@ -249,7 +250,7 @@ export default function ProgresoPage() {
                     <span className="font-display text-5xl font-bold leading-none tabular text-weight">{lecturaModelo.validos}</span>
                     <span className="mb-1 text-sm text-muted-foreground">días completos</span>
                   </div>
-                  <p className="mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">Cuentan desde que marcas algún hábito. Las comidas afinan el cálculo; si faltan, el modelo completa la estimación con el nivel de hábitos.</p>
+                  <p className="mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">Cuentan desde que marcas algún hábito. Las comidas afinan el cálculo; si faltan, la predicción usa la curva aprendida de tu histórico.</p>
                 </div>
                 <div className="bg-secondary/35 p-5 sm:p-6">
                   <p className="text-sm font-semibold">Lectura de la ventana</p>
@@ -261,7 +262,17 @@ export default function ProgresoPage() {
                   </dl>
                 </div>
               </div>
-              <div className="border-t border-border bg-card px-5 py-3 text-xs leading-relaxed text-muted-foreground sm:px-6">Las notas contextuales —viaje, comida libre, enfermedad o entrenamiento especial— quedan visibles en Calendario para interpretar el día, pero no alteran calorías, hábitos ni la predicción.</div>
+              <div className="border-t border-border bg-card px-5 py-4 sm:px-6">
+                <p className="text-xs leading-relaxed text-muted-foreground">Curva histórica usada por la predicción cuando el día depende de hábitos: 0/6 sube, 6/6 baja. Si registras kcal completas, ese dato manda.</p>
+                <div className="mt-3 grid grid-cols-7 gap-1.5">
+                  {BALANCE_HABITOS_KCAL.map((balance, i) => (
+                    <div key={i} className={cn("rounded-lg border px-1 py-2 text-center", balance > 0 ? "border-energy-border bg-energy-wash text-energy" : "border-weight-border bg-weight-wash text-weight")}>
+                      <p className="text-[0.6rem] font-semibold tabular">{i}/6</p>
+                      <p className="mt-1 text-[0.62rem] font-bold tabular">{fmtSigno(balance, 0)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </details>
           </section>
 
