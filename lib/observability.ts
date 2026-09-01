@@ -4,7 +4,7 @@
  * recientes para poder entender un fallo de autenticación, sincronización o IA.
  */
 
-export type EventoDiagnostico = "auth" | "sync" | "nutrition" | "import";
+export type EventoDiagnostico = "auth" | "sync" | "nutrition" | "import" | "ui";
 export type EstadoDiagnostico = "ok" | "warning" | "error";
 
 export interface Diagnostico {

@@ -4,6 +4,7 @@ import * as React from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { registrarDiagnostico } from "@/lib/observability";
 
 /**
  * Error boundary del área privada. Un fallo al renderizar una página (p. ej.
@@ -20,6 +21,7 @@ export default function AppError({
 }) {
   React.useEffect(() => {
     console.error("Error en sección:", error);
+    registrarDiagnostico("ui", "error", "fallo contenido en una sección");
   }, [error]);
 
   return (

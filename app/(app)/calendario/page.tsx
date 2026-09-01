@@ -6,7 +6,7 @@ import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
 import { energiaDe } from "@/lib/model/analytics";
 import { nivelDia } from "@/lib/model/metrics";
-import { TOTAL_HABITOS, HABITOS } from "@/lib/model/config";
+import { habitosModelo } from "@/lib/model/config";
 import { claveMes, DIAS_SEMANA, diaSemanaLunes, hoy, limitesMes, sumarDias, sumarMeses } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,8 @@ export default function CalendarioPage() {
   const hoyISO = hoy();
   const [mes, setMes] = React.useState(claveMes(hoyISO));
   const [sel, setSel] = React.useState(hoyISO);
+  const habitosActivos = React.useMemo(() => habitosModelo(estado.perfil), [estado.perfil]);
+  const totalHabitos = habitosActivos.length;
 
   const { desde, dias } = limitesMes(mes);
   const offset = diaSemanaLunes(desde);
@@ -34,8 +36,8 @@ export default function CalendarioPage() {
 
   const d = dia(sel);
   const energiaSel = energiaDe(estado, sel);
-  const habHechos = HABITOS.filter((h) => d.habitos?.[h.clave]).length;
-  const calidad = calidadDia(energiaSel, habHechos);
+  const habHechos = habitosActivos.filter((h) => d.habitos?.[h.clave]).length;
+  const calidad = calidadDia(energiaSel, habHechos, totalHabitos);
   const diasConRegistroMes = Array.from({ length: dias }, (_, i) => dia(sumarDias(desde, i))).filter((registro) =>
     Object.values(registro.habitos || {}).some(Boolean) || (registro.comidas?.length ?? 0) > 0 || registro.peso != null,
   ).length;
@@ -64,17 +66,18 @@ export default function CalendarioPage() {
           {celdas.map((fecha, i) => {
             if (!fecha) return <span key={i} />;
             const dd = dia(fecha);
-            const nivel = nivelDia(dd.habitos, TOTAL_HABITOS);
+            const habitosDelDia = Object.fromEntries(habitosActivos.map((h) => [h.clave, dd.habitos?.[h.clave] === true]));
+            const nivel = nivelDia(habitosDelDia, totalHabitos);
             const futuro = fecha > hoyISO;
             const e = energiaDe(estado, fecha);
             const esHoy = fecha === hoyISO;
             const activo = fecha === sel;
-            const cumplidos = HABITOS.filter((h) => dd.habitos?.[h.clave]).length;
-            const hechos = HABITOS.filter((h) => dd.habitos?.[h.clave]).map((h) => h.etiqueta);
+            const cumplidos = habitosActivos.filter((h) => dd.habitos?.[h.clave]).length;
+            const hechos = habitosActivos.filter((h) => dd.habitos?.[h.clave]).map((h) => h.etiqueta);
             const resumenDia = futuro
               ? undefined
               : [
-                  `${fmtFechaCorta(fecha)} · ${cumplidos}/${TOTAL_HABITOS} hábitos`,
+                  `${fmtFechaCorta(fecha)} · ${cumplidos}/${totalHabitos} hábitos`,
                   hechos.length ? hechos.join(", ") : "sin hábitos marcados",
                   dd.peso != null ? `Peso: ${dd.peso} kg` : null,
                   e.imputado ? "Día sin registro (imputado)" : null,
@@ -120,7 +123,7 @@ export default function CalendarioPage() {
         </SectionLabel>
         <Card className="overflow-hidden p-0">
           <div className="grid grid-cols-3 border-b border-border bg-secondary/35">
-            <DiaMetric label="Hábitos" value={`${habHechos}`} unit={`/${TOTAL_HABITOS}`} tone="habit" />
+            <DiaMetric label="Hábitos" value={`${habHechos}`} unit={`/${totalHabitos}`} tone="habit" />
             <DiaMetric label="Peso" value={d.peso != null ? fmtPeso(d.peso) : "—"} tone="weight" />
             <DiaMetric label="Balance" value={energiaSel.sinRegistro && !energiaSel.imputado ? "—" : fmtSigno(energiaSel.balance, 0)} tone={energiaSel.balance > 0 ? "energy" : "weight"} />
           </div>
@@ -131,9 +134,9 @@ export default function CalendarioPage() {
           </div>
           {(d.comidas?.length || habHechos > 0) && <div className="mt-3 flex flex-wrap gap-1.5">
             {d.comidas && d.comidas.length > 0 && <span className="inline-flex h-7 items-center rounded-full bg-energy-wash px-2.5 text-xs font-medium text-energy-ink">{d.comidas.length} comida{d.comidas.length > 1 ? "s" : ""} · {fmtKcal(d.kcalConsumidas ?? 0)} kcal</span>}
-            {HABITOS.filter((h) => d.habitos?.[h.clave]).map((h) => <Chip key={h.clave} tone="habit">{h.etiqueta}</Chip>)}
+            {habitosActivos.filter((h) => d.habitos?.[h.clave]).map((h) => <Chip key={h.clave} tone="habit">{h.etiqueta}</Chip>)}
           </div>}
-          <NotaContexto fecha={sel} inicial={d.notas} onGuardar={(notas) => actualizarDia(sel, { notas })} />
+          <NotaContexto key={sel} fecha={sel} inicial={d.notas} onGuardar={(notas) => actualizarDia(sel, { notas })} />
           </div>
         </Card>
       </section>
@@ -144,8 +147,6 @@ export default function CalendarioPage() {
 function NotaContexto({ fecha, inicial, onGuardar }: { fecha: string; inicial?: string; onGuardar: (notas: string | undefined) => Promise<void> }) {
   const [texto, setTexto] = React.useState(inicial ?? "");
   const [guardando, setGuardando] = React.useState(false);
-
-  React.useEffect(() => setTexto(inicial ?? ""), [fecha, inicial]);
 
   const limpio = texto.trim();
   const cambio = limpio !== (inicial ?? "").trim();
@@ -180,17 +181,17 @@ function NotaContexto({ fecha, inicial, onGuardar }: { fecha: string; inicial?: 
       <div className="flex flex-wrap gap-1.5">
         {etiquetas.map(({ etiqueta, icono: Icono }) => <button key={etiqueta} type="button" onClick={() => sumarEtiqueta(etiqueta)} className={cn("flex h-8 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors", texto.includes(etiqueta) ? "border-body-border bg-body-wash text-body-ink" : "border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground")}><Icono className="size-3.5 shrink-0" />{etiqueta}</button>)}
       </div>
-      <Textarea id={`nota-${fecha}`} value={texto} onChange={(event) => setTexto(event.target.value)} placeholder="Ej.: cena fuera, viaje o entrenamiento especial…" className="mt-3 min-h-20 resize-y border-body-border/60 bg-body-wash/15 text-sm placeholder:text-muted-foreground" />
+      <Textarea id={`nota-${fecha}`} aria-label="Nota de contexto del día" value={texto} onChange={(event) => setTexto(event.target.value)} placeholder="Ej.: cena fuera, viaje o entrenamiento especial…" className="mt-3 min-h-20 resize-y border-body-border/60 bg-body-wash/15 text-sm placeholder:text-muted-foreground" />
       <div className="mt-2 flex items-center justify-between gap-3"><span className="text-xs text-muted-foreground">No altera tu balance ni la predicción.</span><Button size="sm" variant="secondary" disabled={!cambio || guardando} onClick={() => void guardar()} className="h-8 px-3 text-xs">{guardando ? "Guardando…" : "Guardar"}</Button></div>
     </div>
   </details>;
 }
 
-function calidadDia(energia: EnergiaDia, habitos: number) {
+function calidadDia(energia: EnergiaDia, habitos: number, totalHabitos: number) {
   if (energia.imputado) return { titulo: "Sin hábitos · superávit estimado", detalle: "No hubo registro. El modelo aplica el superávit conservador configurado para un día sin adherencia.", bg: "bg-warning-wash", border: "border-warning-border", dot: "bg-warning", ink: "text-warning-ink" };
   if (energia.sinRegistro) return { titulo: "Sin datos suficientes", detalle: "Añade comidas o hábitos para que este día empiece a contar.", bg: "bg-secondary", border: "border-border", dot: "bg-muted-foreground", ink: "text-foreground" };
   if (habitos === 0) return { titulo: "Sin hábitos · superávit estimado", detalle: "Hay datos registrados, pero sin hábitos el modelo aplica un superávit conservador, nunca un déficit.", bg: "bg-warning-wash", border: "border-warning-border", dot: "bg-warning", ink: "text-warning-ink" };
-  if (energia.ingestaIncompleta) return { titulo: "Estimación ajustada por hábitos", detalle: `${habitos}/6 hábitos marcados. La comida registrada suma información; el modelo completa lo que falta con tus hábitos.`, bg: "bg-energy-wash", border: "border-energy-border", dot: "bg-energy", ink: "text-energy-ink" };
+  if (energia.ingestaIncompleta) return { titulo: "Estimación ajustada por hábitos", detalle: `${habitos}/${totalHabitos} hábitos marcados. La comida registrada suma información; el modelo completa lo que falta con tus hábitos.`, bg: "bg-energy-wash", border: "border-energy-border", dot: "bg-energy", ink: "text-energy-ink" };
   return { titulo: "Día válido para el modelo", detalle: "Los hábitos y la ingesta permiten usar este día en las tendencias.", bg: "bg-weight-wash", border: "border-weight-border", dot: "bg-weight", ink: "text-weight-ink" };
 }
 

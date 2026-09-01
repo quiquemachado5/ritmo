@@ -5,7 +5,7 @@ import { useRipple } from "@/lib/hooks/use-ripple";
 import { rippleStyles } from "@/lib/hooks/use-ripple";
 import React from "react";
 
-interface ButtonRippleProps extends React.ComponentProps<typeof Button> {}
+type ButtonRippleProps = React.ComponentProps<typeof Button>;
 
 export function ButtonRipple({ onClick, ...props }: ButtonRippleProps) {
   const { addRipple } = useRipple();

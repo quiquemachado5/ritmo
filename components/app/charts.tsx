@@ -15,7 +15,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { fmtPeso, fmtKcal, fmtSigno } from "@/lib/format";
+import { fmtPeso, fmtSigno } from "@/lib/format";
 
 export interface PuntoPeso {
   label: string;

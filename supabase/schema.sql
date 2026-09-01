@@ -209,9 +209,9 @@ group by user_id, date_trunc('month', fecha);
 grant select on public.resumen_mensual to authenticated;
 
 -- ============================================================================
--- PREFERENCIAS DE BIBLIOTECA (sync entre dispositivos)
--- Favoritas, comidas ocultas, ediciones (overrides) y catálogo de comidas
--- creadas a mano. Un blob JSON por usuario: pequeño y last-write-wins.
+-- PREFERENCIAS DE USUARIO (sync entre dispositivos)
+-- Biblioteca de comidas y configuración extensible del modelo (hábitos
+-- personalizados/reglas). Un blob JSON por usuario: pequeño y last-write-wins.
 -- ============================================================================
 create table if not exists public.user_prefs (
   user_id        uuid primary key references auth.users (id) on delete cascade,
@@ -220,7 +220,7 @@ create table if not exists public.user_prefs (
 );
 
 comment on table public.user_prefs is
-  'Preferencias de cliente sincronizadas: biblioteca de comidas (favoritas, ocultas, ediciones, catálogo).';
+  'Preferencias sincronizadas: biblioteca de comidas y configuración extensible del modelo.';
 
 alter table public.user_prefs enable row level security;
 
@@ -265,3 +265,16 @@ create policy backups_actualizar on storage.objects
 create policy backups_borrar on storage.objects
   for delete to authenticated
   using (bucket_id = 'backups' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- Marca legible por CI/migraciones; no contiene datos de usuario ni se expone
+-- a clientes. Las migraciones posteriores deben actualizar este único valor.
+create table if not exists public.ritmo_schema_version (
+  singleton boolean primary key default true check (singleton),
+  version text not null,
+  aplicado_en timestamptz not null default now()
+);
+insert into public.ritmo_schema_version (singleton, version)
+values (true, '202609010001')
+on conflict (singleton) do update set version = excluded.version, aplicado_en = now();
+alter table public.ritmo_schema_version enable row level security;
+revoke all on table public.ritmo_schema_version from anon, authenticated;

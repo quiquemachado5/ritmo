@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, Home, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { registrarDiagnostico } from '@/lib/observability';
 
 export default function Error({
   error,
@@ -14,6 +15,7 @@ export default function Error({
 }) {
   useEffect(() => {
     console.error('Error:', error);
+    registrarDiagnostico('ui', 'error', 'fallo global de interfaz');
   }, [error]);
 
   return (

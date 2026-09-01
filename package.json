@@ -4,14 +4,16 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run check:versions && next build",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:nutrition:eval": "RUN_GEMINI_EVAL=1 node --env-file-if-exists=.env.local ./node_modules/vitest/vitest.mjs run lib/nutrition/__tests__/reference.eval.test.ts --reporter=verbose",
+    "check:versions": "node scripts/check-versions.mjs"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.120.0",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.3",
     "class-variance-authority": "^0.7.1",
@@ -28,6 +30,7 @@
     "vaul": "^1.1.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

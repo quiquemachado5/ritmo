@@ -160,12 +160,27 @@ export class CloudAdapter implements Adapter {
     const { error } = await this.client.from("perfiles").upsert(fila, { onConflict: "user_id" });
     if (error) throw error;
   }
+  private async borrarBackups() {
+    const bucket = this.client.storage.from("backups");
+    const { data, error } = await bucket.list(this.userId, { limit: 1000 });
+    if (error) {
+      // Instalaciones antiguas pueden no tener aún el bucket: en ese caso no
+      // existe ninguna copia que eliminar.
+      if (/bucket.*not found/i.test(error.message)) return;
+      throw error;
+    }
+    const rutas = (data || []).map((archivo) => `${this.userId}/${archivo.name}`);
+    if (!rutas.length) return;
+    const { error: removeError } = await bucket.remove(rutas);
+    if (removeError) throw removeError;
+  }
   async borrarTodo() {
     const resultados = await Promise.all([
       this.client.from("dias").delete().eq("user_id", this.userId),
       this.client.from("composicion").delete().eq("user_id", this.userId),
       this.client.from("user_prefs").delete().eq("user_id", this.userId),
       this.client.from("perfiles").delete().eq("user_id", this.userId),
+      this.borrarBackups().then(() => ({ error: null })).catch((error: unknown) => ({ error })),
     ]);
     const fallo = resultados.find((r) => r.error)?.error;
     if (fallo) throw fallo;
@@ -186,10 +201,12 @@ export class CloudAdapter implements Adapter {
   }
 
   subscribe(cb: () => void): () => void {
+    const filtro = `user_id=eq.${this.userId}`;
     const canal = this.client
       .channel("ritmo-cambios")
-      .on("postgres_changes", { event: "*", schema: "public", table: "dias" }, cb)
-      .on("postgres_changes", { event: "*", schema: "public", table: "composicion" }, cb)
+      .on("postgres_changes", { event: "*", schema: "public", table: "dias", filter: filtro }, cb)
+      .on("postgres_changes", { event: "*", schema: "public", table: "composicion", filter: filtro }, cb)
+      .on("postgres_changes", { event: "*", schema: "public", table: "perfiles", filter: filtro }, cb)
       .subscribe();
     return () => {
       this.client.removeChannel(canal);

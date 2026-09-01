@@ -294,6 +294,8 @@ describe("Calibración personalizada", () => {
     expect(backtest.errorBaseKg).not.toBeNull();
     expect(backtest.errorPersonalKg!).toBeLessThanOrEqual(backtest.errorBaseKg!);
     expect(backtest.errorPersonalKg!).toBeLessThan(0.7);
+    expect(backtest.errorP80Kg).not.toBeNull();
+    expect(backtest.errorP80Kg!).toBeGreaterThanOrEqual(backtest.errorPersonalKg!);
   });
 
   it("mantiene la biología como prior para una persona nueva", () => {

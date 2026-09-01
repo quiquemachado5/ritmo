@@ -1,9 +1,13 @@
 import type { AnalisisNutricional, ItemNutricional } from "./types";
 
 const API_KEY = process.env.GEMINI_API_KEY || "";
-// 3.5 Flash ofrece ahora mismo la mejor combinación de disponibilidad, latencia
-// y salida estructurada para la cuota gratuita usada por RITMO.
-const MODEL = process.env.GEMINI_NUTRITION_MODEL || "gemini-3.5-flash";
+// Priorizamos el Flash estable más capaz, pero conservamos un segundo modelo
+// gratuito: la API puede devolver 429/503 durante picos de demanda.
+const MODELS = process.env.GEMINI_NUTRITION_MODEL
+  ? [process.env.GEMINI_NUTRITION_MODEL]
+  : ["gemini-3.7-flash", "gemini-3.5-flash"];
+const modelUnavailableUntil = new Map<string, number>();
+const MODEL_COOLDOWN_MS = 5 * 60 * 1000;
 
 type GeminiItem = Partial<Record<
   "nombre" | "cantidad" | "cantidadEstimada" | "kcal" | "proteinas" | "carbohidratos" | "grasas",
@@ -63,45 +67,54 @@ function extraerJSON(texto: string): GeminiPayload | null {
 export async function analizarConGemini(texto: string): Promise<AnalisisNutricional | null> {
   if (!API_KEY) return null;
 
-  const respuesta = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(MODEL)}:generateContent`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": API_KEY },
-    body: JSON.stringify({
-      systemInstruction: {
-        parts: [{ text: [
-          "Eres el analista nutricional de RITMO para descripciones en español. Tu prioridad es NO omitir ingredientes.",
-          "Primero separa mentalmente la frase completa ingrediente por ingrediente, aunque sea larga, no tenga comas o repita conectores como 'con' e 'y'. Después calcula cada fila.",
-          "Respeta exactamente gramos, mililitros, unidades, filetes, latas, cucharadas (cda) y cucharaditas. La cantidad se asocia únicamente al ingrediente más cercano.",
-          "Cuenta cada aparición de AOVE, aceite, mantequilla, alioli, salsa, queso, frutos secos y aliño. Si el mismo aceite aparece dos veces, suma ambas cantidades y deja claro el total.",
-          "Una cucharada de AOVE son 15 ml (aprox. 13,5 g y 119 kcal). No confundas una cucharada con una cucharadita.",
-          "Distingue peso crudo de cocido. Si no se especifica, usa el estado habitual del plato descrito.",
-          "Si falta una cantidad, usa una ración española razonable. Para 'filete de pollo a la plancha' sin peso, usa 130 g ya cocinados por filete; dos filetes son 260 g. Marca cantidadEstimada=true y explica el supuesto brevemente.",
-          "No inventes ingredientes, marcas ni preparaciones. Especias, sal y vinagre sin azúcar pueden contar como 0 kcal, pero no deben ocultar ingredientes energéticos cercanos.",
-          "Las kcal y los macronutrientes pertenecen a la cantidad indicada, no a 100 g. Comprueba cada fila y el conjunto con 4 kcal/g de proteína y carbohidrato y 9 kcal/g de grasa, admitiendo fibra y redondeos.",
-          "Devuelve exclusivamente el JSON que impone el esquema. No añadas consejos ni texto fuera del JSON.",
-        ].join(" ") }],
-      },
-      contents: [{ role: "user", parts: [{ text: `Analiza esta comida completa sin saltarte ningún ingrediente:\n${texto}` }] }],
-      generationConfig: {
-        temperature: 0,
-        responseMimeType: "application/json",
-        responseJsonSchema: ESQUEMA_RESPUESTA,
-        maxOutputTokens: 4096,
-        thinkingConfig: { thinkingLevel: "low" },
-      },
-    }),
-    signal: AbortSignal.timeout(20_000),
-  });
+  let payload: GeminiPayload | null = null;
+  for (const model of MODELS) {
+    if ((modelUnavailableUntil.get(model) ?? 0) > Date.now()) continue;
+    const respuesta = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": API_KEY },
+      body: JSON.stringify({
+        systemInstruction: {
+          parts: [{ text: [
+            "Eres el analista nutricional de RITMO para descripciones en español. Tu prioridad es NO omitir ingredientes.",
+            "Primero separa mentalmente la frase completa ingrediente por ingrediente, aunque sea larga, no tenga comas o repita conectores como 'con' e 'y'. Después calcula cada fila.",
+            "Respeta exactamente gramos, mililitros, unidades, filetes, latas, cucharadas (cda) y cucharaditas. La cantidad se asocia únicamente al ingrediente más cercano.",
+            "Cuenta cada aparición de AOVE, aceite, mantequilla, alioli, salsa, queso, frutos secos y aliño. Si el mismo aceite aparece dos veces, suma ambas cantidades y deja claro el total.",
+            "Una cucharada de AOVE son 15 ml (aprox. 13,5 g y 119 kcal). No confundas una cucharada con una cucharadita.",
+            "Distingue peso crudo de cocido. Si no se especifica, usa el estado habitual del plato descrito.",
+            "Si falta una cantidad, usa una ración española razonable. Para 'filete de pollo a la plancha' sin peso, usa 130 g ya cocinados por filete; dos filetes son 260 g. Marca cantidadEstimada=true y explica el supuesto brevemente.",
+            "No inventes ingredientes, marcas ni preparaciones. Especias, sal y vinagre sin azúcar pueden contar como 0 kcal, pero no deben ocultar ingredientes energéticos cercanos.",
+            "Las kcal y los macronutrientes pertenecen a la cantidad indicada, no a 100 g. Comprueba cada fila y el conjunto con 4 kcal/g de proteína y carbohidrato y 9 kcal/g de grasa, admitiendo fibra y redondeos.",
+            "Devuelve exclusivamente el JSON que impone el esquema. No añadas consejos ni texto fuera del JSON.",
+          ].join(" ") }],
+        },
+        contents: [{ role: "user", parts: [{ text: `Analiza esta comida completa sin saltarte ningún ingrediente:\n${texto}` }] }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseJsonSchema: ESQUEMA_RESPUESTA,
+          maxOutputTokens: 4096,
+          thinkingConfig: { thinkingLevel: "low" },
+        },
+      }),
+      signal: AbortSignal.timeout(20_000),
+    });
 
-  if (!respuesta.ok) {
-    const detalle = await respuesta.text().catch(() => "");
-    console.warn(`Gemini nutrición: ${respuesta.status} ${respuesta.statusText}${detalle ? ` · ${detalle.slice(0, 320)}` : ""}`);
-    return null;
+    if (!respuesta.ok) {
+      const detalle = await respuesta.text().catch(() => "");
+      console.warn(`Gemini nutrición (${model}): ${respuesta.status} ${respuesta.statusText}${detalle ? ` · ${detalle.slice(0, 320)}` : ""}`);
+      if (respuesta.status === 429 || respuesta.status === 503) {
+        modelUnavailableUntil.set(model, Date.now() + MODEL_COOLDOWN_MS);
+      }
+      continue;
+    }
+
+    modelUnavailableUntil.delete(model);
+
+    const datos = await respuesta.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+    const textoJSON = datos.candidates?.[0]?.content?.parts?.map((parte) => parte.text || "").join("") || "";
+    payload = extraerJSON(textoJSON);
+    if (payload && Array.isArray(payload.items)) break;
   }
-
-  const datos = await respuesta.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-  const textoJSON = datos.candidates?.[0]?.content?.parts?.map((parte) => parte.text || "").join("") || "";
-  const payload = extraerJSON(textoJSON);
   if (!payload || !Array.isArray(payload.items)) return null;
 
   const items = payload.items

@@ -7,7 +7,8 @@
    Los datos viven en Supabase/estado; el SW solo garantiza que el "cascarón"
    de la app cargue offline. */
 
-const VERSION = "ritmo-v1";
+const DEPLOYMENT_VERSION = new URL(self.location.href).searchParams.get("v") || "dev";
+const VERSION = `ritmo-${DEPLOYMENT_VERSION}`;
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGES_CACHE = `${VERSION}-pages`;
 const OFFLINE_URL = "/offline";
@@ -43,8 +44,10 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(PAGES_CACHE).then((c) => c.put(request, copy));
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(PAGES_CACHE).then((c) => c.put(request, copy));
+          }
           return res;
         })
         .catch(async () => {
@@ -62,8 +65,10 @@ self.addEventListener("fetch", (event) => {
         (cached) =>
           cached ||
           fetch(request).then((res) => {
-            const copy = res.clone();
-            caches.open(STATIC_CACHE).then((c) => c.put(request, copy));
+            if (res.ok) {
+              const copy = res.clone();
+              caches.open(STATIC_CACHE).then((c) => c.put(request, copy));
+            }
             return res;
           }),
       ),
@@ -76,8 +81,10 @@ self.addEventListener("fetch", (event) => {
     caches.match(request).then((cached) => {
       const network = fetch(request)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(STATIC_CACHE).then((c) => c.put(request, copy));
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(STATIC_CACHE).then((c) => c.put(request, copy));
+          }
           return res;
         })
         .catch(() => cached);

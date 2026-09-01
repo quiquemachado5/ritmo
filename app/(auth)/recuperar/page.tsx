@@ -63,7 +63,7 @@ function RecuperarForm() {
         <style>{transitionCSS}</style>
         <div style={{ animation: `fadeScale 0.5s ${springBezier} forwards` }}>
           <div className="bg-background border border-border/50 rounded-2xl shadow-lg px-6 py-6 text-center space-y-3">
-            <CheckCircle2 className="mx-auto size-10 text-green-600" style={{ animation: `successPop 0.6s ${springBezier}` }} />
+            <CheckCircle2 className="mx-auto size-10 text-weight" style={{ animation: `successPop 0.6s ${springBezier}` }} />
             <h1 className="font-display text-xl font-bold">Correo enviado</h1>
             <p className="text-sm text-muted-foreground">Revisa tu bandeja de entrada.</p>
             <p className="text-xs text-muted-foreground">Si no lo ves, revisa spam.</p>
@@ -84,11 +84,11 @@ function RecuperarForm() {
       <div style={{ animation: `fadeScale 0.5s ${springBezier} forwards` }}>
         <div
           className="bg-background border border-border/50 rounded-2xl shadow-lg overflow-hidden"
-          style={{ animation: shaking ? `shake 0.5s cubic-bezier(0.36, 0, 0.66, -0.56)` : "none" }}
+          style={{ animation: shaking ? `shake 0.42s cubic-bezier(0.22, 1, 0.36, 1)` : "none" }}
         >
           <div className="h-0.5 bg-gradient-to-r from-primary via-primary/80 to-primary/60" />
 
-          <div className="px-7 py-6 space-y-5">
+          <div className="space-y-5 px-5 py-6 sm:px-7">
             <div className="overflow-hidden">
               <h1 className="font-display text-3xl font-bold" style={{ animation: `revealText 0.7s ${springBezier} forwards` }}>
                 Recuperar contraseña
@@ -99,7 +99,7 @@ function RecuperarForm() {
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive"
+              <div role="alert" className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive"
                 style={{ animation: `toastIn 0.3s ${springBezier}` }}>
                 <Shield className="size-3.5 shrink-0" /><span>{error}</span>
               </div>
@@ -109,18 +109,18 @@ function RecuperarForm() {
               <div style={stagger(1)}>
                 <Label htmlFor="email" className="text-sm font-semibold mb-1.5 block">Email</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
+                  <Mail className="absolute left-3 top-3.5 size-4 text-muted-foreground sm:top-2.5" />
                   <Input id="email" type="email" autoComplete="email" required
                     value={email} onChange={(e) => handleEmailChange(e.target.value)}
                     placeholder="tu@correo.com" disabled={cargando}
-                    className={`pl-9 h-10 text-sm rounded-lg border-2 transition-all focus:border-primary focus:ring-1 focus:ring-primary/20 ${emailError ? "border-destructive" : ""}`}
+                    className={`h-12 rounded-lg border-2 pl-10 text-base transition-[border-color,box-shadow] focus:border-primary focus:ring-1 focus:ring-primary/20 sm:h-10 sm:pl-9 sm:text-sm ${emailError ? "border-destructive" : ""}`}
                   />
                 </div>
                 {emailError && <p className="text-[0.65rem] text-destructive mt-0.5">{emailError}</p>}
               </div>
 
               <Button type="submit" disabled={cargando || emailError !== null}
-                className="w-full h-10 text-sm font-semibold rounded-lg transition-all active:scale-95"
+                className="h-12 w-full rounded-lg text-base font-semibold transition-transform active:scale-[0.98] sm:h-10 sm:text-sm sm:active:scale-95"
                 style={stagger(2)}>
                 {cargando ? <><Loader2 className="size-3.5 animate-spin mr-1.5" />Enviando...</> : "Enviar enlace"}
               </Button>

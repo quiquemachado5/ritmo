@@ -420,7 +420,9 @@ function PanelHabitos({ fecha }: { fecha: string }) {
         return (
           <button
             key={h.clave}
+            type="button"
             onClick={() => alternarHabito(fecha, h.clave)}
+            aria-pressed={hecho}
             className={cn(
               "flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-colors",
               hecho ? "border-primary/40 bg-primary/8" : "border-border hover:bg-secondary",

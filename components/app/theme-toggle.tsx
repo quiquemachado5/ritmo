@@ -5,10 +5,17 @@ import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+const suscribirMontaje = () => () => {};
+const snapshotCliente = () => true;
+const snapshotServidor = () => false;
+
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
-  const [montado, setMontado] = React.useState(false);
-  React.useEffect(() => setMontado(true), []);
+  const montado = React.useSyncExternalStore(
+    suscribirMontaje,
+    snapshotCliente,
+    snapshotServidor,
+  );
 
   // Hasta el montaje no conocemos el tema resuelto: mantenemos un estado estable
   // para que el HTML del servidor y el del cliente coincidan.

@@ -34,20 +34,33 @@ Los días con kcal completas prevalecen sobre cualquier estimación. Cero hábit
 
 ---
 
-## 2. Arranque rápido (modo demo)
+## 2. Arranque rápido
 
 ```bash
 npm install
+npm run check:versions
 npm run dev
 ```
 
-Abre <http://localhost:3000>. **Sin configurar nada**, RITMO arranca en modo demo con el histórico real de ejemplo: puedes explorar todas las pantallas, registrar comidas, pesos y hábitos (se guardan en el navegador).
+Configura primero las credenciales públicas de Supabase descritas en la sección siguiente y abre <http://localhost:3000>.
 
 Pruebas del modelo:
 
 ```bash
 npm test
 ```
+
+Comprobaciones especializadas:
+
+```bash
+# Benchmark real de Gemini contra ocho platos complejos
+npm run test:nutrition:eval
+
+# Registro móvil y flujos con dos cuentas de prueba (.env.e2e.example)
+npm run test:e2e
+```
+
+El formato de copia, la caché y la última migración se coordinan desde [`config/versions.json`](config/versions.json). Cada despliegue incorpora el commit a la versión de caché; las copias nuevas guardan formato y esquema y las copias v1 siguen siendo importables.
 
 ---
 
@@ -79,10 +92,11 @@ Añade en `.env.local` una clave creada en [Google AI Studio](https://aistudio.g
 
 ```env
 GEMINI_API_KEY=...
-GEMINI_NUTRITION_MODEL=gemini-2.5-flash
+# Opcional: fija un modelo; sin esta línea RITMO usa 3.7 y respaldo 3.5.
+# GEMINI_NUTRITION_MODEL=gemini-3.7-flash
 ```
 
-Gemini tiene un nivel gratuito con límites de uso que pueden cambiar; revisa la cuota de tu proyecto antes de desplegar. Google indica que el contenido enviado en el nivel gratuito puede usarse para mejorar sus productos, así que no incluyas información personal o médica en la descripción de la comida. Sin clave —o si Gemini no responde— RITMO intenta Edamam si está configurado y finalmente mantiene el estimador local. Todas las respuestas se guardan como estimaciones editables: la etiqueta del producto y las cantidades pesadas prevalecen.
+Gemini tiene un nivel gratuito con límites de uso que pueden cambiar; revisa la cuota de tu proyecto antes de desplegar. RITMO prueba primero Gemini 3.7 Flash y, ante saturación o una respuesta inválida, usa 3.5 Flash antes de recurrir a Edamam o al estimador local. Google indica que el contenido enviado en el nivel gratuito puede usarse para mejorar sus productos, así que no incluyas información personal o médica en la descripción de la comida. Todas las respuestas se guardan como estimaciones editables: la etiqueta del producto y las cantidades pesadas prevalecen.
 
 ---
 

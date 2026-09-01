@@ -8,6 +8,9 @@ import {
   ArrowUpRight,
   Minus,
   Pencil,
+  Database,
+  Gauge,
+  Ruler,
   Scale,
   Trash2,
   TrendingDown,
@@ -280,7 +283,17 @@ export default function ProgresoPage() {
 
           <section aria-labelledby="confianza-modelo">
             <details className="group overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-              <summary id="confianza-modelo" className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 py-4"><span><span className="font-display text-lg font-bold">Confianza del modelo</span><span className="mt-0.5 block text-xs text-muted-foreground">Biología, histórico y calidad de los días que sostienen la estimación.</span></span><Chip tone={CALIDAD_TONE[r.prediccion.modelo?.calidad ?? "inicial"]}>{CALIDAD_LABEL[r.prediccion.modelo?.calidad ?? "inicial"]}</Chip></summary>
+              <summary id="confianza-modelo" className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 marker:content-none sm:px-6">
+                <span className="min-w-0">
+                  <span className="font-display text-lg font-bold">Precisión y datos del modelo</span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    {r.prediccion.modelo?.errorHistoricoKg != null
+                      ? `MAE histórico de ${fmtPeso(r.prediccion.modelo.errorHistoricoKg)} kg en ${r.prediccion.modelo.prediccionesEvaluadas} predicciones`
+                      : "Se mostrará cuando existan suficientes tramos de pesaje para evaluarlo"}
+                  </span>
+                </span>
+                <Chip tone={CALIDAD_TONE[r.prediccion.modelo?.calidad ?? "inicial"]}>{CALIDAD_LABEL[r.prediccion.modelo?.calidad ?? "inicial"]}</Chip>
+              </summary>
               <div className="grid divide-y divide-border sm:grid-cols-[minmax(0,1.15fr)_minmax(14rem,.85fr)] sm:divide-x sm:divide-y-0">
                 <div className="p-5 sm:p-6">
                   <p className="text-sm font-semibold">Días que sostienen la tendencia</p>
@@ -300,13 +313,17 @@ export default function ProgresoPage() {
                   </dl>
                 </div>
               </div>
-              <div className="border-t border-border bg-card px-5 py-5 sm:px-6">
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <ModeloDato label="Calibración personal" value={r.prediccion.modelo?.personalizado ? `${r.prediccion.modelo.tramosCalibracion} tramos` : "En aprendizaje"} detail={r.prediccion.modelo?.personalizado ? `${r.prediccion.modelo.coberturaHistorica}% de cobertura histórica` : "Necesita al menos 4 pesajes"} />
-                  <ModeloDato label="Error al anticipar" value={r.prediccion.modelo?.errorHistoricoKg != null ? `±${fmtPeso(r.prediccion.modelo.errorHistoricoKg)} kg` : "—"} detail="media walk-forward, sin mirar el futuro" />
-                  <ModeloDato label="Mejora aprendida" value={r.prediccion.modelo?.mejoraHistoricaPct != null ? `${fmtSigno(r.prediccion.modelo.mejoraHistoricaPct, 0)}%` : "—"} detail="frente al prior sin personalizar" />
+              <div className="border-t border-border bg-card px-5 py-5 sm:px-6 sm:py-6">
+                <div className="mb-3 flex items-end justify-between gap-4">
+                  <div><p className="text-sm font-semibold">Validación sin mirar el futuro</p><p className="mt-0.5 text-xs text-muted-foreground">Cada predicción se calcula usando únicamente los pesajes anteriores.</p></div>
+                  {r.prediccion.hoy && <span className="hidden text-right text-xs tabular text-muted-foreground sm:block">Rango de hoy<br /><strong className="font-semibold text-foreground">{fmtPeso(r.prediccion.hoy.minimo)}–{fmtPeso(r.prediccion.hoy.maximo)} kg</strong></span>}
                 </div>
-                <p className="mt-5 text-xs leading-relaxed text-muted-foreground">El punto de partida usa sexo, edad, altura, actividad y objetivo. Después, cada pesaje cerrado corrige cómo respondes tú a los hábitos. Las kcal completas siempre tienen prioridad.</p>
+                <div className="grid overflow-hidden rounded-xl border border-border bg-secondary/20 sm:grid-cols-3 sm:divide-x sm:divide-border">
+                  <ModeloDato icon={Gauge} label="MAE observado" value={r.prediccion.modelo?.errorHistoricoKg != null ? `${fmtPeso(r.prediccion.modelo.errorHistoricoKg)} kg` : "—"} detail="error absoluto medio del backtest" />
+                  <ModeloDato icon={Ruler} label="80% de los tramos" value={r.prediccion.modelo?.errorHistoricoP80Kg != null ? `≤ ${fmtPeso(r.prediccion.modelo.errorHistoricoP80Kg)} kg` : "—"} detail="error que no se superó en 8 de cada 10 casos" />
+                  <ModeloDato icon={Database} label="Datos evaluados" value={r.prediccion.modelo?.prediccionesEvaluadas ? `${r.prediccion.modelo.prediccionesEvaluadas} predicciones` : "Aún insuficientes"} detail={`${r.prediccion.modelo?.puntos ?? 0} pesajes · ${r.prediccion.modelo?.coberturaHistorica ?? 0}% de cobertura`} />
+                </div>
+                <p className="mt-4 text-xs leading-relaxed text-muted-foreground">El rango de cada fecha combina este error histórico con los días sin pesaje y la calidad de los registros recientes. El punto de partida usa sexo, edad, altura, actividad y objetivo; después cada tramo cerrado recalibra la respuesta a tus hábitos.</p>
                 <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:thin]" aria-label="Balance diario estimado según hábitos cumplidos">
                   {curvaModelo.map(({ balance, cumplidos, total }) => (
                     <div key={cumplidos} className={cn("min-w-16 flex-1 rounded-lg border px-1.5 py-2 text-center", balance > 0 ? "border-energy-border bg-energy-wash text-energy-ink" : "border-weight-border bg-weight-wash text-weight-ink")}>
@@ -426,8 +443,8 @@ function ModeloFila({ cantidad, etiqueta, detalle, tone }: { cantidad: number; e
   return <div className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"><span className={cn("size-2 shrink-0 rounded-full", color)} /><span className="min-w-0 flex-1"><span className="font-medium text-foreground">{etiqueta}</span><span className="text-muted-foreground"> · {detalle}</span></span><span className="font-semibold tabular text-foreground">{cantidad}</span></div>;
 }
 
-function ModeloDato({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return <div className="rounded-xl bg-secondary/55 px-3.5 py-3"><p className="text-[0.68rem] font-semibold text-muted-foreground">{label}</p><p className="mt-1 font-display text-xl font-bold tabular text-foreground">{value}</p><p className="mt-1 text-[0.68rem] leading-snug text-muted-foreground">{detail}</p></div>;
+function ModeloDato({ icon: Icon, label, value, detail }: { icon: typeof Gauge; label: string; value: string; detail: string }) {
+  return <div className="border-b border-border px-4 py-4 last:border-b-0 sm:border-b-0"><div className="flex items-center gap-2 text-muted-foreground"><Icon className="size-3.5" aria-hidden /><p className="text-[0.68rem] font-semibold">{label}</p></div><p className="mt-2 font-display text-xl font-bold tabular text-foreground">{value}</p><p className="mt-1 text-[0.68rem] leading-snug text-muted-foreground">{detail}</p></div>;
 }
 
 function DeltaTag({ delta, compact = false }: { delta: number | null; compact?: boolean }) {

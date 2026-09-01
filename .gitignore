@@ -31,3 +31,5 @@ next-env.d.ts
 .impeccable/surface-brief-index.md
 .impeccable/surfaces/
 tsconfig.tsbuildinfo
+test-results/
+playwright-report/

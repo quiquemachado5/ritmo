@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { HABITOS } from "@/lib/model/config";
+import { habitosModelo } from "@/lib/model/config";
 import type { ResumenMes } from "@/lib/model/analytics";
 import type { Estado } from "@/lib/model/types";
 
@@ -29,8 +29,10 @@ export function MonthlyShare({ meses, estado }: { meses: ResumenMes[]; estado: E
 
   async function compartir() {
     const dias = Object.values(estado.dias).filter((d) => d.fecha.startsWith(`${mes.clave}-`));
-    const porHabito = HABITOS.map((h) => ({ etiqueta: h.etiqueta, pct: dias.length ? Math.round((dias.filter((d) => d.habitos?.[h.clave]).length / dias.length) * 100) : 0 }));
-    const canvas = document.createElement("canvas"); canvas.width = 1080; canvas.height = 1350;
+    const porHabito = habitosModelo(estado.perfil).map((h) => ({ etiqueta: h.etiqueta, pct: dias.length ? Math.round((dias.filter((d) => d.habitos?.[h.clave]).length / dias.length) * 100) : 0 }));
+    const canvas = document.createElement("canvas");
+    canvas.width = 1080;
+    canvas.height = Math.max(1350, 990 + porHabito.length * 52 + 100);
     const c = canvas.getContext("2d"); if (!c) return;
     c.fillStyle = "#f7f5ef"; c.fillRect(0, 0, 1080, 1350);
     c.fillStyle = "#1f6b53"; c.fillRect(0, 0, 1080, 24);
@@ -60,7 +62,7 @@ export function MonthlyShare({ meses, estado }: { meses: ResumenMes[]; estado: E
       c.fillStyle = h.pct >= 80 ? "#1f6b53" : h.pct >= 45 ? "#9a6b16" : "#b3452c"; rounded(c, 420, y - 20, 470 * (h.pct / 100), 16, 8); c.fill();
       c.fillStyle = "#201e18"; c.font = "700 22px Hanken Grotesk, Arial"; c.textAlign = "right"; c.fillText(`${h.pct}%`, 970, y); c.textAlign = "left";
     });
-    c.fillStyle = "#6b6453"; c.font = "500 21px Hanken Grotesk, Arial"; c.fillText("Constancia sobre perfección · ritmo", 82, 1280);
+    c.fillStyle = "#6b6453"; c.font = "500 21px Hanken Grotesk, Arial"; c.fillText("Constancia sobre perfección · ritmo", 82, canvas.height - 48);
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png")); if (!blob) return;
     const file = new File([blob], `ritmo-${mes.clave}.png`, { type: "image/png" });
     if (navigator.share && navigator.canShare?.({ files: [file] })) { await navigator.share({ title: `Mi ${mes.etiqueta} en RITMO`, files: [file] }); return; }

@@ -531,6 +531,7 @@ export interface BacktestModelo {
   tramos: number;
   errorBaseKg: number | null;
   errorPersonalKg: number | null;
+  errorP80Kg: number | null;
   mejoraPct: number | null;
   dentroMedioKg: number;
 }
@@ -547,6 +548,7 @@ export function backtestModelo(estado: Estado): BacktestModelo {
   let errorPersonal = 0;
   let evaluados = 0;
   let dentroMedioKg = 0;
+  const erroresPersonal: number[] = [];
 
   for (let i = 3; i < tramos.length; i++) {
     const tramo = tramos[i];
@@ -558,16 +560,20 @@ export function backtestModelo(estado: Estado): BacktestModelo {
     const errorP = Math.abs(deltaPersonal - tramo.deltaRealKg);
     errorBase += errorB;
     errorPersonal += errorP;
+    erroresPersonal.push(errorP);
     if (errorP <= 0.5) dentroMedioKg++;
     evaluados++;
   }
 
   const base = evaluados ? errorBase / evaluados : null;
   const personal = evaluados ? errorPersonal / evaluados : null;
+  const ordenados = erroresPersonal.sort((a, b) => a - b);
+  const p80 = ordenados.length ? ordenados[Math.max(0, Math.ceil(ordenados.length * 0.8) - 1)] : null;
   const valor: BacktestModelo = {
     tramos: evaluados,
     errorBaseKg: base === null ? null : redondearPeso(base),
     errorPersonalKg: personal === null ? null : redondearPeso(personal),
+    errorP80Kg: p80 === null ? null : redondearPeso(p80),
     mejoraPct: base && personal !== null ? Math.round((1 - personal / base) * 100) : null,
     dentroMedioKg,
   };
@@ -688,6 +694,9 @@ export interface ModeloProyeccion {
   tramosCalibracion: number;
   coberturaHistorica: number;
   errorHistoricoKg: number | null;
+  errorHistoricoP80Kg: number | null;
+  prediccionesEvaluadas: number;
+  aciertosMedioKgPct: number | null;
   mejoraHistoricaPct: number | null;
 }
 
@@ -819,6 +828,9 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
       tramosCalibracion: personalizacion.tramos,
       coberturaHistorica: personalizacion.cobertura,
       errorHistoricoKg: validacion.errorPersonalKg,
+      errorHistoricoP80Kg: validacion.errorP80Kg,
+      prediccionesEvaluadas: validacion.tramos,
+      aciertosMedioKgPct: validacion.tramos ? Math.round((validacion.dentroMedioKg / validacion.tramos) * 100) : null,
       mejoraHistoricaPct: validacion.mejoraPct,
     },
     diasSinPesaje,

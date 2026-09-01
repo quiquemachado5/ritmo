@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, MailCheck, Shield, CheckCircle, Check, X, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Loader2, MailCheck, Shield, CheckCircle, Check, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -129,7 +129,7 @@ function RegistroForm() {
       <div style={{ animation: `fadeScale 0.5s ${springBezier} forwards` }}>
         <div
           className="bg-background border border-border/50 rounded-2xl shadow-lg overflow-hidden"
-          style={{ animation: shaking ? `shake 0.5s cubic-bezier(0.36, 0, 0.66, -0.56)` : "none" }}
+          style={{ animation: shaking ? `shake 0.42s cubic-bezier(0.22, 1, 0.36, 1)` : "none" }}
         >
           <div className="h-0.5 bg-gradient-to-r from-primary via-primary/80 to-primary/60" />
 
@@ -141,7 +141,7 @@ function RegistroForm() {
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive"
+              <div role="alert" className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive"
                 style={{ animation: `toastIn 0.3s ${springBezier}` }}>
                 <Shield className="size-3.5 shrink-0" /><span>{error}</span>
               </div>
@@ -174,7 +174,8 @@ function RegistroForm() {
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={cargando}
-                    className="absolute right-3 top-3.5 text-muted-foreground transition-colors hover:text-primary sm:top-2.5"
+                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    className="absolute right-0 top-0 grid size-12 place-items-center text-muted-foreground transition-colors hover:text-primary sm:size-10"
                   >
                     {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
@@ -182,10 +183,10 @@ function RegistroForm() {
                 {password && (
                   <div className="flex items-center gap-2 mt-1">
                     <div className={`h-1 rounded-full transition-all duration-500 ${passwordStrength.color}`}
-                      style={{ width: `${Math.max(passwordStrength.score * 25, 10)}%` }} />
+                      style={{ width: `${Math.max(passwordStrength.percent, 10)}%` }} />
                     <span className="text-[0.65rem] text-muted-foreground capitalize">{passwordStrength.level}</span>
                     {passwordErrors.length === 0 && (
-                      <Check className="size-3 text-green-500" style={{ animation: `successPop 0.3s ${springBezier}` }} />
+                      <Check className="size-3 text-weight" style={{ animation: `successPop 0.3s ${springBezier}` }} />
                     )}
                   </div>
                 )}
@@ -204,7 +205,8 @@ function RegistroForm() {
                     type="button"
                     onClick={() => setShowConfirm(!showConfirm)}
                     disabled={cargando}
-                    className="absolute right-3 top-3.5 text-muted-foreground transition-colors hover:text-primary sm:top-2.5"
+                    aria-label={showConfirm ? "Ocultar confirmación" : "Mostrar confirmación"}
+                    className="absolute right-0 top-0 grid size-12 place-items-center text-muted-foreground transition-colors hover:text-primary sm:size-10"
                   >
                     {showConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>

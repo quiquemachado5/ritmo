@@ -6,7 +6,7 @@
 
 import type { HabitoPersonalizado, Perfil } from "./types";
 
-export interface DefHabito extends HabitoPersonalizado {}
+export type DefHabito = HabitoPersonalizado;
 
 export const HABITOS: DefHabito[] = [
   { clave: "comida", etiqueta: "Comida", codigo: "COM", icono: "UtensilsCrossed" },

@@ -15,7 +15,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Ring, MacroBar, Metric, SectionLabel } from "@/components/app/primitives";
 import { fmtPeso, fmtKcal, fmtSigno, relativo, capitalizar } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { WeeklyShare } from "@/components/app/weekly-share";
 import { MonthlyShare } from "@/components/app/monthly-share";
 import { RitmoDisclosure } from "@/components/ui/ritmo-disclosure";
 
@@ -281,152 +280,6 @@ const VEREDICTO: Record<Veredicto, { titulo: string; clase: string; punto: strin
   mal: { titulo: "Semana floja", clase: "text-energy", punto: "bg-energy" },
 };
 
-function WeeklyInsightsLegacy({ r, estado }: { r: ReturnType<typeof resumen>; estado: typeof r extends never ? never : Parameters<typeof resumen>[0] }) {
-  const porHabito = React.useMemo(
-    () => [...adherenciaPorHabito(estado, habitosModelo(estado.perfil), 7)].sort((a, b) => b.pct - a.pct),
-    [estado],
-  );
-  const rec = React.useMemo(() => recordsPersonales(estado), [estado]);
-  const meses = React.useMemo(() => resumenPorMes(estado), [estado]);
-  const patrones = React.useMemo(() => patronesHabitos(estado), [estado]);
-
-  const adh = r.habitos.adherencia7;
-  const racha = r.habitos.rachaActual.longitud;
-  const mejorRacha = r.habitos.mejorRacha.longitud;
-  const tendKg = r.prediccion.modelo?.kgSemana ?? null;
-  const quiere = estado.perfil.objetivo ?? "perder";
-
-  let veredicto: Veredicto = adh >= 85 ? "excelente" : adh >= 70 ? "bien" : adh >= 50 ? "flojea" : "mal";
-  const enContra =
-    tendKg != null && ((quiere === "perder" && tendKg > 0.15) || (quiere === "ganar" && tendKg < -0.15));
-  if (enContra && veredicto !== "mal") {
-    veredicto = veredicto === "excelente" ? "bien" : veredicto === "bien" ? "flojea" : "mal";
-  }
-  const v = VEREDICTO[veredicto];
-
-  const cabecera =
-    veredicto === "excelente"
-      ? `${adh}% de constancia. Enhorabuena, así se construye.`
-      : veredicto === "bien"
-        ? `${adh}% de constancia. Vas bien; afina un detalle y es redonda.`
-        : veredicto === "flojea"
-          ? `${adh}% de constancia. Ni mal ni bien: te falta rematar los días.`
-          : `${adh}% de constancia. Esta semana se te ha escapado. Recupérala hoy.`;
-
-  const lineas: { icon: React.ReactNode; text: string }[] = [];
-
-  const peor = porHabito[porHabito.length - 1];
-  if (peor && peor.pct < 100) {
-    lineas.push({
-      icon: <Target className="size-4 shrink-0 text-warning" />,
-      text: `Incide en ${peor.etiqueta.toLowerCase()}: ${peor.hechos} de ${peor.total} días. Es lo que más te suma ahora.`,
-    });
-  }
-
-  const mejor = porHabito[0];
-  if (mejor && mejor.pct >= 70 && mejor.clave !== peor?.clave) {
-    lineas.push({
-      icon: <TrendingUp className="size-4 shrink-0 text-habit" />,
-      text: `${mejor.etiqueta} lo tienes dominado (${mejor.pct}%). Esa base no la sueltes.`,
-    });
-  }
-
-  if (racha >= 3) {
-    lineas.push({
-      icon: <Award className="size-4 shrink-0 text-streak" />,
-      text: `${racha} días seguidos con todos tus hábitos activos. No rompas la cadena.`,
-    });
-  } else if (racha === 0 && mejorRacha >= 3) {
-    lineas.push({
-      icon: <Award className="size-4 shrink-0 text-muted-foreground" />,
-      text: `Sin racha viva. Tu récord son ${mejorRacha} días: hoy puede ser el 1.`,
-    });
-  }
-
-  if (tendKg != null && Math.abs(tendKg) >= 0.1) {
-    const baja = tendKg < 0;
-    lineas.push({
-      icon: baja
-        ? <TrendingDown className="size-4 shrink-0 text-weight" />
-        : <TrendingUp className="size-4 shrink-0 text-energy" />,
-      text: enContra
-        ? `El peso sube ~${Math.abs(tendKg).toFixed(1)} kg/semana y tu objetivo es ${quiere}. Ahí está el desajuste.`
-        : `${baja ? "Pierdes" : "Ganas"} ~${Math.abs(tendKg).toFixed(1)} kg/semana, en línea con tu objetivo.`,
-    });
-  }
-
-  if ((r.prediccion.diasSinPesaje ?? 0) >= 14) {
-    lineas.push({
-      icon: <Target className="size-4 shrink-0 text-muted-foreground" />,
-      text: `Llevas ${r.prediccion.diasSinPesaje} días sin pesarte: la estimación se va abriendo. Una báscula la reajusta.`,
-    });
-  }
-
-  const hayRecords = rec.mejorMesAdherencia || rec.mayorPerdidaMes || rec.totalDiasRegistrados > 0;
-  const estaSemana = resumenSemana(estado, hoy());
-  const semanaAnterior = resumenSemana(estado, sumarDias(hoy(), -7));
-  const deltaSemana = estaSemana.adherencia - semanaAnterior.adherencia;
-
-  return (
-    <section>
-      <SectionLabel action={<WeeklyShare adherencia={adh} comidas={estaSemana.comidas} dias={estaSemana.diasConDatos} titulo={v.titulo} />}>Resumen semanal</SectionLabel>
-      <Card className="flex flex-col gap-0 overflow-hidden p-0">
-        <div className="grid lg:grid-cols-[minmax(0,1.25fr)_minmax(15rem,.75fr)]">
-          <div className="p-5 sm:p-7"><div className="flex items-start justify-between gap-4"><div><h2 className={cn("font-display text-3xl font-bold", v.clase)}>{v.titulo}</h2><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">{cabecera}</p></div><span className={cn("mt-1 size-2 shrink-0 rounded-full", v.punto)} /></div>{lineas.length > 0 ? <div className="mt-6 flex items-start gap-3 border-t border-border pt-4"><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-secondary">{lineas[0].icon}</span><div><p className="text-xs font-semibold text-foreground">Tu foco ahora</p><p className="mt-1 text-sm leading-5 text-muted-foreground">{lineas[0].text}</p></div></div> : <p className="mt-6 border-t border-border pt-4 text-sm text-muted-foreground">Registra unos días más para que RITMO pueda darte una lectura de tu semana.</p>}</div>
-          <div className="border-t border-border bg-secondary/35 p-5 lg:border-l lg:border-t-0 sm:p-7"><p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">Tu semana</p><div className="mt-4 flex items-end justify-between gap-4"><p className={cn("font-display text-6xl font-bold leading-none tabular", v.clase)}>{adh}%</p><Award className={cn("mb-1 size-6", v.clase)} /></div><p className="mt-3 text-sm text-muted-foreground">{estaSemana.diasConDatos} de 7 días registrados · {estaSemana.comidas} comidas</p><div className="mt-6 flex items-center justify-between border-t border-border pt-4"><span className="text-xs text-muted-foreground">frente a la anterior</span><span className={cn("font-display text-xl font-bold tabular", deltaSemana >= 0 ? "text-weight" : "text-energy")}>{deltaSemana >= 0 ? "+" : ""}{deltaSemana} pts</span></div></div>
-        </div>
-
-        <div className="grid grid-cols-3 divide-x divide-border border-t border-border bg-card"><SemanaMetric label="Constancia" actual={`${estaSemana.adherencia}%`} previo={`${semanaAnterior.adherencia}%`} /><SemanaMetric label="Comidas" actual={`${estaSemana.comidas}`} previo={`${semanaAnterior.comidas}`} /><SemanaMetric label="Días con datos" actual={`${estaSemana.diasConDatos}`} previo={`${semanaAnterior.diasConDatos}`} /></div>
-
-        <RitmoDisclosure title="Ver patrones y mejores marcas">
-        {patrones.length > 0 && <div className="border-t border-border bg-secondary/25 px-5 py-5 sm:px-7"><h3 className="font-display text-xl font-bold">Patrones que aparecen</h3><p className="mt-1 text-sm text-muted-foreground">Relaciones observadas en tus últimos registros; describen tendencia, no demuestran causa.</p><div className="mt-4 grid gap-2">{patrones.map((patron) => { const etiqueta = habitosModelo(estado.perfil).find((h) => h.clave === patron.clave)?.etiqueta ?? patron.clave; const favorable = patron.diferencia > 0; return <div key={patron.clave} className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3 last:border-0 last:pb-0"><p className="text-sm text-muted-foreground">Con <span className="font-semibold text-foreground">{etiqueta.toLowerCase()}</span>, tu balance medio fue <span className="font-semibold text-foreground tabular">{Math.abs(patron.diferencia)} kcal</span> {favorable ? "más bajo" : "más alto"}.</p><span className={cn("text-xs font-semibold tabular", favorable ? "text-weight" : "text-energy")}>{patron.muestra} días</span></div>; })}</div></div>}
-
-        {/* Records personales */}
-        {hayRecords && (
-          <div className="border-t border-border bg-background p-5 sm:p-7">
-            <div className="mb-5 flex items-end justify-between gap-4"><div><h3 className="font-display text-xl font-bold">Tus mejores marcas</h3><p className="mt-1 text-sm text-muted-foreground">La evidencia de todo lo que ya has sostenido.</p></div><Award className="size-7 shrink-0 text-streak" /></div>
-            <div className="grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
-              <RecordBadge icon={<Award className="size-4 text-streak" />} label="Mejor racha" value={`${mejorRacha}`} unit="días" />
-              {rec.mejorMesAdherencia && (
-                <RecordBadge icon={<Flame className="size-3.5 text-habit" />} label="Mejor mes" value={`${rec.mejorMesAdherencia.adherenciaMedia}%`} sub={rec.mejorMesAdherencia.etiqueta} />
-              )}
-              {rec.mayorPerdidaMes && (
-                <RecordBadge icon={<TrendingDown className="size-3.5 text-weight" />} label="Mayor pérdida" value={fmtSigno(rec.mayorPerdidaMes.cambioPeso as number, 1)} unit="kg" sub={rec.mayorPerdidaMes.etiqueta} />
-              )}
-              <RecordBadge icon={<Utensils className="size-3.5 text-energy" />} label="Comidas" value={`${rec.totalComidas}`} sub={`${rec.totalDiasRegistrados} días`} />
-            </div>
-          </div>
-        )}
-
-        {/* Comparativa mensual */}
-        {(() => {
-          const esteMes = meses[0] ?? null;
-          const mesPrevio = meses[1] ?? null;
-          if (!esteMes || !mesPrevio) return null;
-          const deltaAdh = esteMes.adherenciaMedia - mesPrevio.adherenciaMedia;
-          return (
-            <div className="border-t border-border p-5">
-              <div className="flex items-start gap-3 text-sm">
-                {deltaAdh >= 0
-                  ? <TrendingUp className="size-4 shrink-0 text-weight" />
-                  : <TrendingDown className="size-4 shrink-0 text-energy" />}
-                <span className="text-muted-foreground">
-                  Este mes ({esteMes.etiqueta}): <span className="tabular font-medium text-foreground">{esteMes.adherenciaMedia}%</span> de constancia,{" "}
-                  {deltaAdh === 0
-                    ? "igual que"
-                    : <><span className="tabular font-medium text-foreground">{Math.abs(deltaAdh)} pts</span> {deltaAdh > 0 ? "por encima" : "por debajo"} de</>}{" "}
-                  {mesPrevio.etiqueta}{mesPrevio.cambioPeso != null ? <> · {mesPrevio.cambioPeso <= 0 ? "perdiste" : "ganaste"} <span className="tabular font-medium text-foreground">{fmtPeso(Math.abs(mesPrevio.cambioPeso))}</span> kg</> : null}.
-                </span>
-              </div>
-            </div>
-          );
-        })()}
-        </RitmoDisclosure>
-      </Card>
-    </section>
-  );
-}
-
 function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: Parameters<typeof resumen>[0] }) {
   const porHabito = React.useMemo(
     () => [...adherenciaPorHabito(estado, habitosModelo(estado.perfil), 7)].sort((a, b) => b.pct - a.pct),
@@ -604,20 +457,6 @@ function resumenSemana(estado: Parameters<typeof resumen>[0], hasta: string) {
     if (hechos > 0 || (d?.comidas?.length ?? 0) > 0 || d?.peso != null) diasConDatos++;
   }
   return { adherencia: Math.round((habitos / (habitosActivos.length * 7)) * 100), comidas, diasConDatos };
-}
-
-function SemanaMetric({ label, actual, previo }: { label: string; actual: string; previo: string }) {
-  return <div className="min-w-0 bg-card px-3 py-4 text-center sm:px-5"><p className="truncate text-xs text-muted-foreground">{label}</p><p className="mt-1 font-display text-2xl font-bold tabular">{actual}</p><p className="mt-1 text-[0.7rem] text-muted-foreground">antes {previo}</p></div>;
-}
-
-function RecordBadge({ icon, label, value, unit, sub }: { icon: React.ReactNode; label: string; value: string; unit?: string; sub?: string }) {
-  return (
-    <div className="min-w-0 bg-card px-4 py-4 sm:px-5">
-      <div className="flex items-center justify-between gap-2"><p className="truncate text-xs font-medium text-muted-foreground">{label}</p><span className="grid size-7 shrink-0 place-items-center rounded-lg bg-secondary">{icon}</span></div>
-      <p className="mt-4 font-display text-3xl font-bold leading-none tabular text-foreground">{value}{unit && <span className="ml-1 text-xs font-medium text-muted-foreground">{unit}</span>}</p>
-      {sub && <p className="mt-2 truncate text-xs text-muted-foreground">{sub}</p>}
-    </div>
-  );
 }
 
 function CargandoHoy() {

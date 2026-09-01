@@ -123,6 +123,7 @@ function LoginForm() {
 
             {error && (
               <div
+                role="alert"
                 className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive"
                 style={{ animation: `toastIn 0.3s ${springBezier}` }}
               >

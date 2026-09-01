@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { transitionCSS, springBezier } from "@/lib/transitions";
+import { springBezier } from "@/lib/transitions";
 
 interface PageTransitionProps {
   children: React.ReactNode;
@@ -13,25 +12,23 @@ const pageTransitionStyles = `
     0% { opacity: 0; transform: translateY(16px); filter: blur(4px); }
     100% { opacity: 1; transform: translateY(0); filter: blur(0); }
   }
+  @media (prefers-reduced-motion: reduce) {
+    .page-transition { animation: none !important; }
+  }
 `;
 
 export function PageTransition({ children }: PageTransitionProps) {
   const pathname = usePathname();
-  const [key, setKey] = useState(0);
-
-  useEffect(() => {
-    setKey(k => k + 1);
-  }, [pathname]);
 
   return (
     <>
       <style>{pageTransitionStyles}</style>
       <div
-        key={key}
+        key={pathname}
         style={{
           animation: `pageInCustom 0.4s ${springBezier} forwards`,
         }}
-        className="w-full"
+        className="page-transition w-full"
       >
         {children}
       </div>

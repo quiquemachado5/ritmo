@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 /**
@@ -35,9 +36,12 @@ export function RitmoBadge({ className }: { className?: string }) {
 /** Wordmark aprobado de RITMO: se muestra como la imagen raster original. */
 export function RitmoWordmark({ className }: { className?: string }) {
   return (
-    <img
+    <Image
       src="/brand/ritmo-wordmark-transparent.png"
       alt="RITMO"
+      width={206}
+      height={76}
+      preload
       className={cn("h-9 w-auto object-contain dark:brightness-0 dark:invert", className)}
     />
   );

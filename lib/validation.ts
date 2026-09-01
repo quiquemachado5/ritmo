@@ -35,6 +35,7 @@ export function validatePassword(password: string): { valid: boolean; errors: st
 
 export function getPasswordStrength(password: string): {
   score: number;
+  percent: number;
   level: "débil" | "regular" | "buena" | "fuerte";
   color: string;
 } {
@@ -48,12 +49,13 @@ export function getPasswordStrength(password: string): {
   if (/[!@#$%^&*]/.test(password)) score++;
 
   const levels: Array<"débil" | "regular" | "buena" | "fuerte"> = ["débil", "regular", "buena", "fuerte"];
-  const colors = ["bg-red-500", "bg-yellow-500", "bg-blue-500", "bg-green-500"];
+  const colors = ["bg-destructive", "bg-warning", "bg-water", "bg-weight"];
 
   const level = score <= 2 ? 0 : score <= 4 ? 1 : score <= 5 ? 2 : 3;
 
   return {
     score,
+    percent: Math.round((score / 6) * 100),
     level: levels[level],
     color: colors[level],
   };

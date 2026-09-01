@@ -25,13 +25,15 @@ import { HABITOS, habitosModelo, habitosUsuario } from "@/lib/model/config";
 type Densidad = "compacta" | "espaciosa";
 
 export default function AjustesPage() {
-  const { estado, cargando, modo, userEmail, actualizarPerfil, exportar, importar, cerrarSesion, borrarDatos } = useRitmo();
+  const { estado, cargando, modo, userId, userEmail, actualizarPerfil, exportar, importar, cerrarSesion, borrarDatos } = useRitmo();
   const { theme, setTheme } = useTheme();
-  const viaje = useModoViaje();
+  const viaje = useModoViaje(userId);
   const fileRef = React.useRef<HTMLInputElement>(null);
 
   const p = estado.perfil;
   const [form, setForm] = React.useState(p);
+  // El perfil llega de una fuente externa asíncrona y debe rehidratar el borrador.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   React.useEffect(() => setForm(p), [p]);
   // Todos los hooks van ANTES de cualquier return: las reglas de hooks exigen
   // el mismo número y orden en cada render (cargando vs cargado incluido).
@@ -46,15 +48,18 @@ export default function AjustesPage() {
   const [confirmarBorrado, setConfirmarBorrado] = React.useState(false);
   const [nuevoHabito, setNuevoHabito] = React.useState("");
   React.useEffect(() => {
-    setDiasSinExportar(diasDesdeExportacion());
-    const b = leerBackupLocal();
+    // Datos externos del almacenamiento local, aislados por la identidad activa.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDiasSinExportar(diasDesdeExportacion(userId));
+    const b = leerBackupLocal(userId);
     setBackupInfo(b ? { at: b.at } : null);
-  }, []);
+  }, [userId]);
   React.useEffect(() => {
     const guardada = window.localStorage.getItem("ritmo:densidad");
     const proxima: Densidad = guardada === "compacta" ? "compacta" : "espaciosa";
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDensidad(proxima);
-    document.documentElement.dataset.densidad = proxima;
+    document.documentElement.setAttribute("data-densidad", proxima);
   }, []);
   // g/kg por defecto según objetivo, para el placeholder del campo de proteína.
   const proteinaSugerida = String(form.objetivo === "perder" ? 2.0 : form.objetivo === "ganar" ? 1.8 : 1.6);
@@ -63,7 +68,7 @@ export default function AjustesPage() {
   function cambiarDensidad(proxima: Densidad) {
     setDensidad(proxima);
     window.localStorage.setItem("ritmo:densidad", proxima);
-    document.documentElement.dataset.densidad = proxima;
+    document.documentElement.setAttribute("data-densidad", proxima);
   }
 
   async function anadirHabitoPersonal() {
@@ -86,7 +91,8 @@ export default function AjustesPage() {
       toast.error("Mantén al menos un hábito activo para que RITMO pueda interpretar tus días.");
       return;
     }
-    actuales.has(clave) ? actuales.delete(clave) : actuales.add(clave);
+    if (actuales.has(clave)) actuales.delete(clave);
+    else actuales.add(clave);
     const habitosDesactivados = [...actuales];
     set("habitosDesactivados", habitosDesactivados as never);
     await actualizarPerfil({ habitosDesactivados });
@@ -144,7 +150,7 @@ export default function AjustesPage() {
     a.download = `ritmo-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    marcarExportacion();
+    marcarExportacion(userId);
     setDiasSinExportar(0);
   }
 
@@ -164,12 +170,12 @@ export default function AjustesPage() {
     a.download = `ritmo-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    marcarExportacion();
+    marcarExportacion(userId);
     setDiasSinExportar(0);
   }
 
   async function restaurarCopiaLocal() {
-    const b = leerBackupLocal();
+    const b = leerBackupLocal(userId);
     if (!b) {
       toast.error("No hay copia local guardada.");
       return;
@@ -201,7 +207,7 @@ export default function AjustesPage() {
       await importar(previewDatos);
       toast.success("Datos importados");
       setPreviewDatos(null); setResumenImportacion(null);
-    } catch (err) {
+    } catch {
       toast.error("Error al importar");
     }
     setImportando(false);
@@ -319,9 +325,9 @@ export default function AjustesPage() {
         <SettingsCard>
           <SettingsSubhead title="Modo viaje / vacaciones" description="Un contexto visual para interpretar tus días sin alterar kcal, hábitos ni predicciones." />
           <Row label="Estado actual">
-            <div className="flex items-center gap-2"><span className={cn("inline-flex h-9 items-center rounded-xl px-3 text-xs font-semibold", viaje.activo ? "bg-habit-wash text-habit-ink" : "bg-secondary text-muted-foreground")}>{viaje.activo ? viaje.etiqueta : "Sin viaje activo"}</span>{viaje.activo && <Button variant="secondary" size="sm" className="h-9 rounded-xl" onClick={() => guardarModoViaje({ ...viaje, activo: false })}>Finalizar</Button>}</div>
+            <div className="flex items-center gap-2"><span className={cn("inline-flex h-9 items-center rounded-xl px-3 text-xs font-semibold", viaje.activo ? "bg-habit-wash text-habit-ink" : "bg-secondary text-muted-foreground")}>{viaje.activo ? viaje.etiqueta : "Sin viaje activo"}</span>{viaje.activo && <Button variant="secondary" size="sm" className="h-9 rounded-xl" onClick={() => guardarModoViaje({ ...viaje, activo: false }, userId)}>Finalizar</Button>}</div>
           </Row>
-          {!viaje.activo && <div className="grid gap-2 border-t border-border pt-4 sm:grid-cols-[minmax(0,1fr)_11rem_auto]"><Input value={nombreViaje} onChange={(e) => setNombreViaje(e.target.value)} placeholder="Viaje a Lisboa" className="h-11 rounded-xl" /><Input type="date" value={finViaje} onChange={(e) => setFinViaje(e.target.value)} className="h-11 rounded-xl" /><Button className="h-11 rounded-xl px-4" onClick={() => guardarModoViaje({ activo: true, etiqueta: nombreViaje.trim() || "Viaje", desde: new Date().toISOString().slice(0, 10), hasta: finViaje || undefined })}><Plane className="size-4" /> Activar</Button></div>}
+          {!viaje.activo && <div className="grid gap-2 border-t border-border pt-4 sm:grid-cols-[minmax(0,1fr)_11rem_auto]"><Input value={nombreViaje} onChange={(e) => setNombreViaje(e.target.value)} placeholder="Viaje a Lisboa" className="h-11 rounded-xl" /><Input type="date" value={finViaje} onChange={(e) => setFinViaje(e.target.value)} className="h-11 rounded-xl" /><Button className="h-11 rounded-xl px-4" onClick={() => guardarModoViaje({ activo: true, etiqueta: nombreViaje.trim() || "Viaje", desde: new Date().toISOString().slice(0, 10), hasta: finViaje || undefined }, userId)}><Plane className="size-4" /> Activar</Button></div>}
         </SettingsCard>
       </section>
 
@@ -404,7 +410,7 @@ export default function AjustesPage() {
               <ImportMetric label="Mediciones nuevas" value={resumenImportacion?.medicionesNuevas ?? 0} />
               <ImportMetric label="Coincidencias" value={resumenImportacion?.medicionesCoincidentes ?? 0} detail="se completan" />
             </div>
-            <p className="mb-5 text-xs leading-relaxed text-muted-foreground">{resumenImportacion?.comidas ?? 0} comidas · versión {resumenImportacion?.version ?? "anterior"}{resumenImportacion?.exportado ? ` · copia del ${fmtFechaCorta(resumenImportacion.exportado.slice(0, 10))}` : ""}. Los duplicados se detectan por fecha: no se crean dos días ni dos mediciones iguales.</p>
+            <p className="mb-5 text-xs leading-relaxed text-muted-foreground">{resumenImportacion?.comidas ?? 0} comidas · formato {resumenImportacion?.version ?? "anterior"}{resumenImportacion?.schemaVersion ? ` · datos ${resumenImportacion.schemaVersion}` : ""}{resumenImportacion?.exportado ? ` · copia del ${fmtFechaCorta(resumenImportacion.exportado.slice(0, 10))}` : ""}. Los duplicados se detectan por fecha: no se crean dos días ni dos mediciones iguales.</p>
             <div className="flex gap-2">
               <Button
                 variant="secondary"
@@ -431,9 +437,9 @@ export default function AjustesPage() {
         <SettingsCard className="gap-3.5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div><p className="text-sm font-semibold">Tus datos siguen siendo tuyos</p><p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">Gemini solo recibe una comida cuando eliges analizarla.</p></div>
-            <Button variant="secondary" onClick={() => { limpiarDatosLocales(); limpiarPreferenciasComidas(); toast.success("Datos locales eliminados"); }} className="h-10 w-full rounded-xl gap-2 sm:w-auto"><Trash2 className="size-4" /> Limpiar este dispositivo</Button>
+            <Button variant="secondary" onClick={() => { limpiarDatosLocales(userId); limpiarPreferenciasComidas(); toast.success("Datos locales eliminados"); }} className="h-10 w-full rounded-xl gap-2 sm:w-auto"><Trash2 className="size-4" /> Limpiar este dispositivo</Button>
           </div>
-          {confirmarBorrado ? <div className="flex flex-col gap-3 rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs leading-relaxed text-destructive">Borra perfil, días, comidas y mediciones de la nube. Tu acceso seguirá existiendo.</p><div className="flex shrink-0 gap-1.5"><Button variant="ghost" size="sm" className="h-8 rounded-lg" onClick={() => setConfirmarBorrado(false)}>Cancelar</Button><Button variant="destructive" size="sm" className="h-8 rounded-lg" onClick={() => void borrarDatos().then(() => { limpiarDatosLocales(); limpiarPreferenciasComidas(); toast.success("Datos de RITMO eliminados"); }).catch(() => toast.error("No se pudieron eliminar los datos."))}>Eliminar</Button></div></div> : <button type="button" onClick={() => setConfirmarBorrado(true)} className="self-start text-xs font-medium text-destructive transition-opacity hover:opacity-75">Eliminar todos mis datos de RITMO…</button>}
+          {confirmarBorrado ? <div className="flex flex-col gap-3 rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs leading-relaxed text-destructive">Borra perfil, días, comidas, mediciones y copias de seguridad de la nube. Tu acceso seguirá existiendo.</p><div className="flex shrink-0 gap-1.5"><Button variant="ghost" size="sm" className="h-8 rounded-lg" onClick={() => setConfirmarBorrado(false)}>Cancelar</Button><Button variant="destructive" size="sm" className="h-8 rounded-lg" onClick={() => void borrarDatos().then(() => { limpiarDatosLocales(userId); limpiarPreferenciasComidas(); toast.success("Datos de RITMO eliminados"); }).catch(() => toast.error("No se pudieron eliminar los datos."))}>Eliminar</Button></div></div> : <button type="button" onClick={() => setConfirmarBorrado(true)} className="self-start text-xs font-medium text-destructive transition-opacity hover:opacity-75">Eliminar todos mis datos de RITMO…</button>}
         </SettingsCard>
       </section>
 

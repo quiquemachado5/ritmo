@@ -81,7 +81,6 @@ export function Heatmap({
         const fecha = cursor;
         const dia = estado.dias[fecha];
         const futuro = fecha > hoyISO;
-        const habitosActivos = Object.fromEntries(activos.map((h) => [h.clave, dia?.habitos?.[h.clave] === true]));
         const hechos = activos.filter((h) => dia?.habitos?.[h.clave] === true).map((h) => h.etiqueta);
         col.push({ fecha, nivel: hechos.length, futuro, cumplidos: hechos.length, hechos, total });
         if (dow === 0) {

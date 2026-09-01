@@ -104,7 +104,9 @@ export default function HabitosPage() {
             return (
               <button
                 key={h.clave}
+                type="button"
                 onClick={() => alternarHabito(hoyISO, h.clave)}
+                aria-pressed={hecho}
                 className={cn(
                   "flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors",
                   hecho ? "border-primary/40 bg-primary/8 text-foreground" : "border-border text-muted-foreground hover:bg-secondary",

@@ -1,6 +1,13 @@
 import type { NextConfig } from "next";
+import packageJson from "./package.json";
+
+const buildId = (process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || packageJson.version).slice(0, 12);
 
 const nextConfig: NextConfig = {
+  generateBuildId: async () => buildId,
+  env: {
+    NEXT_PUBLIC_RITMO_BUILD_ID: buildId,
+  },
   allowedDevOrigins: ['localhost', '127.0.0.1', '192.168.0.110'],
 
   /* Optimizaciones de imagen y performance */

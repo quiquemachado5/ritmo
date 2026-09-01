@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import { createClient } from "@/lib/supabase/client";
+import { registrarDiagnostico } from "@/lib/observability";
+import type { Perfil } from "@/lib/model/types";
 
 /* Preferencias de la biblioteca de comidas, sincronizadas entre dispositivos.
    - Cache inmediata en localStorage (rápida, offline).
@@ -36,17 +38,33 @@ export interface PlantillaComida extends ComidaCatalogo {
   nombre: string;
 }
 
+export type PreferenciasPerfil = Partial<
+  Pick<
+    Perfil,
+    "imputarActiva" | "imputarDesde" | "imputarSuperavitKcal" | "habitosPersonalizados" | "habitosDesactivados"
+  >
+>;
+
 export interface MealPrefs {
   fav: string[];
   hidden: string[];
   overrides: Record<string, OverrideComida>;
   catalog: ComidaCatalogo[];
   templates: PlantillaComida[];
+  /** Ajustes del modelo que no requieren columnas nuevas en Supabase. */
+  profile: PreferenciasPerfil;
   updatedAt: number;
 }
 
-const KEY = "ritmo:mealprefs";
-const VACIO: MealPrefs = { fav: [], hidden: [], overrides: {}, catalog: [], templates: [], updatedAt: 0 };
+const KEY_PREFIX = "ritmo:mealprefs";
+const VACIO: MealPrefs = { fav: [], hidden: [], overrides: {}, catalog: [], templates: [], profile: {}, updatedAt: 0 };
+const CLAVES_PERFIL = [
+  "imputarActiva",
+  "imputarDesde",
+  "imputarSuperavitKcal",
+  "habitosPersonalizados",
+  "habitosDesactivados",
+] as const;
 
 function normalizar(p: Partial<MealPrefs> | null | undefined): MealPrefs {
   return {
@@ -55,14 +73,19 @@ function normalizar(p: Partial<MealPrefs> | null | undefined): MealPrefs {
     overrides: p?.overrides ?? {},
     catalog: p?.catalog ?? [],
     templates: p?.templates ?? [],
+    profile: p?.profile ?? {},
     updatedAt: p?.updatedAt ?? 0,
   };
 }
 
-function leerLocal(): MealPrefs {
+function claveLocal(userId: string): string {
+  return `${KEY_PREFIX}:${userId}`;
+}
+
+function leerLocal(userId: string): MealPrefs {
   if (typeof localStorage === "undefined") return VACIO;
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(claveLocal(userId));
     return raw ? normalizar(JSON.parse(raw)) : VACIO;
   } catch {
     return VACIO;
@@ -70,10 +93,11 @@ function leerLocal(): MealPrefs {
 }
 
 const listeners = new Set<() => void>();
-let cache: MealPrefs | null = null;
+let cache: MealPrefs = VACIO;
+let usuarioActivo: string | null = null;
+let revisionUsuario = 0;
 
 function snapshot(): MealPrefs {
-  if (cache === null) cache = leerLocal();
   return cache;
 }
 
@@ -83,61 +107,112 @@ function emitir() {
 
 /* ------------------------------------------------------------- sync nube */
 
-let syncIniciado = false;
 let pushTimer: ReturnType<typeof setTimeout> | null = null;
+let listenerOnlineIniciado = false;
 
-async function conUsuario<T>(fn: (sb: ReturnType<typeof createClient>, userId: string) => Promise<T>): Promise<T | null> {
+async function empujarNube(userId = usuarioActivo, prefs = snapshot()): Promise<boolean> {
+  if (!userId) return false;
   try {
     const sb = createClient();
-    const { data } = await sb.auth.getUser();
-    if (!data.user) return null;
-    return await fn(sb, data.user.id);
-  } catch {
-    return null;
+    const { error } = await sb.from("user_prefs").upsert(
+      { user_id: userId, meal_prefs: prefs, actualizado_en: new Date().toISOString() },
+      { onConflict: "user_id" },
+    );
+    if (error) throw error;
+    registrarDiagnostico("sync", "ok", "preferencias sincronizadas");
+    return true;
+  } catch (error) {
+    console.error("No se pudieron sincronizar las preferencias", error);
+    registrarDiagnostico("sync", "error", "preferencias no sincronizadas");
+    return false;
   }
 }
 
 /** Carga inicial desde la nube; si es más nueva, sustituye la local. */
-async function cargarNube() {
-  await conUsuario(async (sb, userId) => {
+async function cargarNube(userId: string, revision: number) {
+  try {
+    const sb = createClient();
     const { data, error } = await sb.from("user_prefs").select("meal_prefs").eq("user_id", userId).maybeSingle();
-    if (error || !data?.meal_prefs) return;
-    const remota = normalizar(data.meal_prefs as Partial<MealPrefs>);
+    if (error) throw error;
+    if (usuarioActivo !== userId || revisionUsuario !== revision) return;
     const local = snapshot();
+    if (!data?.meal_prefs) {
+      if (local.updatedAt > 0) await empujarNube(userId, local);
+      return;
+    }
+    const remota = normalizar(data.meal_prefs as Partial<MealPrefs>);
     if (remota.updatedAt > local.updatedAt) {
       cache = remota;
-      try { localStorage.setItem(KEY, JSON.stringify(remota)); } catch {}
+      try { localStorage.setItem(claveLocal(userId), JSON.stringify(remota)); } catch {}
       emitir();
     } else if (local.updatedAt > remota.updatedAt) {
-      void empujarNube(); // la local es más nueva: súbela
+      await empujarNube(userId, local);
     }
-  });
+  } catch (error) {
+    console.error("No se pudieron cargar las preferencias", error);
+    registrarDiagnostico("sync", "error", "preferencias no disponibles");
+  }
 }
 
 function programarPush() {
+  if (!usuarioActivo) return;
   if (pushTimer) clearTimeout(pushTimer);
   pushTimer = setTimeout(() => void empujarNube(), 1200);
 }
 
-async function empujarNube() {
-  const p = snapshot();
-  await conUsuario(async (sb, userId) => {
-    await sb.from("user_prefs").upsert(
-      { user_id: userId, meal_prefs: p, actualizado_en: new Date().toISOString() },
-      { onConflict: "user_id" },
-    );
-  });
-}
-
 function escribir(next: Omit<MealPrefs, "updatedAt">) {
   cache = { ...next, updatedAt: Date.now() };
-  try {
-    localStorage.setItem(KEY, JSON.stringify(cache));
-  } catch {
-    /* cuota / modo privado */
+  if (usuarioActivo) {
+    try {
+      localStorage.setItem(claveLocal(usuarioActivo), JSON.stringify(cache));
+    } catch {
+      /* cuota / modo privado */
+    }
   }
   emitir();
   programarPush();
+}
+
+/**
+ * Cambia el ámbito de preferencias al usuario autenticado. Nunca reutiliza la
+ * caché global antigua: eso podía mostrar o subir comidas de otra cuenta.
+ */
+export async function activarPreferenciasUsuario(userId: string | null): Promise<void> {
+  const revision = ++revisionUsuario;
+  if (pushTimer) {
+    clearTimeout(pushTimer);
+    pushTimer = null;
+  }
+  usuarioActivo = userId;
+  // La versión anterior usaba una única clave para todas las cuentas. No se
+  // migra porque no es posible demostrar a qué usuario pertenecía.
+  try { localStorage.removeItem(KEY_PREFIX); } catch {}
+  cache = userId ? leerLocal(userId) : VACIO;
+  emitir();
+  if (typeof window !== "undefined" && !listenerOnlineIniciado) {
+    listenerOnlineIniciado = true;
+    window.addEventListener("online", () => void empujarNube());
+  }
+  if (userId) await cargarNube(userId, revision);
+}
+
+export function leerPreferenciasPerfil(): PreferenciasPerfil {
+  return structuredClone(snapshot().profile);
+}
+
+export function guardarPreferenciasPerfil(campos: Partial<Perfil>) {
+  const p = snapshot();
+  const profile = { ...p.profile } as Record<string, unknown>;
+  let modificado = false;
+  for (const clave of CLAVES_PERFIL) {
+    if (!Object.prototype.hasOwnProperty.call(campos, clave)) continue;
+    modificado = true;
+    const valor = campos[clave];
+    if (valor === undefined || valor === null) delete profile[clave];
+    else profile[clave] = valor;
+  }
+  if (!modificado) return;
+  escribir({ ...p, profile: profile as PreferenciasPerfil });
 }
 
 /* ---------------------------------------------------------------- acciones */
@@ -198,22 +273,15 @@ export function quitarPlantilla(id: string) {
 
 export function limpiarPreferenciasComidas() {
   cache = VACIO;
-  try { localStorage.removeItem(KEY); } catch {}
+  if (usuarioActivo) {
+    try { localStorage.removeItem(claveLocal(usuarioActivo)); } catch {}
+  }
+  try { localStorage.removeItem(KEY_PREFIX); } catch {}
   emitir();
-  void empujarNube();
 }
 
-/** Hook reactivo. Dispara la carga inicial desde la nube una sola vez. */
+/** Hook reactivo; DataProvider establece siempre el usuario propietario. */
 export function useMealPrefs(): MealPrefs {
-  React.useEffect(() => {
-    if (syncIniciado) return;
-    syncIniciado = true;
-    void cargarNube();
-    if (typeof window !== "undefined") {
-      window.addEventListener("online", () => void empujarNube());
-    }
-  }, []);
-
   return React.useSyncExternalStore(
     (cb) => {
       listeners.add(cb);
