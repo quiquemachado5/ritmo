@@ -11,6 +11,7 @@ import {
   Pencil,
   Plus,
   Scale,
+  ShieldCheck,
   Sparkles,
   UtensilsCrossed,
   X,
@@ -38,6 +39,7 @@ import { recalcularAnalisis } from "@/lib/nutrition/corrections";
 import { guardarCorreccionesNutricion, useMealPrefs } from "@/lib/meal-prefs";
 import type { Comida, TipoComida } from "@/lib/model/types";
 import { fmtFechaLarga, capitalizar } from "@/lib/format";
+import { detectarAnomaliasComida, detectarAnomaliasMedicion, type RecordAnomaly } from "@/lib/record-anomalies";
 import { Chip, MacroBar } from "./primitives";
 import { useQuickLog, type QuickTab } from "./quick-log-provider";
 
@@ -212,6 +214,7 @@ function PanelComida({
   const [analisis, setAnalisis] = React.useState<AnalisisNutricional | null>(null);
   const [itemsCorregidos, setItemsCorregidos] = React.useState<Set<number>>(() => new Set());
   const [textoAnalizado, setTextoAnalizado] = React.useState(comidaEdit?.texto.trim() ?? "");
+  const [firmaAnomaliaConfirmada, setFirmaAnomaliaConfirmada] = React.useState<string | null>(null);
   // Valores editables a mano (fuente de verdad al guardar). Se rellenan al
   // analizar o al abrir en modo edición.
   const [manual, setManual] = React.useState<{ kcal: string; p: string; c: string; g: string } | null>(
@@ -241,6 +244,10 @@ function PanelComida({
     if (!manual) return;
     if (normalizarDescripcionComida(texto) !== normalizarDescripcionComida(textoAnalizado)) {
       toast.error("Vuelve a analizar la descripción antes de guardar los cambios.");
+      return;
+    }
+    if (anomalias.length > 0 && !anomaliasConfirmadas) {
+      toast.error("Revisa y confirma los valores atípicos antes de guardar.");
       return;
     }
     const analisisVigente = analisis;
@@ -301,6 +308,16 @@ function PanelComida({
   const requiereReanalisis = descripcionNecesitaAnalisis(texto, textoAnalizado, editando);
   const listoParaGuardar = !descripcionCambio && (analisis != null || editando) && manual != null;
   const ejecutarPrincipal = listoParaGuardar ? guardar : analizar;
+  const valoresManuales = manual ? {
+    kcal: Number(manual.kcal.replace(",", ".")) || 0,
+    proteinas: Number(manual.p.replace(",", ".")) || 0,
+    carbohidratos: Number(manual.c.replace(",", ".")) || 0,
+    grasas: Number(manual.g.replace(",", ".")) || 0,
+    items: analisisVisible ? analisis.items : undefined,
+  } : null;
+  const anomalias = valoresManuales ? detectarAnomaliasComida(valoresManuales) : [];
+  const firmaAnomalias = anomalias.length > 0 ? JSON.stringify(valoresManuales) : "";
+  const anomaliasConfirmadas = anomalias.length === 0 || firmaAnomaliaConfirmada === firmaAnomalias;
 
   return (
     <div className="flex min-h-full flex-col gap-3">
@@ -405,6 +422,14 @@ function PanelComida({
           )}
           {analisis.aviso && <p className="mt-3 text-xs font-medium text-warning-ink">{analisis.aviso}</p>}
         </div>
+      )}
+
+      {listoParaGuardar && anomalias.length > 0 && (
+        <AnomalyNotice
+          anomalies={anomalias}
+          confirmed={anomaliasConfirmadas}
+          onConfirm={() => setFirmaAnomaliaConfirmada(firmaAnomalias)}
+        />
       )}
 
       <div
@@ -559,8 +584,9 @@ function PanelHabitos({ fecha }: { fecha: string }) {
 /* ----------------------------------------------------------------- PESO */
 
 function PanelPeso({ fecha, onDone, movil = false }: { fecha: string; onDone: () => void; movil?: boolean }) {
-  const { medicion, guardarMedicion } = useRitmo();
+  const { estado, medicion, guardarMedicion } = useRitmo();
   const m = medicion(fecha);
+  const [firmaAnomaliaConfirmada, setFirmaAnomaliaConfirmada] = React.useState<string | null>(null);
   const [campos, setCampos] = React.useState({
     peso: m?.peso != null ? String(m.peso) : "",
     grasaPct: m?.grasaPct != null ? String(m.grasaPct) : "",
@@ -575,18 +601,14 @@ function PanelPeso({ fecha, onDone, movil = false }: { fecha: string; onDone: ()
     cadera: m?.cadera != null ? String(m.cadera) : "",
   });
   const set = (k: keyof typeof campos, v: string) => setCampos((c) => ({ ...c, [k]: v }));
-
-  async function guardar() {
+  const propuesta = React.useMemo(() => {
     const peso = parseFloat(campos.peso.replace(",", "."));
-    if (!Number.isFinite(peso)) {
-      toast.error("El peso es obligatorio para una medición.");
-      return;
-    }
+    if (!Number.isFinite(peso)) return null;
     const num = (s: string) => {
       const n = parseFloat(s.replace(",", "."));
       return Number.isFinite(n) ? n : undefined;
     };
-    await guardarMedicion({
+    return {
       fecha,
       peso: Math.round(peso * 10) / 10,
       grasaPct: num(campos.grasaPct),
@@ -599,7 +621,26 @@ function PanelPeso({ fecha, onDone, movil = false }: { fecha: string; onDone: ()
       aguaPct: num(campos.aguaPct),
       cintura: num(campos.cintura),
       cadera: num(campos.cadera),
-    });
+    };
+  }, [campos, fecha]);
+  const referencia = React.useMemo(() => {
+    const otras = estado.composicion.filter((item) => item.fecha !== fecha).sort((a, b) => a.fecha.localeCompare(b.fecha));
+    return [...otras].reverse().find((item) => item.fecha < fecha) ?? otras.find((item) => item.fecha > fecha) ?? null;
+  }, [estado.composicion, fecha]);
+  const anomalias = propuesta ? detectarAnomaliasMedicion({ measurement: propuesta, reference: referencia }) : [];
+  const firmaAnomalias = anomalias.length > 0 ? JSON.stringify(propuesta) : "";
+  const anomaliasConfirmadas = anomalias.length === 0 || firmaAnomaliaConfirmada === firmaAnomalias;
+
+  async function guardar() {
+    if (!propuesta) {
+      toast.error("El peso es obligatorio para una medición.");
+      return;
+    }
+    if (anomalias.length > 0 && !anomaliasConfirmadas) {
+      toast.error("Revisa y confirma los valores atípicos antes de guardar.");
+      return;
+    }
+    await guardarMedicion(propuesta);
     toast.success("Medición guardada");
     onDone();
   }
@@ -641,10 +682,41 @@ function PanelPeso({ fecha, onDone, movil = false }: { fecha: string; onDone: ()
         </div>
       </div>
 
+      {anomalias.length > 0 && (
+        <AnomalyNotice
+          anomalies={anomalias}
+          confirmed={anomaliasConfirmadas}
+          onConfirm={() => setFirmaAnomaliaConfirmada(firmaAnomalias)}
+        />
+      )}
+
       <div className={cn("mt-1", movil && "absolute inset-x-0 bottom-0 z-20 border-t border-border bg-background/96 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md")}>
-        <Button onClick={guardar} className="h-12 w-full gap-2 rounded-xl">
+        <Button onClick={guardar} disabled={!propuesta} className="h-12 w-full gap-2 rounded-xl">
           <Check className="size-4" /> Guardar medición
         </Button>
+      </div>
+    </div>
+  );
+}
+
+function AnomalyNotice({ anomalies, confirmed, onConfirm }: { anomalies: RecordAnomaly[]; confirmed: boolean; onConfirm: () => void }) {
+  return (
+    <div className="rounded-xl border border-warning-border bg-warning-wash px-3.5 py-3 text-warning-ink" role="alert">
+      <div className="flex items-start gap-2.5">
+        <AlertCircle className="mt-0.5 size-4 shrink-0" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">Valor poco habitual</p>
+          <ul className="mt-1.5 space-y-1 text-xs leading-relaxed">
+            {anomalies.map((anomaly) => <li key={anomaly.code}>{anomaly.message}</li>)}
+          </ul>
+          {confirmed ? (
+            <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold"><ShieldCheck className="size-3.5" /> Revisado por ti</p>
+          ) : (
+            <Button type="button" variant="outline" size="sm" className="mt-2.5 border-warning-border bg-card text-warning-ink hover:bg-card/70" onClick={onConfirm}>
+              Confirmar que es correcto
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
