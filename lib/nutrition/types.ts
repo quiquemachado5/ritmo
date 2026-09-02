@@ -9,6 +9,11 @@ export interface ItemNutricional {
   grasas: number;
 }
 
+export interface CorreccionNutricional extends ItemNutricional {
+  clave: string;
+  actualizada: number;
+}
+
 export interface AnalisisNutricional {
   resumen: string;
   kcal: number;

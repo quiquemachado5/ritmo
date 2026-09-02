@@ -3,13 +3,17 @@
 import * as React from "react";
 import { toast } from "sonner";
 import {
+  AlertCircle,
   Check,
+  CircleHelp,
   ListChecks,
   Loader2,
+  Pencil,
   Plus,
   Scale,
   Sparkles,
   UtensilsCrossed,
+  X,
 } from "lucide-react";
 import { cn, uid } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -28,7 +32,10 @@ import { useRitmo } from "@/lib/store/provider";
 import { habitosModelo } from "@/lib/model/config";
 import { comidasFrecuentes } from "@/lib/model/analytics";
 import { analizarComida } from "@/lib/nutrition/client";
-import type { AnalisisNutricional } from "@/lib/nutrition/types";
+import { descripcionNecesitaAnalisis, normalizarDescripcionComida } from "@/lib/nutrition/prompt-state";
+import type { AnalisisNutricional, ItemNutricional } from "@/lib/nutrition/types";
+import { recalcularAnalisis } from "@/lib/nutrition/corrections";
+import { guardarCorreccionesNutricion, useMealPrefs } from "@/lib/meal-prefs";
 import type { Comida, TipoComida } from "@/lib/model/types";
 import { fmtFechaLarga, capitalizar } from "@/lib/format";
 import { Chip, MacroBar } from "./primitives";
@@ -46,6 +53,7 @@ export function QuickLog() {
   const [tecladoAbierto, setTecladoAbierto] = React.useState(false);
   const [viewportMovil, setViewportMovil] = React.useState<{ alto: number; insetInferior: number } | null>(null);
   const alturaBase = React.useRef(0);
+  const pestanasCompactas = !isDesktop && tecladoAbierto;
 
   React.useEffect(() => {
     if (!abierto || isDesktop || !window.visualViewport) return;
@@ -70,13 +78,17 @@ export function QuickLog() {
   }, [abierto, isDesktop]);
 
   const pestanas = (
-    <div className="flex gap-1.5">
+    <div className={cn("flex", pestanasCompactas ? "gap-1" : "gap-1.5")} role="tablist" aria-label="Tipo de registro">
       {TABS.map((t) => (
         <button
           key={t.id}
+          type="button"
           onClick={() => setTab(t.id)}
+          role="tab"
+          aria-selected={tab === t.id}
           className={cn(
-            "flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "flex flex-1 items-center justify-center rounded-xl font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            pestanasCompactas ? "h-9 gap-1 px-2 text-xs" : "h-11 gap-1.5 px-3 text-sm",
             tab === t.id
               ? "bg-primary text-primary-foreground"
               : "bg-secondary text-secondary-foreground hover:bg-secondary/70",
@@ -141,13 +153,13 @@ export function QuickLog() {
           bottom: `${viewportMovil.insetInferior}px`,
         } : undefined}
       >
-        <DrawerHeader className={cn("shrink-0 border-b border-border text-left", tecladoAbierto ? "px-4 py-2.5" : "px-4 pt-3 pb-4")}>
+        <DrawerHeader className={cn("shrink-0 border-b border-border text-left", tecladoAbierto ? "px-4 py-2" : "px-4 pt-3 pb-4")}>
           <div className="flex items-baseline justify-between gap-3">
             <DrawerTitle className={cn("font-display", tecladoAbierto ? "text-base" : "text-xl")}>{titulo}</DrawerTitle>
             <DrawerDescription className={cn("shrink-0 text-xs", !tecladoAbierto && "hidden")}>{sub}</DrawerDescription>
           </div>
           {!tecladoAbierto && <DrawerDescription>{sub}</DrawerDescription>}
-          {!tecladoAbierto && <div className="pt-3">{pestanas}</div>}
+          <div className={tecladoAbierto ? "pt-2" : "pt-3"}>{pestanas}</div>
         </DrawerHeader>
         <div
           className={cn(
@@ -185,6 +197,7 @@ function PanelComida({
   movil?: boolean;
 }) {
   const { registrarComida, editarComida, estado } = useRitmo();
+  const preferencias = useMealPrefs();
   const editando = comidaEdit != null;
   const frecuentes = React.useMemo(() => (editando ? [] : comidasFrecuentes(estado, 6)), [estado, editando]);
 
@@ -197,6 +210,8 @@ function PanelComida({
   const [tipo, setTipo] = React.useState<TipoComida>(comidaEdit?.tipo ?? "comida");
   const [analizando, setAnalizando] = React.useState(false);
   const [analisis, setAnalisis] = React.useState<AnalisisNutricional | null>(null);
+  const [itemsCorregidos, setItemsCorregidos] = React.useState<Set<number>>(() => new Set());
+  const [textoAnalizado, setTextoAnalizado] = React.useState(comidaEdit?.texto.trim() ?? "");
   // Valores editables a mano (fuente de verdad al guardar). Se rellenan al
   // analizar o al abrir en modo edición.
   const [manual, setManual] = React.useState<{ kcal: string; p: string; c: string; g: string } | null>(
@@ -210,8 +225,10 @@ function PanelComida({
     setAnalizando(true);
     setAnalisis(null);
     try {
-      const res = await analizarComida(texto);
+      const res = await analizarComida(texto, Object.values(preferencias.nutritionCorrections));
       setAnalisis(res);
+      setItemsCorregidos(new Set());
+      setTextoAnalizado(texto.trim());
       setManual({ kcal: String(res.kcal), p: String(res.proteinas), c: String(res.carbohidratos), g: String(res.grasas) });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "No se pudo analizar la comida.");
@@ -222,12 +239,18 @@ function PanelComida({
 
   async function guardar() {
     if (!manual) return;
+    if (normalizarDescripcionComida(texto) !== normalizarDescripcionComida(textoAnalizado)) {
+      toast.error("Vuelve a analizar la descripción antes de guardar los cambios.");
+      return;
+    }
+    const analisisVigente = analisis;
     const n = (s: string) => Math.max(0, Math.round(Number(s.replace(",", ".")) || 0));
-    const editadoManual = analisis != null && (
-      n(manual.kcal) !== analisis.kcal ||
-      n(manual.p) !== analisis.proteinas ||
-      n(manual.c) !== analisis.carbohidratos ||
-      n(manual.g) !== analisis.grasas
+    const editadoManual = analisisVigente != null && (
+      itemsCorregidos.size > 0 ||
+      n(manual.kcal) !== analisisVigente.kcal ||
+      n(manual.p) !== analisisVigente.proteinas ||
+      n(manual.c) !== analisisVigente.carbohidratos ||
+      n(manual.g) !== analisisVigente.grasas
     );
     const editadoExistente = analisis == null && comidaEdit != null && (
       n(manual.kcal) !== comidaEdit.kcal ||
@@ -238,15 +261,15 @@ function PanelComida({
     const comida: Comida = {
       id: comidaEdit?.id ?? uid(),
       tipo,
-      texto: (analisis?.resumen || texto).trim() || comidaEdit?.texto || "Comida",
+      texto: (analisisVigente?.resumen || texto).trim() || comidaEdit?.texto || "Comida",
       kcal: n(manual.kcal),
       proteinas: n(manual.p),
       carbohidratos: n(manual.c),
       grasas: n(manual.g),
-      fuente: analisis ? (editadoManual ? "manual" : analisis.fuente) : editadoExistente ? "manual" : comidaEdit?.fuente,
+      fuente: analisisVigente ? (editadoManual ? "manual" : analisisVigente.fuente) : editadoExistente ? "manual" : comidaEdit?.fuente,
       // Una IA, una base nutricional y el estimador local parten de cantidades
       // interpretadas. Si el usuario cambia los valores, su ajuste prevalece.
-      estimado: analisis ? !editadoManual : editadoExistente ? false : comidaEdit?.estimado,
+      estimado: analisisVigente ? !editadoManual : editadoExistente ? false : comidaEdit?.estimado,
       creado: comidaEdit?.creado ?? new Date().toISOString(),
     };
     if (editando) {
@@ -256,12 +279,27 @@ function PanelComida({
       await registrarComida(fecha, comida);
       toast.success(`Comida añadida (${comida.kcal} kcal)`);
     }
+    if (analisisVigente && itemsCorregidos.size > 0) {
+      guardarCorreccionesNutricion(analisisVigente.items.filter((_, index) => itemsCorregidos.has(index)));
+    }
     onDone();
+  }
+
+  function actualizarIngrediente(index: number, item: ItemNutricional) {
+    if (!analisis) return;
+    const items = analisis.items.map((actual, posicion) => posicion === index ? item : actual);
+    const siguiente = recalcularAnalisis(analisis, items);
+    setAnalisis(siguiente);
+    setManual({ kcal: String(siguiente.kcal), p: String(siguiente.proteinas), c: String(siguiente.carbohidratos), g: String(siguiente.grasas) });
+    setItemsCorregidos((actuales) => new Set(actuales).add(index));
   }
 
   const setM = (k: "kcal" | "p" | "c" | "g", v: string) => setManual((m) => ({ ...(m ?? { kcal: "0", p: "0", c: "0", g: "0" }), [k]: v }));
   const etiquetaTipo = TIPOS.find((t) => t.id === tipo)?.label.toLowerCase() ?? "comida";
-  const listoParaGuardar = (analisis != null || editando) && manual != null;
+  const descripcionCambio = normalizarDescripcionComida(texto) !== normalizarDescripcionComida(textoAnalizado);
+  const analisisVisible = analisis != null && !descripcionCambio;
+  const requiereReanalisis = descripcionNecesitaAnalisis(texto, textoAnalizado, editando);
+  const listoParaGuardar = !descripcionCambio && (analisis != null || editando) && manual != null;
   const ejecutarPrincipal = listoParaGuardar ? guardar : analizar;
 
   return (
@@ -270,6 +308,7 @@ function PanelComida({
         {TIPOS.map((t) => (
           <button
             key={t.id}
+            type="button"
             onClick={() => setTipo(t.id)}
             className={cn(
               "h-11 rounded-xl border px-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -292,15 +331,15 @@ function PanelComida({
         <p className="max-w-[52ch]">Describe el plato completo. RITMO separa ingredientes, cantidades y aliños.</p>
         <span className="shrink-0 tabular">{texto.length}/2.500</span>
       </div>
-      {editando && (
-        <Button onClick={analizar} disabled={analizando || !texto.trim()} variant="secondary" className="gap-2">
-          {analizando ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4 text-primary" />}
-          {analizando ? "Analizando…" : "Recalcular ingredientes"}
-        </Button>
+      {requiereReanalisis && (
+        <div className="flex items-start gap-2.5 rounded-xl border border-warning-border bg-warning-wash px-3 py-2.5 text-xs leading-relaxed text-warning-ink">
+          <AlertCircle className="mt-0.5 size-4 shrink-0" />
+          <p>La descripción ha cambiado. Vuelve a analizarla para actualizar ingredientes, kcal y macros antes de guardar.</p>
+        </div>
       )}
 
       {/* Recientes: registro de un toque, sin volver a analizar */}
-      {!editando && !analisis && frecuentes.length > 0 && (
+      {!editando && !analisisVisible && frecuentes.length > 0 && (
         <div>
           <p className="mb-2 text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
             Recientes · un toque para añadir
@@ -309,6 +348,7 @@ function PanelComida({
             {frecuentes.map(({ comida, veces }) => (
               <button
                 key={comida.id}
+                type="button"
                 onClick={() => anadirRapido(comida)}
                 className="flex items-center justify-between gap-3 rounded-xl border border-border px-3 py-2.5 text-left transition-colors hover:bg-secondary"
               >
@@ -327,7 +367,7 @@ function PanelComida({
       )}
 
       {/* Modo edición sin análisis nuevo: campos numéricos directos */}
-      {editando && !analisis && manual && (
+      {editando && !analisis && !descripcionCambio && manual && (
         <div className="rounded-xl border border-border bg-secondary/40 p-4">
           <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Valores</p>
           <div className="grid grid-cols-2 gap-3">
@@ -339,7 +379,7 @@ function PanelComida({
         </div>
       )}
 
-      {analisis && (
+      {analisis && !descripcionCambio && (
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <span className="font-display text-2xl font-bold tabular text-energy">
@@ -357,23 +397,7 @@ function PanelComida({
             <MacroBar label="Carbos" value={analisis.carbohidratos} colorVar="--habit" />
             <MacroBar label="Grasas" value={analisis.grasas} colorVar="--energy" />
           </div>
-          {analisis.items.length > 0 && (
-            <ul className="mt-4 divide-y divide-border border-y border-border text-sm">
-              {analisis.items.map((it, i) => (
-                <li key={i} className="flex items-center justify-between gap-3 py-2.5">
-                  <span className="min-w-0">
-                    <span className="block truncate font-medium text-foreground">{it.nombre}</span>
-                    {it.cantidad && (
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {it.cantidad}{it.cantidadEstimada ? " · estimada" : ""}
-                      </span>
-                    )}
-                  </span>
-                  <span className="shrink-0 font-medium tabular text-foreground">{it.kcal} kcal</span>
-                </li>
-              ))}
-            </ul>
-          )}
+          {analisis.items.length > 0 && <IngredientTable items={analisis.items} onChange={actualizarIngrediente} />}
           {analisis.observaciones && analisis.observaciones.length > 0 && (
             <div className="mt-3 space-y-1 text-xs leading-relaxed text-muted-foreground">
               {analisis.observaciones.map((observacion, i) => <p key={i}>{observacion}</p>)}
@@ -399,9 +423,95 @@ function PanelComida({
             ? "Analizando plato completo…"
             : listoParaGuardar
               ? editando ? "Guardar cambios" : `Añadir a ${etiquetaTipo}`
-              : "Analizar ingredientes"}
+              : requiereReanalisis ? "Volver a analizar" : "Analizar ingredientes"}
         </Button>
       </div>
+    </div>
+  );
+}
+
+function IngredientTable({ items, onChange }: { items: AnalisisNutricional["items"]; onChange: (index: number, item: ItemNutricional) => void }) {
+  const [editando, setEditando] = React.useState<number | null>(null);
+  const [borrador, setBorrador] = React.useState<{ nombre: string; cantidad: string; kcal: string; p: string; c: string; g: string } | null>(null);
+
+  function abrirEdicion(index: number) {
+    const item = items[index];
+    setEditando(index);
+    setBorrador({ nombre: item.nombre, cantidad: item.cantidad ?? "", kcal: String(item.kcal), p: String(item.proteinas), c: String(item.carbohidratos), g: String(item.grasas) });
+  }
+
+  function aplicar() {
+    if (editando == null || !borrador?.nombre.trim()) return;
+    const numero = (valor: string) => Math.max(0, Math.round((Number(valor.replace(",", ".")) || 0) * 10) / 10);
+    onChange(editando, {
+      nombre: borrador.nombre.trim(),
+      cantidad: borrador.cantidad.trim() || undefined,
+      cantidadEstimada: false,
+      kcal: numero(borrador.kcal),
+      proteinas: numero(borrador.p),
+      carbohidratos: numero(borrador.c),
+      grasas: numero(borrador.g),
+    });
+    setEditando(null);
+    setBorrador(null);
+  }
+
+  return (
+    <div className="mt-4 overflow-hidden rounded-xl border border-border" aria-label="Desglose nutricional por ingrediente">
+      <div className="hidden grid-cols-[minmax(0,1.5fr)_minmax(8rem,.8fr)_repeat(4,minmax(3rem,.42fr))_2rem] gap-3 bg-secondary/55 px-3 py-2 text-[0.65rem] font-semibold uppercase tracking-[0.07em] text-muted-foreground sm:grid">
+        <span>Ingrediente</span><span>Cantidad</span><span className="text-right">P</span><span className="text-right">C</span><span className="text-right">G</span><span className="text-right">kcal</span><span className="sr-only">Editar</span>
+      </div>
+      <div className="divide-y divide-border">
+        {items.map((item, index) => (
+          <div key={`${item.nombre}-${index}`}>
+            <div className="relative grid gap-2 px-3 py-3 pr-12 sm:grid-cols-[minmax(0,1.5fr)_minmax(8rem,.8fr)_repeat(4,minmax(3rem,.42fr))_2rem] sm:items-center sm:gap-3 sm:py-2.5 sm:pr-3">
+              <p className="min-w-0 truncate text-sm font-semibold text-foreground">{item.nombre}</p>
+              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                <span className="truncate text-xs tabular text-muted-foreground">{item.cantidad || "Sin cantidad"}</span>
+                <span className={cn("inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[0.62rem] font-semibold", item.cantidadEstimada ? "bg-warning-wash text-warning-ink" : "bg-weight-wash text-weight-ink")}>
+                  {item.cantidadEstimada ? <CircleHelp className="size-3" /> : <Scale className="size-3" />}
+                  {item.cantidadEstimada ? "Estimada" : "Indicada"}
+                </span>
+              </div>
+              <div className="grid grid-cols-4 gap-1.5 sm:contents">
+                <IngredientMetric label="P" value={item.proteinas} tone="text-weight" />
+                <IngredientMetric label="C" value={item.carbohidratos} tone="text-habit" />
+                <IngredientMetric label="G" value={item.grasas} tone="text-energy" />
+                <IngredientMetric label="kcal" value={item.kcal} tone="text-foreground" kcal />
+              </div>
+              <Button type="button" variant="ghost" size="icon" className="absolute right-2 top-2 size-9 rounded-lg sm:static sm:size-8" onClick={() => abrirEdicion(index)} aria-label={`Corregir ${item.nombre}`}><Pencil className="size-3.5" /></Button>
+            </div>
+            {editando === index && borrador && (
+              <div className="border-t border-border bg-secondary/30 px-3 py-3">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Field label="Ingrediente" value={borrador.nombre} onChange={(nombre) => setBorrador((actual) => actual ? { ...actual, nombre } : actual)} text />
+                  <Field label="Cantidad" value={borrador.cantidad} onChange={(cantidad) => setBorrador((actual) => actual ? { ...actual, cantidad } : actual)} placeholder="Ej. 150 g" text />
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <Field label="kcal" value={borrador.kcal} onChange={(kcal) => setBorrador((actual) => actual ? { ...actual, kcal } : actual)} />
+                  <Field label="Proteína" value={borrador.p} onChange={(p) => setBorrador((actual) => actual ? { ...actual, p } : actual)} />
+                  <Field label="Carbos" value={borrador.c} onChange={(c) => setBorrador((actual) => actual ? { ...actual, c } : actual)} />
+                  <Field label="Grasas" value={borrador.g} onChange={(g) => setBorrador((actual) => actual ? { ...actual, g } : actual)} />
+                </div>
+                <div className="mt-3 flex justify-end gap-2"><Button type="button" variant="ghost" size="sm" onClick={() => { setEditando(null); setBorrador(null); }}><X className="size-3.5" /> Cancelar</Button><Button type="button" size="sm" onClick={aplicar}><Check className="size-3.5" /> Aplicar corrección</Button></div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border bg-secondary/25 px-3 py-2 text-[0.65rem] text-muted-foreground">
+        <span className="inline-flex items-center gap-1"><Scale className="size-3 text-weight" /> Cantidad indicada por ti</span>
+        <span className="inline-flex items-center gap-1"><CircleHelp className="size-3 text-warning" /> Cantidad inferida por RITMO</span>
+      </div>
+    </div>
+  );
+}
+
+function IngredientMetric({ label, value, tone, kcal = false }: { label: string; value: number; tone: string; kcal?: boolean }) {
+  return (
+    <div className="rounded-lg bg-secondary/45 px-1.5 py-1.5 text-center sm:bg-transparent sm:px-0 sm:py-0 sm:text-right">
+      <span className="block text-[0.58rem] font-semibold uppercase text-muted-foreground sm:hidden">{label}</span>
+      <span className={cn("text-xs font-semibold tabular", tone)}>{value}{kcal ? "" : "g"}</span>
     </div>
   );
 }
@@ -545,16 +655,18 @@ function Field({
   value,
   onChange,
   placeholder,
+  text = false,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  text?: boolean;
 }) {
   return (
     <label className="flex flex-col gap-1.5">
       <span className="text-sm font-medium text-foreground/80">{label}</span>
-      <Input inputMode="decimal" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="h-11 rounded-xl tabular" />
+      <Input inputMode={text ? "text" : "decimal"} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={cn("h-11 rounded-xl text-base", !text && "tabular")} />
     </label>
   );
 }

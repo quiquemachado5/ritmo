@@ -8,6 +8,7 @@
 import * as M from "./metrics";
 import { diaAbsoluto, diasEntre, hoy, sumarDias } from "./dates";
 import { HABITOS, habitosModelo, totalHabitosPerfil } from "./config";
+import { limitarBalanceEstimado } from "./calibration";
 import type {
   Comida,
   Composicion,
@@ -98,9 +99,10 @@ export function energiaDe(estado: Estado, fecha: string): EnergiaDia {
   const ratio = cumplidos / Math.max(1, activos.length);
   const ajuste = ajusteCalibracion(calibracion, ratio);
   const balancePropuesto = base.balance + ajuste;
-  const balanceSeguro = estado.perfil.objetivo === "perder" && ratio >= 0.999
+  const balanceConObjetivo = estado.perfil.objetivo === "perder" && ratio >= 0.999
     ? Math.min(-150, balancePropuesto)
     : balancePropuesto;
+  const balanceSeguro = limitarBalanceEstimado(balanceConObjetivo, pesoActual(estado)?.peso);
   const consumidas = Math.max(base.consumidas, base.quemadas + balanceSeguro);
   const balance = consumidas - base.quemadas;
   return {
@@ -752,7 +754,10 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
     if (energia.imputado) diasImputados++;
   }
 
-  const pesoEnergetico = ultimo.peso + balanceDesdeBascula / M.KCAL_POR_KG;
+  const balanceAcumuladoSeguro = diasSinPesaje > 0
+    ? limitarBalanceEstimado(balanceDesdeBascula / diasSinPesaje, ultimo.peso) * diasSinPesaje
+    : 0;
+  const pesoEnergetico = ultimo.peso + balanceAcumuladoSeguro / M.KCAL_POR_KG;
   const tendenciaReciente = tendenciaRobusta && diasSinPesaje <= 21 ? tendenciaRobusta : null;
   const pesoTendencia = tendenciaReciente
     ? tendenciaReciente.intercepto + tendenciaReciente.pendiente * hoyDia
@@ -782,9 +787,10 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
   // registros de kcal imperfectos sin convertir variaciones de agua en grasa.
   const pesoTendenciaEnBalance = balanceTendencia !== null && tendenciaReciente && tendenciaReciente.puntos >= 3 && tendenciaReciente.spanDias >= 14;
   const mezclaBalance = pesoTendenciaEnBalance ? (calibracion ? 0.45 : 0.25) : 0;
-  const balanceDiario = balanceTendencia === null
+  const balanceDiarioSinLimitar = balanceTendencia === null
     ? balanceEnergetico
     : balanceEnergetico * (1 - mezclaBalance) + balanceTendencia * mezclaBalance;
+  const balanceDiario = limitarBalanceEstimado(balanceDiarioSinLimitar, pesoHoy);
   const evaluablesRecientes = diasEvaluables(estado, sumarDias(hoy(), -13), hoy());
   const errorDiario = evaluablesRecientes.length
     ? evaluablesRecientes.reduce((suma, d) => suma + incertidumbreEnergia(d.energia), 0) / evaluablesRecientes.length

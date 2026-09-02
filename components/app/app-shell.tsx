@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, MoreHorizontal, Plus, Settings } from "lucide-react";
+import { LogOut, MoreHorizontal, Plus, Search, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +23,7 @@ import { QuickLog } from "./quick-log";
 import { PageTransition } from "@/components/page-transition";
 import { UserCount } from "./user-count";
 import { TravelBanner } from "./travel-banner";
+import { GlobalSearch } from "./global-search";
 
 function UserMenu({ compact = false }: { compact?: boolean }) {
   const { userEmail, cerrarSesion } = useRitmo();
@@ -68,6 +69,7 @@ function UserMenu({ compact = false }: { compact?: boolean }) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { abrir, abierto } = useQuickLog();
+  const [busquedaAbierta, setBusquedaAbierta] = React.useState(false);
 
   const activo = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
   const primarios = NAV_ITEMS.filter((i) => i.primary);
@@ -76,18 +78,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // o si el panel de registro ya está abierto (para no capturar su escritura).
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setBusquedaAbierta(true); return; }
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const t = e.target as HTMLElement | null;
       const enCampo = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
-      if (enCampo || abierto) return;
+      if (enCampo || abierto || busquedaAbierta) return;
       const k = e.key.toLowerCase();
-      if (k === "r" || k === "n") { e.preventDefault(); abrir("comida"); }
+      if (k === "/") { e.preventDefault(); setBusquedaAbierta(true); }
+      else if (k === "r" || k === "n") { e.preventDefault(); abrir("comida"); }
       else if (k === "p") { e.preventDefault(); abrir("peso"); }
       else if (k === "h") { e.preventDefault(); abrir("habitos"); }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [abrir, abierto]);
+  }, [abrir, abierto, busquedaAbierta]);
 
   return (
     <div className="min-h-dvh bg-background">
@@ -107,6 +111,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Plus className="size-5" />
           Registrar
         </Button>
+        <button type="button" onClick={() => setBusquedaAbierta(true)} className="mt-2 flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
+          <Search className="size-4" /><span className="flex-1 text-left">Buscar</span><kbd className="rounded-md border border-border px-1.5 py-0.5 text-[0.6rem]">⌘K</kbd>
+        </button>
         <nav className="mt-5 flex flex-1 flex-col gap-1">
           {NAV_ITEMS.map((item) => (
             <Link
@@ -141,6 +148,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <RitmoLogo />
         </Link>
         <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="size-9 rounded-xl" onClick={() => setBusquedaAbierta(true)} aria-label="Buscar"><Search className="size-5" /></Button>
           <ThemeToggle />
           <UserMenu />
         </div>
@@ -181,6 +189,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </nav>
 
       <QuickLog />
+      <GlobalSearch open={busquedaAbierta} onOpenChange={setBusquedaAbierta} />
     </div>
   );
 }

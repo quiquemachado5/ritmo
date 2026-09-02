@@ -555,9 +555,11 @@ export function energiaDia(
   const sinHabitosMarcados = clavesHabitos
     ? !clavesHabitos.some((clave) => d.habitos?.[clave] === true)
     : !Object.values(d.habitos || {}).some((valor) => valor === true);
-  // Si faltan registros de comida, la suma guardada es solo un mínimo. No se
-  // bloquea el día: los hábitos completan la estimación energética.
-  const ingestaIncompleta = Boolean(d.comidas?.length) && !d.comidas!.some((comida) => comida.tipo === "cena");
+  // La app no tiene un control explícito de "día alimentario cerrado". Por
+  // tanto, cualquier suma procedente de comidas es un mínimo, aunque incluya
+  // una cena: registrar tres platos no demuestra que se haya anotado todo.
+  // Los hábitos completan la estimación y la cifra escrita solo puede elevarla.
+  const ingestaIncompleta = Boolean(d.comidas?.length);
 
   const sinRegistro =
     inExplicito === null &&

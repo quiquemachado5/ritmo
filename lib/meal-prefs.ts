@@ -4,6 +4,8 @@ import * as React from "react";
 import { createClient } from "@/lib/supabase/client";
 import { registrarDiagnostico } from "@/lib/observability";
 import type { Perfil } from "@/lib/model/types";
+import type { CorreccionNutricional, ItemNutricional } from "@/lib/nutrition/types";
+import { normalizarNombreIngrediente } from "@/lib/nutrition/corrections";
 
 /* Preferencias de la biblioteca de comidas, sincronizadas entre dispositivos.
    - Cache inmediata en localStorage (rápida, offline).
@@ -51,13 +53,15 @@ export interface MealPrefs {
   overrides: Record<string, OverrideComida>;
   catalog: ComidaCatalogo[];
   templates: PlantillaComida[];
+  /** Referencias confirmadas por el usuario para personalizar futuros análisis. */
+  nutritionCorrections: Record<string, CorreccionNutricional>;
   /** Ajustes del modelo que no requieren columnas nuevas en Supabase. */
   profile: PreferenciasPerfil;
   updatedAt: number;
 }
 
 const KEY_PREFIX = "ritmo:mealprefs";
-const VACIO: MealPrefs = { fav: [], hidden: [], overrides: {}, catalog: [], templates: [], profile: {}, updatedAt: 0 };
+const VACIO: MealPrefs = { fav: [], hidden: [], overrides: {}, catalog: [], templates: [], nutritionCorrections: {}, profile: {}, updatedAt: 0 };
 const CLAVES_PERFIL = [
   "imputarActiva",
   "imputarDesde",
@@ -73,6 +77,7 @@ function normalizar(p: Partial<MealPrefs> | null | undefined): MealPrefs {
     overrides: p?.overrides ?? {},
     catalog: p?.catalog ?? [],
     templates: p?.templates ?? [],
+    nutritionCorrections: p?.nutritionCorrections ?? {},
     profile: p?.profile ?? {},
     updatedAt: p?.updatedAt ?? 0,
   };
@@ -269,6 +274,23 @@ export function agregarPlantilla(base: Omit<PlantillaComida, "id" | "creado">) {
 export function quitarPlantilla(id: string) {
   const p = snapshot();
   escribir({ ...p, templates: p.templates.filter((x) => x.id !== id) });
+}
+
+export function guardarCorreccionesNutricion(items: ItemNutricional[]) {
+  if (items.length === 0) return;
+  const p = snapshot();
+  const nutritionCorrections = { ...p.nutritionCorrections };
+  for (const item of items) {
+    const clave = normalizarNombreIngrediente(item.nombre);
+    if (!clave) continue;
+    nutritionCorrections[clave] = { ...item, clave, actualizada: Date.now(), cantidadEstimada: false };
+  }
+  const limitadas = Object.fromEntries(
+    Object.entries(nutritionCorrections)
+      .sort(([, a], [, b]) => b.actualizada - a.actualizada)
+      .slice(0, 80),
+  );
+  escribir({ ...p, nutritionCorrections: limitadas });
 }
 
 export function limpiarPreferenciasComidas() {

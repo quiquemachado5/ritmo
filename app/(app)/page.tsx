@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Award, Flame, Plus, Target, TrendingDown, TrendingUp, Utensils } from "lucide-react";
+import { Award, CheckCircle2, Flame, Plus, Scale, Target, TrendingDown, TrendingUp, Utensils } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
 import { resumen, adherenciaPorHabito, patronesHabitos, recordsPersonales, resumenPorMes } from "@/lib/model/analytics";
@@ -17,6 +17,7 @@ import { fmtPeso, fmtKcal, fmtSigno, relativo, capitalizar } from "@/lib/format"
 import { cn } from "@/lib/utils";
 import { MonthlyShare } from "@/components/app/monthly-share";
 import { RitmoDisclosure } from "@/components/ui/ritmo-disclosure";
+import { qualityForDay, RecordQuality } from "@/components/app/record-quality";
 
 function saludo(): string {
   const h = new Date().getHours();
@@ -60,7 +61,16 @@ export default function HoyPage() {
 
   const habitosHechos = habitosActivos.filter((h) => diaHoy.habitos?.[h.clave]).length;
   const tendKg = r.prediccion.modelo?.kgSemana ?? r.tendencia?.kgSemana ?? null;
-  const necesitaRevision = new Date().getHours() >= 18 && habitosHechos === 0;
+  const calidadRegistro = qualityForDay(comidas, habitosHechos, habitosActivos.length);
+  const lecturaPrincipal = comidas.length === 0 && habitosHechos === 0
+    ? "Tu día empieza con un registro"
+    : habitosHechos === habitosActivos.length
+      ? "Hábitos completos; protege esta base"
+      : comidas.length > 0 && habitosHechos === 0
+        ? "La comida está; faltan tus hábitos"
+        : comidas.length === 0
+          ? "Tus hábitos ya orientan el día"
+          : "Tu día está tomando forma";
 
   return (
     <div className="flex flex-col gap-6">
@@ -87,6 +97,14 @@ export default function HoyPage() {
           Energía de hoy
         </SectionLabel>
         <Card className="p-4 sm:p-5">
+          <div className="mb-4 flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
+            <div><p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Lectura principal</p><h2 className="mt-1 font-display text-xl font-bold">{lecturaPrincipal}</h2></div>
+            <div className="flex flex-wrap gap-2">
+              {comidas.length === 0 && <Button size="sm" onClick={() => abrir("comida")} className="gap-1.5"><Plus className="size-3.5" /> Añadir comida</Button>}
+              {habitosHechos < habitosActivos.length && <Button size="sm" variant="secondary" onClick={() => abrir("habitos")} className="gap-1.5"><CheckCircle2 className="size-3.5" /> Revisar hábitos</Button>}
+              {r.peso.actual == null && <Button size="sm" variant="secondary" onClick={() => abrir("peso")} className="gap-1.5"><Scale className="size-3.5" /> Añadir peso</Button>}
+            </div>
+          </div>
           <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] items-center gap-3 sm:flex sm:gap-7">
             <Ring value={consumidas} max={objetivoKcal} colorVar="--energy" segments={[{ value: macros.p, max: objMacros.proteinas, colorVar: "--weight" }, { value: macros.c, max: objMacros.carbohidratos, colorVar: "--habit" }, { value: macros.g, max: objMacros.grasas, colorVar: "--energy" }]} size={116} stroke={11} className="sm:[width:140px] sm:[height:140px]" ariaLabel={`Energía de hoy: ${fmtKcal(consumidas)} de ${fmtKcal(objetivoKcal)} kcal`}>
               <div><span className="block font-display text-3xl font-bold leading-none tabular">{fmtKcal(Math.abs(restanteKcal))}</span><span className="text-xs text-muted-foreground">{restanteKcal >= 0 ? "kcal restantes" : "kcal de más"}</span></div>
@@ -147,19 +165,9 @@ export default function HoyPage() {
               </div>
             );
           })()}
+          <RecordQuality level={calidadRegistro.level} detail={calidadRegistro.detail} className="mt-4" />
         </Card>
       </section>
-
-      {necesitaRevision && (
-        <section aria-labelledby="revision-dia">
-          <Card className="overflow-hidden p-0">
-            <div className="flex flex-col gap-4 bg-secondary/35 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-              <div><h2 id="revision-dia" className="font-display text-xl font-bold">Antes de cerrar el día</h2><p className="mt-1 max-w-xl text-sm text-muted-foreground">Marca al menos un hábito para que el modelo pueda interpretar cómo fue el día.</p></div>
-              <div className="flex shrink-0 flex-wrap gap-2"><Button variant="secondary" onClick={() => abrir("habitos")} className="gap-2"><Target className="size-4" /> Revisar hábitos</Button></div>
-            </div>
-          </Card>
-        </section>
-      )}
 
       {/* Último pesaje */}
       <section>
@@ -299,17 +307,11 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
   const estaSemana = resumenSemana(estado, hoy());
   const semanaAnterior = resumenSemana(estado, sumarDias(hoy(), -7));
   const deltaSemana = estaSemana.adherencia - semanaAnterior.adherencia;
+  const mediaPersonal = mediaSemanalPersonal(estado, hoy());
+  const deltaMedia = mediaPersonal == null ? null : estaSemana.adherencia - mediaPersonal;
   const peor = porHabito[porHabito.length - 1];
   const mejorRacha = r.habitos.mejorRacha.longitud;
   const hayRecords = rec.mejorMesAdherencia || rec.mayorPerdidaMes || rec.totalDiasRegistrados > 0;
-
-  const cabecera = veredicto === "excelente"
-    ? "Todo está alineado. Sigue protegiendo esta base."
-    : veredicto === "bien"
-      ? "La base está. Un hábito más puede redondearla."
-      : veredicto === "flojea"
-        ? "Hay base, pero te falta consistencia en los remates."
-        : "Empieza hoy con algo sencillo; una semana no se decide en un día.";
 
   const foco = peor && peor.pct < 100
     ? {
@@ -327,122 +329,121 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
     <section>
       <SectionLabel action={<MonthlyShare meses={meses} estado={estado} />}>Esta semana</SectionLabel>
       <Card className="flex flex-col gap-0 overflow-hidden p-0">
-        <div className="p-5 sm:p-7">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="font-display text-2xl font-bold sm:text-3xl">{v.titulo}</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{cabecera}</p>
+        <div className="p-4 sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className={cn("size-2.5 shrink-0 rounded-full", v.punto)} aria-hidden="true" />
+              <h2 className="truncate font-display text-xl font-bold">{v.titulo}</h2>
             </div>
-            <span className={cn("mt-2 size-2.5 shrink-0 rounded-full", v.punto)} aria-label={v.titulo} />
-          </div>
-
-          <div className="mt-7 grid gap-5 border-y border-border py-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-            <div className="flex items-end gap-3">
-              <p className={cn("font-display text-5xl font-bold leading-none tabular sm:text-6xl", v.clase)}>{adh}%</p>
-              <p className="mb-1.5 text-sm text-muted-foreground">de constancia</p>
+            <div className="flex shrink-0 items-baseline gap-1.5">
+              <span className={cn("font-display text-2xl font-bold tabular", v.clase)}>{adh}%</span>
+              <span className="text-xs text-muted-foreground">constancia</span>
             </div>
-            <p className="text-sm text-muted-foreground sm:text-right">
-              {estaSemana.diasConDatos} de 7 días con datos
-              <span className="mx-1.5 text-border">·</span>
-              {estaSemana.comidas} comidas
-            </p>
           </div>
-
+          <p className="mt-1.5 text-xs text-muted-foreground">{estaSemana.diasConDatos}/7 días registrados · {estaSemana.comidas} comidas</p>
           {foco ? (
-            <div className="mt-5 flex items-start gap-3.5">
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-secondary">{foco.icon}</span>
-              <div className="min-w-0 pt-0.5">
-                <p className="font-semibold">Tu siguiente foco</p>
-                <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">{foco.text}</p>
-              </div>
+            <div className="mt-4 flex items-center gap-2.5 border-t border-border pt-3">
+              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-secondary">{foco.icon}</span>
+              <p className="min-w-0 text-sm text-muted-foreground"><span className="font-semibold text-foreground">Siguiente foco:</span> {foco.text}</p>
             </div>
           ) : (
-            <p className="mt-5 text-sm leading-6 text-muted-foreground">Registra unos días más para que RITMO pueda darte una lectura útil.</p>
+            <p className="mt-4 border-t border-border pt-3 text-sm text-muted-foreground">Registra unos días más para obtener una lectura útil.</p>
           )}
         </div>
 
-        {hayRecords && (
-          <div className="border-t border-border bg-secondary/25">
-            <div className="px-5 pb-3 pt-5 sm:px-7 sm:pt-6">
-              <h3 className="font-display text-xl font-bold">Marcas que ya son tuyas</h3>
-              <p className="mt-1 text-sm text-muted-foreground">Tu historial no es ruido: aquí está lo mejor que ya has sostenido.</p>
-            </div>
-            <div className="grid divide-y divide-border border-t border-border sm:grid-cols-2 sm:divide-x sm:divide-y-0">
-              <RecordLineCompact icon={<Award className="size-4 text-streak" />} label="Mejor racha" value={String(mejorRacha)} unit="días seguidos" />
-              {rec.mejorMesAdherencia && <RecordLineCompact icon={<Flame className="size-4 text-habit" />} label="Tu mes más constante" value={rec.mejorMesAdherencia.adherenciaMedia + "%"} sub={rec.mejorMesAdherencia.etiqueta} />}
-              {rec.mayorPerdidaMes && <RecordLineCompact icon={<TrendingDown className="size-4 text-weight" />} label="Mejor avance mensual" value={fmtSigno(rec.mayorPerdidaMes.cambioPeso as number, 1)} unit="kg" sub={rec.mayorPerdidaMes.etiqueta} />}
-              <RecordLineCompact icon={<Utensils className="size-4 text-energy" />} label="Registro acumulado" value={String(rec.totalComidas)} unit="comidas" sub={String(rec.totalDiasRegistrados) + " días con datos"} />
-            </div>
-          </div>
-        )}
-
-        <RitmoDisclosure title="Abrir lectura completa" openLabel="Detalles">
-          <div className="border-t border-border px-5 py-5 sm:px-7 sm:py-6">
-            <div className="grid gap-4 sm:grid-cols-3">
-              <WeekComparisonCompact label="Constancia" actual={estaSemana.adherencia + "%"} previo={semanaAnterior.adherencia + "%"} />
-              <WeekComparisonCompact label="Días registrados" actual={estaSemana.diasConDatos + "/7"} previo={semanaAnterior.diasConDatos + "/7"} />
-              <WeekComparisonCompact label="Contra la anterior" actual={(deltaSemana >= 0 ? "+" : "") + deltaSemana + " pts"} tone={deltaSemana >= 0 ? "text-weight" : "text-energy"} />
+        <RitmoDisclosure title="Comparativa y mejores marcas" openLabel="Ver resumen">
+          <div className="border-t border-border py-4">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 px-4 text-xs sm:px-5">
+              <span className="font-semibold text-foreground">Esta semana {estaSemana.adherencia}%</span>
+              {mediaPersonal != null && <><span className="text-muted-foreground">tu media {mediaPersonal}%</span><span className={cn("font-semibold tabular", (deltaMedia ?? 0) >= 0 ? "text-weight" : "text-energy")}>{fmtSigno(deltaMedia, 0)} pts</span></>}
+              <span className="text-muted-foreground">· anterior {semanaAnterior.adherencia}% ({fmtSigno(deltaSemana, 0)})</span>
+              <span className="text-muted-foreground">· {estaSemana.diasConDatos}/7 días</span>
             </div>
 
-            {patrones.length > 0 && (
-              <div className="mt-7 border-t border-border pt-5">
-                <h3 className="font-display text-xl font-bold">Patrones que aparecen</h3>
-                <p className="mt-1 text-sm text-muted-foreground">Relaciones observadas en tus últimos registros; describen tendencia, no demuestran causa.</p>
-                <div className="mt-4 grid gap-3">
-                  {patrones.map((patron) => {
-                    const etiqueta = habitosModelo(estado.perfil).find((h) => h.clave === patron.clave)?.etiqueta ?? patron.clave;
-                    const favorable = patron.diferencia > 0;
-                    return (
-                      <div key={patron.clave} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border pb-3 last:border-0 last:pb-0">
-                        <p className="text-sm leading-6 text-muted-foreground">Con <span className="font-semibold text-foreground">{etiqueta.toLowerCase()}</span>, tu balance medio fue <span className="font-semibold text-foreground tabular">{Math.abs(patron.diferencia)} kcal</span> {favorable ? "más bajo" : "más alto"}.</p>
-                        <span className={cn("text-xs font-semibold tabular", favorable ? "text-weight" : "text-energy")}>{patron.muestra} días</span>
-                      </div>
-                    );
-                  })}
+            {meses.length > 0 && <MonthlyRanking meses={meses} estado={estado} />}
+
+            {hayRecords && (
+              <div className="mt-3 border-t border-border px-4 pt-3 sm:px-5">
+                <h3 className="text-xs font-semibold text-muted-foreground">Mejores marcas</h3>
+                <div className="mt-2 grid divide-y divide-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                  <RecordLineCompact icon={<Award className="size-4 text-streak" />} label="Mejor racha" value={String(mejorRacha)} unit="días" />
+                  {rec.mejorMesAdherencia && <RecordLineCompact icon={<Flame className="size-4 text-habit" />} label="Mejor mes" value={rec.mejorMesAdherencia.adherenciaMedia + "%"} sub={rec.mejorMesAdherencia.etiqueta} />}
+                  {rec.mayorPerdidaMes && <RecordLineCompact icon={<TrendingDown className="size-4 text-weight" />} label="Mejor avance" value={fmtSigno(rec.mayorPerdidaMes.cambioPeso as number, 1)} unit="kg" sub={rec.mayorPerdidaMes.etiqueta} />}
                 </div>
               </div>
             )}
-
-            {(() => {
-              const esteMes = meses[0] ?? null;
-              const mesPrevio = meses[1] ?? null;
-              if (!esteMes || !mesPrevio) return null;
-              const deltaAdh = esteMes.adherenciaMedia - mesPrevio.adherenciaMedia;
-              return (
-                <div className="mt-6 flex items-start gap-3 border-t border-border pt-5 text-sm">
-                  {deltaAdh >= 0 ? <TrendingUp className="mt-0.5 size-4 shrink-0 text-weight" /> : <TrendingDown className="mt-0.5 size-4 shrink-0 text-energy" />}
-                  <p className="leading-6 text-muted-foreground">
-                    Este mes ({esteMes.etiqueta}): <span className="tabular font-semibold text-foreground">{esteMes.adherenciaMedia}%</span> de constancia, {deltaAdh === 0 ? "igual que" : <><span className="tabular font-semibold text-foreground">{Math.abs(deltaAdh)} pts</span> {deltaAdh > 0 ? "por encima" : "por debajo"} de</>} {mesPrevio.etiqueta}.
-                  </p>
-                </div>
-              );
-            })()}
           </div>
         </RitmoDisclosure>
+
+        {patrones.length > 0 && <RitmoDisclosure title="Patrones observados" openLabel="Ver patrones">
+          <div className="border-t border-border px-4 py-3 sm:px-5">
+            <div className="grid gap-2">
+              {patrones.slice(0, 2).map((patron) => {
+                const etiqueta = habitosModelo(estado.perfil).find((h) => h.clave === patron.clave)?.etiqueta ?? patron.clave;
+                const favorable = patron.diferencia > 0;
+                return (
+                  <div key={patron.clave} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border pb-2 last:border-0 last:pb-0">
+                    <p className="text-xs leading-5 text-muted-foreground">Con <span className="font-semibold text-foreground">{etiqueta.toLowerCase()}</span>, el balance fue <span className="font-semibold text-foreground tabular">{Math.abs(patron.diferencia)} kcal</span> {favorable ? "más bajo" : "más alto"}.</p>
+                    <span className={cn("text-xs font-semibold tabular", favorable ? "text-weight" : "text-energy")}>{patron.muestra} días</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </RitmoDisclosure>}
       </Card>
     </section>
   );
 }
 
-function RecordLineCompact({ icon, label, value, unit, sub }: { icon: React.ReactNode; label: string; value: string; unit?: string; sub?: string }) {
+function MonthlyRanking({ meses, estado }: { meses: ReturnType<typeof resumenPorMes>; estado: Parameters<typeof resumen>[0] }) {
+  const habitosActivos = habitosModelo(estado.perfil);
+  const perfectosPorMes = new Map<string, number>();
+  for (const dia of Object.values(estado.dias)) {
+    if (habitosActivos.length === 0 || !habitosActivos.every((habito) => dia.habitos?.[habito.clave] === true)) continue;
+    const mes = dia.fecha.slice(0, 7);
+    perfectosPorMes.set(mes, (perfectosPorMes.get(mes) ?? 0) + 1);
+  }
+  const ranking = [...meses]
+    .filter((mes) => mes.diasRegistrados > 0)
+    .map((mes) => ({ ...mes, diasPerfectos: perfectosPorMes.get(mes.clave) ?? 0 }))
+    .sort((a, b) => b.diasPerfectos - a.diasPerfectos || b.adherenciaMedia - a.adherenciaMedia || b.clave.localeCompare(a.clave));
+
+  if (ranking.length === 0) return null;
+  const maxPerfectos = Math.max(1, ...ranking.map((mes) => mes.diasPerfectos));
+
   return (
-    <div className="flex min-w-0 items-center gap-3 px-5 py-4 sm:px-6">
-      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-card shadow-sm">{icon}</span>
-      <div className="min-w-0">
-        <p className="truncate text-xs text-muted-foreground">{label}</p>
-        <p className="mt-0.5 font-display text-xl font-bold leading-none tabular">{value}{unit && <span className="ml-1 text-xs font-medium text-muted-foreground">{unit}</span>}</p>
-        {sub && <p className="mt-1 truncate text-xs text-muted-foreground">{sub}</p>}
-      </div>
+    <div className="mt-3 border-t border-border pt-3">
+      <div className="mb-1 flex items-center justify-between gap-3 px-4 sm:px-5"><h3 className="text-xs font-semibold text-muted-foreground">Ranking de días perfectos</h3><span className="text-[0.62rem] text-muted-foreground">{habitosActivos.length}/{habitosActivos.length} hábitos</span></div>
+      <ol className="divide-y divide-border px-4 sm:px-5" aria-label="Ranking mensual por días con todos los hábitos cumplidos">
+        {ranking.map((mes, index) => (
+          <li key={mes.clave} className="grid grid-cols-[1.6rem_minmax(0,1fr)_auto] items-center gap-2.5 py-2">
+            <span className={cn("grid size-6 place-items-center rounded-full text-[0.65rem] font-bold tabular", index < 3 ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground")}>{index + 1}</span>
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="truncate text-xs font-semibold capitalize">{mes.etiqueta}</span>
+                <span className="shrink-0 text-[0.62rem] text-muted-foreground">{mes.adherenciaMedia}% constancia</span>
+                {mes.cambioPeso != null && <span className={cn("ml-auto hidden shrink-0 text-[0.62rem] font-medium tabular sm:inline", mes.cambioPeso <= 0 ? "text-weight" : "text-energy")}>{fmtSigno(mes.cambioPeso, 1)} kg</span>}
+              </div>
+              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-secondary" aria-hidden="true"><span className="block h-full rounded-full bg-primary" style={{ width: `${(mes.diasPerfectos / maxPerfectos) * 100}%` }} /></div>
+            </div>
+            <div className="min-w-16 text-right"><span className="font-display text-base font-bold tabular text-primary">{mes.diasPerfectos}</span><span className="ml-1 text-[0.62rem] text-muted-foreground">día{mes.diasPerfectos === 1 ? "" : "s"}</span>{mes.cambioPeso != null && <span className={cn("block text-[0.58rem] font-medium tabular sm:hidden", mes.cambioPeso <= 0 ? "text-weight" : "text-energy")}>{fmtSigno(mes.cambioPeso, 1)} kg</span>}</div>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
 
-function WeekComparisonCompact({ label, actual, previo, tone = "text-foreground" }: { label: string; actual: string; previo?: string; tone?: string }) {
+function RecordLineCompact({ icon, label, value, unit, sub }: { icon: React.ReactNode; label: string; value: string; unit?: string; sub?: string }) {
   return (
-    <div className="min-w-0">
-      <p className="truncate text-xs text-muted-foreground">{label}</p>
-      <p className={cn("mt-1 font-display text-2xl font-bold tabular", tone)}>{actual}</p>
-      {previo && <p className="mt-1 text-xs text-muted-foreground">antes {previo}</p>}
+    <div className="flex min-w-0 items-center gap-2.5 px-2 py-2 first:pl-0 last:pr-0 sm:py-1">
+      <span className="shrink-0">{icon}</span>
+      <div className="min-w-0">
+        <p className="truncate text-xs text-muted-foreground">{label}</p>
+        <p className="mt-0.5 font-display text-base font-bold leading-none tabular">{value}{unit && <span className="ml-1 text-[0.62rem] font-medium text-muted-foreground">{unit}</span>}</p>
+        {sub && <p className="mt-0.5 truncate text-[0.62rem] text-muted-foreground">{sub}</p>}
+      </div>
     </div>
   );
 }
@@ -457,6 +458,13 @@ function resumenSemana(estado: Parameters<typeof resumen>[0], hasta: string) {
     if (hechos > 0 || (d?.comidas?.length ?? 0) > 0 || d?.peso != null) diasConDatos++;
   }
   return { adherencia: Math.round((habitos / (habitosActivos.length * 7)) * 100), comidas, diasConDatos };
+}
+
+function mediaSemanalPersonal(estado: Parameters<typeof resumen>[0], hasta: string): number | null {
+  const semanas = Array.from({ length: 8 }, (_, index) => resumenSemana(estado, sumarDias(hasta, -(index + 1) * 7)))
+    .filter((semana) => semana.diasConDatos > 0);
+  if (semanas.length === 0) return null;
+  return Math.round(semanas.reduce((total, semana) => total + semana.adherencia, 0) / semanas.length);
 }
 
 function CargandoHoy() {

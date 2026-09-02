@@ -216,6 +216,24 @@ describe("Energía de un día", () => {
     expect(seisDeSeis.deficit).toBeGreaterThanOrEqual(250);
     expect(seisDeSeis.deficit).toBeLessThanOrEqual(950);
 
+    const tresComidasNoCierranElDia = estado({
+      perfil: { alturaCm: 185, edad: 26, sexo: "hombre", objetivo: "perder", kcalObjetivo: 1450, factorActividad: 1.55 },
+      dias: {
+        "2026-08-31": {
+          fecha: "2026-08-31",
+          peso: 95.3,
+          habitos: { comida: true, cena: true, noAlcohol: true, deporte: true, beberAgua: true, dormirBien: true },
+          kcalConsumidas: 1200,
+          comidas: [{ tipo: "desayuno" }, { tipo: "comida" }, { tipo: "cena" }],
+        },
+      },
+      composicion: [],
+    });
+    const energiaTresComidas = A.energiaDe(tresComidasNoCierranElDia, "2026-08-31");
+    igual(energiaTresComidas.ingestaIncompleta, true);
+    expect(energiaTresComidas.deficit).toBeLessThanOrEqual(1100);
+    expect(energiaTresComidas.deficit).toBeGreaterThanOrEqual(250);
+
     const mixto = M.energiaDia({ kcalConsumidas: 1500, habitos: { deporte: true } }, { tdeeBase: 2400 });
     igual(mixto.consumidasEstimadas, false);
     igual(mixto.quemadasEstimadas, true);
@@ -421,6 +439,8 @@ describe("Imputación y arrastre", () => {
     const proy = A.proyeccionPesoConfiable(st);
     igual(proy.disponible, true);
     expect(proy.modelo!.kgSemana).toBeLessThan(-0.5);
+    expect(proy.hoy!.peso).toBeGreaterThan(95.1);
+    expect(proy.hoy!.peso).toBeLessThan(95.3);
     expect(proy.semana!.peso).toBeLessThan(proy.hoy!.peso);
   });
 });

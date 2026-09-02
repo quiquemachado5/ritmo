@@ -15,6 +15,9 @@ import { Ring, MacroBar, Chip, EmptyState } from "@/components/app/primitives";
 import { fmtKcal, fmtFechaLarga, capitalizar } from "@/lib/format";
 import { uid } from "@/lib/utils";
 import type { TipoComida } from "@/lib/model/types";
+import { DataLegend } from "@/components/app/data-legend";
+import { qualityForDay, RecordQuality } from "@/components/app/record-quality";
+import { habitosModelo } from "@/lib/model/config";
 
 // La biblioteca es rica pero secundaria al registro del día; cargarla al final
 // evita bloquear la primera interacción en móvil.
@@ -70,6 +73,9 @@ export default function NutricionPage() {
   );
   const obj = macrosObjetivo({ kcal: objetivoKcal, pesoKg: r.peso.estimadoHoy, objetivo: estado.perfil.objetivo, proteinaGkg: estado.perfil.proteinaObjetivo });
   const esFuturo = diasEntre(fecha, hoy()) < 0;
+  const habitos = habitosModelo(estado.perfil);
+  const habitosHechos = habitos.filter((habito) => d.habitos?.[habito.clave]).length;
+  const calidadRegistro = qualityForDay(comidas, habitosHechos, habitos.length);
 
   // Coach de proteína: la proteína protege la masa muscular en déficit. Avisa
   // cuando el día ya lleva calorías pero la proteína va por detrás de su ritmo,
@@ -129,16 +135,17 @@ export default function NutricionPage() {
             )}
           </div>
         </div>
+        <RecordQuality level={calidadRegistro.level} detail={calidadRegistro.detail} className="mt-4" />
       </Card>
 
       <section>
         <div className="mb-3"><h2 className="font-display text-xl font-bold">Balance calórico</h2><p className="mt-1 text-sm text-muted-foreground">Tu energía reciente. Los días con poca información se muestran como estimaciones.</p></div>
-        <Card className="p-4 sm:p-5"><BalanceChart data={balanceReciente} /><p className="mt-3 text-xs text-muted-foreground">Verde = déficit · terracota = superávit · translúcido = día sin hábitos. Un día sin hábitos nunca se interpreta como déficit.</p></Card>
+        <Card className="p-4 sm:p-5"><BalanceChart data={balanceReciente} /><DataLegend className="mt-3" items={[{ label: "Déficit", colorVar: "--weight", style: "bar" }, { label: "Superávit", colorVar: "--energy", style: "bar" }, { label: "Día imputado", colorVar: "--energy", style: "wash" }]} /><p className="mt-2 text-xs text-muted-foreground">Un día sin hábitos nunca se interpreta como déficit.</p></Card>
       </section>
 
       {/* Comidas por tipo */}
       {comidas.length === 0 ? (
-        <EmptyState title="Sin comidas registradas" action={<Button onClick={() => abrir("comida", fecha)} className="mt-1 gap-2"><Plus className="size-4" /> Añadir comida</Button>}>
+        <EmptyState title="Sin comidas registradas" unlocks={["1 comida: kcal y macros", "Varios días: balance y patrones"]} action={<Button onClick={() => abrir("comida", fecha)} className="mt-1 gap-2"><Plus className="size-4" /> Añadir comida</Button>}>
           Escribe lo que comes en lenguaje natural y RITMO calcula kcal y macros por ti.
         </EmptyState>
       ) : (

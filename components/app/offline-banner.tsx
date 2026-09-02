@@ -18,21 +18,23 @@ export function OfflineBanner() {
 
   return (
     <div
-      className={`fixed inset-x-0 top-0 z-40 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+      role="status"
+      aria-live="polite"
+      className={`fixed right-3 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-50 flex max-w-[calc(100%-1.5rem)] items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium shadow-lg transition-colors md:right-5 md:bottom-5 ${
         sincronizando
-          ? 'bg-warning/10 text-warning-ink'
-          : 'bg-destructive/10 text-destructive'
+          ? 'border-warning-border bg-card text-warning-ink'
+          : 'border-destructive/25 bg-card text-destructive'
       }`}
     >
       {sincronizando ? (
         <>
           <RefreshCw className="size-4 animate-spin" />
-          Sincronizando {pendientes} cambio{pendientes > 1 ? 's' : ''}…
+          {pendientes} cambio{pendientes > 1 ? 's' : ''} pendiente{pendientes > 1 ? 's' : ''}
         </>
       ) : (
         <>
           <AlertCircle className="size-4" />
-          Sin conexión — {pendientes > 0 ? `${pendientes} cambio${pendientes > 1 ? 's' : ''} en cola` : 'los cambios se guardarán al reconectar'}
+          {pendientes > 0 ? `Sin conexión · ${pendientes} pendiente${pendientes > 1 ? 's' : ''}` : 'Sin conexión · guardaremos tus cambios'}
         </>
       )}
     </div>

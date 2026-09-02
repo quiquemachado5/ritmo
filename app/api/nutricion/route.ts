@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { estimarOffline } from "@/lib/nutrition/offline";
-import type { AnalisisNutricional } from "@/lib/nutrition/types";
+import type { AnalisisNutricional, CorreccionNutricional } from "@/lib/nutrition/types";
 import { analizarConEdamam } from "@/lib/nutrition/edamam";
 import { analizarConGemini } from "@/lib/nutrition/gemini";
 import { createClient } from "@/lib/supabase/server";
@@ -34,6 +34,31 @@ function isRateLimited(key: string, limite: number): boolean {
 
 function claveCache(userId: string, texto: string): string {
   return createHash("sha256").update(userId).update("\0").update(texto).digest("hex");
+}
+
+function correccionesValidas(valor: unknown): CorreccionNutricional[] {
+  if (!Array.isArray(valor)) return [];
+  const numero = (dato: unknown, max: number) => {
+    const n = Number(dato);
+    return Number.isFinite(n) && n >= 0 && n <= max ? Math.round(n * 10) / 10 : 0;
+  };
+  return valor.slice(0, 25).flatMap((dato) => {
+    if (!dato || typeof dato !== "object") return [];
+    const item = dato as Record<string, unknown>;
+    const nombre = typeof item.nombre === "string" ? item.nombre.trim().slice(0, 80) : "";
+    if (!nombre) return [];
+    return [{
+      clave: typeof item.clave === "string" ? item.clave.slice(0, 100) : nombre.toLocaleLowerCase("es-ES"),
+      nombre,
+      cantidad: typeof item.cantidad === "string" ? item.cantidad.trim().slice(0, 80) : undefined,
+      cantidadEstimada: false,
+      kcal: numero(item.kcal, 4_000),
+      proteinas: numero(item.proteinas, 500),
+      carbohidratos: numero(item.carbohidratos, 800),
+      grasas: numero(item.grasas, 500),
+      actualizada: numero(item.actualizada, Number.MAX_SAFE_INTEGER),
+    } satisfies CorreccionNutricional];
+  });
 }
 
 export async function POST(request: Request) {
@@ -75,12 +100,14 @@ export async function POST(request: Request) {
 
     /* Parse y validación */
     let texto = "";
+    let correcciones: CorreccionNutricional[] = [];
     try {
-      const body = (await request.json()) as { texto?: unknown };
+      const body = (await request.json()) as { texto?: unknown; correcciones?: unknown };
       if (typeof body.texto !== "string") {
         throw new Error("texto debe ser string");
       }
       texto = body.texto.trim();
+      correcciones = correccionesValidas(body.correcciones);
     } catch {
       return NextResponse.json(
         { error: "Cuerpo inválido. Envía {\"texto\": \"...\"}" },
@@ -102,7 +129,7 @@ export async function POST(request: Request) {
     /* Análisis nutricional. Reutilizamos una estimación reciente de la misma
      * descripción para no quemar cuota gratuita de Gemini al recalcular. */
     const normalizado = texto.toLocaleLowerCase("es-ES").replace(/\s+/g, " ");
-    const cacheKey = claveCache(user.id, normalizado);
+    const cacheKey = claveCache(user.id, `${normalizado}\0${JSON.stringify(correcciones)}`);
     const guardado = nutritionCache.get(cacheKey);
     let resultado: AnalisisNutricional | null = guardado && guardado.expira > Date.now()
       ? structuredClone(guardado.resultado)
@@ -111,7 +138,7 @@ export async function POST(request: Request) {
 
     if (!resultado) {
       try {
-        resultado = await analizarConGemini(texto);
+        resultado = await analizarConGemini(texto, correcciones);
       } catch (error) {
         console.error("Gemini nutrición error:", error);
         registrarDiagnostico("nutrition", "warning", "Gemini no respondió; se usa respaldo");

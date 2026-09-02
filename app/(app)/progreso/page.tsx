@@ -27,6 +27,7 @@ import type { PuntoPeso } from "@/components/app/charts";
 import { Metric, SectionLabel, Chip, EmptyState } from "@/components/app/primitives";
 import { capitalizar, fmtPeso, fmtSigno, fmtNum, fmtFechaCorta, relativo } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { DataLegend } from "@/components/app/data-legend";
 
 const WeightChart = dynamic(() => import("@/components/app/charts").then((m) => m.WeightChart), { loading: () => <Skeleton className="h-72 w-full rounded-xl" /> });
 const CompositionChart = dynamic(() => import("@/components/app/charts").then((m) => m.CompositionChart), { loading: () => <Skeleton className="h-64 w-full rounded-xl" /> });
@@ -181,6 +182,9 @@ export default function ProgresoPage() {
   const tendKg = r.tendencia?.kgSemana ?? null;
   const composicion = r.composicion;
   const diasDesdeBascula = r.prediccion.diasSinPesaje ?? 0;
+  const cambioModeloDesdeBascula = r.peso.actual != null && r.peso.estimadoHoy != null
+    ? Math.round((r.peso.estimadoHoy - r.peso.actual) * 10) / 10
+    : null;
 
   return (
     <div className="flex flex-col gap-8">
@@ -193,7 +197,7 @@ export default function ProgresoPage() {
       </header>
 
       {!hayPesajes ? (
-        <EmptyState icon={<Scale className="size-8" />} title="Empieza con una medición real" action={<Button onClick={() => abrir("peso")} className="mt-1 gap-2"><Scale className="size-4" /> Registrar peso</Button>}>
+        <EmptyState icon={<Scale className="size-8" />} title="Empieza con una medición real" unlocks={["1 pesaje: punto de partida", "2 pesajes: cambio real", "4+ pesajes: error personalizado"]} action={<Button onClick={() => abrir("peso")} className="mt-1 gap-2"><Scale className="size-4" /> Registrar peso</Button>}>
           Con pesajes regulares, RITMO podrá separar tu evolución real de la estimación del modelo.
         </EmptyState>
       ) : (
@@ -201,7 +205,7 @@ export default function ProgresoPage() {
           <section aria-labelledby="estado-actual">
             <h2 id="estado-actual" className="sr-only">Estado actual</h2>
             <Card className="overflow-hidden p-0">
-              <div className="grid divide-y divide-border lg:grid-cols-[1fr_1.08fr] lg:divide-x lg:divide-y-0">
+              <div className="grid divide-y divide-border lg:grid-cols-[1.15fr_.85fr] lg:divide-x lg:divide-y-0">
                 <div className="p-5 sm:p-6">
                   <div className="mb-5 flex items-start justify-between gap-3">
                     <div>
@@ -226,28 +230,25 @@ export default function ProgresoPage() {
                 </div>
 
                 <div className="bg-body-wash/45 p-5 sm:p-6">
-                  <div className="mb-5 flex items-start justify-between gap-3">
+                  <div className="mb-4 flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold">Estimación del modelo para hoy</p>
-                      <p className="mt-1 text-xs text-muted-foreground">Calculada a partir de tu último pesaje y balance energético</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Orientación desde tu último pesaje</p>
                     </div>
                     <Chip tone="body">Modelo</Chip>
                   </div>
-                  <div className="flex flex-wrap items-end gap-x-2 gap-y-1">
-                    <span className="font-display text-5xl font-bold leading-none tabular text-body">{fmtPeso(r.peso.estimadoHoy)}</span>
+                  <div className="flex items-end gap-2">
+                    <span className="font-display text-3xl font-bold leading-none tabular text-body">{fmtPeso(r.peso.estimadoHoy)}</span>
                     <span className="mb-1 text-base font-medium text-muted-foreground">kg</span>
-                    {intervaloHoy && <span className="mb-1 text-xs tabular text-muted-foreground">rango {fmtPeso(intervaloHoy.minimo)}–{fmtPeso(intervaloHoy.maximo)}</span>}
                   </div>
-                  <p className="mt-3 text-sm text-muted-foreground">
+                  <p className="mt-2 text-xs text-muted-foreground">
                     {diasDesdeBascula === 0
                       ? "Coincide con tu pesaje de hoy."
-                      : <><span className="font-medium text-foreground tabular">{diasDesdeBascula} días</span> desde la báscula; el rango se ampliará hasta el próximo pesaje.</>}
-                    {r.peso.restante != null && <> Según esta estimación, faltan <span className="font-medium text-foreground tabular">{fmtPeso(Math.abs(r.peso.restante))} kg</span> para tu objetivo.</>}
+                      : cambioModeloDesdeBascula != null
+                        ? <><span className={cn("font-semibold tabular", cambioModeloDesdeBascula <= 0 ? "text-weight" : "text-energy")}>{fmtSigno(cambioModeloDesdeBascula, 1)} kg</span> desde la última medición.</>
+                        : "Se actualizará con tu próxima medición."}
                   </p>
-                  <div className="mt-5 border-t border-body-border pt-4 text-xs leading-relaxed text-muted-foreground">
-                    Una medición nueva recalibra el modelo. Esta cifra orienta: no sustituye a la báscula.
-                  </div>
-                  {r.prediccion.disponible && <div className="mt-4 flex snap-x snap-mandatory gap-2 overflow-x-auto pr-0 [scrollbar-width:none] sm:grid sm:grid-cols-4 sm:overflow-visible"><PredCell etiqueta="Mañana" iv={r.prediccion.manana} base={r.peso.estimadoHoy} /><PredCell etiqueta="3 días" iv={r.prediccion.tresDias} base={r.peso.estimadoHoy} /><PredCell etiqueta="1 semana" iv={r.prediccion.semana} base={r.peso.estimadoHoy} /><PredCell etiqueta="1 mes" iv={r.prediccion.mes} base={r.peso.estimadoHoy} /></div>}
+                  {r.prediccion.disponible && <div className="mt-4 border-t border-body-border pt-4"><p className="mb-2 text-[0.68rem] font-semibold text-muted-foreground">Si mantienes el ritmo</p><div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pr-0 [scrollbar-width:none] sm:grid sm:grid-cols-4 sm:overflow-visible"><PredCell etiqueta="Mañana" iv={r.prediccion.manana} base={r.peso.estimadoHoy} /><PredCell etiqueta="3 días" iv={r.prediccion.tresDias} base={r.peso.estimadoHoy} /><PredCell etiqueta="1 semana" iv={r.prediccion.semana} base={r.peso.estimadoHoy} /><PredCell etiqueta="1 mes" iv={r.prediccion.mes} base={r.peso.estimadoHoy} /></div></div>}
                 </div>
               </div>
             </Card>
@@ -272,12 +273,7 @@ export default function ProgresoPage() {
                 <Metric className="col-span-2 sm:col-span-1" label="Objetivo" value={fmtPeso(r.peso.objetivo)} unit="kg" />
               </div>
               <WeightChart data={datosPeso} objetivo={estado.perfil.pesoObjetivo} />
-              <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
-                <span className="flex items-center gap-2"><span className="h-0.5 w-5 rounded bg-weight" /> Peso medido</span>
-                <span className="flex items-center gap-2"><span className="h-0.5 w-5 border-b-2 border-dashed border-body" /> Estimación del modelo</span>
-                <span className="flex items-center gap-2"><span className="h-3 w-5 rounded-sm bg-body/15 ring-1 ring-body/30" /> Rango orientativo</span>
-                {estado.perfil.pesoObjetivo != null && <span className="flex items-center gap-2"><span className="h-0.5 w-5 border-b-2 border-dotted border-weight/60" /> Objetivo</span>}
-              </div>
+              <DataLegend className="mt-4" items={[{ label: "Peso medido", colorVar: "--weight" }, { label: "Estimación del modelo", colorVar: "--body", style: "dashed" }, { label: "Rango orientativo", colorVar: "--body", style: "wash" }, ...(estado.perfil.pesoObjetivo != null ? [{ label: "Objetivo", colorVar: "--weight" as const, style: "dotted" as const }] : [])]} />
             </Card>
           </section>
 
@@ -356,7 +352,7 @@ export default function ProgresoPage() {
                     <p className="mt-3 text-xs text-muted-foreground">Medición del {fmtFechaCorta(composicion.fecha)} · {relativo(composicion.fecha, hoyISO)}</p>
                   </div>
                 </>}
-                {compSerie.length > 1 ? <div className="border-t border-border pt-5"><CompositionChart data={compSerie} /><div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground"><span className="text-body">● % grasa</span><span className="text-energy">● masa grasa</span><span className="text-weight">● masa magra</span><span className="text-water">┈ músculo</span></div><p className="mt-2 text-xs text-muted-foreground">Morado usa el eje izquierdo (%); las masas usan el derecho (kg). Son mediciones reales, no estimaciones.</p></div> : <div className="border-t border-border pt-5"><p className="font-medium">Aún falta una segunda medición de composición</p><p className="mt-1 text-sm text-muted-foreground">Registra grasa corporal o masa muscular en diferentes fechas para ver la evolución.</p></div>}
+                {compSerie.length > 1 ? <div className="border-t border-border pt-5"><CompositionChart data={compSerie} /><DataLegend className="mt-3" items={[{ label: "% grasa", colorVar: "--body" }, { label: "Masa grasa", colorVar: "--energy" }, { label: "Masa magra", colorVar: "--weight" }, { label: "Músculo", colorVar: "--water", style: "dashed" }]} /><p className="mt-2 text-xs text-muted-foreground">% de grasa usa el eje izquierdo; las masas usan el derecho (kg). Son mediciones reales, no estimaciones.</p></div> : <div className="border-t border-border pt-5"><p className="font-medium">Aún falta una segunda medición de composición</p><p className="mt-1 text-sm text-muted-foreground">Registra grasa corporal o masa muscular en otra fecha para desbloquear la gráfica conjunta.</p></div>}
               </Card>
               {ultimaMedicion && (ultimaMedicion.cintura || ultimaMedicion.cadera || ultimaMedicion.pecho || ultimaMedicion.brazo || ultimaMedicion.muslo) && (
                 <Card className="mt-4 grid grid-cols-2 gap-4 p-5 sm:grid-cols-3 lg:grid-cols-5">
@@ -367,47 +363,32 @@ export default function ProgresoPage() {
           )}
 
           <section aria-labelledby="historial">
-            <SectionLabel action={<span className="text-xs text-muted-foreground tabular">{historial.length} registros</span>}><span id="historial">Historial de mediciones</span></SectionLabel>
+            <SectionLabel action={<span className="text-xs font-medium text-muted-foreground">{historial.length} registros</span>}><span id="historial">Historial de mediciones</span></SectionLabel>
             <Card className="overflow-hidden p-0">
-              <div className="grid border-b border-border lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,.8fr)] lg:divide-x lg:divide-border">
-                <div className="trajectory-surface relative overflow-hidden px-4 py-5 sm:px-6 sm:py-6">
-                  <div className="relative z-10 max-w-xl">
-                    <p className="font-display text-2xl font-bold tracking-tight">Tu trayectoria real</p>
-                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">Cada punto viene de una medición tuya. La escala inferior sitúa cada pesaje entre tu mínimo y máximo registrados.</p>
-                    <div className="mt-6 flex flex-wrap items-end gap-x-3 gap-y-2">
-                      <span className="font-display text-6xl font-bold leading-none tracking-tight text-weight tabular sm:text-7xl">{fmtPeso(lecturaHistorial.ultimo?.peso)}</span>
-                      <span className="mb-2 text-sm font-semibold text-muted-foreground">kg actuales</span>
-                      <DeltaTag delta={cambioTotal} />
-                    </div>
-                  </div>
-                  <div aria-hidden className="absolute -right-20 -top-16 size-48 rounded-full bg-card/50 blur-3xl" />
+              <div className="flex items-center gap-4 overflow-x-auto border-b border-border bg-secondary/25 px-4 py-3 [scrollbar-width:none] sm:px-5">
+                <div className="flex shrink-0 items-baseline gap-2.5 border-r border-border pr-4">
+                  <span className="font-display text-3xl font-bold leading-none tabular text-weight">{fmtPeso(lecturaHistorial.ultimo?.peso)}<span className="ml-1 text-xs font-medium text-muted-foreground">kg</span></span>
+                  <DeltaTag delta={cambioTotal} />
                 </div>
-                <div className="grid grid-cols-2 gap-px bg-border text-sm sm:grid-cols-4 lg:grid-cols-2">
+                <div className="grid min-w-[32rem] flex-1 grid-cols-4 gap-4">
                   <HistorialStat label="Inicio" value={fmtPeso(lecturaHistorial.primero?.peso)} detail={lecturaHistorial.primero ? fmtFechaCorta(lecturaHistorial.primero.fecha) : "—"} />
                   <HistorialStat label="Mínimo" value={fmtPeso(lecturaHistorial.minimo)} detail="mejor lectura" tone="text-weight" />
                   <HistorialStat label="Máximo" value={fmtPeso(lecturaHistorial.maximo)} detail="pico registrado" tone="text-energy" />
                   <HistorialStat label="Mejor salto" value={lecturaHistorial.mejorBajada?.delta != null ? fmtSigno(lecturaHistorial.mejorBajada.delta, 1) : "—"} detail={lecturaHistorial.mejorBajada ? fmtFechaCorta(lecturaHistorial.mejorBajada.fecha) : "sin tramo"} tone="text-weight" />
                 </div>
               </div>
-              <div className="max-h-[46rem] overflow-y-auto bg-card [scrollbar-width:thin]">
+              <div className="bg-card">
                 {historialPorMes.map((grupo) => (
-                  <section key={grupo.mes} className="grid border-b border-border last:border-b-0 md:grid-cols-[11.5rem_minmax(0,1fr)]">
-                    <div className="sticky top-0 z-20 flex items-center justify-between gap-3 bg-secondary/80 px-4 py-3 backdrop-blur md:block md:border-r md:border-border md:bg-card/92 md:px-5 md:py-5">
-                      <div>
-                        <h3 className="font-display text-base font-bold">{grupo.mes}</h3>
-                        <p className="mt-0.5 text-xs text-muted-foreground">{grupo.registros.length} medición{grupo.registros.length === 1 ? "" : "es"}</p>
-                      </div>
-                      <div className="mt-0 md:mt-4">
-                        <DeltaTag delta={grupo.cambio} />
-                      </div>
+                  <section key={grupo.mes} className="border-b border-border last:border-b-0">
+                    <div className="flex min-h-11 items-center justify-between gap-3 bg-secondary/35 px-4 py-2 sm:px-5">
+                      <div className="flex min-w-0 items-center gap-2.5"><h3 className="truncate text-sm font-semibold">{grupo.mes}</h3><span className="text-xs text-muted-foreground">{grupo.registros.length}</span></div>
+                      <DeltaTag delta={grupo.cambio} compact />
                     </div>
                     <div className="divide-y divide-border">
                       {grupo.registros.map((registro) => (
                         <PesajeTimelineRow
                           key={registro.fecha}
                           registro={registro}
-                          minimo={lecturaHistorial.minimo}
-                          maximo={lecturaHistorial.maximo}
                           hoyISO={hoyISO}
                           confirmando={confirmBorrar === registro.fecha}
                           onEditar={() => abrir("peso", registro.fecha)}
@@ -456,18 +437,16 @@ function DeltaTag({ delta, compact = false }: { delta: number | null; compact?: 
 
 function HistorialStat({ label, value, detail, tone = "text-foreground" }: { label: string; value: string; detail: string; tone?: string }) {
   return (
-    <div className="min-w-0 bg-card px-4 py-4 sm:px-5">
+    <div className="min-w-0">
       <p className="truncate text-[0.62rem] font-semibold uppercase tracking-[0.1em] text-muted-foreground">{label}</p>
-      <p className={cn("mt-1 font-display text-2xl font-bold leading-none tabular", tone)}>{value}</p>
-      <p className="mt-1 truncate text-[0.68rem] text-muted-foreground">{detail}</p>
+      <p className={cn("mt-1 font-display text-lg font-bold leading-none tabular", tone)}>{value}</p>
+      <p className="mt-0.5 truncate text-[0.62rem] text-muted-foreground">{detail}</p>
     </div>
   );
 }
 
 function PesajeTimelineRow({
   registro,
-  minimo,
-  maximo,
   hoyISO,
   confirmando,
   onEditar,
@@ -476,8 +455,6 @@ function PesajeTimelineRow({
   onBorrar,
 }: {
   registro: HistorialRegistro;
-  minimo: number | null;
-  maximo: number | null;
   hoyISO: string;
   confirmando: boolean;
   onEditar: () => void;
@@ -488,27 +465,18 @@ function PesajeTimelineRow({
   const fecha = new Date(`${registro.fecha}T00:00:00`);
   const dia = new Intl.DateTimeFormat("es-ES", { day: "2-digit" }).format(fecha);
   const mes = new Intl.DateTimeFormat("es-ES", { month: "short" }).format(fecha).replace(".", "");
-  const rango = minimo != null && maximo != null ? Math.max(0.1, maximo - minimo) : 1;
-  const posicion = minimo != null && maximo != null ? Math.min(100, Math.max(0, ((registro.peso - minimo) / rango) * 100)) : 50;
-
   return (
-    <article className="group grid grid-cols-[2.55rem_minmax(0,1fr)_auto] items-center gap-2.5 px-3 py-2.5 transition-colors hover:bg-secondary/35 sm:grid-cols-[3.4rem_minmax(0,1fr)_auto] sm:gap-3 sm:px-5 sm:py-3.5">
-      <div className="rounded-lg border border-border bg-background px-1.5 py-1.5 text-center shadow-sm sm:rounded-xl sm:px-2 sm:py-2">
+    <article className="group grid grid-cols-[2.4rem_minmax(0,1fr)_auto] items-center gap-2.5 px-3 py-2 transition-colors hover:bg-secondary/35 sm:grid-cols-[3rem_minmax(0,1fr)_auto] sm:px-5 sm:py-2.5">
+      <div className="text-center">
         <p className="font-display text-base font-bold leading-none tabular sm:text-lg">{dia}</p>
-        <p className="mt-0.5 text-[0.56rem] font-semibold uppercase tracking-[0.06em] text-muted-foreground sm:mt-1 sm:text-[0.62rem] sm:tracking-[0.08em]">{mes}</p>
+        <p className="mt-0.5 text-[0.56rem] font-semibold uppercase tracking-[0.06em] text-muted-foreground sm:text-[0.62rem]">{mes}</p>
       </div>
       <div className="min-w-0">
-        <div className="flex min-w-0 items-baseline gap-x-1.5 overflow-hidden sm:flex-wrap sm:gap-x-2 sm:gap-y-1">
-          <p className="shrink-0 font-display text-xl font-bold leading-none tabular text-weight sm:text-3xl">{fmtPeso(registro.peso)}<span className="ml-0.5 text-[0.62rem] font-medium text-muted-foreground sm:ml-1 sm:text-xs">kg</span></p>
+        <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 sm:gap-x-2">
+          <p className="shrink-0 font-display text-lg font-bold leading-none tabular text-weight sm:text-xl">{fmtPeso(registro.peso)}<span className="ml-0.5 text-[0.62rem] font-medium text-muted-foreground">kg</span></p>
           <DeltaTag delta={registro.delta} compact />
           {registro.grasaPct != null ? <Chip tone="body">{fmtNum(registro.grasaPct, 1)}% grasa</Chip> : null}
-        </div>
-        <div className="mt-1.5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:mt-2 sm:gap-3">
-          <div className="relative h-1.5 overflow-hidden rounded-full bg-secondary sm:h-2">
-            <div className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-weight/25 via-weight/45 to-energy/45" style={{ width: `${posicion}%` }} />
-            <span className="absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-card bg-weight shadow-sm sm:size-3" style={{ left: `${posicion}%` }} />
-          </div>
-          <span className="hidden text-[0.68rem] text-muted-foreground sm:inline">{relativo(registro.fecha, hoyISO)}</span>
+          <span className="ml-auto hidden text-[0.68rem] text-muted-foreground sm:inline">{relativo(registro.fecha, hoyISO)}</span>
         </div>
       </div>
       <div className="flex items-center justify-end gap-1">
@@ -519,8 +487,8 @@ function PesajeTimelineRow({
           </div>
         ) : (
           <div className="flex items-center gap-0.5 rounded-lg bg-secondary/45 p-0.5 opacity-90 transition-opacity group-hover:opacity-100">
-            <Button variant="ghost" size="icon" className="size-11 rounded-md text-muted-foreground hover:bg-card hover:text-weight sm:size-8" onClick={onEditar} aria-label={`Editar pesaje del ${fmtFechaCorta(registro.fecha)}`}><Pencil className="size-3.5" /></Button>
-            <Button variant="ghost" size="icon" className="size-11 rounded-md text-muted-foreground hover:bg-card hover:text-destructive sm:size-8" onClick={onPedirBorrar} aria-label={`Eliminar pesaje del ${fmtFechaCorta(registro.fecha)}`}><Trash2 className="size-3.5" /></Button>
+            <Button variant="ghost" size="icon" className="size-10 rounded-md text-muted-foreground hover:bg-card hover:text-weight sm:size-8" onClick={onEditar} aria-label={`Editar pesaje del ${fmtFechaCorta(registro.fecha)}`}><Pencil className="size-3.5" /></Button>
+            <Button variant="ghost" size="icon" className="size-10 rounded-md text-muted-foreground hover:bg-card hover:text-destructive sm:size-8" onClick={onPedirBorrar} aria-label={`Eliminar pesaje del ${fmtFechaCorta(registro.fecha)}`}><Trash2 className="size-3.5" /></Button>
           </div>
         )}
       </div>

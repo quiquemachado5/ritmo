@@ -63,6 +63,15 @@ export default function AjustesPage() {
   }, []);
   // g/kg por defecto según objetivo, para el placeholder del campo de proteína.
   const proteinaSugerida = String(form.objetivo === "perder" ? 2.0 : form.objetivo === "ganar" ? 1.8 : 1.6);
+  const perfilPendiente = form.nombre !== p.nombre
+    || form.sexo !== p.sexo
+    || form.edad !== p.edad
+    || form.alturaCm !== p.alturaCm
+    || form.objetivo !== p.objetivo
+    || form.pesoObjetivo !== p.pesoObjetivo
+    || form.kcalObjetivo !== p.kcalObjetivo
+    || form.proteinaObjetivo !== p.proteinaObjetivo
+    || form.factorActividad !== p.factorActividad;
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }));
 
   function cambiarDensidad(proxima: Densidad) {
@@ -238,6 +247,7 @@ export default function AjustesPage() {
           <Row label="Altura (cm)" htmlFor="altura">
             <Input id="altura" inputMode="numeric" value={String(form.alturaCm ?? "")} onChange={(e) => set("alturaCm", Number(e.target.value) as never)} className="h-11 w-full rounded-xl tabular sm:w-28" />
           </Row>
+          <Button onClick={guardarPerfil} disabled={!perfilPendiente} className="mt-1 h-11 self-start px-5">{perfilPendiente ? "Guardar cambios" : "Sin cambios pendientes"}</Button>
         </SettingsCard>
       </section>
 
@@ -281,7 +291,9 @@ export default function AjustesPage() {
               {FACTORES_ACTIVIDAD.map((f) => (
                 <button
                   key={f.clave}
+                  type="button"
                   onClick={() => set("factorActividad", f.factor)}
+                  aria-pressed={form.factorActividad === f.factor}
                   className={cn("flex min-h-11 items-center justify-between gap-3 rounded-xl border px-3 text-left text-sm transition-colors", form.factorActividad === f.factor ? "border-primary bg-primary/8" : "border-border hover:bg-secondary/50")}
                 >
                   <span className="font-medium">{f.etiqueta}</span>
@@ -290,7 +302,7 @@ export default function AjustesPage() {
               ))}
             </div>
           </div>
-          <Button onClick={guardarPerfil} className="mt-1 h-11 self-start rounded-xl px-5">Guardar cambios</Button>
+          <Button onClick={guardarPerfil} disabled={!perfilPendiente} className="mt-1 h-11 self-start rounded-xl px-5">{perfilPendiente ? "Guardar cambios" : "Sin cambios pendientes"}</Button>
         </SettingsCard>
       </section>
 
@@ -304,6 +316,7 @@ export default function AjustesPage() {
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             Con cero hábitos en un día registrado, RITMO aplica un superávit estimado de {p.imputarSuperavitKcal ?? 500} kcal. Así un día sin adherencia nunca se interpreta como déficit.
           </p>
+          <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">Cuando faltan comidas, los hábitos completan el día y el déficit inferido queda limitado a un ritmo máximo aproximado del 1% del peso por semana.</p>
           </div>
           <div className="border-t border-border pt-4"><Row label="Contar días totalmente vacíos">
             <Switch checked={form.imputarActiva !== false} onCheckedChange={(v) => { set("imputarActiva", v); actualizarPerfil({ imputarActiva: v }); }} aria-label="Contar días totalmente vacíos" />
@@ -313,8 +326,8 @@ export default function AjustesPage() {
 
       <section>
         <SectionLabel>Hábitos personales</SectionLabel>
-        <SettingsCard className="gap-4">
-          <SettingsSubhead title="Qué cuenta en tu modelo" description={`Los ${habitosModelo(form).length} hábitos activos definen tu constancia, el balance estimado y cada recalibración del peso. Desactiva los que no quieras usar.`} />
+        <SettingsCard>
+          <SettingsSubhead title="Qué cuenta en tu modelo" description={`Los ${habitosModelo(form).length} hábitos activos definen la constancia y recalibran el peso. Desactiva los que no quieras usar.`} />
           <div className="grid gap-2 sm:grid-cols-2">{habitosUsuario(form).map((h) => { const activo = !(form.habitosDesactivados || []).includes(h.clave); const esBase = HABITOS.some((base) => base.clave === h.clave); return <div key={h.clave} className={cn("flex min-h-12 items-center gap-2 rounded-xl border px-3", activo ? "border-primary/25 bg-primary/5" : "border-border bg-secondary/30 text-muted-foreground")}><button type="button" onClick={() => void alternarHabitoModelo(h.clave)} className="min-w-0 flex-1 text-left text-sm font-medium" aria-pressed={activo}>{h.etiqueta}<span className="mt-0.5 block text-[0.68rem] font-normal text-muted-foreground">{activo ? "Activo en el modelo" : "No cuenta en el modelo"}</span></button><Switch checked={activo} onCheckedChange={() => void alternarHabitoModelo(h.clave)} aria-label={`${activo ? "Desactivar" : "Activar"} ${h.etiqueta}`} />{!esBase && <button type="button" onClick={() => void quitarHabitoPersonal(h.clave)} className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-card hover:text-destructive" aria-label={`Eliminar ${h.etiqueta}`}>×</button>}</div>; })}</div>
           <div className="flex flex-col gap-2 sm:flex-row"><Input value={nuevoHabito} onChange={(e) => setNuevoHabito(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void anadirHabitoPersonal(); } }} placeholder="Ej. Caminar 8.000 pasos" maxLength={28} className="h-11 rounded-xl" /><Button type="button" onClick={() => void anadirHabitoPersonal()} variant="secondary" className="h-11 shrink-0 rounded-xl">Añadir hábito</Button></div>
         </SettingsCard>
@@ -331,16 +344,17 @@ export default function AjustesPage() {
         </SettingsCard>
       </section>
 
-      {/* Preferencias de uso */}
       <section>
         <SectionLabel>Experiencia</SectionLabel>
         <SettingsCard>
-          <SettingsSubhead title="Apariencia" description="Elige el modo de color que mejor encaja con tu entorno." />
+          <SettingsSubhead title="Apariencia" description="Elige color y densidad para tu forma de usar RITMO." />
           <div className="flex gap-2">
             {([["light", "Claro", Sun], ["dark", "Oscuro", Moon], ["system", "Sistema", Monitor]] as const).map(([val, label, Icon]) => (
               <button
                 key={val}
+                type="button"
                 onClick={() => setTheme(val)}
+                aria-pressed={theme === val}
                 className={cn("flex min-h-20 flex-1 flex-col items-center justify-center gap-1.5 rounded-xl border py-3 text-sm transition-colors", theme === val ? "border-primary bg-primary/8 text-foreground shadow-sm" : "border-border text-muted-foreground hover:bg-secondary/50")}
               >
                 <Icon className="size-5" />
@@ -443,7 +457,6 @@ export default function AjustesPage() {
         </SettingsCard>
       </section>
 
-      {/* Cuenta */}
       <section>
         <SectionLabel>Cuenta</SectionLabel>
         <SettingsCard className="gap-0">
@@ -473,6 +486,7 @@ function Row({ label, children, htmlFor }: { label: string; children: React.Reac
 function Pill({ children, activo, onClick }: { children: React.ReactNode; activo: boolean; onClick: () => void }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       className={cn("h-10 rounded-xl border px-3 text-sm font-medium transition-colors", activo ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-secondary/50")}
     >
@@ -482,7 +496,7 @@ function Pill({ children, activo, onClick }: { children: React.ReactNode; activo
 }
 
 function SettingsCard({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <Card className={cn("flex flex-col gap-5 rounded-2xl border-border/80 p-4 shadow-sm sm:p-5", className)}>{children}</Card>;
+  return <Card className={cn("flex flex-col gap-4 rounded-2xl border-border/80 p-4 shadow-sm [&_button]:rounded-lg [&_input]:rounded-lg sm:p-5", className)}>{children}</Card>;
 }
 
 function SettingsSubhead({ title, description, className }: { title: string; description: string; className?: string }) {

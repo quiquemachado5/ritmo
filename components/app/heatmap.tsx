@@ -6,6 +6,8 @@ import { habitosModelo } from "@/lib/model/config";
 import { DIAS_SEMANA, diaSemanaLunes, hoy, sumarDias } from "@/lib/model/dates";
 import { capitalizar, fmtFechaLarga } from "@/lib/format";
 import type { Estado } from "@/lib/model/types";
+import { HabitScaleLegend } from "./data-legend";
+import { habitScaleClass } from "@/lib/visual-semantics";
 
 interface Celda {
   fecha: string;
@@ -19,22 +21,6 @@ interface Celda {
 function etiquetaDia(c: Celda): string {
   const base = `${c.fecha} · ${c.cumplidos}/${c.total} hábitos`;
   return c.hechos.length ? `${base}: ${c.hechos.join(", ")}` : `${base} (ninguno)`;
-}
-
-const NIVEL_COLOR = [
-  "bg-destructive/35 ring-1 ring-destructive/10",
-  "bg-energy/35 ring-1 ring-energy/10",
-  "bg-warning/42 ring-1 ring-warning/10",
-  "bg-habit/42 ring-1 ring-habit/10",
-  "bg-primary/38 ring-1 ring-primary/12",
-  "bg-primary/68 ring-1 ring-primary/18",
-  "bg-primary ring-1 ring-primary/30",
-];
-
-function colorCumplimiento(cumplidos: number, total: number) {
-  const max = NIVEL_COLOR.length - 1;
-  const nivel = Math.round((cumplidos / Math.max(1, total)) * max);
-  return NIVEL_COLOR[Math.max(0, Math.min(max, nivel))];
 }
 
 /** Mapa de calor de constancia, estilo GitHub Contributions. */
@@ -141,7 +127,7 @@ export function Heatmap({
                     onBlur={() => setActivo(null)}
                     className={cn(
                       "size-5 cursor-default rounded-[4px] outline-none transition-shadow sm:size-6",
-                      colorCumplimiento(cell.cumplidos, cell.total),
+                      habitScaleClass(cell.cumplidos, cell.total),
                       activo?.fecha === cell.fecha && "ring-2 ring-foreground/50",
                     )}
                   />
@@ -168,13 +154,7 @@ export function Heatmap({
             <span className="text-muted-foreground">Pasa el ratón por un día para ver su detalle.</span>
           )}
         </div>
-        <div className="mt-2 flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
-          <span>menos</span>
-          {NIVEL_COLOR.map((c, i) => (
-            <span key={i} className={cn("size-4 rounded-[4px]", c)} title={`${i}/${NIVEL_COLOR.length - 1}`} />
-          ))}
-          <span>más</span>
-        </div>
+        <HabitScaleLegend className="mt-2 justify-end" />
       </div>
     </div>
   );

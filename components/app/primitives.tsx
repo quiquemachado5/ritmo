@@ -203,17 +203,27 @@ export function EmptyState({
   title,
   children,
   action,
+  unlocks,
 }: {
   icon?: React.ReactNode;
   title: string;
   children?: React.ReactNode;
   action?: React.ReactNode;
+  unlocks?: string[];
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border px-6 py-10 text-center">
+    <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card px-5 py-8 text-center sm:px-6 sm:py-10">
       {icon && <div className="text-muted-foreground/60">{icon}</div>}
       <p className="font-display text-base font-semibold text-foreground">{title}</p>
       {children && <p className="max-w-xs text-sm text-muted-foreground">{children}</p>}
+      {unlocks && unlocks.length > 0 && (
+        <div className="mt-1 w-full max-w-md rounded-xl bg-secondary/55 p-3 text-left">
+          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Qué desbloquea</p>
+          <ul className="mt-2 grid gap-1.5 text-xs text-foreground sm:grid-cols-2">
+            {unlocks.map((item) => <li key={item} className="flex items-start gap-2"><span className="mt-1 size-1.5 shrink-0 rounded-full bg-primary" />{item}</li>)}
+          </ul>
+        </div>
+      )}
       {action}
     </div>
   );

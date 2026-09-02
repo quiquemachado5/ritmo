@@ -58,3 +58,15 @@ export function balanceBasePorPerfil(
   const superavitSinControl = objetivo === "ganar" ? 700 : 850;
   return Math.round(superavitSinControl + (extremoPerfecto - superavitSinControl) * progreso * Math.sqrt(Math.max(ratio, 0.05)));
 }
+
+/**
+ * Límite prudente para balances que RITMO infiere, no para kcal completas
+ * introducidas por la persona. Evita convertir comida omitida, agua o una
+ * recalibración agresiva en pérdidas de tejido inverosímiles de un día a otro.
+ */
+export function limitarBalanceEstimado(balance: number, pesoKg?: number | null): number {
+  const peso = Number.isFinite(pesoKg) && (pesoKg as number) > 30 ? pesoKg as number : 90;
+  const deficitDiarioMax = limitar((peso * 0.01 * 7700) / 7, 700, 1100);
+  const superavitDiarioMax = limitar((peso * 0.006 * 7700) / 7, 350, 700);
+  return Math.round(limitar(balance, -deficitDiarioMax, superavitDiarioMax));
+}

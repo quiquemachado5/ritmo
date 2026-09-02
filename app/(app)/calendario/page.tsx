@@ -1,11 +1,11 @@
 "use client";
 
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronLeft, ChevronRight, Dumbbell, HeartPulse, MessageSquareText, Plane, Plus, UtensilsCrossed } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
 import { energiaDe } from "@/lib/model/analytics";
-import { nivelDia } from "@/lib/model/metrics";
 import { habitosModelo } from "@/lib/model/config";
 import { claveMes, DIAS_SEMANA, diaSemanaLunes, hoy, limitesMes, sumarDias, sumarMeses } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
@@ -15,15 +15,24 @@ import { SectionLabel, Chip } from "@/components/app/primitives";
 import { fmtPeso, fmtKcal, fmtFechaLarga, fmtMes, capitalizar, fmtSigno, fmtFechaCorta } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { EnergiaDia } from "@/lib/model/types";
-
-const NIVEL = ["bg-transparent", "bg-primary/25", "bg-primary/45", "bg-primary/70", "bg-primary"];
+import { HabitScaleLegend } from "@/components/app/data-legend";
+import { habitScaleClass, habitScaleIndex } from "@/lib/visual-semantics";
 
 export default function CalendarioPage() {
+  const searchParams = useSearchParams();
+  const hoyISO = hoy();
+  const fechaSolicitada = searchParams.get("fecha");
+  const fechaInicial = fechaSolicitada && /^\d{4}-\d{2}-\d{2}$/.test(fechaSolicitada) && fechaSolicitada <= hoyISO ? fechaSolicitada : hoyISO;
+
+  return <CalendarioContenido key={fechaInicial} fechaInicial={fechaInicial} />;
+}
+
+function CalendarioContenido({ fechaInicial }: { fechaInicial: string }) {
   const { estado, dia, actualizarDia } = useRitmo();
   const { abrir } = useQuickLog();
   const hoyISO = hoy();
-  const [mes, setMes] = React.useState(claveMes(hoyISO));
-  const [sel, setSel] = React.useState(hoyISO);
+  const [mes, setMes] = React.useState(claveMes(fechaInicial));
+  const [sel, setSel] = React.useState(fechaInicial);
   const habitosActivos = React.useMemo(() => habitosModelo(estado.perfil), [estado.perfil]);
   const totalHabitos = habitosActivos.length;
 
@@ -66,8 +75,6 @@ export default function CalendarioPage() {
           {celdas.map((fecha, i) => {
             if (!fecha) return <span key={i} />;
             const dd = dia(fecha);
-            const habitosDelDia = Object.fromEntries(habitosActivos.map((h) => [h.clave, dd.habitos?.[h.clave] === true]));
-            const nivel = nivelDia(habitosDelDia, totalHabitos);
             const futuro = fecha > hoyISO;
             const e = energiaDe(estado, fecha);
             const esHoy = fecha === hoyISO;
@@ -94,8 +101,8 @@ export default function CalendarioPage() {
                 className={cn(
                   "relative flex aspect-square min-h-12 flex-col items-center justify-center rounded-xl text-sm transition-all sm:min-h-16",
                   futuro ? "text-muted-foreground/30" : "hover:-translate-y-0.5 hover:shadow-sm",
-                  nivel > 0 ? NIVEL[nivel] : "bg-secondary/50",
-                  nivel >= 3 ? "text-primary-foreground" : "text-foreground",
+                  futuro ? "bg-transparent" : habitScaleClass(cumplidos, totalHabitos),
+                  habitScaleIndex(cumplidos, totalHabitos) >= 4 ? "text-primary-foreground" : "text-foreground",
                   activo && "ring-2 ring-primary shadow-sm",
                   esHoy && "font-bold ring-1 ring-primary/35",
                 )}
@@ -110,6 +117,7 @@ export default function CalendarioPage() {
           })}
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-[0.65rem] text-muted-foreground">
+          <HabitScaleLegend compact />
           <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-weight" /> pesaje</span>
           <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-warning" /> imputado</span>
         </div>
