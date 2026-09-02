@@ -70,6 +70,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { abrir, abierto } = useQuickLog();
   const [busquedaAbierta, setBusquedaAbierta] = React.useState(false);
+  const modoMinimo = pathname === "/minimo";
 
   const activo = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
   const primarios = NAV_ITEMS.filter((i) => i.primary);
@@ -78,6 +79,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // o si el panel de registro ya está abierto (para no capturar su escritura).
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      if (modoMinimo) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setBusquedaAbierta(true); return; }
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const t = e.target as HTMLElement | null;
@@ -91,7 +93,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [abrir, abierto, busquedaAbierta]);
+  }, [abrir, abierto, busquedaAbierta, modoMinimo]);
+
+  if (modoMinimo) {
+    return (
+      <div className="min-h-dvh bg-background">
+        <main className="mx-auto flex min-h-dvh w-full items-start px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] sm:items-center sm:px-6 sm:py-8">
+          <PageTransition>{children}</PageTransition>
+        </main>
+        <QuickLog />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-dvh bg-background">
