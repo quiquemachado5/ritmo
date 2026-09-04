@@ -53,11 +53,11 @@ npm test
 Comprobaciones especializadas:
 
 ```bash
-# Benchmark real de Gemini contra ocho platos complejos
-npm run test:nutrition:eval
+# Ocho platos de referencia, sin API ni consumo externo
+npm run test:nutrition:local
 
-# Registro móvil y flujos con dos cuentas de prueba (.env.e2e.example)
-npm run test:e2e
+# Registro móvil y cambio de cuenta con identidades sintéticas
+npm run test:e2e:local
 ```
 
 El formato de copia, la caché y la última migración se coordinan desde [`config/versions.json`](config/versions.json). Cada despliegue incorpora el commit a la versión de caché; las copias nuevas guardan formato y esquema y las copias v1 siguen siendo importables.
@@ -67,7 +67,7 @@ El formato de copia, la caché y la última migración se coordinan desde [`conf
 ## 3. Activar cuentas y sincronización (Supabase)
 
 1. **Crea un proyecto** en [supabase.com](https://supabase.com) (plan gratuito; región cercana).
-2. **Crea el esquema:** en *SQL Editor*, pega y ejecuta [`supabase/schema.sql`](supabase/schema.sql). Es idempotente.
+2. **Crea el esquema:** aplica las migraciones de `supabase/migrations/` en orden, usando su historial de aplicación. Para una instalación existente, revisa primero [la guía de despliegue](DEPLOYMENT.md) y prueba una restauración en staging; no vuelvas a ejecutar indiscriminadamente el esquema histórico.
 3. **Habilita email + contraseña:** *Authentication → Providers → Email*. Para confirmación por correo, deja *Confirm email* activo; añade tu dominio en *URL Configuration → Redirect URLs* (incluye `/auth/callback`).
 4. **Copia las credenciales** de *Project Settings → API* a un archivo `.env.local`:
 
@@ -84,19 +84,11 @@ Con esto, la app pide registro/login, ejecuta el **onboarding obligatorio** y si
 
 ---
 
-## 4. Contador de calorías inteligente (Gemini)
+## 4. Análisis nutricional sin servicios de pago
 
-El registro de comidas en lenguaje natural (“2 huevos revueltos, tostada y café con leche” → kcal + macros) puede usar **Gemini** desde una ruta de servidor ([`app/api/nutricion/route.ts`](app/api/nutricion/route.ts)). La clave nunca se envía al navegador.
+El registro en lenguaje natural utiliza una tabla local de alimentos, sin llamadas a Gemini o Edamam. Reutiliza correcciones confirmadas solo para el mismo ingrediente y cantidad. **No necesita claves nuevas ni facturación** y funciona sin conexión; el guardado en la cuenta conserva la sincronización habitual.
 
-Añade en `.env.local` una clave creada en [Google AI Studio](https://aistudio.google.com/app/apikey):
-
-```env
-GEMINI_API_KEY=...
-# Opcional: fija un modelo; sin esta línea RITMO usa 3.7 y respaldo 3.5.
-# GEMINI_NUTRITION_MODEL=gemini-3.7-flash
-```
-
-Gemini tiene un nivel gratuito con límites de uso que pueden cambiar; revisa la cuota de tu proyecto antes de desplegar. RITMO prueba primero Gemini 3.7 Flash y, ante saturación o una respuesta inválida, usa 3.5 Flash antes de recurrir a Edamam o al estimador local. Google indica que el contenido enviado en el nivel gratuito puede usarse para mejorar sus productos, así que no incluyas información personal o médica en la descripción de la comida. Todas las respuestas se guardan como estimaciones editables: la etiqueta del producto y las cantidades pesadas prevalecen.
+`config/nutrition.json` bloquea los proveedores externos incluso si quedan claves antiguas en el entorno. Es un estimador local aproximado, no IA generativa: revisa los ingredientes reconocidos, cantidades y etiquetas. El código de proveedores se conserva inactivo para una posible decisión futura explícita. Consulta [la guía de despliegue](DEPLOYMENT.md) para distinguir las comprobaciones gratuitas de las opciones no activadas.
 
 ---
 
@@ -104,7 +96,7 @@ Gemini tiene un nivel gratuito con límites de uso que pueden cambiar; revisa la
 
 **Vercel (recomendado para Next.js):**
 1. Importa el repositorio en [vercel.com](https://vercel.com).
-2. Añade las variables de entorno (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `GEMINI_API_KEY` si quieres análisis con IA).
+2. Añade las variables de entorno (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` y el dominio real en `NEXT_PUBLIC_APP_URL`). No hace falta una clave de nutrición.
 3. Deploy. Añade la URL resultante a *Redirect URLs* en Supabase.
 
 **Netlify:** funciona con el plugin oficial `@netlify/plugin-nextjs` (build `next build`). Configura las mismas variables de entorno.

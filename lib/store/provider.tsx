@@ -9,14 +9,16 @@ import { CloudAdapter } from "./cloud";
 import { QueuedAdapter } from "./queued";
 import type { Adapter, Modo, StoreData } from "./types";
 import { fusionarImport } from "./merge";
-import { analizarImportacion } from "./import";
-import { registrarDiagnostico } from "@/lib/observability";
+import { analizarImportacion, type ArchivoRitmo } from "./import";
+import { registrarDiagnostico, configurarDiagnosticoUsuario } from "@/lib/observability";
 import { recalcularKcalComidas } from "./day";
 import { BACKUP_FORMAT_VERSION, DATABASE_MIGRATION_VERSION } from "@/lib/version";
 import {
   activarPreferenciasUsuario,
   guardarPreferenciasPerfil,
   leerPreferenciasPerfil,
+  exportarPreferencias,
+  importarPreferencias,
 } from "@/lib/meal-prefs";
 
 function clonar<T>(v: T): T {
@@ -39,19 +41,21 @@ export interface RitmoContextValue {
   estado: Estado;
   modo: Modo;
   cargando: boolean;
+  cargaValida: boolean;
+  errorCarga: boolean;
   sincronizando: boolean;
   userId: string | null;
   userEmail: string | null;
   dia: (fecha: string) => Dia;
   medicion: (fecha: string) => Composicion | null;
-  alternarHabito: (fecha: string, clave: string) => Promise<void>;
-  actualizarDia: (fecha: string, campos: Partial<Dia>) => Promise<void>;
-  registrarComida: (fecha: string, comida: Comida) => Promise<void>;
-  editarComida: (fecha: string, comida: Comida) => Promise<void>;
-  borrarComida: (fecha: string, id: string) => Promise<void>;
-  guardarMedicion: (m: Composicion) => Promise<void>;
-  borrarMedicion: (fecha: string) => Promise<void>;
-  actualizarPerfil: (campos: Partial<Perfil>) => Promise<void>;
+  alternarHabito: (fecha: string, clave: string) => Promise<boolean>;
+  actualizarDia: (fecha: string, campos: Partial<Dia>) => Promise<boolean>;
+  registrarComida: (fecha: string, comida: Comida) => Promise<boolean>;
+  editarComida: (fecha: string, comida: Comida) => Promise<boolean>;
+  borrarComida: (fecha: string, id: string) => Promise<boolean>;
+  guardarMedicion: (m: Composicion) => Promise<boolean>;
+  borrarMedicion: (fecha: string) => Promise<boolean>;
+  actualizarPerfil: (campos: Partial<Perfil>) => Promise<boolean>;
   exportar: () => object;
   importar: (datos: Partial<StoreData>) => Promise<void>;
   recargar: () => Promise<void>;
@@ -74,6 +78,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [version, setVersion] = React.useState(0);
   const [modo, setModo] = React.useState<Modo>("local");
   const [cargando, setCargando] = React.useState(true);
+  const [cargaValida, setCargaValida] = React.useState(false);
+  const [errorCarga, setErrorCarga] = React.useState(false);
+  const cargaValidaRef = React.useRef(false);
   const [sincronizando, setSincronizando] = React.useState(false);
   const [userEmail, setUserEmail] = React.useState<string | null>(null);
   const [authUserId, setAuthUserId] = React.useState<string | null | undefined>(undefined);
@@ -98,13 +105,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const recargar = React.useCallback(async () => {
-    if (!adapterRef.current) return;
+    const adapter = adapterRef.current;
+    const revision = revisionRef.current;
+    if (!adapter) { window.location.reload(); return; }
+    if (escriturasRef.current > 0) return;
     try {
-      const cargado = await adapterRef.current.load();
+      const cargado = await adapter.load();
+      if (adapterRef.current !== adapter || revisionRef.current !== revision || escriturasRef.current > 0) return;
       aplicar({
         ...cargado,
         perfil: { ...cargado.perfil, ...leerPreferenciasPerfil() },
       });
+      cargaValidaRef.current = true;
+      setCargaValida(true);
+      setErrorCarga(false);
     } catch (e) {
       console.error("Fallo al recargar", e);
       registrarDiagnostico("sync", "error", "recarga fallida");
@@ -116,10 +130,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     const client = supabase;
     let vivo = true;
+    let identidadCambiada = false;
     void client.auth.getUser().then(({ data }) => {
-      if (vivo) setAuthUserId(data.user?.id ?? null);
-    });
+      if (vivo && !identidadCambiada) setAuthUserId(data.user?.id ?? null);
+    }).catch(() => { if (vivo && !identidadCambiada) { setErrorCarga(true); setCargando(false); } });
     const { data: listener } = client.auth.onAuthStateChange((_evento, session) => {
+      if (!vivo) return;
+      if (_evento !== "INITIAL_SESSION") identidadCambiada = true;
       setAuthUserId(session?.user?.id ?? null);
     });
     return () => {
@@ -134,6 +151,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     (async () => {
       if (authUserId === undefined) return;
+      configurarDiagnosticoUsuario(authUserId);
       // Mientras se resuelve la cuenta nueva, no mostramos ni datos ni estado
       // de onboarding de la anterior.
       adapterRef.current?.dispose?.();
@@ -141,6 +159,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       aplicar(clonar(VACIO));
       setUserEmail(null);
       setCargando(true);
+      cargaValidaRef.current = false;
+      setCargaValida(false);
+      setErrorCarga(false);
+      revisionRef.current += 1;
       if (!authUserId) {
         await activarPreferenciasUsuario(null);
         if (vivo) setCargando(false);
@@ -154,6 +176,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       try {
         const client = supabase;
         const { data: sesion } = await client.auth.getUser();
+        if (!vivo) return;
         if (!sesion.user || sesion.user.id !== authUserId) {
           throw new Error("Sesión de Supabase requerida");
         }
@@ -162,11 +185,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         adapter = new QueuedAdapter(new CloudAdapter(client, sesion.user.id), sesion.user.id);
         email = sesion.user.email ?? null;
         await activarPreferenciasUsuario(sesion.user.id);
+        if (!vivo) { adapter.dispose?.(); return; }
       } catch (e) {
         console.error("Fallo al inicializar Supabase", e);
         registrarDiagnostico("auth", "error", "inicio de sesión no disponible");
         if (vivo) {
           setCargando(false);
+          setErrorCarga(true);
           toast.error("Error de autenticación. Por favor, inicia sesión de nuevo.");
         }
         return;
@@ -181,19 +206,27 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           perfil: { ...cargado.perfil, ...leerPreferenciasPerfil() },
         });
         setModo(modoDetectado);
+        cargaValidaRef.current = true;
+        setCargaValida(true);
         setUserEmail(email);
         registrarDiagnostico("auth", "ok", "sesión restaurada");
       } catch (e) {
+        if (!vivo) return;
         console.error("Fallo al cargar datos", e);
         registrarDiagnostico("sync", "error", "carga inicial fallida");
         toast.error("No se pudieron cargar los datos.");
+        setErrorCarga(true);
       } finally {
         if (vivo) setCargando(false);
       }
 
-      desuscribir = adapter.subscribe?.(() => {
-        void recargar();
+      if (!vivo) return;
+      let refresco: ReturnType<typeof setTimeout>;
+      const cancelar = adapter.subscribe?.(() => {
+        clearTimeout(refresco);
+        refresco = setTimeout(() => { void recargar(); }, 400);
       });
+      desuscribir = () => { clearTimeout(refresco); cancelar?.(); adapter.dispose?.(); };
     })();
 
     return () => {
@@ -210,7 +243,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       errMsg: string,
     ): Promise<boolean> => {
       const adapter = adapterRef.current;
-      if (!adapter) return false;
+      if (!adapter || !cargaValidaRef.current) {
+        toast.error("Espera a que carguen tus datos antes de guardar.");
+        return false;
+      }
       const prev = dataRef.current;
       const draft = clonar(prev);
       const revision = ++revisionRef.current;
@@ -221,13 +257,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       try {
         await persistir(draft, adapter);
         registrarDiagnostico("sync", "ok", "cambio guardado");
-        return true;
+        return adapterRef.current === adapter;
       } catch (e) {
         console.error(errMsg, e);
         registrarDiagnostico("sync", "error", "cambio no sincronizado");
         // Si ya hubo otra escritura posterior, su borrador contiene este
         // cambio y no debemos destruirla restaurando un snapshot antiguo.
-        if (revisionRef.current === revision) aplicar(prev);
+        if (adapterRef.current === adapter && revisionRef.current === revision) aplicar(prev);
         toast.error(errMsg);
         return false;
       } finally {
@@ -256,7 +292,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       if (siguiente.habitos[clave]) delete siguiente.habitos[clave];
       else siguiente.habitos[clave] = true;
       const borrar = diaVacio(siguiente);
-      await commit(
+      return commit(
         (d) => {
           if (borrar) delete d.dias[fecha];
           else d.dias[fecha] = siguiente;
@@ -286,7 +322,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         Object.prototype.hasOwnProperty.call(campos, "comidas"),
       );
       const borrar = diaVacio(siguiente);
-      await commit(
+      return commit(
         (d) => {
           if (borrar) delete d.dias[fecha];
           else d.dias[fecha] = siguiente;
@@ -301,8 +337,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const registrarComida = React.useCallback(
     async (fecha: string, comida: Comida) => {
       const base = clonar(dataRef.current.dias[fecha] || { fecha, habitos: {} });
-      const comidas = [...(base.comidas || []), comida];
-      await actualizarDia(fecha, { comidas });
+      const comidas = [...(base.comidas || []).filter(c => c.id !== comida.id), comida];
+      return actualizarDia(fecha, { comidas });
     },
     [actualizarDia],
   );
@@ -316,7 +352,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       const comidas = existe
         ? previas.map((c) => (c.id === comida.id ? comida : c))
         : [...previas, comida];
-      await actualizarDia(fecha, { comidas });
+      return actualizarDia(fecha, { comidas });
     },
     [actualizarDia],
   );
@@ -325,7 +361,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     async (fecha: string, id: string) => {
       const base = dataRef.current.dias[fecha];
       const comidas = (base?.comidas || []).filter((c) => c.id !== id);
-      await actualizarDia(fecha, { comidas });
+      return actualizarDia(fecha, { comidas });
     },
     [actualizarDia],
   );
@@ -346,8 +382,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       );
       // El peso de una medición es también el peso del día: historial único.
       if (guardada && typeof fusionada.peso === "number") {
-        await actualizarDia(m.fecha, { peso: fusionada.peso });
+        return actualizarDia(m.fecha, { peso: fusionada.peso });
       }
+      return guardada;
     },
     [commit, actualizarDia],
   );
@@ -363,7 +400,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       );
       // Una medición y el peso diario son dos vistas del mismo registro.
       // Evita que un pesaje borrado siga alimentando calendario y predicción.
-      if (borrada) await actualizarDia(fecha, { peso: undefined });
+      return borrada ? actualizarDia(fecha, { peso: undefined }) : false;
     },
     [commit, actualizarDia],
   );
@@ -378,7 +415,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         (d, a) => a.guardarPerfil(d.perfil),
         "No se pudo guardar el perfil.",
       );
-      if (guardado) guardarPreferenciasPerfil(campos);
+      return guardado && guardarPreferenciasPerfil(campos);
     },
     [commit],
   );
@@ -392,6 +429,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       perfil: dataRef.current.perfil,
       dias: dataRef.current.dias,
       composicion: dataRef.current.composicion,
+      preferencias: exportarPreferencias(),
     }),
     [],
   );
@@ -399,6 +437,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const importar = React.useCallback(
     async (datos: Partial<StoreData>) => {
       const prev = dataRef.current;
+      const adapter = adapterRef.current;
+      if (!adapter || !cargaValidaRef.current) throw new Error("Carga tus datos antes de importar.");
       const analisis = analizarImportacion(datos, prev);
       if (!analisis.valido) {
         registrarDiagnostico("import", "warning", analisis.error);
@@ -409,18 +449,24 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       aplicar(next);
       setSincronizando(true);
       try {
-        if (adapterRef.current?.sembrar) await adapterRef.current.sembrar(next);
+        if (adapter.sembrar) await adapter.sembrar(next);
         else {
-          for (const d of Object.values(dias)) await adapterRef.current?.guardarDia(d);
+          for (const d of Object.values(dias)) {
+            if (adapterRef.current !== adapter) throw new Error("La cuenta cambió durante la importación.");
+            await adapter.guardarDia(d);
+          }
         }
-        guardarPreferenciasPerfil(next.perfil);
+        if (adapterRef.current !== adapter) throw new Error("La cuenta cambió durante la importación.");
+        if (!guardarPreferenciasPerfil(next.perfil)) throw new Error("No se pudieron conservar los ajustes del perfil.");
+        if ((datos as ArchivoRitmo).preferencias && !importarPreferencias((datos as ArchivoRitmo).preferencias!)) throw new Error("No se pudo conservar la biblioteca importada.");
         registrarDiagnostico("import", "ok", "respaldo fusionado");
         toast.success("Datos importados.");
       } catch (e) {
         console.error("Fallo al importar", e);
         registrarDiagnostico("import", "error", "falló la importación");
-        aplicar(prev);
+        if (adapterRef.current === adapter) aplicar(prev);
         toast.error("No se pudieron importar los datos.");
+        throw e;
       } finally {
         setSincronizando(false);
       }
@@ -429,20 +475,37 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   );
 
   const cerrarSesion = React.useCallback(async () => {
+    cargaValidaRef.current = false;
+    setCargaValida(false);
     adapterRef.current?.dispose?.();
     adapterRef.current = null;
     await activarPreferenciasUsuario(null);
     aplicar(clonar(VACIO));
     setUserEmail(null);
     registrarDiagnostico("auth", "ok", "sesión cerrada");
-    await supabase.auth.signOut({ scope: "local" });
+    const { error } = await supabase.auth.signOut({ scope: "local" });
+    if (error) {
+      registrarDiagnostico("auth", "error", "cierre de sesión fallido");
+      toast.error("No se pudo cerrar la sesión. Vuelve a intentarlo.");
+      window.location.reload();
+      return;
+    }
     window.location.replace("/login");
   }, [aplicar, supabase]);
 
   const borrarDatos = React.useCallback(async () => {
-    if (!adapterRef.current?.borrarTodo) throw new Error("No se pudo preparar el borrado de datos.");
-    await adapterRef.current.borrarTodo();
-    aplicar(clonar(VACIO));
+    const adapter = adapterRef.current;
+    if (!adapter?.borrarTodo) throw new Error("No se pudo preparar el borrado de datos.");
+    // Desactiva nuevas copias antes de empezar a borrar, no después.
+    cargaValidaRef.current = false;
+    setCargaValida(false);
+    try {
+      await adapter.borrarTodo();
+      if (adapterRef.current === adapter) aplicar(clonar(VACIO));
+    } catch (error) {
+      if (adapterRef.current === adapter) setErrorCarga(true);
+      throw error;
+    }
   }, [aplicar]);
 
   const estado = React.useMemo<Estado>(
@@ -455,6 +518,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       estado,
       modo,
       cargando,
+      cargaValida,
+      errorCarga,
       sincronizando,
       userId: authUserId ?? null,
       userEmail,
@@ -474,7 +539,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       cerrarSesion,
       borrarDatos,
     }),
-    [estado, modo, cargando, sincronizando, authUserId, userEmail, dia, medicion, alternarHabito, actualizarDia, registrarComida, editarComida, borrarComida, guardarMedicion, borrarMedicion, actualizarPerfil, exportar, importar, recargar, cerrarSesion, borrarDatos],
+    [estado, modo, cargando, cargaValida, errorCarga, sincronizando, authUserId, userEmail, dia, medicion, alternarHabito, actualizarDia, registrarComida, editarComida, borrarComida, guardarMedicion, borrarMedicion, actualizarPerfil, exportar, importar, recargar, cerrarSesion, borrarDatos],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

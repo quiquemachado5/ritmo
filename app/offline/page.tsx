@@ -11,9 +11,12 @@ export default function OfflinePage() {
       <div className="max-w-sm">
         <h1 className="font-display text-2xl font-bold tracking-tight">Sin conexión</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          No hay red ahora mismo. Cuando vuelvas a tener conexión, RITMO se
-          recargará y sincronizará tus datos.
+          No hay red ahora mismo. Los cambios que quedaron guardados en este
+          dispositivo se recuperarán al volver a abrir tu cuenta con conexión.
         </p>
+        {/* Recarga completa intencionada: el router puede estar sin conexión. */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        <a href="/" className="mt-5 inline-flex min-h-11 items-center rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground">Volver a intentar</a>
       </div>
     </div>
   );

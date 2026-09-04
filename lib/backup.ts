@@ -5,6 +5,7 @@
    dispositivo. Independiente de Supabase a propósito. */
 
 import { registrarDiagnostico } from "./observability";
+import { limpiarBorradores } from "./drafts";
 
 const BACKUP_KEY = "ritmo:backup";
 const LAST_EXPORT_KEY = "ritmo:lastExport";
@@ -22,9 +23,11 @@ export function guardarBackupLocal(data: unknown, userId: string | null): void {
   if (!userId) return;
   try {
     localStorage.removeItem(BACKUP_KEY);
+    const anterior = localStorage.getItem(clave(BACKUP_KEY, userId));
+    if (anterior) localStorage.setItem(clave(BACKUP_KEY + ":previous", userId), anterior);
     localStorage.setItem(clave(BACKUP_KEY, userId), JSON.stringify({ at: new Date().toISOString(), data }));
   } catch {
-    /* cuota llena o modo privado: no es crítico */
+    registrarDiagnostico("sync", "warning", "copia local no disponible");
   }
 }
 
@@ -68,12 +71,14 @@ export function diasDesdeExportacion(userId: string | null): number | null {
 }
 
 export function limpiarDatosLocales(userId: string | null): void {
+  if (userId) limpiarBorradores(userId);
   try {
     localStorage.removeItem(BACKUP_KEY);
     localStorage.removeItem(LAST_EXPORT_KEY);
     localStorage.removeItem(CLOUD_MARK);
     if (userId) {
       localStorage.removeItem(clave(BACKUP_KEY, userId));
+      localStorage.removeItem(clave(BACKUP_KEY + ":previous", userId));
       localStorage.removeItem(clave(LAST_EXPORT_KEY, userId));
       localStorage.removeItem(clave(CLOUD_MARK, userId));
     }
@@ -102,13 +107,13 @@ function horasDesdeCloud(userId: string): number {
  * sobrescrito) y uno con fecha. Degrada en silencio si no hay bucket/red.
  * Import dinámico del cliente para no cargar Supabase salvo cuando toca.
  */
-export async function subirBackupNube(data: unknown, minHoras = 12): Promise<void> {
+export async function subirBackupNube(data: unknown, userId: string, minHoras = 12): Promise<void> {
   if (typeof window === "undefined") return;
   try {
     const { createClient } = await import("@/lib/supabase/client");
     const sb = createClient();
     const { data: u } = await sb.auth.getUser();
-    if (!u.user) return;
+    if (!u.user || u.user.id !== userId) return;
     if (horasDesdeCloud(u.user.id) < minHoras) return;
     const cuerpo = new Blob([JSON.stringify(data)], { type: "application/json" });
     const fecha = new Date().toISOString().slice(0, 10);

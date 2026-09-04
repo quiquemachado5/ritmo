@@ -1,11 +1,13 @@
 "use client";
 
 import * as React from "react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { registrarDiagnostico } from "@/lib/observability";
 import type { Perfil } from "@/lib/model/types";
 import type { CorreccionNutricional, ItemNutricional } from "@/lib/nutrition/types";
 import { normalizarNombreIngrediente } from "@/lib/nutrition/corrections";
+import type { ComidaPlanificada } from "@/lib/nutrition/portions";
 
 /* Preferencias de la biblioteca de comidas, sincronizadas entre dispositivos.
    - Cache inmediata en localStorage (rápida, offline).
@@ -24,6 +26,7 @@ export interface OverrideComida {
 }
 
 export interface ComidaCatalogo {
+  ingredientes?: ItemNutricional[];
   clave: string; // "tipo:texto normalizado"
   texto: string;
   tipo: string;
@@ -48,6 +51,7 @@ export type PreferenciasPerfil = Partial<
 >;
 
 export interface MealPrefs {
+  plan: ComidaPlanificada[];
   fav: string[];
   hidden: string[];
   overrides: Record<string, OverrideComida>;
@@ -61,7 +65,7 @@ export interface MealPrefs {
 }
 
 const KEY_PREFIX = "ritmo:mealprefs";
-const VACIO: MealPrefs = { fav: [], hidden: [], overrides: {}, catalog: [], templates: [], nutritionCorrections: {}, profile: {}, updatedAt: 0 };
+const VACIO: MealPrefs = { plan: [], fav: [], hidden: [], overrides: {}, catalog: [], templates: [], nutritionCorrections: {}, profile: {}, updatedAt: 0 };
 const CLAVES_PERFIL = [
   "imputarActiva",
   "imputarDesde",
@@ -72,6 +76,7 @@ const CLAVES_PERFIL = [
 
 function normalizar(p: Partial<MealPrefs> | null | undefined): MealPrefs {
   return {
+    plan: p?.plan ?? [],
     fav: p?.fav ?? [],
     hidden: p?.hidden ?? [],
     overrides: p?.overrides ?? {},
@@ -166,16 +171,18 @@ function programarPush() {
 }
 
 function escribir(next: Omit<MealPrefs, "updatedAt">) {
-  cache = { ...next, updatedAt: Date.now() };
-  if (usuarioActivo) {
-    try {
-      localStorage.setItem(claveLocal(usuarioActivo), JSON.stringify(cache));
-    } catch {
-      /* cuota / modo privado */
-    }
+  if (!usuarioActivo) { toast.error("Inicia sesión para guardar este cambio."); return false; }
+  const siguiente = { ...next, updatedAt: Date.now() };
+  try { localStorage.setItem(claveLocal(usuarioActivo), JSON.stringify(siguiente)); }
+  catch {
+    toast.error("No se pudo conservar el cambio en este dispositivo. Libera espacio y reintenta.");
+    registrarDiagnostico("sync", "error", "preferencias no conservadas");
+    return false;
   }
+  cache = siguiente;
   emitir();
   programarPush();
+  return true;
 }
 
 /**
@@ -216,8 +223,8 @@ export function guardarPreferenciasPerfil(campos: Partial<Perfil>) {
     if (valor === undefined || valor === null) delete profile[clave];
     else profile[clave] = valor;
   }
-  if (!modificado) return;
-  escribir({ ...p, profile: profile as PreferenciasPerfil });
+  if (!modificado) return true;
+  return escribir({ ...p, profile: profile as PreferenciasPerfil });
 }
 
 /* ---------------------------------------------------------------- acciones */
@@ -254,7 +261,7 @@ export function agregarCatalogo(c: Omit<ComidaCatalogo, "clave" | "creado">) {
   const p = snapshot();
   const catalog = p.catalog.filter((x) => x.clave !== clave);
   catalog.push({ ...c, texto: c.texto.trim(), clave, creado: new Date().toISOString() });
-  escribir({ ...p, catalog });
+  if (!escribir({ ...p, catalog })) return null;
   return clave;
 }
 
@@ -267,13 +274,26 @@ export function quitarCatalogo(clave: string) {
 export function agregarPlantilla(base: Omit<PlantillaComida, "id" | "creado">) {
   const p = snapshot();
   const plantilla: PlantillaComida = { ...base, id: crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`, creado: new Date().toISOString() };
-  escribir({ ...p, templates: [plantilla, ...p.templates.filter((x) => x.nombre !== plantilla.nombre)].slice(0, 24) });
+  if (!escribir({ ...p, templates: [plantilla, ...p.templates.filter((x) => x.nombre !== plantilla.nombre)] })) return null;
   return plantilla;
 }
 
 export function quitarPlantilla(id: string) {
   const p = snapshot();
   escribir({ ...p, templates: p.templates.filter((x) => x.id !== id) });
+}
+
+export function guardarPlan(plan: ComidaPlanificada[]) {
+  return escribir({ ...snapshot(), plan });
+}
+export function exportarPreferencias(): MealPrefs { return structuredClone(snapshot()); }
+export function importarPreferencias(prefs: MealPrefs) {
+  const p = snapshot();
+  const unir = <T,>(a: T[], b: T[], clave: (v: T) => string) => [...new Map([...a, ...b].map(v => [clave(v), v])).values()];
+  return escribir({ ...p, fav: [...new Set([...p.fav, ...prefs.fav])], hidden: [...new Set([...p.hidden, ...prefs.hidden])],
+    catalog: unir(p.catalog, prefs.catalog, c => c.clave), templates: unir(p.templates, prefs.templates, t => t.id),
+    plan: unir(p.plan, prefs.plan ?? [], t => t.id), overrides: { ...p.overrides, ...prefs.overrides },
+    nutritionCorrections: { ...p.nutritionCorrections, ...prefs.nutritionCorrections }, profile: { ...p.profile, ...prefs.profile } });
 }
 
 export function guardarCorreccionesNutricion(items: ItemNutricional[]) {

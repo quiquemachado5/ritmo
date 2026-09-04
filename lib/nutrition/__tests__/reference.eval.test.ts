@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import { analizarConGemini } from "../gemini";
 import { evaluateNutrition } from "../evaluation";
 import { REFERENCE_MEALS } from "../reference-meals";
+import { EXTERNAL_NUTRITION_ENABLED } from "../policy";
 
-const live = process.env.RUN_GEMINI_EVAL === "1" && Boolean(process.env.GEMINI_API_KEY);
+const live = process.env.RUN_GEMINI_EVAL === "1";
+if (live && !EXTERNAL_NUTRITION_ENABLED) throw new Error("Los proveedores externos están bloqueados por la configuración sin facturación de RITMO. Usa test:nutrition:local.");
+if (live && !process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY es obligatoria para ejecutar el benchmark real; no se omite silenciosamente.");
 
 (live ? describe : describe.skip)("benchmark real de Gemini", () => {
   it("mide el error contra platos complejos de referencia", async () => {
@@ -27,7 +30,15 @@ const live = process.env.RUN_GEMINI_EVAL === "1" && Boolean(process.env.GEMINI_A
       "MAE grasas g": metrics.mae.grasas,
       "casos dentro tolerancia %": metrics.dentroToleranciaPct,
     });
-    expect(metrics.casos, "Gemini no produjo suficientes casos para un benchmark representativo").toBeGreaterThanOrEqual(Math.ceil(REFERENCE_MEALS.length * 0.75));
+    expect(metrics.casos, "Todos los platos deben responder; una caída del servicio también es un fallo").toBe(REFERENCE_MEALS.length);
     expect(metrics.mape.kcal).toBeLessThanOrEqual(25);
-  }, 300_000);
+    expect(metrics.mape.proteinas).toBeLessThanOrEqual(30);
+    expect(metrics.mape.carbohidratos).toBeLessThanOrEqual(35);
+    expect(metrics.mape.grasas).toBeLessThanOrEqual(30);
+    // Detecta resultados numéricamente válidos pero inútiles para el usuario.
+    for (const { meal, result } of cases) {
+      expect(Math.abs(result.kcal - meal.referencia.kcal) / meal.referencia.kcal, meal.id).toBeLessThanOrEqual(0.5);
+      expect(result.items.length, meal.id).toBeGreaterThan(0);
+    }
+  }, 480_000);
 });

@@ -10,17 +10,27 @@ const actual: StoreData = {
 };
 
 describe("analizarImportacion", () => {
+  it("rechaza fechas imposibles, ingredientes corruptos y planes mal formados", () => {
+    expect(analizarImportacion({ dias: { "2026-02-31": { fecha: "2026-02-31", habitos: {} } } }, actual).valido).toBe(false);
+    expect(analizarImportacion({ dias: { "2026-08-01": { fecha: "2026-08-01", habitos: {}, comidas: [{ ...comida("a"), ingredientes: [{}] }] } } }, actual).valido).toBe(false);
+    expect(analizarImportacion({ preferencias: { fav: [], hidden: [], templates: [], catalog: [], plan: [{}] } }, actual).valido).toBe(false);
+    expect(analizarImportacion(JSON.parse('{"perfil":{"__proto__":{"admin":true}}}'), actual).valido).toBe(false);
+  });
   it("resume nuevas fechas y coincidencias sin mutar el estado", () => {
     const resultado = analizarImportacion({
       app: "ritmo", version: 2, schemaVersion: "202609010001", exportado: "2026-08-26T12:00:00.000Z",
       dias: {
-        "2026-08-01": { fecha: "2026-08-01", habitos: {}, comidas: [{ id: "a" }] },
-        "2026-08-02": { fecha: "2026-08-02", habitos: {}, comidas: [{ id: "b" }, { id: "c" }] },
+        "2026-08-01": { fecha: "2026-08-01", habitos: {}, comidas: [comida("a")] },
+        "2026-08-02": { fecha: "2026-08-02", habitos: {}, comidas: [comida("b"), comida("c")] },
       },
       composicion: [{ fecha: "2026-08-01", peso: 80 }, { fecha: "2026-08-02", peso: 79.8 }],
     }, actual);
     expect(resultado).toMatchObject({ valido: true, version: 2, schemaVersion: "202609010001", diasNuevos: 1, diasCoincidentes: 1, medicionesNuevas: 1, medicionesCoincidentes: 1, comidas: 3 });
     expect(Object.keys(actual.dias)).toEqual(["2026-08-01"]);
+  });
+
+  it("rechaza registros incompletos en lugar de importar datos que rompan la pantalla", () => {
+    expect(analizarImportacion({ dias: { "2026-08-01": { fecha: "2026-08-01", habitos: {}, comidas: [{ id: "a" }] } } }, actual).valido).toBe(false);
   });
 
   it("rechaza una app o versión incompatibles antes de importar", () => {
@@ -33,3 +43,5 @@ describe("analizarImportacion", () => {
     expect(analizarImportacion({ app: "ritmo", version: 1, dias: {} }, actual)).toMatchObject({ valido: true, version: 1, schemaVersion: null });
   });
 });
+
+function comida(id: string) { return { id, tipo: "comida", texto: "Plato de prueba", kcal: 400, proteinas: 20, carbohidratos: 40, grasas: 15 }; }

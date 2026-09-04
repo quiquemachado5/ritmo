@@ -1,12 +1,7 @@
 import type { Composicion, Dia, Perfil } from "@/lib/model/types";
 import type { Adapter, StoreData } from "./types";
-
-/* Cola de escritura offline. Envuelve al adaptador real: si una escritura falla
-   por falta de red (o el dispositivo está offline), la operación se guarda en
-   localStorage y se resuelve como si hubiera ido bien —para que la UI mantenga
-   el cambio optimista en vez de revertirlo— y se reintenta al volver la
-   conexión. Todas las operaciones son idempotentes (upserts/deletes), así que
-   reproducir la cola es seguro. */
+import { leerBackupLocal } from "../backup";
+import { registrarDiagnostico } from "../observability";
 
 type Op =
   | { type: "guardarDia"; payload: Dia }
@@ -14,83 +9,80 @@ type Op =
   | { type: "guardarMedicion"; payload: Composicion }
   | { type: "borrarMedicion"; payload: string }
   | { type: "guardarPerfil"; payload: Perfil };
+type Entrada = Op & { id: string; bloqueada?: boolean; revision: number };
+export interface EstadoCola { pendientes: number; requiereAtencion: boolean; sincronizando: boolean }
+const listeners = new Set<(estado: EstadoCola) => void>();
+let estadoCola: EstadoCola = { pendientes: 0, requiereAtencion: false, sincronizando: false };
+let activo: QueuedAdapter | null = null;
 
-function claveOp(op: Op): string {
-  switch (op.type) {
-    case "guardarDia":
-    case "borrarDia":
-      return "dia:" + (typeof op.payload === "string" ? op.payload : op.payload.fecha);
-    case "guardarMedicion":
-    case "borrarMedicion":
-      return "med:" + (typeof op.payload === "string" ? op.payload : op.payload.fecha);
-    case "guardarPerfil":
-      return "perfil";
-  }
-}
-
-function esErrorDeRed(e: unknown): boolean {
-  if (typeof navigator !== "undefined" && !navigator.onLine) return true;
-  if (e instanceof TypeError) return true; // fetch abortado / sin red
-  const msg = e instanceof Error ? e.message.toLowerCase() : String(e).toLowerCase();
-  return msg.includes("fetch") || msg.includes("network") || msg.includes("failed to");
-}
-
-const listeners = new Set<(n: number) => void>();
-let pendientes = 0;
-
-export function onColaCambia(cb: (n: number) => void): () => void {
+export function onColaCambia(cb: (estado: EstadoCola) => void): () => void {
   listeners.add(cb);
-  cb(pendientes);
-  return () => listeners.delete(cb);
+  cb(estadoCola);
+  return () => { listeners.delete(cb); };
+}
+export async function reintentarCola(): Promise<void> { await activo?.reintentar(); }
+function claveOp(op: Op): string {
+  if (op.type === "guardarPerfil") return "perfil";
+  return (op.type.includes("Dia") ? "dia:" : "med:") + (typeof op.payload === "string" ? op.payload : op.payload.fecha);
+}
+function offline(): boolean { return typeof navigator !== "undefined" && !navigator.onLine; }
+function esErrorDeRed(e: unknown): boolean {
+  const mensaje = e instanceof Error ? e.message : e && typeof e === "object" && "message" in e ? String(e.message) : String(e);
+  return offline() || /failed to fetch|fetch failed|network|timeout|load failed/i.test(mensaje);
+}
+function aplicarOperaciones(data: StoreData, ops: Op[]): StoreData {
+  const copia = structuredClone(data);
+  for (const op of ops) {
+    switch (op.type) {
+      case "guardarDia": copia.dias[op.payload.fecha] = op.payload; break;
+      case "borrarDia": delete copia.dias[op.payload]; break;
+      case "guardarPerfil": copia.perfil = op.payload; break;
+      case "borrarMedicion": copia.composicion = copia.composicion.filter(m => m.fecha !== op.payload); break;
+      case "guardarMedicion": copia.composicion = [...copia.composicion.filter(m => m.fecha !== op.payload.fecha), op.payload]; break;
+    }
+  }
+  copia.composicion.sort((a, b) => a.fecha.localeCompare(b.fecha));
+  return copia;
 }
 
+/** Conserva primero la operación; envía en orden y confirma por ID, no posición. */
 export class QueuedAdapter implements Adapter {
   private key: string;
-  private cola: Op[] = [];
-  private flushing = false;
-  private readonly alVolverOnline = () => void this.flush();
+  private cola: Entrada[] = [];
+  private vuelo: string | null = null;
+  private tarea: Promise<void> | null = null;
+  private cerrado = false;
+  private revision = 0;
+  private recientes: Entrada[] = [];
+  hydrationSource: "cloud" | "backup" = "cloud";
+  private readonly alVolverOnline = () => { void this.flush(); };
 
-  constructor(private inner: Adapter, userId: string) {
-    this.key = `ritmo:writequeue:${userId}`;
-    this.cola = this.leer();
+  constructor(private inner: Adapter, private userId: string) {
+    this.key = "ritmo:writequeue:" + userId;
+    const raw = localStorage.getItem(this.key);
+    const datos: unknown = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(datos) || datos.some(o => !o || !["guardarDia", "borrarDia", "guardarMedicion", "borrarMedicion", "guardarPerfil"].includes(o.type) || !o.payload)) {
+      throw new Error("No se pudo leer la cola local. Conserva una copia del dispositivo antes de limpiarlo.");
+    }
+    this.cola = datos.map(o => ({ ...o, id: o.id || crypto.randomUUID(), revision: ++this.revision }));
+    // La instancia activa es el destino explícito del botón global Reintentar.
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    activo = this;
     this.notificar();
-    if (typeof window !== "undefined") {
-      window.addEventListener("online", this.alVolverOnline);
-      // Intento inicial por si quedó cola de una sesión anterior.
-      if (navigator.onLine) void this.flush();
-    }
+    if (typeof window !== "undefined") window.addEventListener("online", this.alVolverOnline);
   }
-
-  private leer(): Op[] {
-    try {
-      const raw = localStorage.getItem(this.key);
-      return raw ? (JSON.parse(raw) as Op[]) : [];
-    } catch {
-      return [];
-    }
-  }
-  private escribir() {
-    try {
-      localStorage.setItem(this.key, JSON.stringify(this.cola));
-    } catch {
-      /* cuota / modo privado */
-    }
+  private escribir(siguiente: Entrada[]) {
+    try { localStorage.setItem(this.key, JSON.stringify(siguiente)); }
+    catch { throw new Error("El dispositivo no pudo conservar el cambio. Libera espacio y vuelve a intentarlo."); }
+    this.cola = siguiente;
     this.notificar();
   }
   private notificar() {
-    pendientes = this.cola.length;
-    listeners.forEach((l) => l(pendientes));
+    if (activo !== this) return;
+    estadoCola = { pendientes: this.cola.length, requiereAtencion: this.cola.some(o => o.bloqueada), sincronizando: Boolean(this.vuelo) };
+    listeners.forEach(l => l(estadoCola));
   }
-
-  /** Coalesce: una nueva op sustituye a la pendiente de la misma clave. */
-  private encolar(op: Op) {
-    const k = claveOp(op);
-    this.cola = this.cola.filter((o) => claveOp(o) !== k);
-    this.cola.push(op);
-    this.escribir();
-  }
-
-  private async ejecutar(op: Op): Promise<void> {
+  private ejecutar(op: Op): Promise<void> {
     switch (op.type) {
       case "guardarDia": return this.inner.guardarDia(op.payload);
       case "borrarDia": return this.inner.borrarDia(op.payload);
@@ -99,57 +91,94 @@ export class QueuedAdapter implements Adapter {
       case "guardarPerfil": return this.inner.guardarPerfil(op.payload);
     }
   }
-
-  /** Ejecuta ahora; si falla por red, encola y resuelve OK. */
-  private async intentar(op: Op): Promise<void> {
-    if (typeof navigator !== "undefined" && !navigator.onLine) {
-      this.encolar(op);
-      return;
-    }
-    try {
-      await this.ejecutar(op);
-      // Si había cola previa, aprovecha para vaciarla.
-      if (this.cola.length) void this.flush();
-    } catch (e) {
-      if (esErrorDeRed(e)) {
-        this.encolar(op);
-        return;
-      }
-      throw e; // error real (permisos, validación): que la UI lo gestione
+  private async intentar(op: Op) {
+    if (this.cerrado) throw new Error("La cuenta ha cambiado. Abre de nuevo el registro.");
+    const entrada: Entrada = { ...structuredClone(op), id: crypto.randomUUID(), revision: ++this.revision };
+    this.escribir([...this.cola.filter(o => o.id === this.vuelo || claveOp(o) !== claveOp(op)), entrada]);
+    this.recientes.push(entrada);
+    await this.flush();
+    if (this.cola.some(o => o.id === entrada.id && o.bloqueada)) {
+      throw new Error("El cambio necesita revisión. Sigue conservado en este dispositivo.");
     }
   }
-
-  async flush(): Promise<void> {
-    if (this.flushing) return;
-    if (typeof navigator !== "undefined" && !navigator.onLine) return;
-    this.flushing = true;
-    try {
-      while (this.cola.length) {
-        const op = this.cola[0];
-        try {
-          await this.ejecutar(op);
-        } catch (e) {
-          if (esErrorDeRed(e)) break; // sigue offline: reintentar más tarde
-          // Error no recuperable: descarta esa op para no bloquear la cola.
-          console.error("Op descartada de la cola de sincronización", op.type, e);
+  flush(): Promise<void> {
+    if (this.tarea) return this.tarea;
+    this.tarea = this.enviar().finally(() => { this.tarea = null; });
+    return this.tarea;
+  }
+  private async enviar() {
+    while (!this.cerrado && !offline() && this.cola.length) {
+      const op = this.cola[0];
+      if (op.bloqueada) break;
+      this.vuelo = op.id;
+      this.notificar();
+      try {
+        await this.ejecutar(op);
+        this.escribir(this.cola.filter(o => o.id !== op.id));
+      } catch (e) {
+        if (!esErrorDeRed(e)) {
+          try { this.escribir(this.cola.map(o => o.id === op.id ? { ...o, bloqueada: true } : o)); }
+          catch { op.bloqueada = true; }
+          registrarDiagnostico("sync", "error", "escritura pendiente requiere atención");
         }
-        this.cola.shift();
-        this.escribir();
+        break;
+      } finally {
+        this.vuelo = null;
+        this.notificar();
       }
-    } finally {
-      this.flushing = false;
     }
   }
-
-  // --- Adapter ---
-  load() { return this.inner.load(); }
+  async reintentar() {
+    // Actualiza las revisiones remotas antes de una resolución explícita.
+    await this.inner.load();
+    this.escribir(this.cola.map(o => ({ ...o, bloqueada: false })));
+    await this.flush();
+  }
+  async load(): Promise<StoreData> {
+    const revision = this.revision;
+    const iniciales = [...this.cola];
+    let data: StoreData;
+    try {
+      data = await this.inner.load();
+      this.hydrationSource = "cloud";
+    } catch (error) {
+      if (!esErrorDeRed(error)) throw error;
+      const respaldo = leerBackupLocal(this.userId)?.data as Partial<StoreData> | undefined;
+      if (!respaldo?.perfil || !respaldo.dias || !Array.isArray(respaldo.composicion)) throw error;
+      data = respaldo as StoreData;
+      this.hydrationSource = "backup";
+    }
+    const resultado = aplicarOperaciones(data, [...iniciales, ...this.recientes.filter(o => o.revision > revision), ...this.cola]);
+    this.recientes = this.recientes.filter(o => o.revision > revision);
+    void this.flush();
+    return resultado;
+  }
   guardarDia(dia: Dia) { return this.intentar({ type: "guardarDia", payload: dia }); }
   borrarDia(fecha: string) { return this.intentar({ type: "borrarDia", payload: fecha }); }
   guardarMedicion(m: Composicion) { return this.intentar({ type: "guardarMedicion", payload: m }); }
   borrarMedicion(fecha: string) { return this.intentar({ type: "borrarMedicion", payload: fecha }); }
   guardarPerfil(perfil: Perfil) { return this.intentar({ type: "guardarPerfil", payload: perfil }); }
-  borrarTodo() { this.cola = []; this.escribir(); return this.inner.borrarTodo?.() ?? Promise.resolve(); }
-  sembrar(data: StoreData) { return this.inner.sembrar?.(data) ?? Promise.resolve(); }
+  async borrarTodo() {
+    await this.flush();
+    if (this.cola.length) throw new Error("Resuelve los cambios pendientes antes de borrar tus datos.");
+    if (!this.inner.borrarTodo) throw new Error("Borrado no disponible.");
+    await this.inner.borrarTodo();
+  }
+  async sembrar(data: StoreData) {
+    await this.flush();
+    if (this.cola.length || offline()) throw new Error("Sincroniza los cambios pendientes antes de importar.");
+    if (!this.inner.sembrar) throw new Error("Importación no disponible.");
+    await this.inner.sembrar(data);
+  }
   subscribe(cb: () => void) { return this.inner.subscribe?.(cb) ?? (() => {}); }
-  dispose() { window.removeEventListener("online", this.alVolverOnline); }
+  dispose() {
+    this.cerrado = true;
+    this.inner.dispose?.();
+    if (typeof window !== "undefined") window.removeEventListener("online", this.alVolverOnline);
+    if (activo === this) {
+      activo = null;
+      estadoCola = { pendientes: 0, requiereAtencion: false, sincronizando: false };
+      listeners.forEach(l => l(estadoCola));
+    }
+  }
 }

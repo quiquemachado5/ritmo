@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { Download, FileSpreadsheet, HistoryIcon, LogOut, Monitor, Moon, Plane, ShieldCheck, Sun, Trash2, Upload, UserRound } from "lucide-react";
@@ -21,6 +22,9 @@ import type { Objetivo, Sexo } from "@/lib/model/types";
 import { guardarModoViaje, useModoViaje } from "@/lib/travel-mode";
 import { analizarImportacion, type ArchivoRitmo, type ResumenImportacion } from "@/lib/store/import";
 import { HABITOS, habitosModelo, habitosUsuario } from "@/lib/model/config";
+import { validarPerfil } from "@/lib/profile-validation";
+import { diagnosticoCompartido, permitirDiagnostico } from "@/lib/observability";
+import { EXTERNAL_NUTRITION_ENABLED } from "@/lib/nutrition/policy";
 
 type Densidad = "compacta" | "espaciosa";
 
@@ -32,9 +36,14 @@ export default function AjustesPage() {
 
   const p = estado.perfil;
   const [form, setForm] = React.useState(p);
+  const [guardandoPerfil, setGuardandoPerfil] = React.useState(false);
+  const dirty = React.useRef(false);
+  const cuentaForm = React.useRef(userId);
   // El perfil llega de una fuente externa asíncrona y debe rehidratar el borrador.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  React.useEffect(() => setForm(p), [p]);
+  React.useEffect(() => {
+    if (cuentaForm.current !== userId) { dirty.current = false; cuentaForm.current = userId; }
+    if (!dirty.current) setForm(p);
+  }, [p, userId]);
   // Todos los hooks van ANTES de cualquier return: las reglas de hooks exigen
   // el mismo número y orden en cada render (cargando vs cargado incluido).
   const [diasSinExportar, setDiasSinExportar] = React.useState<number | null>(null);
@@ -47,6 +56,12 @@ export default function AjustesPage() {
   const [finViaje, setFinViaje] = React.useState(viaje.hasta ?? "");
   const [confirmarBorrado, setConfirmarBorrado] = React.useState(false);
   const [nuevoHabito, setNuevoHabito] = React.useState("");
+  const [diagnostico, setDiagnostico] = React.useState(() => diagnosticoCompartido(userId));
+  React.useEffect(() => {
+    // Preferencia externa y privada de la identidad recién cargada.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDiagnostico(diagnosticoCompartido(userId));
+  }, [userId]);
   React.useEffect(() => {
     // Datos externos del almacenamiento local, aislados por la identidad activa.
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -72,7 +87,7 @@ export default function AjustesPage() {
     || form.kcalObjetivo !== p.kcalObjetivo
     || form.proteinaObjetivo !== p.proteinaObjetivo
     || form.factorActividad !== p.factorActividad;
-  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }));
+  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => { dirty.current = true; setForm((f) => ({ ...f, [k]: v })); };
 
   function cambiarDensidad(proxima: Densidad) {
     setDensidad(proxima);
@@ -110,13 +125,14 @@ export default function AjustesPage() {
   if (cargando) return <div className="flex flex-col gap-6"><Skeleton className="h-8 w-40" /><Skeleton className="h-64 w-full rounded-xl" /></div>;
 
   async function guardarPerfil() {
+    if (guardandoPerfil) return;
     const edad = Number(form.edad);
     const altura = Number(form.alturaCm);
     const pesoObj = form.pesoObjetivo ? Number(form.pesoObjetivo) : undefined;
     const kcal = Number(form.kcalObjetivo);
 
-    if (!edad || edad < 13 || edad > 120) {
-      toast.error("Edad: entre 13 y 120 años");
+    if (!edad || edad < 18 || edad > 120) {
+      toast.error("RITMO está dirigido a personas mayores de 18 años.");
       return;
     }
     if (!altura || altura < 100 || altura > 250) {
@@ -127,8 +143,8 @@ export default function AjustesPage() {
       toast.error("Peso objetivo: entre 30 y 300 kg");
       return;
     }
-    if (!kcal || kcal < 800 || kcal > 5000) {
-      toast.error("Calorías objetivo: entre 800 y 5000");
+    if (!kcal || kcal < 800 || kcal > 6000) {
+      toast.error("Calorías objetivo: entre 800 y 6000");
       return;
     }
     const proteina = form.proteinaObjetivo != null && String(form.proteinaObjetivo) !== "" ? Number(form.proteinaObjetivo) : undefined;
@@ -137,7 +153,7 @@ export default function AjustesPage() {
       return;
     }
 
-    await actualizarPerfil({
+    const cambios = {
       nombre: form.nombre,
       sexo: form.sexo,
       edad,
@@ -147,8 +163,13 @@ export default function AjustesPage() {
       kcalObjetivo: kcal,
       proteinaObjetivo: proteina,
       factorActividad: Number(form.factorActividad),
-    });
-    toast.success("Perfil guardado");
+    };
+    const error = validarPerfil({ ...form, ...cambios });
+    if (error) { toast.error(error); return; }
+    setGuardandoPerfil(true);
+    const ok = await actualizarPerfil(cambios);
+    setGuardandoPerfil(false);
+    if (ok) { dirty.current = false; toast.success("Perfil guardado"); }
   }
 
   function descargar() {
@@ -247,7 +268,7 @@ export default function AjustesPage() {
           <Row label="Altura (cm)" htmlFor="altura">
             <Input id="altura" inputMode="numeric" value={String(form.alturaCm ?? "")} onChange={(e) => set("alturaCm", Number(e.target.value) as never)} className="h-11 w-full rounded-xl tabular sm:w-28" />
           </Row>
-          <Button onClick={guardarPerfil} disabled={!perfilPendiente} className="mt-1 h-11 self-start px-5">{perfilPendiente ? "Guardar cambios" : "Sin cambios pendientes"}</Button>
+          <div className="flex items-center justify-between gap-3 border-t border-border pt-4"><p className="text-xs text-muted-foreground" role="status">{perfilPendiente ? "Tienes cambios sin guardar" : "Todo al día"}</p><Button onClick={guardarPerfil} disabled={!perfilPendiente || guardandoPerfil} className="h-11 rounded-lg px-5">{guardandoPerfil ? "Guardando…" : "Guardar cambios"}</Button></div>
         </SettingsCard>
       </section>
 
@@ -302,7 +323,7 @@ export default function AjustesPage() {
               ))}
             </div>
           </div>
-          <Button onClick={guardarPerfil} disabled={!perfilPendiente} className="mt-1 h-11 self-start rounded-xl px-5">{perfilPendiente ? "Guardar cambios" : "Sin cambios pendientes"}</Button>
+          <div className="flex items-center justify-between gap-3 border-t border-border pt-4"><p className="text-xs text-muted-foreground" role="status">{perfilPendiente ? "Tienes cambios sin guardar" : "Todo al día"}</p><Button onClick={guardarPerfil} disabled={!perfilPendiente || guardandoPerfil} className="h-11 rounded-lg px-5">{guardandoPerfil ? "Guardando…" : "Guardar cambios"}</Button></div>
         </SettingsCard>
       </section>
 
@@ -449,8 +470,10 @@ export default function AjustesPage() {
       <section>
         <SectionLabel>Privacidad</SectionLabel>
         <SettingsCard className="gap-3.5">
+          <Row label="Compartir errores técnicos"><Switch checked={diagnostico} onCheckedChange={v => { permitirDiagnostico(userId, v); setDiagnostico(v); }} aria-label="Compartir errores técnicos" /></Row>
+          <p className="text-xs leading-relaxed text-muted-foreground">Opcional: envía el tipo de error y la versión de RITMO, nunca tus comidas, peso ni notas. <Link href="/privacidad" className="font-medium text-primary underline underline-offset-4">Cómo se usan mis datos</Link></p>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div><p className="text-sm font-semibold">Tus datos siguen siendo tuyos</p><p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">Gemini solo recibe una comida cuando eliges analizarla.</p></div>
+            <div><p className="text-sm font-semibold">Tus datos siguen siendo tuyos</p><p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{EXTERNAL_NUTRITION_ENABLED ? "Gemini solo recibe una comida cuando eliges analizarla." : "El análisis nutricional es local: no envía tus comidas a Gemini ni Edamam."}</p></div>
             <Button variant="secondary" onClick={() => { limpiarDatosLocales(userId); limpiarPreferenciasComidas(); toast.success("Datos locales eliminados"); }} className="h-10 w-full rounded-xl gap-2 sm:w-auto"><Trash2 className="size-4" /> Limpiar este dispositivo</Button>
           </div>
           {confirmarBorrado ? <div className="flex flex-col gap-3 rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs leading-relaxed text-destructive">Borra perfil, días, comidas, mediciones y copias de seguridad de la nube. Tu acceso seguirá existiendo.</p><div className="flex shrink-0 gap-1.5"><Button variant="ghost" size="sm" className="h-8 rounded-lg" onClick={() => setConfirmarBorrado(false)}>Cancelar</Button><Button variant="destructive" size="sm" className="h-8 rounded-lg" onClick={() => void borrarDatos().then(() => { limpiarDatosLocales(userId); limpiarPreferenciasComidas(); toast.success("Datos de RITMO eliminados"); }).catch(() => toast.error("No se pudieron eliminar los datos."))}>Eliminar</Button></div></div> : <button type="button" onClick={() => setConfirmarBorrado(true)} className="self-start text-xs font-medium text-destructive transition-opacity hover:opacity-75">Eliminar todos mis datos de RITMO…</button>}
@@ -476,7 +499,7 @@ function ImportMetric({ label, value, detail }: { label: string; value: number; 
 
 function Row({ label, children, htmlFor }: { label: string; children: React.ReactNode; htmlFor?: string }) {
   return (
-    <div className="grid gap-2 border-b border-border/70 pb-4 last:border-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_minmax(13rem,22rem)] sm:items-center sm:gap-8">
+    <div className="settings-row grid gap-2 border-b border-border/70 pb-4 last:border-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_minmax(13rem,22rem)] sm:items-center sm:gap-8">
       <Label htmlFor={htmlFor} className="text-sm font-medium">{label}</Label>
       <div className="flex w-full justify-start sm:justify-end">{children}</div>
     </div>
@@ -496,7 +519,7 @@ function Pill({ children, activo, onClick }: { children: React.ReactNode; activo
 }
 
 function SettingsCard({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <Card className={cn("flex flex-col gap-4 rounded-2xl border-border/80 p-4 shadow-sm [&_button]:rounded-lg [&_input]:rounded-lg sm:p-5", className)}>{children}</Card>;
+  return <Card className={cn("settings-card flex flex-col gap-4 rounded-2xl border-border/80 p-4 shadow-sm sm:p-5", className)}>{children}</Card>;
 }
 
 function SettingsSubhead({ title, description, className }: { title: string; description: string; className?: string }) {

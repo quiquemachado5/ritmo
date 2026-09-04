@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+// Prueba de protocolo con respuestas sintéticas, sin habilitar la política real.
+vi.mock("../policy", () => ({ EXTERNAL_NUTRITION_ENABLED: true }));
+
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();

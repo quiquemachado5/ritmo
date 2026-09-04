@@ -36,12 +36,15 @@ import { analizarComida } from "@/lib/nutrition/client";
 import { descripcionNecesitaAnalisis, normalizarDescripcionComida } from "@/lib/nutrition/prompt-state";
 import type { AnalisisNutricional, ItemNutricional } from "@/lib/nutrition/types";
 import { recalcularAnalisis } from "@/lib/nutrition/corrections";
-import { guardarCorreccionesNutricion, useMealPrefs } from "@/lib/meal-prefs";
+import { guardarCorreccionesNutricion, agregarPlantilla, useMealPrefs } from "@/lib/meal-prefs";
 import type { Comida, TipoComida } from "@/lib/model/types";
 import { fmtFechaLarga, capitalizar } from "@/lib/format";
 import { detectarAnomaliasComida, detectarAnomaliasMedicion, type RecordAnomaly } from "@/lib/record-anomalies";
 import { Chip, MacroBar } from "./primitives";
 import { useQuickLog, type QuickTab } from "./quick-log-provider";
+import { claveBorrador, leerBorrador, guardarBorrador, quitarBorrador } from "@/lib/drafts";
+import { aclaracionComida, type AclaracionComida } from "@/lib/nutrition/clarification";
+import { escalarNutrientes, escalarIngrediente, factorPorcion } from "@/lib/nutrition/portions";
 
 const TABS: { id: QuickTab; label: string; icon: typeof Scale }[] = [
   { id: "comida", label: "Comida", icon: UtensilsCrossed },
@@ -105,7 +108,7 @@ export function QuickLog() {
 
   const panel = (
     <>
-      {tab === "comida" && <PanelComida fecha={fecha} onDone={cerrar} comidaEdit={comidaEdit} movil={!isDesktop} />}
+      {tab === "comida" && <PanelComida key={`${fecha}:${comidaEdit?.id ?? "nueva"}`} fecha={fecha} onDone={cerrar} comidaEdit={comidaEdit} movil={!isDesktop} />}
       {tab === "peso" && <PanelPeso fecha={fecha} onDone={cerrar} movil={!isDesktop} />}
       {tab === "habitos" && <PanelHabitos fecha={fecha} />}
     </>
@@ -198,18 +201,32 @@ function PanelComida({
   comidaEdit?: Comida | null;
   movil?: boolean;
 }) {
-  const { registrarComida, editarComida, estado } = useRitmo();
+  const { registrarComida, editarComida, estado, userId } = useRitmo();
+  const draftKey = claveBorrador(userId ?? "sin-sesion", fecha, comidaEdit?.id);
+  const [borrador] = React.useState(() => leerBorrador(draftKey));
+  const [guardando, setGuardando] = React.useState(false);
+  const ocupado = React.useRef(false);
+  const guardado = React.useRef(false);
+  const [aclaracion, setAclaracion] = React.useState<AclaracionComida | null>(null);
+  const [raciones, setRaciones] = React.useState(1);
+  const [porcion, setPorcion] = React.useState(1);
+  const [comoPlantilla, setComoPlantilla] = React.useState(false);
+  const aclarado = React.useRef("");
   const preferencias = useMealPrefs();
   const editando = comidaEdit != null;
   const frecuentes = React.useMemo(() => (editando ? [] : comidasFrecuentes(estado, 6)), [estado, editando]);
 
   async function anadirRapido(base: Comida) {
-    await registrarComida(fecha, { ...base, id: uid(), tipo, creado: new Date().toISOString() });
+    if (ocupado.current) return;
+    ocupado.current = true; setGuardando(true);
+    const ok = await registrarComida(fecha, { ...base, id: uid(), tipo, creado: new Date().toISOString() });
+    ocupado.current = false; setGuardando(false);
+    if (!ok) return;
     toast.success(`Añadida: ${base.texto} (${base.kcal} kcal)`);
     onDone();
   }
-  const [texto, setTexto] = React.useState(comidaEdit?.texto ?? "");
-  const [tipo, setTipo] = React.useState<TipoComida>(comidaEdit?.tipo ?? "comida");
+  const [texto, setTexto] = React.useState(borrador?.texto ?? comidaEdit?.texto ?? "");
+  const [tipo, setTipo] = React.useState<TipoComida>(borrador?.tipo ?? comidaEdit?.tipo ?? "comida");
   const [analizando, setAnalizando] = React.useState(false);
   const [analisis, setAnalisis] = React.useState<AnalisisNutricional | null>(null);
   const [itemsCorregidos, setItemsCorregidos] = React.useState<Set<number>>(() => new Set());
@@ -223,8 +240,16 @@ function PanelComida({
       : null,
   );
 
+  React.useEffect(() => {
+    if (userId && !guardado.current) guardarBorrador(draftKey, { texto, tipo });
+  }, [draftKey, texto, tipo, userId]);
+
   async function analizar() {
-    if (!texto.trim()) return;
+    if (!texto.trim() || ocupado.current) return;
+    const pregunta = aclaracionComida(texto);
+    if (pregunta && aclarado.current !== texto) { setAclaracion(pregunta); return; }
+    setAclaracion(null);
+    ocupado.current = true;
     setAnalizando(true);
     setAnalisis(null);
     try {
@@ -237,11 +262,12 @@ function PanelComida({
       toast.error(e instanceof Error ? e.message : "No se pudo analizar la comida.");
     } finally {
       setAnalizando(false);
+      ocupado.current = false;
     }
   }
 
   async function guardar() {
-    if (!manual) return;
+    if (!manual || ocupado.current) return;
     if (normalizarDescripcionComida(texto) !== normalizarDescripcionComida(textoAnalizado)) {
       toast.error("Vuelve a analizar la descripción antes de guardar los cambios.");
       return;
@@ -265,6 +291,10 @@ function PanelComida({
       n(manual.c) !== comidaEdit.carbohidratos ||
       n(manual.g) !== comidaEdit.grasas
     );
+    let factor = 1;
+    try {
+      factor = editando && !analisisVigente ? 1 : factorPorcion(comidaEdit?.racionesReceta ?? raciones, comidaEdit?.porcionConsumida ?? porcion);
+    } catch { toast.error("Revisa las raciones preparadas y tu porción."); return; }
     const comida: Comida = {
       id: comidaEdit?.id ?? uid(),
       tipo,
@@ -278,12 +308,21 @@ function PanelComida({
       // interpretadas. Si el usuario cambia los valores, su ajuste prevalece.
       estimado: analisisVigente ? !editadoManual : editadoExistente ? false : comidaEdit?.estimado,
       creado: comidaEdit?.creado ?? new Date().toISOString(),
+      ingredientes: analisisVigente?.items.map(item => escalarIngrediente(item, factor)) ?? comidaEdit?.ingredientes,
+      racionesReceta: comidaEdit?.racionesReceta ?? raciones,
+      porcionConsumida: comidaEdit?.porcionConsumida ?? porcion,
     };
+    Object.assign(comida, escalarNutrientes(comida, factor));
+    ocupado.current = true; setGuardando(true);
+    const ok = editando ? await editarComida(fecha, comida) : await registrarComida(fecha, comida);
+    ocupado.current = false; setGuardando(false);
+    if (!ok) return;
+    if (comoPlantilla) agregarPlantilla({ ...comida, nombre: texto.trim().slice(0, 60), clave: `receta:${comida.id}` });
+    guardado.current = true;
+    quitarBorrador(draftKey);
     if (editando) {
-      await editarComida(fecha, comida);
       toast.success("Comida actualizada");
     } else {
-      await registrarComida(fecha, comida);
       toast.success(`Comida añadida (${comida.kcal} kcal)`);
     }
     if (analisisVigente && itemsCorregidos.size > 0) {
@@ -321,6 +360,7 @@ function PanelComida({
 
   return (
     <div className="flex min-h-full flex-col gap-3">
+      <p className="text-sm text-muted-foreground" role="status">{listoParaGuardar ? "Revisa las cantidades y guarda tu comida." : borrador ? "Borrador recuperado · revisa la descripción antes de analizar." : "Describe el plato; después podrás revisar cada ingrediente."}</p>
       <div className="grid grid-cols-4 gap-1.5">
         {TIPOS.map((t) => (
           <button
@@ -337,6 +377,7 @@ function PanelComida({
         ))}
       </div>
       <Textarea
+        aria-label="Descripción de la comida"
         value={texto}
         onChange={(e) => setTexto(e.target.value)}
         placeholder="Escribe lo que has comido: 2 huevos revueltos, tostada integral y café con leche…"
@@ -348,6 +389,16 @@ function PanelComida({
         <p className="max-w-[52ch]">Describe el plato completo. RITMO separa ingredientes, cantidades y aliños.</p>
         <span className="shrink-0 tabular">{texto.length}/2.500</span>
       </div>
+      {aclaracion && <div className="rounded-xl border border-warning-border bg-warning-wash p-3 text-warning-ink">
+        <p className="text-sm font-medium">{aclaracion.pregunta}</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {aclaracion.opciones.map(opcion => <Button key={opcion} variant="outline" size="sm" onClick={() => {
+            setTexto(t => `${t.trim()}\n${aclaracion.prefijo}: ${opcion}.`.slice(0, 2500)); setAclaracion(null);
+          }}>{opcion}</Button>)}
+          <Button variant="ghost" size="sm" onClick={() => { aclarado.current = texto; void analizar(); }}>No lo sé · estimar</Button>
+        </div>
+        <p className="mt-2 text-xs">También puedes corregir la descripción con la cantidad exacta.</p>
+      </div>}
       {requiereReanalisis && (
         <div className="flex items-start gap-2.5 rounded-xl border border-warning-border bg-warning-wash px-3 py-2.5 text-xs leading-relaxed text-warning-ink">
           <AlertCircle className="mt-0.5 size-4 shrink-0" />
@@ -431,6 +482,16 @@ function PanelComida({
           onConfirm={() => setFirmaAnomaliaConfirmada(firmaAnomalias)}
         />
       )}
+      {listoParaGuardar && !editando && <details className="rounded-xl border border-border p-3">
+        <summary className="cursor-pointer text-sm font-medium">¿Has preparado varias raciones?</summary>
+        <p className="mt-2 text-xs text-muted-foreground">El análisis corresponde al plato completo. Solo se registra la parte que has comido.</p>
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <label className="text-xs text-muted-foreground">Raciones preparadas<Input type="number" min={1} max={24} value={raciones} onChange={e => setRaciones(Number(e.target.value))} /></label>
+          <label className="text-xs text-muted-foreground">Raciones consumidas<Input type="number" min={0.25} max={raciones} step={0.25} value={porcion} onChange={e => setPorcion(Number(e.target.value))} /></label>
+        </div>
+        {raciones >= 1 && porcion > 0 && porcion <= raciones && manual && <p className="mt-3 text-sm font-semibold text-primary">Tu porción: {Math.round(Number(manual.kcal) * porcion / raciones)} kcal</p>}
+        <label className="mt-3 flex min-h-10 items-center gap-2 text-sm"><input type="checkbox" checked={comoPlantilla} onChange={e => setComoPlantilla(e.target.checked)} />Guardar esta porción en mis plantillas</label>
+      </details>}
 
       <div
         className={cn(
@@ -440,11 +501,11 @@ function PanelComida({
       >
         <Button
           onClick={() => void ejecutarPrincipal()}
-          disabled={analizando || (listoParaGuardar ? !manual : !texto.trim())}
+          disabled={analizando || guardando || (listoParaGuardar ? !manual : !texto.trim())}
           className="h-12 w-full gap-2 rounded-xl"
         >
           {analizando ? <Loader2 className="size-4 animate-spin" /> : listoParaGuardar ? <Check className="size-4" /> : <Sparkles className="size-4" />}
-          {analizando
+          {guardando ? "Guardando…" : analizando
             ? "Analizando plato completo…"
             : listoParaGuardar
               ? editando ? "Guardar cambios" : `Añadir a ${etiquetaTipo}`
@@ -586,6 +647,8 @@ function PanelHabitos({ fecha }: { fecha: string }) {
 function PanelPeso({ fecha, onDone, movil = false }: { fecha: string; onDone: () => void; movil?: boolean }) {
   const { estado, medicion, guardarMedicion } = useRitmo();
   const m = medicion(fecha);
+  const [guardando, setGuardando] = React.useState(false);
+  const ocupado = React.useRef(false);
   const [firmaAnomaliaConfirmada, setFirmaAnomaliaConfirmada] = React.useState<string | null>(null);
   const [campos, setCampos] = React.useState({
     peso: m?.peso != null ? String(m.peso) : "",
@@ -632,6 +695,7 @@ function PanelPeso({ fecha, onDone, movil = false }: { fecha: string; onDone: ()
   const anomaliasConfirmadas = anomalias.length === 0 || firmaAnomaliaConfirmada === firmaAnomalias;
 
   async function guardar() {
+    if (ocupado.current) return;
     if (!propuesta) {
       toast.error("El peso es obligatorio para una medición.");
       return;
@@ -640,7 +704,10 @@ function PanelPeso({ fecha, onDone, movil = false }: { fecha: string; onDone: ()
       toast.error("Revisa y confirma los valores atípicos antes de guardar.");
       return;
     }
-    await guardarMedicion(propuesta);
+    ocupado.current = true; setGuardando(true);
+    const ok = await guardarMedicion(propuesta);
+    ocupado.current = false; setGuardando(false);
+    if (!ok) return;
     toast.success("Medición guardada");
     onDone();
   }
@@ -691,8 +758,8 @@ function PanelPeso({ fecha, onDone, movil = false }: { fecha: string; onDone: ()
       )}
 
       <div className={cn("mt-1", movil && "absolute inset-x-0 bottom-0 z-20 border-t border-border bg-background/96 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md")}>
-        <Button onClick={guardar} disabled={!propuesta} className="h-12 w-full gap-2 rounded-xl">
-          <Check className="size-4" /> Guardar medición
+        <Button onClick={guardar} disabled={!propuesta || guardando} className="h-12 w-full gap-2 rounded-xl">
+          <Check className="size-4" /> {guardando ? "Guardando…" : "Guardar medición"}
         </Button>
       </div>
     </div>

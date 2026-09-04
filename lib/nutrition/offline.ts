@@ -266,11 +266,21 @@ function localizar(texto: string): Coincidencia[] {
   });
 }
 
-const SEPARADOR = /\s*(?:,|\by\b|\bcon\b|\bmas\b|\+|\n|;)\s*/;
+// Una coma decimal no separa ingredientes: «1,5 kg» debe conservarse entero.
+const SEPARADOR = /\s*(?:(?<!\d),|,(?!\d)|\by\b|\bcon\b|\bmas\b|\+|\n|;)\s*/;
 
 /** Estima kcal y macros a partir de texto libre, sin IA externa. */
 export function estimarOffline(texto: string): AnalisisNutricional {
-  const limpio = sinTildes(texto)
+  const normalizado = sinTildes(texto);
+  const aceiteTotal = normalizado.match(/aclaracion: cantidad total de aceite del plato\s*:?\s*(5|10|15)\s*ml/);
+  const estadoCoccion = normalizado.match(/aclaracion: el peso de arroz o pasta indicado es\s*:?\s*(en crudo|ya cocinado)/)?.[1];
+  // Las aclaraciones son metadatos del plato, no ingredientes adicionales.
+  let base = normalizado.replace(/\n?\s*aclaracion:[^\n]*/g, "");
+  if (aceiteTotal) {
+    base = base.replace(/\b(?:aceite(?: de oliva(?: virgen extra)?)?|aove)\b/g, "aliño");
+    base += `; ${aceiteTotal[1]} ml de aceite de oliva`;
+  }
+  const limpio = base
     .replace(/^(desayuno|comida|cena|snack|merienda|almuerzo)\s*:?/, "")
     .trim();
 
@@ -294,7 +304,7 @@ export function estimarOffline(texto: string): AnalisisNutricional {
     const contexto = `${prefijo} ${surface} ${sufijo}`;
 
     const gramos = Math.min(2000, Math.max(1, gramosDe(contexto, c.alimento)));
-    const esSecoEnCrudo = /\b(?:pasta|penne|arroz)\b/.test(surface) && /\bcrudo\b/.test(contexto);
+    const esSecoEnCrudo = /\b(?:pasta|penne|arroz|basmati)\b/.test(surface) && (estadoCoccion === "en crudo" || (!estadoCoccion && /\bcrudo\b/.test(contexto)));
     const alimento = esSecoEnCrudo ? SECOS_EN_CRUDO : c.alimento;
     const f = gramos / 100;
 

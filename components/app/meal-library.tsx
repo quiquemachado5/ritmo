@@ -97,9 +97,10 @@ export function MealLibrary({ fecha }: { fecha: string }) {
       carbohidratos: item.carbohidratos,
       grasas: item.grasas,
       estimado: item.estimado,
+      ingredientes: item.ingredientes,
       creado: new Date().toISOString(),
     };
-    await registrarComida(fecha, comida);
+    if (!await registrarComida(fecha, comida)) return;
     toast.success(`${capitalizar(item.texto)} · ${fmtKcal(item.kcal)} kcal`, { description: "Añadida al día" });
   }
 
@@ -186,7 +187,7 @@ export function MealLibrary({ fecha }: { fecha: string }) {
           <NuevaComidaForm
             tipo={cat}
             onCancel={() => setCreando(false)}
-            onSave={(c) => { agregarCatalogo(c); setCreando(false); toast.success("Comida guardada en la biblioteca"); }}
+            onSave={(c) => { if (!agregarCatalogo(c)) return; setCreando(false); toast.success("Comida guardada en la biblioteca"); }}
           />
         ) : (
           <button
@@ -221,7 +222,7 @@ export function MealLibrary({ fecha }: { fecha: string }) {
                     onUsar={() => usar(item)}
                     onFav={() => toggleFavorito(item.clave)}
                     onEdit={() => setEditando(item.clave)}
-                    onTemplate={() => { agregarPlantilla({ nombre: capitalizar(item.texto), clave: item.clave, texto: item.texto, tipo: item.tipo, kcal: item.kcal, proteinas: item.proteinas, carbohidratos: item.carbohidratos, grasas: item.grasas }); toast.success("Guardada como plantilla"); }}
+                    onTemplate={() => { if (agregarPlantilla({ nombre: capitalizar(item.texto), clave: item.clave, texto: item.texto, tipo: item.tipo, kcal: item.kcal, proteinas: item.proteinas, carbohidratos: item.carbohidratos, grasas: item.grasas, ingredientes: item.ingredientes })) toast.success("Guardada como plantilla"); }}
                     onHide={() =>
                       item.esCatalogo
                         ? (quitarCatalogo(item.clave), toast("Comida quitada de la biblioteca"))

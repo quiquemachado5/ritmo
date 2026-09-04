@@ -5,6 +5,7 @@
  */
 
 import type { AnalisisNutricional, ItemNutricional } from "./types";
+import { EXTERNAL_NUTRITION_ENABLED } from "./policy";
 
 export interface EdamamFood {
   foodId: string;
@@ -31,6 +32,7 @@ const APP_ID = process.env.EDAMAM_APP_ID || "";
 const APP_KEY = process.env.EDAMAM_APP_KEY || "";
 
 export async function analizarConEdamam(texto: string): Promise<AnalisisNutricional | null> {
+  if (!EXTERNAL_NUTRITION_ENABLED) return null;
   if (!APP_ID || !APP_KEY) {
     console.warn("Edamam no configurado (EDAMAM_APP_ID/APP_KEY no definidas)");
     return null;

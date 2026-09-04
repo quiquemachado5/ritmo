@@ -3,13 +3,15 @@
 import { useOnlineStatus } from '@/lib/hooks/useOnlineStatus';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { onColaCambia } from '@/lib/store/queued';
+import { onColaCambia, reintentarCola, type EstadoCola } from '@/lib/store/queued';
+import { toast } from 'sonner';
 
 export function OfflineBanner() {
   const isOnline = useOnlineStatus();
-  const [pendientes, setPendientes] = useState(0);
+  const [cola, setCola] = useState<EstadoCola>({ pendientes: 0, requiereAtencion: false, sincronizando: false });
+  const { pendientes, requiereAtencion } = cola;
 
-  useEffect(() => onColaCambia(setPendientes), []);
+  useEffect(() => onColaCambia(setCola), []);
 
   const show = !isOnline || pendientes > 0;
   if (!show) return null;
@@ -26,9 +28,17 @@ export function OfflineBanner() {
           : 'border-destructive/25 bg-card text-destructive'
       }`}
     >
-      {sincronizando ? (
+      {requiereAtencion ? (
         <>
-          <RefreshCw className="size-4 animate-spin" />
+          <AlertCircle className="size-4 shrink-0" />
+          <span>Hay cambios locales sin sincronizar</span>
+          <button className="min-h-10 shrink-0 underline underline-offset-4" onClick={() => {
+            if (window.confirm('Revisa tus cambios. Si otro dispositivo modificó el mismo registro, al reintentar se enviará la versión conservada aquí. ¿Continuar?')) void reintentarCola().catch(() => toast.error('No se pudo reintentar. Conserva tus datos locales.'));
+          }}>Revisar</button>
+        </>
+      ) : sincronizando ? (
+        <>
+          <RefreshCw className={`size-4 ${cola.sincronizando ? 'motion-safe:animate-spin' : ''}`} />
           {pendientes} cambio{pendientes > 1 ? 's' : ''} pendiente{pendientes > 1 ? 's' : ''}
         </>
       ) : (

@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./env";
 
 /** Rutas accesibles sin sesión. */
-const PUBLIC_PATHS = ["/login", "/registro", "/auth", "/bienvenida", "/recuperar", "/recuperar-contrasena"];
+const PUBLIC_PATHS = ["/login", "/registro", "/auth", "/bienvenida", "/recuperar", "/recuperar-contrasena", "/privacidad", "/offline"];
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
@@ -11,6 +11,8 @@ function isPublic(pathname: string): boolean {
 
 /** Refresca la sesión de Supabase y protege las rutas privadas. */
 export async function updateSession(request: NextRequest) {
+  // Documentos públicos y el worker no necesitan una consulta de identidad.
+  if (["/offline", "/privacidad", "/sw.js"].includes(request.nextUrl.pathname)) return NextResponse.next({ request });
   // RITMO requiere Supabase para todo; la validación ocurre en env.ts
 
   let response = NextResponse.next({ request });
@@ -37,6 +39,11 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (!user && !isPublic(pathname)) {
+    if (pathname.startsWith("/api/")) {
+      const denied = NextResponse.json({ error: "Inicia sesión para continuar." }, { status: 401, headers: { "Cache-Control": "private, no-store" } });
+      response.cookies.getAll().forEach(cookie => denied.cookies.set(cookie));
+      return denied;
+    }
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", pathname);

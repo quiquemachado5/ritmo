@@ -71,12 +71,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { abrir, abierto } = useQuickLog();
   const [busquedaAbierta, setBusquedaAbierta] = React.useState(false);
   const modoMinimo = pathname === "/minimo";
+  const { errorCarga, recargar } = useRitmo();
 
   const activo = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
   const primarios = NAV_ITEMS.filter((i) => i.primary);
 
   // Atajos de teclado globales. Se ignoran si el foco está en un campo de texto
   // o si el panel de registro ya está abierto (para no capturar su escritura).
+  React.useEffect(() => {
+    const focus = new URLSearchParams(window.location.search).get("focus");
+    if (focus === "peso" || focus === "comida" || focus === "habitos") {
+      abrir(focus);
+      const url = new URL(window.location.href); url.searchParams.delete("focus");
+      window.history.replaceState(window.history.state, "", url.pathname + url.search);
+    }
+  }, [abrir]);
+
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (modoMinimo) return;
@@ -94,6 +104,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [abrir, abierto, busquedaAbierta, modoMinimo]);
+
+  if (errorCarga) {
+    return <main className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center gap-4 px-6">
+      <RitmoLogo />
+      <h1 className="text-2xl font-semibold">No hemos podido cargar tus datos</h1>
+      <p className="text-muted-foreground">No se han sustituido tus registros ni tus copias de seguridad. Comprueba la conexión y vuelve a intentarlo.</p>
+      <Button onClick={() => void recargar()}>Volver a cargar</Button>
+      <Link className="text-center text-sm underline underline-offset-4" href="/login">Volver a iniciar sesión</Link>
+    </main>;
+  }
 
   if (modoMinimo) {
     return (

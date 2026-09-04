@@ -1,94 +1,31 @@
-/* RITMO service worker — app instalable y utilizable sin conexión.
-   Estrategia:
-   - Navegaciones (HTML): network-first con fallback a la última página cacheada
-     o a /offline. Así, sin red, la app sigue abriendo.
-   - Estáticos de Next (_next/static, fuentes): cache-first (son inmutables).
-   - Resto same-origin GET: stale-while-revalidate.
-   Los datos viven en Supabase/estado; el SW solo garantiza que el "cascarón"
-   de la app cargue offline. */
-
-const DEPLOYMENT_VERSION = new URL(self.location.href).searchParams.get("v") || "dev";
-const VERSION = `ritmo-${DEPLOYMENT_VERSION}`;
-const STATIC_CACHE = `${VERSION}-static`;
-const PAGES_CACHE = `${VERSION}-pages`;
+/* Solo activos públicos. Nunca cachea HTML privado, respuestas RSC ni API. */
+const VERSION = "ritmo-" + (new URL(self.location.href).searchParams.get("v") || "dev");
+const STATIC_CACHE = VERSION + "-static";
 const OFFLINE_URL = "/offline";
 
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) => cache.addAll([OFFLINE_URL, "/manifest.json"]).catch(() => {})),
-  );
-  self.skipWaiting();
+self.addEventListener("install", event => {
+  event.waitUntil(caches.open(STATIC_CACHE).then(cache => cache.addAll([OFFLINE_URL, "/manifest.json", "/icon"])));
+  // Una versión nueva espera confirmación: no interrumpe un formulario abierto.
 });
-
-self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => !k.startsWith(VERSION)).map((k) => caches.delete(k))),
-    ),
-  );
-  self.clients.claim();
+self.addEventListener("message", event => {
+  if (event.data?.type === "ACTIVATE_UPDATE") self.skipWaiting();
 });
-
-self.addEventListener("fetch", (event) => {
-  const { request } = event;
-  if (request.method !== "GET") return;
-
+self.addEventListener("activate", event => {
+  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith("ritmo-") && k !== STATIC_CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+});
+self.addEventListener("fetch", event => {
+  const request = event.request;
   const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return;
-
-  // No cachear API ni auth: siempre red (y que fallen limpio si no hay).
-  if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/auth/")) return;
-
-  // Navegaciones: network-first → cache → offline.
+  if (request.method !== "GET" || url.origin !== self.location.origin) return;
   if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request)
-        .then((res) => {
-          if (res.ok) {
-            const copy = res.clone();
-            caches.open(PAGES_CACHE).then((c) => c.put(request, copy));
-          }
-          return res;
-        })
-        .catch(async () => {
-          const cached = await caches.match(request);
-          return cached || (await caches.match(OFFLINE_URL)) || Response.error();
-        }),
-    );
+    event.respondWith(fetch(request).catch(async () => (await caches.match(OFFLINE_URL)) || Response.error()));
     return;
   }
-
-  // Estáticos inmutables de Next: cache-first.
-  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/__nextjs_font/")) {
-    event.respondWith(
-      caches.match(request).then(
-        (cached) =>
-          cached ||
-          fetch(request).then((res) => {
-            if (res.ok) {
-              const copy = res.clone();
-              caches.open(STATIC_CACHE).then((c) => c.put(request, copy));
-            }
-            return res;
-          }),
-      ),
-    );
-    return;
-  }
-
-  // Resto same-origin: stale-while-revalidate.
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      const network = fetch(request)
-        .then((res) => {
-          if (res.ok) {
-            const copy = res.clone();
-            caches.open(STATIC_CACHE).then((c) => c.put(request, copy));
-          }
-          return res;
-        })
-        .catch(() => cached);
-      return cached || network;
-    }),
-  );
+  if (request.headers.has("rsc") || url.searchParams.has("_rsc")) return;
+  const publicAsset = url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/brand/") || url.pathname === "/icon";
+  if (!publicAsset) return;
+  event.respondWith(caches.match(request).then(cached => cached || fetch(request).then(response => {
+    if (response.ok) { const copy = response.clone(); event.waitUntil(caches.open(STATIC_CACHE).then(cache => cache.put(request, copy))); }
+    return response;
+  })));
 });

@@ -1,8 +1,9 @@
 import type { AnalisisNutricional, CorreccionNutricional, ItemNutricional } from "./types";
+import { EXTERNAL_NUTRITION_ENABLED } from "./policy";
 
 const API_KEY = process.env.GEMINI_API_KEY || "";
 // Priorizamos el Flash estable más capaz, pero conservamos un segundo modelo
-// gratuito: la API puede devolver 429/503 durante picos de demanda.
+// alternativo: disponibilidad y facturación dependen del proyecto de Google.
 const MODELS = process.env.GEMINI_NUTRITION_MODEL
   ? [process.env.GEMINI_NUTRITION_MODEL]
   : ["gemini-3.7-flash", "gemini-3.5-flash"];
@@ -65,6 +66,7 @@ function extraerJSON(texto: string): GeminiPayload | null {
  * navegador; ante una respuesta incompleta, el llamador conserva sus fallbacks.
  */
 export async function analizarConGemini(texto: string, correcciones: CorreccionNutricional[] = []): Promise<AnalisisNutricional | null> {
+  if (!EXTERNAL_NUTRITION_ENABLED) return null;
   if (!API_KEY) return null;
 
   let payload: GeminiPayload | null = null;
@@ -80,6 +82,7 @@ export async function analizarConGemini(texto: string, correcciones: CorreccionN
             "Primero separa mentalmente la frase completa ingrediente por ingrediente, aunque sea larga, no tenga comas o repita conectores como 'con' e 'y'. Después calcula cada fila.",
             "Respeta exactamente gramos, mililitros, unidades, filetes, latas, cucharadas (cda) y cucharaditas. La cantidad se asocia únicamente al ingrediente más cercano.",
             "Cuenta cada aparición de AOVE, aceite, mantequilla, alioli, salsa, queso, frutos secos y aliño. Si el mismo aceite aparece dos veces, suma ambas cantidades y deja claro el total.",
+            "Una aclaración del usuario sobre la cantidad TOTAL reemplaza las cantidades previas de ese ingrediente; no la sumes otra vez. Los valores de una etiqueta y cantidades pesadas tienen prioridad sobre porciones habituales.",
             "Una cucharada de AOVE son 15 ml (aprox. 13,5 g y 119 kcal). No confundas una cucharada con una cucharadita.",
             "Distingue peso crudo de cocido. Si no se especifica, usa el estado habitual del plato descrito.",
             "Si falta una cantidad, usa una ración española razonable. Para 'filete de pollo a la plancha' sin peso, usa 130 g ya cocinados por filete; dos filetes son 260 g. Marca cantidadEstimada=true y explica el supuesto brevemente.",
@@ -101,8 +104,8 @@ export async function analizarConGemini(texto: string, correcciones: CorreccionN
     });
 
     if (!respuesta.ok) {
-      const detalle = await respuesta.text().catch(() => "");
-      console.warn(`Gemini nutrición (${model}): ${respuesta.status} ${respuesta.statusText}${detalle ? ` · ${detalle.slice(0, 320)}` : ""}`);
+      // No registrar respuestas del proveedor: pueden contener parte de la comida.
+      console.warn("[ritmo] gemini_status", respuesta.status);
       if (respuesta.status === 429 || respuesta.status === 503) {
         modelUnavailableUntil.set(model, Date.now() + MODEL_COOLDOWN_MS);
       }

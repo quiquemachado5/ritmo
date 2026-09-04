@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 const accountA = { email: process.env.E2E_USER_A_EMAIL || "", password: process.env.E2E_USER_A_PASSWORD || "" };
 const accountB = { email: process.env.E2E_USER_B_EMAIL || "", password: process.env.E2E_USER_B_PASSWORD || "" };
 const hasAccounts = Boolean(accountA.email && accountA.password && accountB.email && accountB.password);
+if (process.env.CI && !hasAccounts) throw new Error("Faltan las dos cuentas de pruebas autenticadas.");
 
 async function login(page: Page, account: typeof accountA) {
   await page.goto("/login");
@@ -44,22 +45,22 @@ test("un hábito registrado offline entra en cola y se sincroniza al reconectar"
   test.skip(!hasAccounts, "Configura una cuenta E2E con onboarding completo");
   await login(page, accountA);
   await page.getByRole("button", { name: "Registrar", exact: true }).click();
-  await page.getByRole("button", { name: "Hábitos", exact: true }).click();
-  const habit = page.getByRole("button", { name: /Comida|Cena|Sin alcohol|Deporte|Beber agua|Dormir bien/ }).first();
+  await page.getByRole("tab", { name: "Hábitos", exact: true }).click();
+  const habit = page.getByRole("dialog").getByRole("button", { name: /Comida|Cena|Sin alcohol|Deporte|Beber agua|Dormir bien/ }).first();
   const initial = await habit.getAttribute("aria-pressed");
 
   await context.setOffline(true);
   await habit.click();
   await expect(page.getByText(/Sin conexión/)).toBeVisible();
-  await expect(page.getByText(/1 cambio en cola/)).toBeVisible();
+  await expect(page.getByText(/Sin conexión · 1 pendiente/)).toBeVisible();
 
   await context.setOffline(false);
   await expect(page.getByText(/Sin conexión/)).toBeHidden({ timeout: 15_000 });
   await page.keyboard.press("Escape");
   await page.reload();
   await page.getByRole("button", { name: "Registrar", exact: true }).click();
-  await page.getByRole("button", { name: "Hábitos", exact: true }).click();
-  const persisted = page.getByRole("button", { name: /Comida|Cena|Sin alcohol|Deporte|Beber agua|Dormir bien/ }).first();
+  await page.getByRole("tab", { name: "Hábitos", exact: true }).click();
+  const persisted = page.getByRole("dialog").getByRole("button", { name: /Comida|Cena|Sin alcohol|Deporte|Beber agua|Dormir bien/ }).first();
   await expect(persisted).toHaveAttribute("aria-pressed", initial === "true" ? "false" : "true");
   await persisted.click();
 });

@@ -4,8 +4,39 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      e2e_real:
+        description: 'Ejecutar además cuentas reales de staging (requiere secretos)'
+        type: boolean
+        default: false
 
 jobs:
+  database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: ritmo_ci
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: ci-only-password
+      PGDATABASE: ritmo_ci
+    steps:
+      - uses: actions/checkout@v4
+      - run: psql -v ON_ERROR_STOP=1 -f scripts/ci-bootstrap.sql
+      - name: Aplicar todas las migraciones sobre una base vacía
+        run: |
+          for migration in supabase/migrations/*.sql; do
+            psql -v ON_ERROR_STOP=1 -f "$migration"
+          done
+      - name: Aislamiento entre cuentas y cuota de IA
+        run: psql -v ON_ERROR_STOP=1 -f scripts/ci-rls.sql
   quality:
     runs-on: ubuntu-latest
     env:
@@ -24,13 +55,28 @@ jobs:
       - run: npm run lint
       - run: npm run test
       - run: npm run build
+      - name: Alcance de las pruebas
+        run: echo 'Pruebas automáticas con datos sintéticos. OAuth, correo y cuentas reales requieren la ejecución manual de staging.' >> "$GITHUB_STEP_SUMMARY"
 
-  e2e:
+  ui-local:
     runs-on: ubuntu-latest
     needs: quality
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e:local
+  e2e:
+    if: github.event_name == 'workflow_dispatch' && inputs.e2e_real
+    runs-on: ubuntu-latest
+    needs: [quality, database]
     env:
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.E2E_SUPABASE_ANON_KEY }}
       E2E_USER_A_EMAIL: ${{ secrets.E2E_USER_A_EMAIL }}
       E2E_USER_A_PASSWORD: ${{ secrets.E2E_USER_A_PASSWORD }}
       E2E_USER_B_EMAIL: ${{ secrets.E2E_USER_B_EMAIL }}
@@ -42,10 +88,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: node scripts/check-e2e-env.mjs
       - run: npx playwright install --with-deps chromium
       - name: E2E autenticadas
-        if: ${{ env.NEXT_PUBLIC_SUPABASE_URL != '' && env.E2E_USER_A_EMAIL != '' && env.E2E_USER_B_EMAIL != '' }}
         run: npm run test:e2e -- --project=chromium
       - name: E2E móvil pública
-        if: ${{ env.NEXT_PUBLIC_SUPABASE_URL != '' }}
         run: npm run test:e2e -- --project=mobile-chrome --grep="registro móvil"

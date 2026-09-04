@@ -32,7 +32,7 @@ const OBJETIVOS: { id: Objetivo; label: string; desc: string }[] = [
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { actualizarPerfil, actualizarDia } = useRitmo();
+  const { estado, actualizarPerfil, actualizarDia } = useRitmo();
   const [paso, setPaso] = React.useState(0);
   const [guardando, setGuardando] = React.useState(false);
   const [d, setD] = React.useState<Datos>({
@@ -50,9 +50,9 @@ export default function OnboardingPage() {
   const num = (s: string) => parseFloat(s.replace(",", "."));
   const pasoValido =
     paso === 0
-      ? d.nombre.trim().length > 0 && num(d.edad) >= 14 && num(d.edad) <= 100
+      ? num(d.edad) >= 18 && num(d.edad) <= 120 && Number.isInteger(num(d.edad))
       : paso === 1
-        ? num(d.alturaCm) >= 120 && num(d.alturaCm) <= 230 && num(d.pesoActual) >= 25 && num(d.pesoObjetivo) >= 25
+        ? num(d.alturaCm) >= 100 && num(d.alturaCm) <= 250 && Number.isInteger(num(d.alturaCm)) && (!d.pesoActual || (num(d.pesoActual) >= 25 && num(d.pesoActual) <= 400)) && (!d.pesoObjetivo || (num(d.pesoObjetivo) >= 30 && num(d.pesoObjetivo) <= 300))
         : true;
 
   async function finalizar() {
@@ -60,26 +60,27 @@ export default function OnboardingPage() {
     const peso = num(d.pesoActual);
     const alturaCm = num(d.alturaCm);
     const edad = num(d.edad);
-    const tdee = tdeeTeorico({ peso, alturaCm, edad, sexo: d.sexo, factorActividad: d.factorActividad }) ?? 2200;
+    const tdee = Number.isFinite(peso) ? tdeeTeorico({ peso, alturaCm, edad, sexo: d.sexo, factorActividad: d.factorActividad }) : null;
     const kcal =
-      d.objetivo === "perder" ? tdee - 450 : d.objetivo === "ganar" ? tdee + 300 : tdee;
+      tdee == null ? estado.perfil.kcalObjetivo : d.objetivo === "perder" ? tdee - 450 : d.objetivo === "ganar" ? tdee + 300 : tdee;
     const kcalObjetivo = Math.min(4000, Math.max(1200, Math.round(kcal / 10) * 10));
 
-    await actualizarPerfil({
-      nombre: d.nombre.trim(),
+    const perfilGuardado = await actualizarPerfil({
+      nombre: d.nombre.trim() || undefined,
       sexo: d.sexo,
       edad,
       alturaCm,
-      pesoObjetivo: Math.round(num(d.pesoObjetivo) * 10) / 10,
+      pesoObjetivo: d.pesoObjetivo ? Math.round(num(d.pesoObjetivo) * 10) / 10 : undefined,
       objetivo: d.objetivo,
       factorActividad: d.factorActividad,
       kcalObjetivo,
       onboardingCompleto: true,
     });
+    if (!perfilGuardado) { setGuardando(false); return; }
     // Primer pesaje: ancla la predicción desde el día uno.
-    await actualizarDia(hoy(), { peso: Math.round(peso * 10) / 10 });
+    if (Number.isFinite(peso) && !await actualizarDia(hoy(), { peso: Math.round(peso * 10) / 10 })) { setGuardando(false); return; }
 
-    router.push("/");
+    router.push("/?focus=habitos");
     router.refresh();
   }
 
@@ -105,7 +106,7 @@ export default function OnboardingPage() {
         <div className="flex-1">
           {paso === 0 && (
             <Step titulo="Empecemos por ti" sub="Personalizamos tu plan con estos datos.">
-              <Campo label="¿Cómo te llamas?">
+              <Campo label="¿Cómo te llamas? (opcional)">
                 <Input value={d.nombre} onChange={(e) => set("nombre", e.target.value)} placeholder="Tu nombre" autoFocus />
               </Campo>
               <Campo label="Sexo biológico">
@@ -117,22 +118,22 @@ export default function OnboardingPage() {
                   ))}
                 </div>
               </Campo>
-              <Campo label="Edad">
+              <Campo label="Edad" ayuda="RITMO está dirigida a personas mayores de 18 años.">
                 <Input inputMode="numeric" value={d.edad} onChange={(e) => set("edad", e.target.value)} placeholder="34" className="tabular" />
               </Campo>
             </Step>
           )}
 
           {paso === 1 && (
-            <Step titulo="Tus cifras" sub="La báscula y el objetivo anclan la predicción.">
+            <Step titulo="Tus cifras" sub="Puedes dejar el peso para otro momento. Se necesita un primer pesaje para estimar tu evolución.">
               <Campo label="Altura (cm)">
                 <Input inputMode="numeric" value={d.alturaCm} onChange={(e) => set("alturaCm", e.target.value)} placeholder="185" className="tabular" autoFocus />
               </Campo>
               <div className="grid grid-cols-2 gap-3">
-                <Campo label="Peso de HOY (kg)" ayuda="Se guarda como pesaje de hoy. Si tu última báscula es de otro día, impórtala o regístrala luego con su fecha.">
+                <Campo label="Peso de hoy (opcional)" ayuda="Si es de otro día, regístralo luego con su fecha. Sin pesaje, el objetivo calórico será provisional.">
                   <Input inputMode="decimal" value={d.pesoActual} onChange={(e) => set("pesoActual", e.target.value)} placeholder="88,5" className="tabular" />
                 </Campo>
-                <Campo label="Peso objetivo (kg)">
+                <Campo label="Peso objetivo (opcional)">
                   <Input inputMode="decimal" value={d.pesoObjetivo} onChange={(e) => set("pesoObjetivo", e.target.value)} placeholder="82" className="tabular" />
                 </Campo>
               </div>

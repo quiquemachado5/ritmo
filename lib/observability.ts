@@ -16,10 +16,20 @@ export interface Diagnostico {
 
 const KEY = "ritmo:diagnostico";
 const LIMITE = 40;
+let usuario: string | null = null;
+const enviados = new Map<string, number>();
+export function configurarDiagnosticoUsuario(userId: string | null) { usuario = userId; enviados.clear(); }
+export function diagnosticoCompartido(userId: string | null): boolean {
+  try { return Boolean(userId && localStorage.getItem(`ritmo:diagnostico-consent:${userId}`) === "true"); } catch { return false; }
+}
+export function permitirDiagnostico(userId: string | null, enabled: boolean) {
+  if (!userId) return;
+  try { localStorage.setItem(`ritmo:diagnostico-consent:${userId}`, String(enabled)); } catch {}
+}
 
 function limpio(detalle?: unknown): string | undefined {
   if (typeof detalle !== "string") return undefined;
-  return detalle.replace(/[\r\n]+/g, " ").slice(0, 120) || undefined;
+  return detalle.replace(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/gi, "[correo]").replace(/(?:https?:\/\/|Bearer\s+)[^\s]+/gi, "[oculto]").replace(/[A-Za-z0-9_-]{32,}/g, "[oculto]").replace(/[\r\n]+/g, " ").slice(0, 120) || undefined;
 }
 
 export function registrarDiagnostico(evento: EventoDiagnostico, estado: EstadoDiagnostico, detalle?: unknown): void {
@@ -35,6 +45,14 @@ export function registrarDiagnostico(evento: EventoDiagnostico, estado: EstadoDi
     localStorage.setItem(KEY, JSON.stringify([...prev, dato].slice(-LIMITE)));
   } catch {
     // La observabilidad nunca debe interferir con el registro de salud.
+  }
+  // El detalle libre nunca sale del dispositivo. Agrupamos por tipo y versión.
+  const key = `${evento}:${estado}`;
+  if (estado !== "ok" && diagnosticoCompartido(usuario) && Date.now() - (enviados.get(key) ?? 0) > 60000) {
+    enviados.set(key, Date.now());
+    void fetch("/api/diagnostico", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ evento, estado, build: process.env.NEXT_PUBLIC_RITMO_BUILD_ID || "dev" }), keepalive: true,
+    }).catch(() => {});
   }
 }
 

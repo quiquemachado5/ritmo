@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import { AlertTriangle, Beef, ChevronLeft, ChevronRight, Pencil, Plus, RotateCcw, Sparkles, Trash2 } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
@@ -27,6 +28,7 @@ const MealLibrary = dynamic(() => import("@/components/app/meal-library").then((
 const BalanceChart = dynamic(() => import("@/components/app/charts").then((m) => m.BalanceChart), {
   loading: () => <Skeleton className="h-56 w-full rounded-xl" />,
 });
+const MealPlanner = dynamic(() => import("@/components/app/meal-planner").then(m => m.MealPlanner), { loading: () => <Skeleton className="h-16 w-full rounded-xl" /> });
 
 const ORDEN = [
   { id: "desayuno", label: "Desayuno", wash: "bg-habit-wash", ink: "text-habit" },
@@ -54,7 +56,7 @@ export default function NutricionPage() {
   const [confirmBorrar, setConfirmBorrar] = React.useState<string | null>(null);
 
   async function repetirHoy(c: import("@/lib/model/types").Comida) {
-    await registrarComida(hoy(), { ...c, id: uid(), creado: new Date().toISOString() });
+    if (!await registrarComida(hoy(), { ...c, id: uid(), creado: new Date().toISOString() })) return;
     const { toast } = await import("sonner");
     toast.success(fecha === hoy() ? "Comida duplicada" : "Añadida a hoy");
   }
@@ -180,7 +182,11 @@ export default function NutricionPage() {
                         <span className="mr-1 font-display font-bold tabular text-energy">{fmtKcal(c.kcal)}</span>
                         {confirmBorrar === c.id ? (
                           <div className="flex items-center gap-1">
-                            <Button variant="destructive" size="sm" className="h-8 gap-1 px-2 text-xs" onClick={() => { borrarComida(fecha, c.id); setConfirmBorrar(null); }}>
+                            <Button variant="destructive" size="sm" className="h-8 gap-1 px-2 text-xs" onClick={async () => {
+                              if (!await borrarComida(fecha, c.id)) return;
+                              setConfirmBorrar(null);
+                              toast("Comida eliminada", { action: { label: "Deshacer", onClick: () => { void registrarComida(fecha, c); } }, duration: 8000 });
+                            }}>
                               <AlertTriangle className="size-3" /> Borrar
                             </Button>
                             <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={() => setConfirmBorrar(null)}>
@@ -216,6 +222,7 @@ export default function NutricionPage() {
 
       {/* Biblioteca personal de comidas: reutiliza cualquier plato en este día */}
       <MealLibrary fecha={fecha} />
+      <MealPlanner fecha={fecha} />
     </div>
   );
 }

@@ -90,18 +90,34 @@ const PERFIL_COLS: Record<string, string> = {
 /* ------------------------------------------------------------- adaptador */
 
 export class CloudAdapter implements Adapter {
+  private revisiones = new Map<string, string>();
   constructor(
     private client: SupabaseClient,
     private userId: string,
   ) {}
 
+  private async historial(tabla: "dias" | "composicion"): Promise<Record<string, unknown>[]> {
+    const filas: Record<string, unknown>[] = [];
+    const bloque = 500;
+    for (let desde = 0; ; desde += bloque) {
+      const { data, error } = await this.client.from(tabla).select("*").eq("user_id", this.userId)
+        .order("fecha").range(desde, desde + bloque - 1);
+      if (error) throw error;
+      filas.push(...(data || []));
+      if (!data || data.length < bloque) return filas;
+    }
+  }
+
   async load(): Promise<StoreData> {
-    const [perfilRes, diasRes, compRes] = await Promise.all([
+    const [perfilRes, diasFilas, compFilas] = await Promise.all([
       this.client.from("perfiles").select("*").eq("user_id", this.userId).maybeSingle(),
-      this.client.from("dias").select("*").eq("user_id", this.userId).order("fecha"),
-      this.client.from("composicion").select("*").eq("user_id", this.userId).order("fecha"),
+      this.historial("dias"),
+      this.historial("composicion"),
     ]);
-    for (const r of [perfilRes, diasRes, compRes]) if (r.error) throw r.error;
+    if (perfilRes.error) throw perfilRes.error;
+    for (const [tabla, filas] of [["dias", diasFilas], ["composicion", compFilas], ["perfiles", perfilRes.data ? [perfilRes.data] : []]] as const) {
+      for (const fila of filas) if (typeof fila.actualizado_en === "string") this.revisiones.set(`${tabla}:${fila.fecha ?? "perfil"}`, fila.actualizado_en);
+    }
 
     const perfil: Perfil = { ...PERFIL_DEFECTO };
     if (perfilRes.data) {
@@ -119,37 +135,49 @@ export class CloudAdapter implements Adapter {
     }
 
     const dias: StoreData["dias"] = {};
-    for (const fila of (diasRes.data as DiaFila[]) || []) dias[fila.fecha] = diaDesdeFila(fila);
+    for (const fila of diasFilas as unknown as DiaFila[]) dias[fila.fecha] = diaDesdeFila(fila);
 
     return {
       perfil,
       dias,
-      composicion: ((compRes.data as Record<string, unknown>[]) || []).map(compDesdeFila),
+      composicion: compFilas.map(compDesdeFila),
     };
   }
 
-  async guardarDia(dia: Dia) {
-    const { error } = await this.client
-      .from("dias")
-      .upsert(diaAFila(dia, this.userId), { onConflict: "user_id,fecha" });
+  private async guardarFila(tabla: "dias" | "composicion" | "perfiles", fila: Record<string, unknown>) {
+    const clave = `${tabla}:${fila.fecha ?? "perfil"}`;
+    const revision = this.revisiones.get(clave);
+    let query;
+    if (revision) {
+      let update = this.client.from(tabla).update(fila).eq("user_id", this.userId).eq("actualizado_en", revision);
+      if (fila.fecha) update = update.eq("fecha", fila.fecha);
+      query = update.select("actualizado_en").maybeSingle();
+    } else query = this.client.from(tabla).insert(fila).select("actualizado_en").single();
+    const { data, error } = await query;
+    if (error?.code === "23505" || (!error && !data)) throw new Error("Conflicto: otro dispositivo cambió el registro. Recarga y revisa antes de reintentar.");
     if (error) throw error;
+    if (!data) throw new Error("No se confirmó el guardado. Recarga antes de reintentar.");
+    this.revisiones.set(clave, data.actualizado_en);
+  }
+
+  async guardarDia(dia: Dia) {
+    await this.guardarFila("dias", diaAFila(dia, this.userId));
   }
   async borrarDia(fecha: string) {
     const { error } = await this.client.from("dias").delete().eq("user_id", this.userId).eq("fecha", fecha);
     if (error) throw error;
+    this.revisiones.delete(`dias:${fecha}`);
   }
   async guardarMedicion(m: Composicion) {
-    const { error } = await this.client
-      .from("composicion")
-      .upsert(compAFila(m, this.userId), { onConflict: "user_id,fecha" });
-    if (error) throw error;
+    await this.guardarFila("composicion", compAFila(m, this.userId));
   }
   async borrarMedicion(fecha: string) {
     const { error } = await this.client.from("composicion").delete().eq("user_id", this.userId).eq("fecha", fecha);
     if (error) throw error;
+    this.revisiones.delete(`composicion:${fecha}`);
   }
   async guardarPerfil(perfil: Perfil) {
-    // Upsert completo del perfil: escribimos null para los campos opcionales
+    // Escritura del perfil con revisión: null vacía los campos opcionales
     // ausentes, de modo que vaciar un objetivo (p. ej. proteína) sí se guarde
     // en vez de conservar el valor antiguo.
     const fila: Record<string, unknown> = { user_id: this.userId };
@@ -157,8 +185,7 @@ export class CloudAdapter implements Adapter {
       const v = (perfil as unknown as Record<string, unknown>)[js];
       fila[sql] = v === undefined ? null : v;
     }
-    const { error } = await this.client.from("perfiles").upsert(fila, { onConflict: "user_id" });
-    if (error) throw error;
+    await this.guardarFila("perfiles", fila);
   }
   private async borrarBackups() {
     const bucket = this.client.storage.from("backups");
@@ -175,6 +202,10 @@ export class CloudAdapter implements Adapter {
     if (removeError) throw removeError;
   }
   async borrarTodo() {
+    const { error: cacheError } = await this.client.rpc("clear_my_nutrition_data");
+    // Instalaciones anteriores al caché nutricional no tienen este RPC.
+    // No ocultar errores de permisos, red ni del borrado cuando sí existe.
+    if (cacheError && cacheError.code !== "PGRST202") throw cacheError;
     const resultados = await Promise.all([
       this.client.from("dias").delete().eq("user_id", this.userId),
       this.client.from("composicion").delete().eq("user_id", this.userId),

@@ -168,8 +168,8 @@ export default function ProgresoPage() {
   }, [estado, historial, intervaloHoy, r, rango]);
 
   async function borrarPesaje(fecha: string) {
-    if (medicion(fecha)) await borrarMedicion(fecha);
-    await actualizarDia(fecha, { peso: undefined });
+    if (medicion(fecha)) { if (!await borrarMedicion(fecha)) return; }
+    else if (!await actualizarDia(fecha, { peso: undefined })) return;
     setConfirmBorrar(null);
   }
 
@@ -311,9 +311,14 @@ export default function ProgresoPage() {
               </div>
               <div className="border-t border-border bg-card px-5 py-5 sm:px-6 sm:py-6">
                 <div className="mb-3 flex items-end justify-between gap-4">
-                  <div><p className="text-sm font-semibold">Validación sin mirar el futuro</p><p className="mt-0.5 text-xs text-muted-foreground">Cada predicción se calcula usando únicamente los pesajes anteriores.</p></div>
+                  <div><p className="text-sm font-semibold">Cómo se comportó con tu historial</p><p className="mt-0.5 text-xs text-muted-foreground">Se oculta cada siguiente pesaje y se usan los anteriores y los hábitos del tramo.</p></div>
                   {r.prediccion.hoy && <span className="hidden text-right text-xs tabular text-muted-foreground sm:block">Rango de hoy<br /><strong className="font-semibold text-foreground">{fmtPeso(r.prediccion.hoy.minimo)}–{fmtPeso(r.prediccion.hoy.maximo)} kg</strong></span>}
                 </div>
+                <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                  {r.prediccion.modelo?.errorUltimoPesoKg != null ? `Sin modelo, repetir el último peso habría tenido un error medio de ${fmtPeso(r.prediccion.modelo.errorUltimoPesoKg)} kg. ` : "Añade pesajes en fechas distintas para comparar el modelo con repetir el último peso. "}
+                  {r.prediccion.modelo?.coberturaIntervaloPct != null ? `En el ensayo histórico, bandas fijadas con errores anteriores incluyeron el siguiente peso en el ${r.prediccion.modelo.coberturaIntervaloPct}% de ${r.prediccion.modelo.intervalosEvaluados} tramos. Esta cobertura no garantiza la del rango de tu proyección futura.` : "Aún faltan tramos para evaluar las bandas del ensayo histórico."}
+                </p>
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">Es una evaluación condicionada a hábitos ya registrados, no una garantía sobre hábitos o peso futuros. Los cambios anteriores de perfil no están historizados.</p>
                 <div className="grid overflow-hidden rounded-xl border border-border bg-secondary/20 sm:grid-cols-3 sm:divide-x sm:divide-border">
                   <ModeloDato icon={Gauge} label="MAE observado" value={r.prediccion.modelo?.errorHistoricoKg != null ? `${fmtPeso(r.prediccion.modelo.errorHistoricoKg)} kg` : "—"} detail="error absoluto medio del backtest" />
                   <ModeloDato icon={Ruler} label="80% de los tramos" value={r.prediccion.modelo?.errorHistoricoP80Kg != null ? `≤ ${fmtPeso(r.prediccion.modelo.errorHistoricoP80Kg)} kg` : "—"} detail="error que no se superó en 8 de cada 10 casos" />

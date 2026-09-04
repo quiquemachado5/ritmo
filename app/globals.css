@@ -10,7 +10,31 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Una misma geometría de controles; los switches conservan su forma nativa. */
+.settings-card :is(input, select, [data-slot="button"], button[aria-pressed]) {
+  border-radius: 0.5rem;
+  min-height: 2.75rem;
+}
+.settings-row [data-slot="input"] { width: 100%; text-align: start; }
+@media (min-width: 640px) {
+  .settings-row [data-slot="input"] { max-width: 15rem; text-align: end; }
+}
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]), textarea, select { font-size: max(1rem, 1em); }
+}
+:where(button, a, summary, select):focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}
+
 :root {
+  --constancia-0: #c67468;
+  --constancia-1: #d89563;
+  --constancia-2: #dab069;
+  --constancia-3: #c4be7b;
+  --constancia-4: #9bba89;
+  --constancia-5: #5b9c76;
+  --constancia-6: #1f6b53;
   --radius: 0.9rem;
 
   /* --- Superficies (papel cálido, no clínico) --------------------------- */
@@ -79,6 +103,13 @@
 }
 
 .dark {
+  --constancia-0: #b56559;
+  --constancia-1: #b87d50;
+  --constancia-2: #b29657;
+  --constancia-3: #a2a064;
+  --constancia-4: #829f72;
+  --constancia-5: #5cac7a;
+  --constancia-6: #37c58c;
   --background: #0b0f0d;          /* carbón cálido con matiz verde */
   --foreground: #f0eee6;
   --card: #151a16;

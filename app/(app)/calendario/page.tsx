@@ -152,7 +152,7 @@ function CalendarioContenido({ fechaInicial }: { fechaInicial: string }) {
   );
 }
 
-function NotaContexto({ fecha, inicial, onGuardar }: { fecha: string; inicial?: string; onGuardar: (notas: string | undefined) => Promise<void> }) {
+function NotaContexto({ fecha, inicial, onGuardar }: { fecha: string; inicial?: string; onGuardar: (notas: string | undefined) => Promise<boolean> }) {
   const [texto, setTexto] = React.useState(inicial ?? "");
   const [guardando, setGuardando] = React.useState(false);
 

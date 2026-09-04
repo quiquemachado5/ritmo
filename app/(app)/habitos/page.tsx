@@ -73,12 +73,12 @@ export default function HabitosPage() {
             <div><h2 className="font-display text-lg font-bold">Últimos 7 días</h2><p className="mt-0.5 text-xs text-muted-foreground">Tu ritmo reciente, de un vistazo.</p></div>
             <div className="shrink-0 text-right"><p className={cn("font-display text-3xl font-bold leading-none tabular", tonoSemana.tinta)}>{r.habitos.adherencia7}%</p><p className="mt-1 text-[0.65rem] font-medium uppercase tracking-[0.1em] text-muted-foreground">constancia</p></div>
           </div>
-          <div className="grid grid-cols-7 gap-1.5" role="list" aria-label="Cumplimiento de hábitos de los últimos siete días">
+          <div className="grid grid-cols-7 gap-1 sm:gap-1.5" role="list" aria-label="Cumplimiento de hábitos de los últimos siete días">
             {semanaReciente.map((d) => {
               const altura = (d.cumplidos / activos.length) * 100;
               const tono = tonoCumplimiento(d.cumplidos, activos.length);
-              return <div key={d.fecha} role="listitem" aria-label={`${DIAS_SEMANA[diaSemanaLunes(d.fecha)]}: ${d.cumplidos} de ${activos.length} hábitos`} className={cn("min-w-0 rounded-xl border p-1.5 text-center sm:p-2", tono.superficie, d.esHoy && "ring-1 ring-habit-border")}>
-                <p className={cn("truncate text-[0.65rem] font-semibold sm:text-xs", d.esHoy ? "text-habit-ink" : "text-muted-foreground")}>{DIAS_SEMANA[diaSemanaLunes(d.fecha)]}</p>
+              return <div key={d.fecha} role="listitem" aria-label={`${DIAS_SEMANA[diaSemanaLunes(d.fecha)]}: ${d.cumplidos} de ${activos.length} hábitos`} className={cn("min-w-0 rounded-xl border px-0.5 py-1.5 text-center sm:p-2", tono.superficie, d.esHoy && "ring-1 ring-habit-border")}>
+                <p className={cn("text-[0.65rem] font-semibold sm:text-xs", d.esHoy ? "text-habit-ink" : "text-muted-foreground")}>{DIAS_SEMANA[diaSemanaLunes(d.fecha)]}</p>
                 <div className="mt-2 flex h-11 items-end rounded-lg bg-card/85 p-1" aria-hidden="true">
                   <div className={cn("w-full rounded-md transition-[height] duration-500", tono.barra)} style={{ height: `${altura}%` }} />
                 </div>

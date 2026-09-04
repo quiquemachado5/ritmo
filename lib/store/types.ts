@@ -10,6 +10,7 @@ export type Modo = "nube" | "local";
 
 /** Contrato común de persistencia. Idéntico para local y para la nube. */
 export interface Adapter {
+  hydrationSource?: "cloud" | "backup";
   load(): Promise<StoreData>;
   guardarDia(dia: Dia): Promise<void>;
   borrarDia(fecha: string): Promise<void>;

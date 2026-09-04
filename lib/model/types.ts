@@ -29,6 +29,9 @@ export interface Comida {
   fuente?: "gemini" | "edamam" | "offline" | "claude" | "manual";
   estimado?: boolean;
   creado?: string; // ISO datetime
+  ingredientes?: import("../nutrition/types").ItemNutricional[];
+  racionesReceta?: number;
+  porcionConsumida?: number;
 }
 
 export interface Dia {

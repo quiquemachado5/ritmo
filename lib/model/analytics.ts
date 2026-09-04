@@ -536,6 +536,10 @@ export interface BacktestModelo {
   errorP80Kg: number | null;
   mejoraPct: number | null;
   dentroMedioKg: number;
+  errorUltimoPesoKg: number | null;
+  coberturaIntervaloPct: number | null;
+  intervalosEvaluados: number;
+  radio80DiarioKg: number | null;
 }
 
 /**
@@ -551,6 +555,11 @@ export function backtestModelo(estado: Estado): BacktestModelo {
   let evaluados = 0;
   let dentroMedioKg = 0;
   const erroresPersonal: number[] = [];
+  const residuosDiarios: number[] = [];
+  let errorUltimoPeso = 0;
+  let intervalosEvaluados = 0;
+  let intervalosAcertados = 0;
+  const percentil80 = (valores: number[]) => [...valores].sort((a, b) => a - b)[Math.max(0, Math.ceil(valores.length * 0.8) - 1)];
 
   for (let i = 3; i < tramos.length; i++) {
     const tramo = tramos[i];
@@ -560,6 +569,14 @@ export function backtestModelo(estado: Estado): BacktestModelo {
     const deltaPersonal = ((tramo.balanceBase + ajuste) * tramo.dias) / M.KCAL_POR_KG;
     const errorB = Math.abs(deltaBase - tramo.deltaRealKg);
     const errorP = Math.abs(deltaPersonal - tramo.deltaRealKg);
+    // El intervalo del tramo también se fija ANTES de conocer su peso final.
+    if (residuosDiarios.length >= 5) {
+      const radio = Math.max(0.3, percentil80(residuosDiarios) * Math.sqrt(tramo.dias));
+      intervalosEvaluados++;
+      if (errorP <= radio) intervalosAcertados++;
+    }
+    residuosDiarios.push(errorP / Math.sqrt(tramo.dias));
+    errorUltimoPeso += Math.abs(tramo.deltaRealKg);
     errorBase += errorB;
     errorPersonal += errorP;
     erroresPersonal.push(errorP);
@@ -578,6 +595,10 @@ export function backtestModelo(estado: Estado): BacktestModelo {
     errorP80Kg: p80 === null ? null : redondearPeso(p80),
     mejoraPct: base && personal !== null ? Math.round((1 - personal / base) * 100) : null,
     dentroMedioKg,
+    errorUltimoPesoKg: evaluados ? redondearPeso(errorUltimoPeso / evaluados) : null,
+    coberturaIntervaloPct: intervalosEvaluados ? Math.round(100 * intervalosAcertados / intervalosEvaluados) : null,
+    intervalosEvaluados,
+    radio80DiarioKg: residuosDiarios.length >= 5 ? percentil80(residuosDiarios) : null,
   };
   cacheBacktest.set(estado, { version: estado.version ?? 0, valor });
   return valor;
@@ -700,6 +721,9 @@ export interface ModeloProyeccion {
   prediccionesEvaluadas: number;
   aciertosMedioKgPct: number | null;
   mejoraHistoricaPct: number | null;
+  errorUltimoPesoKg: number | null;
+  coberturaIntervaloPct: number | null;
+  intervalosEvaluados: number;
 }
 
 export interface ProyeccionConfiable {
@@ -735,7 +759,7 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
   const validacion = backtestModelo(estado);
   const desde = sumarDias(ultimo.fecha, 1);
   let balanceDesdeBascula = 0;
-  const errorHistorico = personalizacion.errorMedioKg ?? 0.25;
+  const errorHistorico = validacion.errorPersonalKg ?? 0.5;
   let errorKcalCuadrado = (Math.max(0.25, errorHistorico * 0.7) * M.KCAL_POR_KG) ** 2;
   let diasConDato = 0;
   let diasImputados = 0;
@@ -838,6 +862,9 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
       prediccionesEvaluadas: validacion.tramos,
       aciertosMedioKgPct: validacion.tramos ? Math.round((validacion.dentroMedioKg / validacion.tramos) * 100) : null,
       mejoraHistoricaPct: validacion.mejoraPct,
+      errorUltimoPesoKg: validacion.errorUltimoPesoKg,
+      coberturaIntervaloPct: validacion.coberturaIntervaloPct,
+      intervalosEvaluados: validacion.intervalosEvaluados,
     },
     diasSinPesaje,
     pesajes: puntos.length,
@@ -1138,6 +1165,7 @@ export function recordsPersonales(estado: Estado): RecordsPersonales {
 /* ---------------------------------------------------------------- BIBLIOTECA */
 
 export interface ComidaGuardada {
+  ingredientes?: Comida["ingredientes"];
   clave: string;   // "tipo:texto normalizado" — identidad estable
   texto: string;   // etiqueta a mostrar (la más reciente)
   tipo: TipoComida;
@@ -1182,6 +1210,7 @@ export function bibliotecaComidas(
           prev.carbohidratos = c.carbohidratos;
           prev.grasas = c.grasas;
           prev.estimado = c.estimado;
+          prev.ingredientes = c.ingredientes;
         }
       } else {
         mapa.set(clave, {
@@ -1193,6 +1222,7 @@ export function bibliotecaComidas(
           carbohidratos: c.carbohidratos,
           grasas: c.grasas,
           estimado: c.estimado,
+          ingredientes: c.ingredientes,
           veces: 1,
           ultima: d.fecha,
         });

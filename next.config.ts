@@ -25,6 +25,8 @@ const nextConfig: NextConfig = {
   /* Security headers */
   async headers() {
     const desarrollo = process.env.NODE_ENV !== 'production';
+    const supabaseOrigin = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://example.supabase.co').origin;
+    const supabaseSocket = supabaseOrigin.replace(/^http/, 'ws');
     const contentSecurityPolicy = [
       "default-src 'self'",
       "base-uri 'self'",
@@ -35,7 +37,7 @@ const nextConfig: NextConfig = {
       "font-src 'self' data:",
       "style-src 'self' 'unsafe-inline'",
       `script-src 'self' 'unsafe-inline'${desarrollo ? " 'unsafe-eval'" : ''}`,
-      `connect-src 'self' https://*.supabase.co wss://*.supabase.co${desarrollo ? ' ws:' : ''}`,
+      `connect-src 'self' ${supabaseOrigin} ${supabaseSocket}${desarrollo ? ' ws:' : ''}`,
       desarrollo ? '' : "upgrade-insecure-requests",
     ].filter(Boolean).join('; ');
     return [

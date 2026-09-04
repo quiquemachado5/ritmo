@@ -314,6 +314,11 @@ describe("Calibración personalizada", () => {
     expect(backtest.errorPersonalKg!).toBeLessThan(0.7);
     expect(backtest.errorP80Kg).not.toBeNull();
     expect(backtest.errorP80Kg!).toBeGreaterThanOrEqual(backtest.errorPersonalKg!);
+    expect(backtest.errorUltimoPesoKg).not.toBeNull();
+    expect(backtest.intervalosEvaluados).toBe(backtest.tramos - 5);
+    expect(backtest.coberturaIntervaloPct).toBeGreaterThanOrEqual(0);
+    expect(backtest.coberturaIntervaloPct).toBeLessThanOrEqual(100);
+    expect(backtest.radio80DiarioKg).toBeGreaterThan(0);
   });
 
   it("mantiene la biología como prior para una persona nueva", () => {

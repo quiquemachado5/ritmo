@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 import { estimarOffline } from "../offline";
 
 describe("estimador offline de comidas detalladas", () => {
+  it("conserva las comas decimales sin confundirlas con separadores", () => {
+    const decimal = estimarOffline("1,5 kg de patata, 20 g de pan");
+    const entero = estimarOffline("1500 g de patata con 20 g de pan");
+    expect(decimal.items).toEqual(entero.items);
+    expect(decimal.items[0].cantidad).toBe("1500 g");
+  });
   it("cuenta los ingredientes energéticos que suelen omitirse", () => {
     const resultado = estimarOffline("220 g de pechuga de pavo con 25 ml de AOVE, 20 g de pecorino y 80 g de canónigos");
     expect(resultado.kcal).toBeGreaterThan(500);

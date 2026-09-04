@@ -98,11 +98,12 @@ export default function HoyPage() {
         </SectionLabel>
         <Card className="p-4 sm:p-5">
           <div className="mb-4 flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
-            <div><p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Lectura principal</p><h2 className="mt-1 font-display text-xl font-bold">{lecturaPrincipal}</h2></div>
+            <div><h2 className="font-display text-xl font-bold">{lecturaPrincipal}</h2><p className="mt-1 text-sm text-muted-foreground">{habitosHechos === habitosActivos.length ? "Por hoy, tu base está completa." : "Un paso cada vez. Lo demás puede esperar."}</p></div>
             <div className="flex flex-wrap gap-2">
-              {comidas.length === 0 && <Button size="sm" onClick={() => abrir("comida")} className="gap-1.5"><Plus className="size-3.5" /> Añadir comida</Button>}
-              {habitosHechos < habitosActivos.length && <Button size="sm" variant="secondary" onClick={() => abrir("habitos")} className="gap-1.5"><CheckCircle2 className="size-3.5" /> Revisar hábitos</Button>}
-              {r.peso.actual == null && <Button size="sm" variant="secondary" onClick={() => abrir("peso")} className="gap-1.5"><Scale className="size-3.5" /> Añadir peso</Button>}
+              {habitosHechos < habitosActivos.length ? <Button size="sm" onClick={() => abrir("habitos")} className="gap-1.5"><CheckCircle2 className="size-3.5" /> Revisar hábitos</Button>
+                : r.peso.actual == null ? <Button size="sm" onClick={() => abrir("peso")} className="gap-1.5"><Scale className="size-3.5" /> Añadir primer peso</Button>
+                : comidas.length === 0 ? <Button size="sm" variant="secondary" onClick={() => abrir("comida")} className="gap-1.5"><Plus className="size-3.5" /> Añadir comida, si quieres</Button>
+                : <Link href="/minimo" className="text-sm font-medium text-primary underline underline-offset-4">Quedarme con lo esencial</Link>}
             </div>
           </div>
           <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] items-center gap-3 sm:flex sm:gap-7">
@@ -142,7 +143,7 @@ export default function HoyPage() {
                   <div className="flex items-center gap-2.5">
                     <Target className={cn("size-5", tonos.text)} />
                     <div>
-                      <p className={cn("text-sm font-bold", tonos.text)}>Balance del día</p>
+                      <p className={cn("text-sm font-bold", tonos.text)}>Hábitos de hoy</p>
                       <p className="text-xs text-muted-foreground">{frase}</p>
                     </div>
                   </div>

@@ -18,11 +18,11 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><rect fill='%231f6b53' width='48' height='48' rx='10'/><text x='50%' y='50%' font-size='32' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='central'>R</text></svg>",
-        type: "image/svg+xml",
+        url: "/icon",
+        type: "image/png",
       },
     ],
-    apple: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231f6b53' width='180' height='180' rx='40'/><text x='90' y='90' font-size='100' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='central'>R</text></svg>",
+    apple: "/icon",
   },
   manifest: "/manifest.json",
   appleWebApp: {
