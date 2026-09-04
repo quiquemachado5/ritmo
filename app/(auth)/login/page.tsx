@@ -13,6 +13,10 @@ import { loginRateLimiter, validateEmail } from "@/lib/validation";
 import { transitionCSS, springBezier, stagger } from "@/lib/transitions";
 import { rutaInternaSegura } from "@/lib/auth-redirect";
 
+const suscribirCliente = () => () => {};
+const clientePreparado = () => true;
+const servidorPreparado = () => false;
+
 export default function LoginPage() {
   return (
     <React.Suspense fallback={null}>
@@ -22,6 +26,9 @@ export default function LoginPage() {
 }
 
 function LoginForm() {
+  // Impide escribir sobre el HTML estático antes de que React controle los
+  // campos: en WebKit ese texto podía perderse durante la hidratación.
+  const preparado = React.useSyncExternalStore(suscribirCliente, clientePreparado, servidorPreparado);
   const router = useRouter();
   const params = useSearchParams();
   const [email, setEmail] = React.useState("");
@@ -46,6 +53,7 @@ function LoginForm() {
 
   async function entrar(e: React.FormEvent) {
     e.preventDefault();
+    if (!preparado || cargando) return;
     setError(null);
     setShaking(false);
 
@@ -132,7 +140,8 @@ function LoginForm() {
               </div>
             )}
 
-            <form onSubmit={entrar} className="space-y-3">
+            <form onSubmit={entrar} aria-busy={!preparado || cargando}>
+              <fieldset disabled={!preparado || cargando} className="space-y-3">
               <div style={stagger(1)}>
                 <Label htmlFor="email" className="text-sm font-semibold mb-1.5 block">Email</Label>
                 <div className="relative">
@@ -206,6 +215,7 @@ function LoginForm() {
                   <>Iniciar sesión<ArrowRight className="size-3.5 ml-1.5" /></>
                 )}
               </ButtonRipple>
+              </fieldset>
             </form>
 
             <div style={stagger(5)}>

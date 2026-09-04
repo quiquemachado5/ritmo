@@ -28,6 +28,7 @@ import { Metric, SectionLabel, Chip, EmptyState } from "@/components/app/primiti
 import { capitalizar, fmtPeso, fmtSigno, fmtNum, fmtFechaCorta, relativo } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { DataLegend } from "@/components/app/data-legend";
+import { ModelAudit } from "@/components/app/model-audit";
 
 const WeightChart = dynamic(() => import("@/components/app/charts").then((m) => m.WeightChart), { loading: () => <Skeleton className="h-72 w-full rounded-xl" /> });
 const CompositionChart = dynamic(() => import("@/components/app/charts").then((m) => m.CompositionChart), { loading: () => <Skeleton className="h-64 w-full rounded-xl" /> });
@@ -290,6 +291,7 @@ export default function ProgresoPage() {
                 </span>
                 <Chip tone={CALIDAD_TONE[r.prediccion.modelo?.calidad ?? "inicial"]}>{CALIDAD_LABEL[r.prediccion.modelo?.calidad ?? "inicial"]}</Chip>
               </summary>
+              <ModelAudit />
               <div className="grid divide-y divide-border sm:grid-cols-[minmax(0,1.15fr)_minmax(14rem,.85fr)] sm:divide-x sm:divide-y-0">
                 <div className="p-5 sm:p-6">
                   <p className="text-sm font-semibold">Días que sostienen la tendencia</p>
@@ -318,7 +320,7 @@ export default function ProgresoPage() {
                   {r.prediccion.modelo?.errorUltimoPesoKg != null ? `Sin modelo, repetir el último peso habría tenido un error medio de ${fmtPeso(r.prediccion.modelo.errorUltimoPesoKg)} kg. ` : "Añade pesajes en fechas distintas para comparar el modelo con repetir el último peso. "}
                   {r.prediccion.modelo?.coberturaIntervaloPct != null ? `En el ensayo histórico, bandas fijadas con errores anteriores incluyeron el siguiente peso en el ${r.prediccion.modelo.coberturaIntervaloPct}% de ${r.prediccion.modelo.intervalosEvaluados} tramos. Esta cobertura no garantiza la del rango de tu proyección futura.` : "Aún faltan tramos para evaluar las bandas del ensayo histórico."}
                 </p>
-                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">Es una evaluación condicionada a hábitos ya registrados, no una garantía sobre hábitos o peso futuros. Los cambios anteriores de perfil no están historizados.</p>
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">Es un ensayo retrospectivo condicionado a hábitos ya registrados, no una predicción guardada ni una garantía sobre el futuro. Las fechas anteriores al primer historial de configuración usan un supuesto inicial fijo, no ajustes observados entonces.</p>
                 <div className="grid overflow-hidden rounded-xl border border-border bg-secondary/20 sm:grid-cols-3 sm:divide-x sm:divide-border">
                   <ModeloDato icon={Gauge} label="MAE observado" value={r.prediccion.modelo?.errorHistoricoKg != null ? `${fmtPeso(r.prediccion.modelo.errorHistoricoKg)} kg` : "—"} detail="error absoluto medio del backtest" />
                   <ModeloDato icon={Ruler} label="80% de los tramos" value={r.prediccion.modelo?.errorHistoricoP80Kg != null ? `≤ ${fmtPeso(r.prediccion.modelo.errorHistoricoP80Kg)} kg` : "—"} detail="error que no se superó en 8 de cada 10 casos" />

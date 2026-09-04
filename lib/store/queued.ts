@@ -9,7 +9,7 @@ type Op =
   | { type: "guardarMedicion"; payload: Composicion }
   | { type: "borrarMedicion"; payload: string }
   | { type: "guardarPerfil"; payload: Perfil };
-type Entrada = Op & { id: string; bloqueada?: boolean; revision: number };
+type Entrada = Op & { id: string; bloqueada?: boolean; revision: number; revisionRemota?: string | null };
 export interface EstadoCola { pendientes: number; requiereAtencion: boolean; sincronizando: boolean }
 const listeners = new Set<(estado: EstadoCola) => void>();
 let estadoCola: EstadoCola = { pendientes: 0, requiereAtencion: false, sincronizando: false };
@@ -61,10 +61,14 @@ export class QueuedAdapter implements Adapter {
     this.key = "ritmo:writequeue:" + userId;
     const raw = localStorage.getItem(this.key);
     const datos: unknown = raw ? JSON.parse(raw) : [];
-    if (!Array.isArray(datos) || datos.some(o => !o || !["guardarDia", "borrarDia", "guardarMedicion", "borrarMedicion", "guardarPerfil"].includes(o.type) || !o.payload)) {
+    if (!Array.isArray(datos) || datos.some(o => !o || !["guardarDia", "borrarDia", "guardarMedicion", "borrarMedicion", "guardarPerfil"].includes(o.type) || !o.payload || (o.revisionRemota !== undefined && o.revisionRemota !== null && typeof o.revisionRemota !== "string"))) {
       throw new Error("No se pudo leer la cola local. Conserva una copia del dispositivo antes de limpiarlo.");
     }
-    this.cola = datos.map(o => ({ ...o, id: o.id || crypto.randomUUID(), revision: ++this.revision }));
+    this.cola = datos.map(o => ({ ...o, id: o.id || crypto.randomUUID(), revision: ++this.revision,
+      // Una cola antigua no incluía revisión: no inventar una precondición
+      // tomando la revisión más reciente y sobrescribir otro dispositivo.
+      revisionRemota: o.revisionRemota === undefined && this.inner.revisionActual ? null : o.revisionRemota,
+    }));
     // La instancia activa es el destino explícito del botón global Reintentar.
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     activo = this;
@@ -82,18 +86,27 @@ export class QueuedAdapter implements Adapter {
     estadoCola = { pendientes: this.cola.length, requiereAtencion: this.cola.some(o => o.bloqueada), sincronizando: Boolean(this.vuelo) };
     listeners.forEach(l => l(estadoCola));
   }
-  private ejecutar(op: Op): Promise<void> {
+  private revisionRemota(op: Op): string | null | undefined {
+    if (!this.inner.revisionActual) return undefined;
+    const tipo = op.type === "guardarPerfil" ? "perfil" : op.type.includes("Dia") ? "dia" : "medicion";
+    const fecha = op.type === "guardarPerfil" ? undefined : typeof op.payload === "string" ? op.payload : op.payload.fecha;
+    // Sin una carga remota previa no hay prueba de la revisión: exigir que
+    // no exista evita sobrescribir datos conocidos solo por una copia offline.
+    return this.inner.revisionActual(tipo, fecha) ?? null;
+  }
+  private ejecutar(op: Entrada): Promise<void> {
+    const condicion = { revisionEsperada: op.revisionRemota };
     switch (op.type) {
-      case "guardarDia": return this.inner.guardarDia(op.payload);
-      case "borrarDia": return this.inner.borrarDia(op.payload);
-      case "guardarMedicion": return this.inner.guardarMedicion(op.payload);
-      case "borrarMedicion": return this.inner.borrarMedicion(op.payload);
-      case "guardarPerfil": return this.inner.guardarPerfil(op.payload);
+      case "guardarDia": return this.inner.guardarDia(op.payload, condicion);
+      case "borrarDia": return this.inner.borrarDia(op.payload, condicion);
+      case "guardarMedicion": return this.inner.guardarMedicion(op.payload, condicion);
+      case "borrarMedicion": return this.inner.borrarMedicion(op.payload, condicion);
+      case "guardarPerfil": return this.inner.guardarPerfil(op.payload, condicion);
     }
   }
   private async intentar(op: Op) {
     if (this.cerrado) throw new Error("La cuenta ha cambiado. Abre de nuevo el registro.");
-    const entrada: Entrada = { ...structuredClone(op), id: crypto.randomUUID(), revision: ++this.revision };
+    const entrada: Entrada = { ...structuredClone(op), id: crypto.randomUUID(), revision: ++this.revision, revisionRemota: this.revisionRemota(op) };
     this.escribir([...this.cola.filter(o => o.id === this.vuelo || claveOp(o) !== claveOp(op)), entrada]);
     this.recientes.push(entrada);
     await this.flush();
@@ -114,7 +127,10 @@ export class QueuedAdapter implements Adapter {
       this.notificar();
       try {
         await this.ejecutar(op);
-        this.escribir(this.cola.filter(o => o.id !== op.id));
+        // Una segunda edición propia depende de esta confirmación, no de la
+        // revisión anterior que había cuando se pulsó por segunda vez.
+        const revisionRemota = this.revisionRemota(op);
+        this.escribir(this.cola.filter(o => o.id !== op.id).map(o => claveOp(o) === claveOp(op) ? { ...o, revisionRemota } : o));
       } catch (e) {
         if (!esErrorDeRed(e)) {
           try { this.escribir(this.cola.map(o => o.id === op.id ? { ...o, bloqueada: true } : o)); }
@@ -131,7 +147,7 @@ export class QueuedAdapter implements Adapter {
   async reintentar() {
     // Actualiza las revisiones remotas antes de una resolución explícita.
     await this.inner.load();
-    this.escribir(this.cola.map(o => ({ ...o, bloqueada: false })));
+    this.escribir(this.cola.map(o => ({ ...o, bloqueada: false, revisionRemota: this.revisionRemota(o) })));
     await this.flush();
   }
   async load(): Promise<StoreData> {

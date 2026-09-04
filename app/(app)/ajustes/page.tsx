@@ -18,45 +18,101 @@ import { limpiarDatosLocales, marcarExportacion, diasDesdeExportacion, leerBacku
 import { limpiarPreferenciasComidas } from "@/lib/meal-prefs";
 import { fmtFechaCorta } from "@/lib/format";
 import { cn, uid } from "@/lib/utils";
-import type { Objetivo, Sexo } from "@/lib/model/types";
+import type { Objetivo, Sexo, Perfil } from "@/lib/model/types";
 import { guardarModoViaje, useModoViaje } from "@/lib/travel-mode";
 import { analizarImportacion, type ArchivoRitmo, type ResumenImportacion } from "@/lib/store/import";
 import { HABITOS, habitosModelo, habitosUsuario } from "@/lib/model/config";
-import { validarPerfil } from "@/lib/profile-validation";
+import { erroresPerfil } from "@/lib/profile-validation";
 import { diagnosticoCompartido, permitirDiagnostico } from "@/lib/observability";
 import { EXTERNAL_NUTRITION_ENABLED } from "@/lib/nutrition/policy";
 
 type Densidad = "compacta" | "espaciosa";
+const CAMPOS_NUMERICOS = ["edad", "alturaCm", "pesoObjetivo", "kcalObjetivo", "proteinaObjetivo"] as const;
+type CampoNumerico = typeof CAMPOS_NUMERICOS[number];
+function numerosDelPerfil(perfil: Perfil): Record<CampoNumerico, string> {
+  return Object.fromEntries(CAMPOS_NUMERICOS.map(campo => [campo, perfil[campo] == null ? "" : String(perfil[campo])])) as Record<CampoNumerico, string>;
+}
 
 export default function AjustesPage() {
   const { estado, cargando, modo, userId, userEmail, actualizarPerfil, exportar, importar, cerrarSesion, borrarDatos } = useRitmo();
   const { theme, setTheme } = useTheme();
   const viaje = useModoViaje(userId);
   const fileRef = React.useRef<HTMLInputElement>(null);
+  const barraGuardarRef = React.useRef<HTMLDivElement>(null);
+  const [barraGuardarFija, setBarraGuardarFija] = React.useState(true);
+  React.useEffect(() => {
+    const barra = barraGuardarRef.current;
+    if (!barra) return;
+    const viewport = window.visualViewport;
+    let frame = 0;
+    const medir = () => {
+      const disponible = viewport?.height ?? window.innerHeight;
+      // Con texto ampliado o teclado abierto, una barra alta debe fluir con
+      // la página, no tapar el formulario. Los botones siempre permanecen.
+      const cabe = barra.getBoundingClientRect().height <= disponible * 0.28;
+      setBarraGuardarFija(anterior => anterior === cabe ? anterior : cabe);
+    };
+    const programar = () => { window.cancelAnimationFrame(frame); frame = window.requestAnimationFrame(medir); };
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(programar);
+    observer?.observe(barra);
+    window.addEventListener("resize", programar);
+    viewport?.addEventListener("resize", programar);
+    programar();
+    return () => {
+      window.cancelAnimationFrame(frame); observer?.disconnect();
+      window.removeEventListener("resize", programar);
+      viewport?.removeEventListener("resize", programar);
+    };
+  }, [cargando]);
 
   const p = estado.perfil;
   const [form, setForm] = React.useState(p);
+  const [numeros, setNumeros] = React.useState(() => numerosDelPerfil(p));
+  const [mostrarErrores, setMostrarErrores] = React.useState(false);
   const [guardandoPerfil, setGuardandoPerfil] = React.useState(false);
+  const [errorGuardado, setErrorGuardado] = React.useState<string | null>(null);
   const dirty = React.useRef(false);
   const cuentaForm = React.useRef(userId);
+  const secuenciaGuardado = React.useRef(0);
+  const guardadoEnCurso = React.useRef<number | null>(null);
+  const generacionCuenta = React.useRef(0);
   // El perfil llega de una fuente externa asíncrona y debe rehidratar el borrador.
   React.useEffect(() => {
-    if (cuentaForm.current !== userId) { dirty.current = false; cuentaForm.current = userId; }
-    if (!dirty.current) setForm(p);
+    if (cuentaForm.current !== userId) {
+      dirty.current = false; cuentaForm.current = userId; generacionCuenta.current += 1;
+      guardadoEnCurso.current = null; setGuardandoPerfil(false); setMostrarErrores(false); setErrorGuardado(null);
+    }
+    if (!dirty.current) { setForm(p); setNumeros(numerosDelPerfil(p)); }
   }, [p, userId]);
+  React.useEffect(() => () => { guardadoEnCurso.current = null; generacionCuenta.current += 1; }, []);
   // Todos los hooks van ANTES de cualquier return: las reglas de hooks exigen
   // el mismo número y orden en cada render (cargando vs cargado incluido).
   const [diasSinExportar, setDiasSinExportar] = React.useState<number | null>(null);
   const [backupInfo, setBackupInfo] = React.useState<{ at: string } | null>(null);
   const [importando, setImportando] = React.useState(false);
+  const importacionEnCurso = React.useRef(false);
   const [previewDatos, setPreviewDatos] = React.useState<ArchivoRitmo | null>(null);
   const [resumenImportacion, setResumenImportacion] = React.useState<ResumenImportacion | null>(null);
   const [densidad, setDensidad] = React.useState<Densidad>("espaciosa");
   const [nombreViaje, setNombreViaje] = React.useState(viaje.etiqueta);
   const [finViaje, setFinViaje] = React.useState(viaje.hasta ?? "");
   const [confirmarBorrado, setConfirmarBorrado] = React.useState(false);
+  const [borrandoDatos, setBorrandoDatos] = React.useState(false);
+  const borradoEnCurso = React.useRef(false);
   const [nuevoHabito, setNuevoHabito] = React.useState("");
   const [diagnostico, setDiagnostico] = React.useState(() => diagnosticoCompartido(userId));
+  React.useEffect(() => {
+    // Ningún borrador, confirmación ni archivo de la cuenta anterior cruza a la nueva.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPreviewDatos(null); setResumenImportacion(null); setImportando(false);
+    importacionEnCurso.current = false; borradoEnCurso.current = false;
+    setConfirmarBorrado(false); setBorrandoDatos(false); setNuevoHabito("");
+  }, [userId]);
+  React.useEffect(() => {
+    // Rehidrata el contexto externo de viaje de la identidad actual.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setNombreViaje(viaje.etiqueta); setFinViaje(viaje.hasta ?? "");
+  }, [userId, viaje.etiqueta, viaje.hasta]);
   React.useEffect(() => {
     // Preferencia externa y privada de la identidad recién cargada.
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -78,16 +134,36 @@ export default function AjustesPage() {
   }, []);
   // g/kg por defecto según objetivo, para el placeholder del campo de proteína.
   const proteinaSugerida = String(form.objetivo === "perder" ? 2.0 : form.objetivo === "ganar" ? 1.8 : 1.6);
-  const perfilPendiente = form.nombre !== p.nombre
-    || form.sexo !== p.sexo
-    || form.edad !== p.edad
-    || form.alturaCm !== p.alturaCm
-    || form.objetivo !== p.objetivo
-    || form.pesoObjetivo !== p.pesoObjetivo
-    || form.kcalObjetivo !== p.kcalObjetivo
-    || form.proteinaObjetivo !== p.proteinaObjetivo
-    || form.factorActividad !== p.factorActividad;
-  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => { dirty.current = true; setForm((f) => ({ ...f, [k]: v })); };
+  // Una escritura parcial (perfil enviado, preferencias locales fallidas)
+  // también debe poder reintentarse aunque la vista optimista ya coincida.
+  const perfilPendiente = JSON.stringify(form) !== JSON.stringify(p) || Boolean(errorGuardado);
+  const errores = mostrarErrores ? erroresPerfil(form) : {};
+  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => { dirty.current = true; setErrorGuardado(null); setForm((f) => ({ ...f, [k]: v })); };
+  const setNumero = (campo: CampoNumerico, texto: string) => {
+    setNumeros(anterior => ({ ...anterior, [campo]: texto }));
+    const opcional = campo === "pesoObjetivo" || campo === "proteinaObjetivo";
+    set(campo, (texto.trim() === "" ? (opcional ? undefined : NaN) : Number(texto.replace(",", "."))) as never);
+  };
+  function descartarPerfil() {
+    dirty.current = false;
+    setForm(p); setNumeros(numerosDelPerfil(p)); setMostrarErrores(false); setNuevoHabito(""); setErrorGuardado(null);
+  }
+  React.useEffect(() => {
+    if (!perfilPendiente) return;
+    const salir = (event: BeforeUnloadEvent) => { if (!dirty.current) return; event.preventDefault(); event.returnValue = ""; };
+    const navegar = (event: MouseEvent) => {
+      if (!dirty.current || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const enlace = event.target instanceof Element ? event.target.closest("a[href]") as HTMLAnchorElement | null : null;
+      if (!enlace || enlace.download || (enlace.target && enlace.target !== "_self")) return;
+      const destino = new URL(enlace.href, window.location.href);
+      if (destino.origin === window.location.origin && destino.pathname === window.location.pathname && destino.search === window.location.search) return;
+      if (!window.confirm("Tienes cambios de perfil sin guardar. ¿Quieres salir y descartarlos?")) { event.preventDefault(); event.stopImmediatePropagation(); }
+      else dirty.current = false; // El permiso de descartar evita una segunda confirmación en beforeunload.
+    };
+    window.addEventListener("beforeunload", salir);
+    document.addEventListener("click", navegar, true);
+    return () => { window.removeEventListener("beforeunload", salir); document.removeEventListener("click", navegar, true); };
+  }, [perfilPendiente]);
 
   function cambiarDensidad(proxima: Densidad) {
     setDensidad(proxima);
@@ -95,21 +171,26 @@ export default function AjustesPage() {
     document.documentElement.setAttribute("data-densidad", proxima);
   }
 
-  async function anadirHabitoPersonal() {
+  function anadirHabitoPersonal() {
     const etiqueta = nuevoHabito.trim().slice(0, 28);
     if (!etiqueta) return;
     const actuales = form.habitosPersonalizados || [];
     if (actuales.some((h) => h.etiqueta.toLocaleLowerCase("es-ES") === etiqueta.toLocaleLowerCase("es-ES"))) { toast.error("Ese hábito ya existe."); return; }
     const siguiente = [...actuales, { clave: `personal-${uid()}`, etiqueta, codigo: etiqueta.slice(0, 3).toUpperCase(), icono: "Check" }];
-    set("habitosPersonalizados", siguiente as never); setNuevoHabito(""); await actualizarPerfil({ habitosPersonalizados: siguiente });
+    set("habitosPersonalizados", siguiente as never); setNuevoHabito("");
   }
 
-  async function quitarHabitoPersonal(clave: string) {
+  function quitarHabitoPersonal(clave: string) {
+    if (!(form.habitosDesactivados || []).includes(clave) && habitosModelo(form).length <= 1) {
+      toast.error("Mantén al menos un hábito activo antes de eliminar este.");
+      return;
+    }
     const siguiente = (form.habitosPersonalizados || []).filter((h) => h.clave !== clave);
-    set("habitosPersonalizados", siguiente as never); await actualizarPerfil({ habitosPersonalizados: siguiente });
+    set("habitosPersonalizados", siguiente as never);
+    set("habitosDesactivados", (form.habitosDesactivados || []).filter(id => id !== clave));
   }
 
-  async function alternarHabitoModelo(clave: string) {
+  function alternarHabitoModelo(clave: string) {
     const actuales = new Set(form.habitosDesactivados || []);
     if (!actuales.has(clave) && habitosModelo(form).length <= 1) {
       toast.error("Mantén al menos un hábito activo para que RITMO pueda interpretar tus días.");
@@ -119,57 +200,34 @@ export default function AjustesPage() {
     else actuales.add(clave);
     const habitosDesactivados = [...actuales];
     set("habitosDesactivados", habitosDesactivados as never);
-    await actualizarPerfil({ habitosDesactivados });
   }
 
   if (cargando) return <div className="flex flex-col gap-6"><Skeleton className="h-8 w-40" /><Skeleton className="h-64 w-full rounded-xl" /></div>;
 
   async function guardarPerfil() {
-    if (guardandoPerfil) return;
-    const edad = Number(form.edad);
-    const altura = Number(form.alturaCm);
-    const pesoObj = form.pesoObjetivo ? Number(form.pesoObjetivo) : undefined;
-    const kcal = Number(form.kcalObjetivo);
-
-    if (!edad || edad < 18 || edad > 120) {
-      toast.error("RITMO está dirigido a personas mayores de 18 años.");
+    if (guardadoEnCurso.current !== null || importacionEnCurso.current || borradoEnCurso.current || !perfilPendiente) return;
+    const validacion = erroresPerfil(form);
+    if (Object.keys(validacion).length) {
+      setMostrarErrores(true);
+      const campo = Object.keys(validacion)[0];
+      document.getElementById(campo === "alturaCm" ? "altura" : campo)?.focus();
       return;
     }
-    if (!altura || altura < 100 || altura > 250) {
-      toast.error("Altura: entre 100 y 250 cm");
-      return;
-    }
-    if (pesoObj && (pesoObj < 30 || pesoObj > 300)) {
-      toast.error("Peso objetivo: entre 30 y 300 kg");
-      return;
-    }
-    if (!kcal || kcal < 800 || kcal > 6000) {
-      toast.error("Calorías objetivo: entre 800 y 6000");
-      return;
-    }
-    const proteina = form.proteinaObjetivo != null && String(form.proteinaObjetivo) !== "" ? Number(form.proteinaObjetivo) : undefined;
-    if (proteina != null && (!Number.isFinite(proteina) || proteina < 0.5 || proteina > 4)) {
-      toast.error("Proteína: entre 0,5 y 4 g/kg (o vacío para automático)");
-      return;
-    }
-
-    const cambios = {
-      nombre: form.nombre,
-      sexo: form.sexo,
-      edad,
-      alturaCm: altura,
-      objetivo: form.objetivo,
-      pesoObjetivo: pesoObj,
-      kcalObjetivo: kcal,
-      proteinaObjetivo: proteina,
-      factorActividad: Number(form.factorActividad),
-    };
-    const error = validarPerfil({ ...form, ...cambios });
-    if (error) { toast.error(error); return; }
+    const cuenta = userId;
+    const operacion = ++secuenciaGuardado.current;
+    guardadoEnCurso.current = operacion;
+    setErrorGuardado(null);
     setGuardandoPerfil(true);
-    const ok = await actualizarPerfil(cambios);
-    setGuardandoPerfil(false);
-    if (ok) { dirty.current = false; toast.success("Perfil guardado"); }
+    try {
+      const ok = await actualizarPerfil({ ...form });
+      if (cuentaForm.current !== cuenta || guardadoEnCurso.current !== operacion) return;
+      if (ok) { dirty.current = false; setMostrarErrores(false); toast.success("Cambios guardados"); }
+      else setErrorGuardado("No se pudo confirmar el guardado. Tus cambios siguen aquí para reintentarlo.");
+    } catch {
+      if (cuentaForm.current === cuenta && guardadoEnCurso.current === operacion) setErrorGuardado("No se pudo guardar. Revisa la conexión y vuelve a intentarlo.");
+    } finally {
+      if (cuentaForm.current === cuenta && guardadoEnCurso.current === operacion) { guardadoEnCurso.current = null; setGuardandoPerfil(false); }
+    }
   }
 
   function descargar() {
@@ -216,59 +274,84 @@ export default function AjustesPage() {
   }
 
   async function subirArchivo(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+    const input = e.currentTarget;
+    const file = input.files?.[0];
     if (!file) return;
+    const generacion = generacionCuenta.current;
     try {
       const datos: unknown = JSON.parse(await file.text());
+      if (generacionCuenta.current !== generacion) return;
       const analisis = analizarImportacion(datos, { perfil: estado.perfil, dias: estado.dias, composicion: estado.composicion });
       if (!analisis.valido) { toast.error(analisis.error); return; }
       setPreviewDatos(datos as ArchivoRitmo);
       setResumenImportacion(analisis);
     } catch {
-      toast.error("Archivo no válido.");
-    }
-    e.target.value = "";
+      if (generacionCuenta.current === generacion) toast.error("Archivo no válido.");
+    } finally { input.value = ""; }
   }
 
   async function confirmarImportacion() {
-    if (!previewDatos) return;
+    if (!previewDatos || importacionEnCurso.current || guardadoEnCurso.current !== null || borradoEnCurso.current) return;
+    if (perfilPendiente && !window.confirm("La importación puede cambiar tu perfil. ¿Quieres descartar los cambios sin guardar y continuar?")) return;
+    const generacion = generacionCuenta.current;
+    importacionEnCurso.current = true;
+    descartarPerfil();
     setImportando(true);
     try {
       await importar(previewDatos);
+      if (generacionCuenta.current !== generacion) return;
       toast.success("Datos importados");
       setPreviewDatos(null); setResumenImportacion(null);
     } catch {
-      toast.error("Error al importar");
+      if (generacionCuenta.current === generacion) toast.error("Error al importar");
+    } finally { if (generacionCuenta.current === generacion) { importacionEnCurso.current = false; setImportando(false); } }
+  }
+
+  async function eliminarDatos() {
+    if (borradoEnCurso.current || guardadoEnCurso.current !== null || importacionEnCurso.current) return;
+    const generacion = generacionCuenta.current;
+    const cuenta = userId;
+    borradoEnCurso.current = true; setBorrandoDatos(true);
+    try {
+      await borrarDatos();
+      if (generacionCuenta.current !== generacion) return;
+      limpiarDatosLocales(cuenta); limpiarPreferenciasComidas();
+      dirty.current = false; setConfirmarBorrado(false);
+      toast.success("Datos de RITMO eliminados");
+    } catch {
+      if (generacionCuenta.current === generacion) toast.error("No se pudieron eliminar los datos.");
+    } finally {
+      if (generacionCuenta.current === generacion) { borradoEnCurso.current = false; setBorrandoDatos(false); }
     }
-    setImportando(false);
   }
 
   return (
     <div className="flex flex-col gap-7">
-      <header className="flex flex-col gap-1 border-b border-border/70 pb-5"><h1 className="font-display text-2xl font-bold tracking-tight">Ajustes</h1><p className="text-sm text-muted-foreground">Perfil, preferencias, datos y cuenta en un único sistema ordenado.</p></header>
+      <header className="flex flex-col gap-1 border-b border-border/70 pb-5"><h1 className="font-display text-2xl font-bold tracking-tight">Ajustes</h1><p className="text-sm text-muted-foreground">Perfil, objetivos y hábitos se guardan juntos. Apariencia y privacidad se aplican al momento.</p></header>
 
       {/* Datos que alimentan el modelo, separados para una lectura más clara. */}
+      <form id="perfil-ajustes" onSubmit={event => { event.preventDefault(); void guardarPerfil(); }}>
+      <fieldset disabled={guardandoPerfil || importando || borrandoDatos} className="flex min-w-0 flex-col gap-7" aria-busy={guardandoPerfil || importando || borrandoDatos}>
       <section>
         <SectionLabel>Datos personales</SectionLabel>
         <SettingsCard>
-          <SettingsSubhead title="Tu perfil" description="La base para calcular tus objetivos con precisión." />
-          <Row label="Nombre" htmlFor="nombre">
-            <Input id="nombre" value={form.nombre ?? ""} onChange={(e) => set("nombre", e.target.value)} className="h-11 w-full rounded-xl sm:w-56" />
+          <SettingsSubhead title="Tu perfil" description="Los datos que orientan las estimaciones de RITMO." />
+          <Row label="Nombre" htmlFor="nombre" error={errores.nombre}>
+            <Input id="nombre" autoComplete="given-name" maxLength={80} aria-invalid={!!errores.nombre} aria-describedby={errores.nombre ? "nombre-error" : undefined} value={form.nombre ?? ""} onChange={(e) => set("nombre", e.target.value)} className="h-11 w-full rounded-xl sm:w-56" />
           </Row>
-          <Row label="Sexo biológico">
-            <div className="flex gap-1.5">
+          <Row label="Sexo biológico" htmlFor="sexo" error={errores.sexo}>
+            <div id="sexo" role="group" aria-label="Sexo biológico" tabIndex={-1} aria-describedby={errores.sexo ? "sexo-error" : undefined} className="flex flex-wrap gap-1.5">
               {(["hombre", "mujer"] as Sexo[]).map((s) => (
                 <Pill key={s} activo={form.sexo === s} onClick={() => set("sexo", s)}>{s === "hombre" ? "Hombre" : "Mujer"}</Pill>
               ))}
             </div>
           </Row>
-          <Row label="Edad" htmlFor="edad">
-            <Input id="edad" inputMode="numeric" value={String(form.edad ?? "")} onChange={(e) => set("edad", Number(e.target.value) as never)} className="h-11 w-full rounded-xl tabular sm:w-28" />
+          <Row label="Edad" htmlFor="edad" error={errores.edad}>
+            <Input id="edad" inputMode="numeric" value={numeros.edad} aria-invalid={!!errores.edad} aria-describedby={errores.edad ? "edad-error" : undefined} onChange={(e) => setNumero("edad", e.target.value)} className="h-11 w-full rounded-xl tabular sm:w-28" />
           </Row>
-          <Row label="Altura (cm)" htmlFor="altura">
-            <Input id="altura" inputMode="numeric" value={String(form.alturaCm ?? "")} onChange={(e) => set("alturaCm", Number(e.target.value) as never)} className="h-11 w-full rounded-xl tabular sm:w-28" />
+          <Row label="Altura (cm)" htmlFor="altura" error={errores.alturaCm}>
+            <Input id="altura" inputMode="numeric" value={numeros.alturaCm} aria-invalid={!!errores.alturaCm} aria-describedby={errores.alturaCm ? "altura-error" : undefined} onChange={(e) => setNumero("alturaCm", e.target.value)} className="h-11 w-full rounded-xl tabular sm:w-28" />
           </Row>
-          <div className="flex items-center justify-between gap-3 border-t border-border pt-4"><p className="text-xs text-muted-foreground" role="status">{perfilPendiente ? "Tienes cambios sin guardar" : "Todo al día"}</p><Button onClick={guardarPerfil} disabled={!perfilPendiente || guardandoPerfil} className="h-11 rounded-lg px-5">{guardandoPerfil ? "Guardando…" : "Guardar cambios"}</Button></div>
         </SettingsCard>
       </section>
 
@@ -276,8 +359,8 @@ export default function AjustesPage() {
         <SectionLabel>Objetivo y nutrición</SectionLabel>
         <SettingsCard>
           <SettingsSubhead title="Tu estrategia" description="Las referencias con las que RITMO interpreta tu evolución." />
-          <Row label="Objetivo principal">
-            <div className="flex flex-wrap gap-1.5">
+          <Row label="Objetivo principal" htmlFor="objetivo" error={errores.objetivo}>
+            <div id="objetivo" role="group" aria-label="Objetivo principal" tabIndex={-1} aria-describedby={errores.objetivo ? "objetivo-error" : undefined} className="flex flex-wrap gap-1.5">
               {(["perder", "mantener", "ganar"] as Objetivo[]).map((o) => (
                 <Pill key={o} activo={form.objetivo === o} onClick={() => set("objetivo", o)}>
                   {o === "perder" ? "Perder" : o === "mantener" ? "Mantener" : "Ganar"}
@@ -285,20 +368,22 @@ export default function AjustesPage() {
               ))}
             </div>
           </Row>
-          <Row label="Peso objetivo (kg)" htmlFor="pesoObjetivo">
-            <Input id="pesoObjetivo" inputMode="decimal" value={String(form.pesoObjetivo ?? "")} onChange={(e) => set("pesoObjetivo", Number(e.target.value) as never)} className="h-11 w-full rounded-xl tabular sm:w-28" />
+          <Row label="Peso objetivo (kg)" htmlFor="pesoObjetivo" error={errores.pesoObjetivo}>
+            <Input id="pesoObjetivo" inputMode="decimal" value={numeros.pesoObjetivo} aria-invalid={!!errores.pesoObjetivo} aria-describedby={errores.pesoObjetivo ? "pesoObjetivo-error" : undefined} onChange={(e) => setNumero("pesoObjetivo", e.target.value)} className="h-11 w-full rounded-xl tabular sm:w-28" />
           </Row>
-          <Row label="Calorías objetivo" htmlFor="kcalObjetivo">
-            <Input id="kcalObjetivo" inputMode="numeric" value={String(form.kcalObjetivo ?? "")} onChange={(e) => set("kcalObjetivo", Number(e.target.value) as never)} className="h-11 w-full rounded-xl tabular sm:w-32" />
+          <Row label="Calorías objetivo" htmlFor="kcalObjetivo" error={errores.kcalObjetivo}>
+            <Input id="kcalObjetivo" inputMode="numeric" value={numeros.kcalObjetivo} aria-invalid={!!errores.kcalObjetivo} aria-describedby={errores.kcalObjetivo ? "kcalObjetivo-error" : undefined} onChange={(e) => setNumero("kcalObjetivo", e.target.value)} className="h-11 w-full rounded-xl tabular sm:w-32" />
           </Row>
           <div>
-            <Row label="Proteína (g/kg)" htmlFor="proteinaObjetivo">
+            <Row label="Proteína (g/kg)" htmlFor="proteinaObjetivo" error={errores.proteinaObjetivo}>
               <Input
                 id="proteinaObjetivo"
                 inputMode="decimal"
                 placeholder={proteinaSugerida}
-                value={form.proteinaObjetivo != null ? String(form.proteinaObjetivo) : ""}
-                onChange={(e) => set("proteinaObjetivo", (e.target.value === "" ? undefined : Number(e.target.value)) as never)}
+                value={numeros.proteinaObjetivo}
+                aria-invalid={!!errores.proteinaObjetivo}
+                aria-describedby={errores.proteinaObjetivo ? "proteinaObjetivo-error" : undefined}
+                onChange={(e) => setNumero("proteinaObjetivo", e.target.value)}
                 className="h-11 w-full rounded-xl tabular sm:w-28"
               />
             </Row>
@@ -308,22 +393,22 @@ export default function AjustesPage() {
           </div>
           <div className="border-t border-border pt-4">
             <Label className="mb-2 block text-sm">Nivel de actividad</Label>
-            <div className="flex flex-col gap-1.5">
+            <div id="factorActividad" role="group" aria-label="Nivel de actividad" tabIndex={-1} aria-describedby={errores.factorActividad ? "factorActividad-error" : undefined} className="flex flex-col gap-1.5">
               {FACTORES_ACTIVIDAD.map((f) => (
                 <button
                   key={f.clave}
                   type="button"
                   onClick={() => set("factorActividad", f.factor)}
                   aria-pressed={form.factorActividad === f.factor}
-                  className={cn("flex min-h-11 items-center justify-between gap-3 rounded-xl border px-3 text-left text-sm transition-colors", form.factorActividad === f.factor ? "border-primary bg-primary/8" : "border-border hover:bg-secondary/50")}
+                  className={cn("flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl border px-3 py-2 text-left text-sm transition-colors", form.factorActividad === f.factor ? "border-primary bg-primary/8" : "border-border hover:bg-secondary/50")}
                 >
                   <span className="font-medium">{f.etiqueta}</span>
                   <span className="text-xs text-muted-foreground">{f.detalle}</span>
                 </button>
               ))}
             </div>
+            {errores.factorActividad && <p id="factorActividad-error" role="alert" className="mt-1.5 text-xs leading-relaxed text-destructive">{errores.factorActividad}</p>}
           </div>
-          <div className="flex items-center justify-between gap-3 border-t border-border pt-4"><p className="text-xs text-muted-foreground" role="status">{perfilPendiente ? "Tienes cambios sin guardar" : "Todo al día"}</p><Button onClick={guardarPerfil} disabled={!perfilPendiente || guardandoPerfil} className="h-11 rounded-lg px-5">{guardandoPerfil ? "Guardando…" : "Guardar cambios"}</Button></div>
         </SettingsCard>
       </section>
 
@@ -340,7 +425,7 @@ export default function AjustesPage() {
           <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">Cuando faltan comidas, los hábitos completan el día y el déficit inferido queda limitado a un ritmo máximo aproximado del 1% del peso por semana.</p>
           </div>
           <div className="border-t border-border pt-4"><Row label="Contar días totalmente vacíos">
-            <Switch checked={form.imputarActiva !== false} onCheckedChange={(v) => { set("imputarActiva", v); actualizarPerfil({ imputarActiva: v }); }} aria-label="Contar días totalmente vacíos" />
+            <Switch checked={form.imputarActiva !== false} onCheckedChange={(v) => set("imputarActiva", v)} aria-label="Contar días totalmente vacíos" />
           </Row><p className="mt-1.5 text-xs text-muted-foreground">También aplica ese superávit a huecos sin ningún dato desde la fecha de corte configurada.</p></div>
         </SettingsCard>
       </section>
@@ -350,16 +435,18 @@ export default function AjustesPage() {
         <SettingsCard>
           <SettingsSubhead title="Qué cuenta en tu modelo" description={`Los ${habitosModelo(form).length} hábitos activos definen la constancia y recalibran el peso. Desactiva los que no quieras usar.`} />
           <div className="grid gap-2 sm:grid-cols-2">{habitosUsuario(form).map((h) => { const activo = !(form.habitosDesactivados || []).includes(h.clave); const esBase = HABITOS.some((base) => base.clave === h.clave); return <div key={h.clave} className={cn("flex min-h-12 items-center gap-2 rounded-xl border px-3", activo ? "border-primary/25 bg-primary/5" : "border-border bg-secondary/30 text-muted-foreground")}><button type="button" onClick={() => void alternarHabitoModelo(h.clave)} className="min-w-0 flex-1 text-left text-sm font-medium" aria-pressed={activo}>{h.etiqueta}<span className="mt-0.5 block text-[0.68rem] font-normal text-muted-foreground">{activo ? "Activo en el modelo" : "No cuenta en el modelo"}</span></button><Switch checked={activo} onCheckedChange={() => void alternarHabitoModelo(h.clave)} aria-label={`${activo ? "Desactivar" : "Activar"} ${h.etiqueta}`} />{!esBase && <button type="button" onClick={() => void quitarHabitoPersonal(h.clave)} className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-card hover:text-destructive" aria-label={`Eliminar ${h.etiqueta}`}>×</button>}</div>; })}</div>
-          <div className="flex flex-col gap-2 sm:flex-row"><Input value={nuevoHabito} onChange={(e) => setNuevoHabito(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void anadirHabitoPersonal(); } }} placeholder="Ej. Caminar 8.000 pasos" maxLength={28} className="h-11 rounded-xl" /><Button type="button" onClick={() => void anadirHabitoPersonal()} variant="secondary" className="h-11 shrink-0 rounded-xl">Añadir hábito</Button></div>
+          <div className="flex flex-col gap-2 sm:flex-row"><Input aria-label="Nombre del nuevo hábito" value={nuevoHabito} onChange={(e) => setNuevoHabito(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void anadirHabitoPersonal(); } }} placeholder="Ej. Caminar 8.000 pasos" maxLength={28} className="h-11 rounded-xl" /><Button type="button" onClick={() => void anadirHabitoPersonal()} variant="secondary" className="h-11 shrink-0 rounded-xl">Añadir hábito</Button></div>
         </SettingsCard>
       </section>
+      </fieldset>
+      </form>
 
       <section>
         <SectionLabel>Contexto y viaje</SectionLabel>
         <SettingsCard>
           <SettingsSubhead title="Modo viaje / vacaciones" description="Un contexto visual para interpretar tus días sin alterar kcal, hábitos ni predicciones." />
           <Row label="Estado actual">
-            <div className="flex items-center gap-2"><span className={cn("inline-flex h-9 items-center rounded-xl px-3 text-xs font-semibold", viaje.activo ? "bg-habit-wash text-habit-ink" : "bg-secondary text-muted-foreground")}>{viaje.activo ? viaje.etiqueta : "Sin viaje activo"}</span>{viaje.activo && <Button variant="secondary" size="sm" className="h-9 rounded-xl" onClick={() => guardarModoViaje({ ...viaje, activo: false }, userId)}>Finalizar</Button>}</div>
+            <div className="flex flex-wrap items-center gap-2"><span className={cn("inline-flex min-h-9 max-w-full items-center rounded-xl px-3 py-1 text-xs font-semibold break-words", viaje.activo ? "bg-habit-wash text-habit-ink" : "bg-secondary text-muted-foreground")}>{viaje.activo ? viaje.etiqueta : "Sin viaje activo"}</span>{viaje.activo && <Button variant="secondary" size="sm" className="h-9 rounded-xl" onClick={() => guardarModoViaje({ ...viaje, activo: false }, userId)}>Finalizar</Button>}</div>
           </Row>
           {!viaje.activo && <div className="grid gap-2 border-t border-border pt-4 sm:grid-cols-[minmax(0,1fr)_11rem_auto]"><Input value={nombreViaje} onChange={(e) => setNombreViaje(e.target.value)} placeholder="Viaje a Lisboa" className="h-11 rounded-xl" /><Input type="date" value={finViaje} onChange={(e) => setFinViaje(e.target.value)} className="h-11 rounded-xl" /><Button className="h-11 rounded-xl px-4" onClick={() => guardarModoViaje({ activo: true, etiqueta: nombreViaje.trim() || "Viaje", desde: new Date().toISOString().slice(0, 10), hasta: finViaje || undefined }, userId)}><Plane className="size-4" /> Activar</Button></div>}
         </SettingsCard>
@@ -369,14 +456,14 @@ export default function AjustesPage() {
         <SectionLabel>Experiencia</SectionLabel>
         <SettingsCard>
           <SettingsSubhead title="Apariencia" description="Elige color y densidad para tu forma de usar RITMO." />
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {([["light", "Claro", Sun], ["dark", "Oscuro", Moon], ["system", "Sistema", Monitor]] as const).map(([val, label, Icon]) => (
               <button
                 key={val}
                 type="button"
                 onClick={() => setTheme(val)}
                 aria-pressed={theme === val}
-                className={cn("flex min-h-20 flex-1 flex-col items-center justify-center gap-1.5 rounded-xl border py-3 text-sm transition-colors", theme === val ? "border-primary bg-primary/8 text-foreground shadow-sm" : "border-border text-muted-foreground hover:bg-secondary/50")}
+                className={cn("flex min-h-20 min-w-0 flex-1 basis-20 flex-col items-center justify-center gap-1.5 rounded-xl border py-3 text-sm transition-colors", theme === val ? "border-primary bg-primary/8 text-foreground shadow-sm" : "border-border text-muted-foreground hover:bg-secondary/50")}
               >
                 <Icon className="size-5" />
                 {label}
@@ -388,7 +475,7 @@ export default function AjustesPage() {
               <div><p className="text-sm font-semibold">Densidad visual</p><p className="mt-0.5 text-xs text-muted-foreground">Ajusta el espacio entre secciones y el aire de lectura.</p></div>
               <span className="text-xs font-medium text-primary">{densidad === "compacta" ? "Compacta" : "Espaciosa"}</span>
             </div>
-            <div className="mt-3 inline-flex rounded-xl bg-secondary p-1" role="group" aria-label="Densidad visual">
+            <div className="mt-3 inline-flex max-w-full flex-wrap rounded-xl bg-secondary p-1" role="group" aria-label="Densidad visual">
               {(["compacta", "espaciosa"] as const).map((opcion) => <button key={opcion} type="button" onClick={() => cambiarDensidad(opcion)} aria-pressed={densidad === opcion} className={cn("h-9 rounded-xl px-4 text-sm font-medium transition-colors", densidad === opcion ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>{opcion === "compacta" ? "Compacta" : "Espaciosa"}</button>)}
             </div>
           </div>
@@ -401,7 +488,7 @@ export default function AjustesPage() {
         <SettingsCard className="gap-3.5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div><p className="text-sm font-semibold">Tu historial, siempre contigo</p><p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">Exporta, importa o recupera una copia sin salir de tu espacio.</p></div>
-            <div className="grid grid-cols-3 gap-1.5 sm:flex sm:shrink-0">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(5rem,1fr))] gap-1.5 sm:flex sm:shrink-0">
               <Button variant="secondary" onClick={descargar} className="h-10 rounded-xl gap-1.5 px-2.5 text-xs sm:px-3 sm:text-sm"><Download className="size-4" /> JSON</Button>
               <Button variant="secondary" onClick={descargarCSV} className="h-10 rounded-xl gap-1.5 px-2.5 text-xs sm:px-3 sm:text-sm"><FileSpreadsheet className="size-4" /> CSV</Button>
               <Button variant="secondary" onClick={() => fileRef.current?.click()} className="h-10 rounded-xl gap-1.5 px-2.5 text-xs sm:px-3 sm:text-sm"><Upload className="size-4" /> Importar</Button>
@@ -423,7 +510,7 @@ export default function AjustesPage() {
               <span>{backupInfo ? <>Copia local guardada · {fmtFechaCorta(backupInfo.at.slice(0, 10))}</> : "Aún no hay copia local automática."}</span>
             </div>
             {backupInfo && (
-              <Button variant="ghost" size="sm" onClick={restaurarCopiaLocal} className="h-8 w-full rounded-lg gap-2 text-xs sm:w-auto">
+              <Button variant="ghost" size="sm" onClick={restaurarCopiaLocal} className="h-auto min-h-8 w-full rounded-lg gap-2 py-2 text-xs whitespace-normal sm:w-auto">
                 <HistoryIcon className="size-3.5" /> Restaurar copia local
               </Button>
             )}
@@ -446,6 +533,7 @@ export default function AjustesPage() {
               <ImportMetric label="Coincidencias" value={resumenImportacion?.medicionesCoincidentes ?? 0} detail="se completan" />
             </div>
             <p className="mb-5 text-xs leading-relaxed text-muted-foreground">{resumenImportacion?.comidas ?? 0} comidas · formato {resumenImportacion?.version ?? "anterior"}{resumenImportacion?.schemaVersion ? ` · datos ${resumenImportacion.schemaVersion}` : ""}{resumenImportacion?.exportado ? ` · copia del ${fmtFechaCorta(resumenImportacion.exportado.slice(0, 10))}` : ""}. Los duplicados se detectan por fecha: no se crean dos días ni dos mediciones iguales.</p>
+            {(previewDatos.auditoriaModelo || previewDatos.auditoriaDocumental) && <p className="mb-4 rounded-lg bg-secondary/60 px-3 py-2 text-xs leading-relaxed text-muted-foreground">El historial del modelo se conservará como copia documental; no contará como predicciones verificadas.</p>}
             <div className="flex gap-2">
               <Button
                 variant="secondary"
@@ -474,9 +562,9 @@ export default function AjustesPage() {
           <p className="text-xs leading-relaxed text-muted-foreground">Opcional: envía el tipo de error y la versión de RITMO, nunca tus comidas, peso ni notas. <Link href="/privacidad" className="font-medium text-primary underline underline-offset-4">Cómo se usan mis datos</Link></p>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div><p className="text-sm font-semibold">Tus datos siguen siendo tuyos</p><p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{EXTERNAL_NUTRITION_ENABLED ? "Gemini solo recibe una comida cuando eliges analizarla." : "El análisis nutricional es local: no envía tus comidas a Gemini ni Edamam."}</p></div>
-            <Button variant="secondary" onClick={() => { limpiarDatosLocales(userId); limpiarPreferenciasComidas(); toast.success("Datos locales eliminados"); }} className="h-10 w-full rounded-xl gap-2 sm:w-auto"><Trash2 className="size-4" /> Limpiar este dispositivo</Button>
+            <Button variant="secondary" onClick={() => { limpiarDatosLocales(userId); limpiarPreferenciasComidas(); toast.success("Datos locales eliminados"); }} className="h-auto min-h-10 w-full rounded-xl gap-2 py-2 whitespace-normal sm:w-auto"><Trash2 className="size-4" /> Limpiar este dispositivo</Button>
           </div>
-          {confirmarBorrado ? <div className="flex flex-col gap-3 rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs leading-relaxed text-destructive">Borra perfil, días, comidas, mediciones y copias de seguridad de la nube. Tu acceso seguirá existiendo.</p><div className="flex shrink-0 gap-1.5"><Button variant="ghost" size="sm" className="h-8 rounded-lg" onClick={() => setConfirmarBorrado(false)}>Cancelar</Button><Button variant="destructive" size="sm" className="h-8 rounded-lg" onClick={() => void borrarDatos().then(() => { limpiarDatosLocales(userId); limpiarPreferenciasComidas(); toast.success("Datos de RITMO eliminados"); }).catch(() => toast.error("No se pudieron eliminar los datos."))}>Eliminar</Button></div></div> : <button type="button" onClick={() => setConfirmarBorrado(true)} className="self-start text-xs font-medium text-destructive transition-opacity hover:opacity-75">Eliminar todos mis datos de RITMO…</button>}
+          {confirmarBorrado ? <div className="flex flex-col gap-3 rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs leading-relaxed text-destructive">Borra perfil, días, comidas, mediciones y copias de seguridad de la nube. Tu acceso seguirá existiendo.</p><div className="flex shrink-0 gap-1.5"><Button variant="ghost" size="sm" className="h-8 rounded-lg" disabled={borrandoDatos} onClick={() => setConfirmarBorrado(false)}>Cancelar</Button><Button variant="destructive" size="sm" className="h-8 rounded-lg" disabled={borrandoDatos || guardandoPerfil || importando} onClick={() => void eliminarDatos()}>{borrandoDatos ? "Eliminando…" : "Eliminar"}</Button></div></div> : <button type="button" onClick={() => setConfirmarBorrado(true)} className="self-start text-xs font-medium text-destructive transition-opacity hover:opacity-75">Eliminar todos mis datos de RITMO…</button>}
         </SettingsCard>
       </section>
 
@@ -485,10 +573,14 @@ export default function AjustesPage() {
         <SettingsCard className="gap-0">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><UserRound className="size-4" /></span><div className="min-w-0"><p className="truncate text-sm font-semibold">{userEmail ?? "Modo demo (local)"}</p><p className="mt-0.5 text-xs text-muted-foreground">{modo === "nube" ? "Cuenta sincronizada" : "Datos solo en este dispositivo"}</p></div></div>
-            <Button variant="ghost" onClick={() => void cerrarSesion()} className="h-10 w-full rounded-xl gap-2 text-muted-foreground hover:text-destructive sm:w-auto"><LogOut className="size-4" /> {modo === "nube" ? "Cerrar sesión" : "Salir"}</Button>
+            <Button variant="ghost" onClick={() => { if (!perfilPendiente || window.confirm("Tienes cambios sin guardar. ¿Quieres cerrar sesión y descartarlos?")) { dirty.current = false; void cerrarSesion(); } }} className="h-10 w-full rounded-xl gap-2 text-muted-foreground hover:text-destructive sm:w-auto"><LogOut className="size-4" /> {modo === "nube" ? "Cerrar sesión" : "Salir"}</Button>
           </div>
         </SettingsCard>
       </section>
+      <div ref={barraGuardarRef} role="region" aria-label="Guardar ajustes" className={cn("z-30 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-3 shadow-lg", barraGuardarFija ? "sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] md:bottom-4" : "relative")}>
+        <div className="min-w-0"><p className={cn("text-sm font-semibold", errorGuardado && "text-destructive")} role={errorGuardado ? "alert" : "status"}>{errorGuardado ?? (guardandoPerfil ? "Guardando tus cambios…" : perfilPendiente ? "Cambios pendientes" : "Todo al día")}</p><p className="mt-0.5 text-xs text-muted-foreground">Perfil, objetivos y hábitos</p></div>
+        <div className="flex w-full min-w-0 flex-wrap gap-2 sm:w-auto"><Button type="button" variant="secondary" className="h-auto min-h-11 min-w-0 flex-1 basis-32 px-3 py-2 whitespace-normal sm:flex-none" onClick={descartarPerfil} disabled={!perfilPendiente || guardandoPerfil || importando || borrandoDatos}>Descartar</Button><Button type="submit" form="perfil-ajustes" className="h-auto min-h-11 min-w-0 flex-1 basis-32 px-3 py-2 whitespace-normal sm:flex-none" disabled={!perfilPendiente || guardandoPerfil || importando || borrandoDatos}>{guardandoPerfil ? "Guardando…" : "Guardar cambios"}</Button></div>
+      </div>
     </div>
   );
 }
@@ -497,11 +589,11 @@ function ImportMetric({ label, value, detail }: { label: string; value: number; 
   return <div className="bg-card px-3 py-2.5"><p className="font-display text-xl font-bold tabular">{value}</p><p className="mt-0.5 text-[0.65rem] text-muted-foreground">{label}{detail ? ` · ${detail}` : ""}</p></div>;
 }
 
-function Row({ label, children, htmlFor }: { label: string; children: React.ReactNode; htmlFor?: string }) {
+function Row({ label, children, htmlFor, error }: { label: string; children: React.ReactNode; htmlFor?: string; error?: string }) {
   return (
     <div className="settings-row grid gap-2 border-b border-border/70 pb-4 last:border-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_minmax(13rem,22rem)] sm:items-center sm:gap-8">
       <Label htmlFor={htmlFor} className="text-sm font-medium">{label}</Label>
-      <div className="flex w-full justify-start sm:justify-end">{children}</div>
+      <div className="min-w-0"><div className="flex w-full justify-start sm:justify-end [&>*]:min-w-0 [&>*]:max-w-full">{children}</div>{error && <p id={`${htmlFor}-error`} role="alert" className="mt-1.5 text-xs leading-relaxed text-destructive sm:text-right">{error}</p>}</div>
     </div>
   );
 }
@@ -511,7 +603,8 @@ function Pill({ children, activo, onClick }: { children: React.ReactNode; activo
     <button
       type="button"
       onClick={onClick}
-      className={cn("h-10 rounded-xl border px-3 text-sm font-medium transition-colors", activo ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-secondary/50")}
+      aria-pressed={activo}
+      className={cn("min-h-10 max-w-full rounded-xl border px-3 py-2 text-sm font-medium transition-colors", activo ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-secondary/50")}
     >
       {children}
     </button>

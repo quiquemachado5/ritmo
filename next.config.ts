@@ -4,6 +4,9 @@ import packageJson from "./package.json";
 const buildId = (process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || packageJson.version).slice(0, 12);
 
 const nextConfig: NextConfig = {
+  // El indicador de desarrollo tapa «Hoy» en el viewport móvil de E2E.
+  // Esto no oculta errores de compilación/runtime ni modifica producción.
+  devIndicators: process.env.RITMO_E2E === "1" ? false : undefined,
   generateBuildId: async () => buildId,
   env: {
     NEXT_PUBLIC_RITMO_BUILD_ID: buildId,

@@ -28,7 +28,6 @@ const MealLibrary = dynamic(() => import("@/components/app/meal-library").then((
 const BalanceChart = dynamic(() => import("@/components/app/charts").then((m) => m.BalanceChart), {
   loading: () => <Skeleton className="h-56 w-full rounded-xl" />,
 });
-const MealPlanner = dynamic(() => import("@/components/app/meal-planner").then(m => m.MealPlanner), { loading: () => <Skeleton className="h-16 w-full rounded-xl" /> });
 
 const ORDEN = [
   { id: "desayuno", label: "Desayuno", wash: "bg-habit-wash", ink: "text-habit" },
@@ -222,7 +221,6 @@ export default function NutricionPage() {
 
       {/* Biblioteca personal de comidas: reutiliza cualquier plato en este día */}
       <MealLibrary fecha={fecha} />
-      <MealPlanner fecha={fecha} />
     </div>
   );
 }

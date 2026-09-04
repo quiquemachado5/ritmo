@@ -94,4 +94,49 @@ describe("persistencia segura", () => {
     gate.resolve(vacio());
     expect((await read).dias["2026-09-04"].habitos.agua).toBe(true);
   });
+
+  it("conserva la revisión original offline aunque una recarga vea cambios remotos", async () => {
+    const inner = adapter(); let conocida = "v1"; let remota = "v1";
+    inner.revisionActual = () => conocida;
+    vi.mocked(inner.load).mockImplementation(async () => { conocida = remota; return vacio(); });
+    vi.mocked(inner.guardarDia).mockImplementation(async (_dia, condicion) => {
+      if (condicion?.revisionEsperada !== remota) throw new Error("Conflicto");
+      conocida = remota = "v3";
+    });
+    const q = cola(inner); vi.stubGlobal("navigator", { onLine: false });
+    await q.guardarDia({ fecha: "2026-09-04", habitos: { agua: true } });
+    expect(JSON.parse(storage.get("ritmo:writequeue:a")!)[0].revisionRemota).toBe("v1");
+    remota = "v2"; vi.stubGlobal("navigator", { onLine: true });
+    await q.load(); await q.flush();
+    expect(vi.mocked(inner.guardarDia).mock.calls[0][1]?.revisionEsperada).toBe("v1");
+    expect(JSON.parse(storage.get("ritmo:writequeue:a")!)[0].bloqueada).toBe(true);
+    await q.reintentar();
+    expect(vi.mocked(inner.guardarDia).mock.calls[1][1]?.revisionEsperada).toBe("v2");
+    expect(JSON.parse(storage.get("ritmo:writequeue:a")!)).toEqual([]);
+  });
+
+  it("una edición posterior adopta la revisión de su propia escritura anterior", async () => {
+    const inner = adapter(); const gate = deferred(); let revision = "v1";
+    inner.revisionActual = () => revision;
+    vi.mocked(inner.guardarDia).mockImplementationOnce(async () => { await gate.promise; revision = "v2"; });
+    const q = cola(inner);
+    const first = q.guardarDia({ fecha: "2026-09-04", habitos: { agua: true } });
+    const second = q.guardarDia({ fecha: "2026-09-04", habitos: { agua: true, deporte: true } });
+    gate.resolve(); await Promise.all([first, second]);
+    expect(vi.mocked(inner.guardarDia).mock.calls.map(call => call[1]?.revisionEsperada)).toEqual(["v1", "v2"]);
+  });
+
+  it("una cola persistida mantiene su revisión al crear otra instancia", async () => {
+    const inner = adapter(); inner.revisionActual = () => "v2";
+    storage.set("ritmo:writequeue:a", JSON.stringify([{ type: "borrarDia", payload: "2026-09-04", revisionRemota: "v1" }]));
+    const q = cola(inner); await q.load(); await q.flush();
+    expect(inner.borrarDia).toHaveBeenCalledWith("2026-09-04", { revisionEsperada: "v1" });
+  });
+
+  it("una cola antigua sin revisión no adopta silenciosamente la versión remota", async () => {
+    const inner = adapter(); inner.revisionActual = () => "v2";
+    storage.set("ritmo:writequeue:a", JSON.stringify([{ type: "guardarDia", payload: { fecha: "2026-09-04", habitos: {} } }]));
+    const q = cola(inner); await q.load(); await q.flush();
+    expect(vi.mocked(inner.guardarDia).mock.calls[0][1]?.revisionEsperada).toBeNull();
+  });
 });

@@ -2,8 +2,12 @@ import type { StoreData } from "./types";
 import { BACKUP_FORMAT_VERSION, DATABASE_MIGRATION_VERSION } from "../version";
 import { comidaValida, fechaValida, jsonSeguro, objeto, preferenciasValidas, preferenciasPerfilValidas } from "./validation";
 import { validarPerfil } from "../profile-validation";
+import { validarAuditoriaImportada } from "../model-audit/import";
+import type { AuditoriaModelo } from "../model-audit/types";
 
 export interface ArchivoRitmo extends Partial<StoreData> {
+  auditoriaModelo?: AuditoriaModelo;
+  auditoriaDocumental?: AuditoriaModelo;
   preferencias?: import("../meal-prefs").MealPrefs;
   version?: number;
   app?: string;
@@ -32,6 +36,7 @@ export function analizarImportacion(valor: unknown, actual: StoreData): ResumenI
   if (!valor || typeof valor !== "object" || Array.isArray(valor)) return { ...vacio, error: "El archivo no contiene un respaldo válido de RITMO." };
   if (!jsonSeguro(valor)) return { ...vacio, error: "El respaldo contiene valores o estructuras no válidos." };
   const archivo = valor as ArchivoRitmo;
+  if ([archivo.auditoriaModelo, archivo.auditoriaDocumental].some(v => v !== undefined && !validarAuditoriaImportada(v))) return { ...vacio, error: "El historial del modelo no tiene un formato válido." };
   if (archivo.perfil !== undefined && (!objeto(archivo.perfil) || validarPerfil({ ...actual.perfil, ...archivo.perfil }) || !preferenciasPerfilValidas(archivo.perfil))) return { ...vacio, error: "Revisa los valores del perfil en el respaldo." };
   if (archivo.app && archivo.app !== "ritmo") return { ...vacio, error: "Este archivo no parece pertenecer a RITMO." };
   if (archivo.version !== undefined && (!Number.isInteger(archivo.version) || archivo.version < 1 || archivo.version > BACKUP_FORMAT_VERSION)) return { ...vacio, error: "La versión de este respaldo no es compatible todavía." };

@@ -1,4 +1,5 @@
 /** Validadores puros para archivos externos: nunca confían en una aserción TS. */
+import { metadataIngredienteValida } from "../nutrition/catalog";
 export function objeto(v: unknown): v is Record<string, unknown> {
   return Boolean(v && typeof v === "object" && !Array.isArray(v));
 }
@@ -23,7 +24,7 @@ function nutrientes(v: unknown) {
 }
 export function ingredienteValido(v: unknown): boolean {
   return objeto(v) && nutrientes(v) && texto(v.nombre, 500) && (v.cantidad === undefined || texto(v.cantidad, 500))
-    && (v.cantidadEstimada === undefined || typeof v.cantidadEstimada === "boolean");
+    && (v.cantidadEstimada === undefined || typeof v.cantidadEstimada === "boolean") && metadataIngredienteValida(v);
 }
 export function comidaValida(v: unknown, requiereId = true): boolean {
   return objeto(v) && nutrientes(v) && (!requiereId || texto(v.id, 200)) && texto(v.texto)

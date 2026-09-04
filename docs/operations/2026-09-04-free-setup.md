@@ -1,5 +1,7 @@
 # Configuración sin nuevos servicios de pago · 4 septiembre 2026
 
+Registro del primer pase, publicado después en `13cec36`. Para el estado posterior del catálogo, auditoría y esquema, ver `2026-09-04-catalog-audit-sync.md`: ese segundo pase sí crea el registro de versión y las tablas del modelo, sin aplicar a ciegas migraciones anteriores.
+
 ## Proyecto verificado
 
 Supabase: **dieta**, referencia `twslzgzmvgoaqusrmukt`, organización en plan Free. Coincide con el host configurado en RITMO. No se activó facturación, SMTP de terceros, proveedores de IA ni planes superiores.

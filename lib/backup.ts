@@ -6,6 +6,8 @@
 
 import { registrarDiagnostico } from "./observability";
 import { limpiarBorradores } from "./drafts";
+import { limpiarAuditoriaLocal } from "./model-audit/storage";
+import { limpiarAuditoriaDocumental } from "./model-audit/documentary";
 
 const BACKUP_KEY = "ritmo:backup";
 const LAST_EXPORT_KEY = "ritmo:lastExport";
@@ -77,6 +79,8 @@ export function limpiarDatosLocales(userId: string | null): void {
     localStorage.removeItem(LAST_EXPORT_KEY);
     localStorage.removeItem(CLOUD_MARK);
     if (userId) {
+      limpiarAuditoriaLocal(userId);
+      limpiarAuditoriaDocumental(userId);
       localStorage.removeItem(clave(BACKUP_KEY, userId));
       localStorage.removeItem(clave(BACKUP_KEY + ":previous", userId));
       localStorage.removeItem(clave(LAST_EXPORT_KEY, userId));

@@ -93,6 +93,15 @@ export interface Estado {
   dias: Record<string, Dia>;
   composicion: Composicion[];
   version?: number;
+  /** Configuración observada desde que se activa el historial; no inventa el pasado. */
+  perfilHistorial?: ConfiguracionModeloVersion[];
+}
+
+export interface ConfiguracionModeloVersion {
+  id: string;
+  effectiveFrom: string;
+  effectiveDate?: string;
+  perfil: Perfil;
 }
 
 export interface ReglaImputacion {

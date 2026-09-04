@@ -45,6 +45,7 @@ import { useQuickLog, type QuickTab } from "./quick-log-provider";
 import { claveBorrador, leerBorrador, guardarBorrador, quitarBorrador } from "@/lib/drafts";
 import { aclaracionComida, type AclaracionComida } from "@/lib/nutrition/clarification";
 import { escalarNutrientes, escalarIngrediente, factorPorcion } from "@/lib/nutrition/portions";
+import { corregirGramos, etiquetaCantidad } from "@/lib/nutrition/catalog";
 
 const TABS: { id: QuickTab; label: string; icon: typeof Scale }[] = [
   { id: "comida", label: "Comida", icon: UtensilsCrossed },
@@ -229,6 +230,7 @@ function PanelComida({
   const [tipo, setTipo] = React.useState<TipoComida>(borrador?.tipo ?? comidaEdit?.tipo ?? "comida");
   const [analizando, setAnalizando] = React.useState(false);
   const [analisis, setAnalisis] = React.useState<AnalisisNutricional | null>(null);
+  const descripcionRef = React.useRef<HTMLTextAreaElement>(null);
   const [itemsCorregidos, setItemsCorregidos] = React.useState<Set<number>>(() => new Set());
   const [textoAnalizado, setTextoAnalizado] = React.useState(comidaEdit?.texto.trim() ?? "");
   const [firmaAnomaliaConfirmada, setFirmaAnomaliaConfirmada] = React.useState<string | null>(null);
@@ -377,6 +379,7 @@ function PanelComida({
         ))}
       </div>
       <Textarea
+        ref={descripcionRef}
         aria-label="Descripción de la comida"
         value={texto}
         onChange={(e) => setTexto(e.target.value)}
@@ -465,6 +468,12 @@ function PanelComida({
             <MacroBar label="Carbos" value={analisis.carbohidratos} colorVar="--habit" />
             <MacroBar label="Grasas" value={analisis.grasas} colorVar="--energy" />
           </div>
+          {!!analisis.noReconocidos?.length && <div className="mt-4 rounded-lg border border-warning-border bg-warning-wash p-3 text-sm text-warning-ink" role="status">
+            <p className="font-semibold">Hay texto sin interpretar</p>
+            <p className="mt-1 break-words">{analisis.noReconocidos.join(" · ")}</p>
+            <p className="mt-1">No está incluido en el total. Si es un alimento, concreta su nombre y cantidad o corrige los nutrientes.</p>
+            <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => { descripcionRef.current?.focus(); descripcionRef.current?.scrollIntoView({ block: "center", behavior: "auto" }); }}>Corregir descripción</Button>
+          </div>}
           {analisis.items.length > 0 && <IngredientTable items={analisis.items} onChange={actualizarIngrediente} />}
           {analisis.observaciones && analisis.observaciones.length > 0 && (
             <div className="mt-3 space-y-1 text-xs leading-relaxed text-muted-foreground">
@@ -518,21 +527,50 @@ function PanelComida({
 
 function IngredientTable({ items, onChange }: { items: AnalisisNutricional["items"]; onChange: (index: number, item: ItemNutricional) => void }) {
   const [editando, setEditando] = React.useState<number | null>(null);
-  const [borrador, setBorrador] = React.useState<{ nombre: string; cantidad: string; kcal: string; p: string; c: string; g: string } | null>(null);
+  const [borrador, setBorrador] = React.useState<{ nombre: string; cantidad: string; peso: string; pesoModificado: boolean; kcal: string; p: string; c: string; g: string } | null>(null);
+  const [error, setError] = React.useState("");
 
   function abrirEdicion(index: number) {
     const item = items[index];
     setEditando(index);
-    setBorrador({ nombre: item.nombre, cantidad: item.cantidad ?? "", kcal: String(item.kcal), p: String(item.proteinas), c: String(item.carbohidratos), g: String(item.grasas) });
+    setError("");
+    setBorrador({ nombre: item.nombre.split(" · ")[0], cantidad: item.cantidad ?? "", peso: item.gramos == null ? "" : String(item.gramos), pesoModificado: false, kcal: String(item.kcal), p: String(item.proteinas), c: String(item.carbohidratos), g: String(item.grasas) });
+  }
+
+  function cambiarPeso(peso: string) {
+    if (editando == null || !borrador) return;
+    const gramos = Number(peso.replace(",", "."));
+    const base = items[editando];
+    setError("");
+    if (!peso.trim() || !Number.isFinite(gramos) || gramos <= 0 || gramos > 10000) {
+      setBorrador({ ...borrador, peso, pesoModificado: true }); return;
+    }
+    const recalculado = corregirGramos(base, gramos);
+    setBorrador({ ...borrador, peso, pesoModificado: true, cantidad: recalculado.cantidad ?? "",
+      kcal: String(recalculado.kcal), p: String(recalculado.proteinas), c: String(recalculado.carbohidratos), g: String(recalculado.grasas) });
   }
 
   function aplicar() {
     if (editando == null || !borrador?.nombre.trim()) return;
-    const numero = (valor: string) => Math.max(0, Math.round((Number(valor.replace(",", ".")) || 0) * 10) / 10);
-    onChange(editando, {
+    const numero = (valor: string) => Math.round(Number(valor.replace(",", ".")) * 10) / 10;
+    if ([borrador.kcal, borrador.p, borrador.c, borrador.g].some(v => !v.trim() || !Number.isFinite(numero(v)) || numero(v) < 0 || numero(v) > 6000)) {
+      setError("Revisa los nutrientes: deben ser números entre 0 y 6.000."); return;
+    }
+    let base = items[editando];
+    if (borrador.pesoModificado && base.referencia) {
+      try { base = corregirGramos(base, Number(borrador.peso.replace(",", "."))); }
+      catch { setError("Indica un peso mayor que 0 y como máximo 10.000 g."); return; }
+    }
+    const nutrientesCambiados = numero(borrador.kcal) !== base.kcal || numero(borrador.p) !== base.proteinas || numero(borrador.c) !== base.carbohidratos || numero(borrador.g) !== base.grasas;
+    const nombreCambiado = borrador.nombre.trim() !== base.nombre.split(" · ")[0];
+    const referencia = (nutrientesCambiados || nombreCambiado) && base.referencia && base.gramos
+      ? { ...base.referencia, estado: "correccion_personal" as const, nombre: borrador.nombre.trim(), fuente: "Tus valores corregidos", url: undefined, revisadaEn: undefined,
+        por100g: { kcal: numero(borrador.kcal) * 100 / base.gramos, proteinas: numero(borrador.p) * 100 / base.gramos, carbohidratos: numero(borrador.c) * 100 / base.gramos, grasas: numero(borrador.g) * 100 / base.gramos } }
+      : base.referencia;
+    onChange(editando, { ...base,
       nombre: borrador.nombre.trim(),
       cantidad: borrador.cantidad.trim() || undefined,
-      cantidadEstimada: false,
+      referencia,
       kcal: numero(borrador.kcal),
       proteinas: numero(borrador.p),
       carbohidratos: numero(borrador.c),
@@ -551,12 +589,12 @@ function IngredientTable({ items, onChange }: { items: AnalisisNutricional["item
         {items.map((item, index) => (
           <div key={`${item.nombre}-${index}`}>
             <div className="relative grid gap-2 px-3 py-3 pr-12 sm:grid-cols-[minmax(0,1.5fr)_minmax(8rem,.8fr)_repeat(4,minmax(3rem,.42fr))_2rem] sm:items-center sm:gap-3 sm:py-2.5 sm:pr-3">
-              <p className="min-w-0 truncate text-sm font-semibold text-foreground">{item.nombre}</p>
+              <p className="min-w-0 break-words text-sm font-semibold text-foreground">{item.nombre.split(" · ")[0]}</p>
               <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                 <span className="truncate text-xs tabular text-muted-foreground">{item.cantidad || "Sin cantidad"}</span>
                 <span className={cn("inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[0.62rem] font-semibold", item.cantidadEstimada ? "bg-warning-wash text-warning-ink" : "bg-weight-wash text-weight-ink")}>
                   {item.cantidadEstimada ? <CircleHelp className="size-3" /> : <Scale className="size-3" />}
-                  {item.cantidadEstimada ? "Estimada" : "Indicada"}
+                  {etiquetaCantidad(item)}
                 </span>
               </div>
               <div className="grid grid-cols-4 gap-1.5 sm:contents">
@@ -571,7 +609,7 @@ function IngredientTable({ items, onChange }: { items: AnalisisNutricional["item
               <div className="border-t border-border bg-secondary/30 px-3 py-3">
                 <div className="grid gap-2 sm:grid-cols-2">
                   <Field label="Ingrediente" value={borrador.nombre} onChange={(nombre) => setBorrador((actual) => actual ? { ...actual, nombre } : actual)} text />
-                  <Field label="Cantidad" value={borrador.cantidad} onChange={(cantidad) => setBorrador((actual) => actual ? { ...actual, cantidad } : actual)} placeholder="Ej. 150 g" text />
+                  {item.referencia ? <Field label="Peso en gramos · recalcula nutrientes" value={borrador.peso} onChange={cambiarPeso} placeholder="Ej. 150" /> : <Field label="Cantidad" value={borrador.cantidad} onChange={(cantidad) => setBorrador((actual) => actual ? { ...actual, cantidad } : actual)} placeholder="Ej. 150 g" text />}
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
                   <Field label="kcal" value={borrador.kcal} onChange={(kcal) => setBorrador((actual) => actual ? { ...actual, kcal } : actual)} />
@@ -579,16 +617,30 @@ function IngredientTable({ items, onChange }: { items: AnalisisNutricional["item
                   <Field label="Carbos" value={borrador.c} onChange={(c) => setBorrador((actual) => actual ? { ...actual, c } : actual)} />
                   <Field label="Grasas" value={borrador.g} onChange={(g) => setBorrador((actual) => actual ? { ...actual, g } : actual)} />
                 </div>
-                <div className="mt-3 flex justify-end gap-2"><Button type="button" variant="ghost" size="sm" onClick={() => { setEditando(null); setBorrador(null); }}><X className="size-3.5" /> Cancelar</Button><Button type="button" size="sm" onClick={aplicar}><Check className="size-3.5" /> Aplicar corrección</Button></div>
+                {error && <p className="mt-2 text-sm text-destructive" role="alert">{error}</p>}
+                <div className="mt-3 flex flex-wrap justify-end gap-2"><Button type="button" variant="ghost" size="sm" onClick={() => { setEditando(null); setBorrador(null); }}><X className="size-3.5" /> Cancelar</Button><Button type="button" size="sm" onClick={aplicar}><Check className="size-3.5" /> Aplicar corrección</Button></div>
               </div>
             )}
           </div>
         ))}
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border bg-secondary/25 px-3 py-2 text-[0.65rem] text-muted-foreground">
-        <span className="inline-flex items-center gap-1"><Scale className="size-3 text-weight" /> Cantidad indicada por ti</span>
-        <span className="inline-flex items-center gap-1"><CircleHelp className="size-3 text-warning" /> Cantidad inferida por RITMO</span>
+        <span className="inline-flex items-center gap-1"><Scale className="size-3 text-weight" /> Peso en g indicado por ti</span>
+        <span className="inline-flex items-center gap-1"><CircleHelp className="size-3 text-warning" /> Piezas, volumen o porción: peso aproximado</span>
       </div>
+      <details className="border-t border-border px-3 py-2.5 text-sm">
+        <summary className="cursor-pointer font-medium">Fuentes y valores por 100 g</summary>
+        <p className="mt-2 text-muted-foreground">Una fuente comprobada describe el alimento de referencia, no garantiza la composición de tu plato.</p>
+        <div className="mt-2 divide-y divide-border">
+          {[...new Map(items.filter(i => i.referencia).map(i => [`${i.referencia!.id}:${i.referencia!.estado}`, i.referencia!])).values()].map(ref => <div key={`${ref.id}:${ref.estado}`} className="py-3">
+            <p className="font-medium">{ref.nombre}</p>
+            <p className="mt-1 tabular">{ref.por100g.kcal.toFixed(0)} kcal · P {ref.por100g.proteinas.toFixed(1)} g · C {ref.por100g.carbohidratos.toFixed(1)} g · G {ref.por100g.grasas.toFixed(1)} g</p>
+            {ref.url ? <a href={ref.url} target="_blank" rel="noopener noreferrer" className="mt-1 block break-words text-primary underline underline-offset-2">{ref.fuente}</a> : <p className="mt-1 text-warning-ink">{ref.fuente}</p>}
+            <p className="mt-1 break-words text-xs text-muted-foreground">{ref.id} · catálogo {ref.version}{ref.revisadaEn ? ` · revisado ${ref.revisadaEn}` : " · sin verificación externa"}</p>
+          </div>)}
+          {!items.some(i => i.referencia) && <p className="py-2 text-muted-foreground">Este análisis anterior no contiene trazabilidad por ingrediente.</p>}
+        </div>
+      </details>
     </div>
   );
 }

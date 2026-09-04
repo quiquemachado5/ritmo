@@ -5,7 +5,7 @@ describe("estimador offline de comidas detalladas", () => {
   it("conserva las comas decimales sin confundirlas con separadores", () => {
     const decimal = estimarOffline("1,5 kg de patata, 20 g de pan");
     const entero = estimarOffline("1500 g de patata con 20 g de pan");
-    expect(decimal.items).toEqual(entero.items);
+    expect(decimal.items.map(item => ({ ...item, cantidadOriginal: undefined }))).toEqual(entero.items.map(item => ({ ...item, cantidadOriginal: undefined })));
     expect(decimal.items[0].cantidad).toBe("1500 g");
   });
   it("cuenta los ingredientes energéticos que suelen omitirse", () => {
@@ -34,5 +34,41 @@ describe("estimador offline de comidas detalladas", () => {
     expect(resultado.items.some((item) => item.nombre.startsWith("pollo") && item.nombre.includes("260 g"))).toBe(true);
     expect(resultado.kcal).toBeGreaterThan(750);
     expect(resultado.kcal).toBeLessThan(950);
+  });
+
+  it("no presta la cantidad del siguiente ingrediente aunque no haya coma", () => {
+    const res = estimarOffline("arroz 150 g de pollo");
+    expect(res.items[0]).toMatchObject({ gramos: 180, cantidadEstimada: true });
+    expect(res.items[1]).toMatchObject({ gramos: 150, cantidadEstimada: false });
+  });
+
+  it("separa cantidad declarada de peso inferido y no recorta medias cucharadas", () => {
+    const res = estimarOffline("2 filetes de pollo con media cucharada de AOVE y 20 ml de leche");
+    expect(res.items[0]).toMatchObject({ gramos: 260, tipoCantidad: "unidades_declaradas", cantidadEstimada: true });
+    expect(res.items[1]).toMatchObject({ gramos: 6.75, tipoCantidad: "unidades_declaradas", cantidadEstimada: true });
+    expect(res.items[2]).toMatchObject({ gramos: 20, tipoCantidad: "volumen_declarado", cantidadEstimada: true });
+    expect(res.items[1].cantidad).toContain("6,75 g");
+  });
+
+  it("muestra lo no interpretado sin inventar calorías para completarlo", () => {
+    const base = estimarOffline("100 g de arroz");
+    const incompleto = estimarOffline("100 g de arroz con 30 g de tahini y 15 g de kimchi");
+    expect(incompleto.noReconocidos).toEqual(["tahini", "kimchi"]);
+    expect(incompleto.kcal).toBe(base.kcal);
+    expect(incompleto.items).toHaveLength(1);
+  });
+
+  it("no confunde crudo y cocido en una comida con dos cereales", () => {
+    const res = estimarOffline("100 g de arroz en crudo y 100 g de pasta cocida");
+    expect(res.items[0].referencia?.id).toBe("usda:169756");
+    expect(res.items[0].kcal).toBe(365);
+    expect(res.items[1].referencia?.id).toBe("usda:168928");
+    expect(res.items[1].kcal).toBe(158);
+    expect(estimarOffline("100 g de pasta cruda").kcal).toBe(371);
+  });
+
+  it("cuenta piezas pequeñas y dos verduras diferentes sin duplicar contenedores", () => {
+    expect(estimarOffline("7 galletas").items[0].gramos).toBe(56);
+    expect(estimarOffline("ensalada de lechuga con brocoli").items).toHaveLength(2);
   });
 });

@@ -201,7 +201,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Barra inferior + FAB — móvil */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur-md md:hidden">
+      <nav aria-label="Navegación principal móvil" className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur-md md:hidden">
         <div className="mx-auto flex min-h-[4.2rem] max-w-lg items-stretch justify-around px-2 pb-[env(safe-area-inset-bottom)]">
           {primarios.slice(0, 2).map((item) => (
             <NavTab key={item.href} item={item} active={activo(item.href)} />
@@ -232,12 +232,12 @@ function NavTab({ item, active }: { item: (typeof NAV_ITEMS)[number]; active: bo
     <Link
       href={item.href}
       className={cn(
-        "flex flex-1 flex-col items-center justify-center gap-1 text-[0.62rem] font-medium transition-colors",
+        "flex min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-1 px-1 py-2 text-center text-[0.62rem] font-medium transition-colors",
         active ? "text-primary" : "text-muted-foreground",
       )}
     >
-      <item.icon className={cn("size-[1.35rem]", active && "fill-primary/10")} />
-      {item.label}
+      <item.icon className={cn("size-[1.35rem] shrink-0", active && "fill-primary/10")} />
+      <span className="w-full hyphens-auto [overflow-wrap:anywhere]">{item.label}</span>
     </Link>
   );
 }

@@ -9,6 +9,7 @@ import * as M from "./metrics";
 import { diaAbsoluto, diasEntre, hoy, sumarDias } from "./dates";
 import { HABITOS, habitosModelo, totalHabitosPerfil } from "./config";
 import { limitarBalanceEstimado } from "./calibration";
+import { configuracionEnFecha, perfilEnFecha } from "./profile-history";
 import type {
   Comida,
   Composicion,
@@ -83,6 +84,7 @@ export function reglaImputacion(estado: Estado): ReglaImputacion {
 
 /** Energía de un día concreto, con los parámetros del perfil aplicados. */
 export function energiaDe(estado: Estado, fecha: string): EnergiaDia {
+  const perfil = perfilEnFecha(estado, fecha);
   const base = energiaBaseDe(estado, fecha);
   if (
     base.imputado
@@ -94,12 +96,12 @@ export function energiaDe(estado: Estado, fecha: string): EnergiaDia {
   const calibracion = calibracionPersonalizada(estado);
   if (!calibracion.personalizada) return base;
   const dia = (estado.dias || {})[fecha];
-  const activos = habitosModelo(estado.perfil).map((h) => h.clave);
+  const activos = habitosModelo(perfil).map((h) => h.clave);
   const cumplidos = activos.filter((clave) => dia?.habitos?.[clave] === true).length;
   const ratio = cumplidos / Math.max(1, activos.length);
   const ajuste = ajusteCalibracion(calibracion, ratio);
   const balancePropuesto = base.balance + ajuste;
-  const balanceConObjetivo = estado.perfil.objetivo === "perder" && ratio >= 0.999
+  const balanceConObjetivo = perfil.objetivo === "perder" && ratio >= 0.999
     ? Math.min(-150, balancePropuesto)
     : balancePropuesto;
   const balanceSeguro = limitarBalanceEstimado(balanceConObjetivo, pesoActual(estado)?.peso);
@@ -117,14 +119,15 @@ export function energiaDe(estado: Estado, fecha: string): EnergiaDia {
 /** Cálculo diario sin la corrección aprendida, usado como prior biológico. */
 function energiaBaseDe(estado: Estado, fecha: string): EnergiaDia {
   const dia = (estado.dias || {})[fecha] || { fecha, habitos: {} };
-  const perfil = estado.perfil || ({} as Estado["perfil"]);
+  const perfil = perfilEnFecha(estado, fecha) || ({} as Estado["perfil"]);
+  const estadoVigente = { ...estado, perfil };
   return M.energiaDia(
     { ...dia, fecha },
     {
       kcalObjetivo: perfil.kcalObjetivo,
-      tdeeBase: tdeeVigente(estado),
+      tdeeBase: tdeeConPerfil(estado, perfil),
       objetivo: perfil.objetivo,
-      imputacion: reglaImputacion(estado),
+      imputacion: reglaImputacion(estadoVigente),
       habitosActivos: habitosModelo(perfil).map((h) => h.clave),
     },
   );
@@ -239,6 +242,18 @@ export function seriePesoDiaria(estado: Estado, desde: string, hasta: string): P
 
 /* Caché del TDEE por versión de estado (evita recomputar en el arrastre). */
 const cacheTdee = new WeakMap<Estado, { version: number; valor: number }>();
+const cacheTdeePerfil = new WeakMap<Estado, Map<Estado["perfil"], number>>();
+
+function tdeeConPerfil(estado: Estado, perfil: Estado["perfil"]): number {
+  if (perfil === estado.perfil) return tdeeVigente(estado);
+  let perfiles = cacheTdeePerfil.get(estado);
+  if (!perfiles) { perfiles = new Map(); cacheTdeePerfil.set(estado, perfiles); }
+  const guardado = perfiles.get(perfil);
+  if (guardado !== undefined) return guardado;
+  const valor = calcularTdeeVigente({ ...estado, perfil });
+  perfiles.set(perfil, valor);
+  return valor;
+}
 
 export function tdeeVigente(estado: Estado): number {
   const guardado = cacheTdee.get(estado);
@@ -291,8 +306,8 @@ export function tdeeDesdeHistorial(estado: Estado, ventanaDias = 60): TdeeHistor
   const enRango = diasOrdenados(estado).filter((d) => d.fecha >= inicio.fecha && d.fecha <= fin.fecha);
   if (enRango.length < 14 || enRango.length / dias < 0.6) return null;
   const explicitas = enRango.filter((d) => M.num(d.kcalConsumidas) !== null).length;
-  const perfil = estado.perfil || ({} as Estado["perfil"]);
   const consumos = enRango.map((d) => {
+    const perfil = perfilEnFecha(estado, d.fecha);
     const explicito = M.num(d.kcalConsumidas);
     return explicito !== null ? explicito : M.estimarKcalConsumidas(d.habitos, perfil.kcalObjetivo, habitosModelo(perfil).map((h) => h.clave)).kcal;
   });
@@ -353,8 +368,8 @@ const CALIBRACION_INICIAL: CalibracionPersonal = {
 const cacheCalibracion = new WeakMap<Estado, { version: number; valor: CalibracionPersonal }>();
 const cacheBacktest = new WeakMap<Estado, { version: number; valor: BacktestModelo }>();
 
-function tdeeTeoricoHistorico(estado: Estado, peso: number): number {
-  const perfil = estado.perfil || ({} as Estado["perfil"]);
+function tdeeTeoricoHistorico(estado: Estado, peso: number, fecha: string): number {
+  const perfil = perfilEnFecha(estado, fecha) || ({} as Estado["perfil"]);
   return M.tdeeTeorico({
     peso,
     alturaCm: perfil.alturaCm,
@@ -366,7 +381,7 @@ function tdeeTeoricoHistorico(estado: Estado, peso: number): number {
 
 function tramosCalibracion(estado: Estado, hastaFecha?: string): TramoCalibracion[] {
   const puntos = pesajes(estado).filter((p) => !hastaFecha || p.fecha <= hastaFecha);
-  const activos = habitosModelo(estado.perfil).map((h) => h.clave);
+  const activos = [...new Set([estado.perfil, ...(estado.perfilHistorial ?? []).map((v) => v.perfil)].flatMap((perfil) => habitosModelo(perfil).map((h) => h.clave)))];
   const clavesBase = new Set(HABITOS.map((h) => h.clave));
   const primeraAparicion = new Map<string, string>();
   for (const dia of diasOrdenados(estado)) {
@@ -383,27 +398,29 @@ function tramosCalibracion(estado: Estado, hastaFecha?: string): TramoCalibracio
     const fin = puntos[i];
     const dias = diasEntre(inicio.fecha, fin.fecha);
     if (dias < 2 || dias > 90) continue;
-    const tdee = tdeeTeoricoHistorico(estado, inicio.peso);
     let sumaBalance = 0;
     let sumaRatio = 0;
     let registrados = 0;
 
     for (let paso = 1; paso <= dias; paso++) {
       const fecha = sumarDias(inicio.fecha, paso);
+      const configuracion = configuracionEnFecha(estado, fecha);
+      const perfil = configuracion.perfil;
+      const activosPerfil = habitosModelo(perfil).map((h) => h.clave);
       const dia = estado.dias[fecha];
       if (dia) registrados++;
       const habitos = dia?.habitos || {};
-      const activosEseDia = activos.filter((clave) => clavesBase.has(clave) || (primeraAparicion.get(clave) ?? "9999-12-31") <= fecha);
-      const clavesDia = activosEseDia.length ? activosEseDia : activos.filter((clave) => clavesBase.has(clave));
+      const activosEseDia = configuracion.documentada ? activosPerfil : activosPerfil.filter((clave) => clavesBase.has(clave) || (primeraAparicion.get(clave) ?? "9999-12-31") <= fecha);
+      const clavesDia = activosEseDia.length ? activosEseDia : activosPerfil.filter((clave) => clavesBase.has(clave));
       const totalDia = Math.max(1, clavesDia.length);
       const cumplidos = clavesDia.filter((clave) => habitos[clave] === true).length;
       sumaRatio += cumplidos / totalDia;
       const energia = M.energiaDia(
         dia || { fecha, habitos: {} },
         {
-          kcalObjetivo: estado.perfil.kcalObjetivo,
-          tdeeBase: tdee,
-          objetivo: estado.perfil.objetivo,
+          kcalObjetivo: perfil.kcalObjetivo,
+          tdeeBase: tdeeTeoricoHistorico(estado, inicio.peso, fecha),
+          objetivo: perfil.objetivo,
           imputacion: null,
           habitosActivos: clavesDia,
         },
@@ -625,10 +642,11 @@ export function balanceMedioPonderado(estado: Estado, ventanaDias = 21): number 
     const dia = estado.dias[fecha];
     const energia = energiaDe(estado, fecha);
     if (energia.sinRegistro && !energia.imputado) continue;
-    const activos = habitosModelo(estado.perfil).map((h) => h.clave);
+    const perfil = perfilEnFecha(estado, fecha);
+    const activos = habitosModelo(perfil).map((h) => h.clave);
     const habitos = activos.filter((clave) => dia?.habitos?.[clave] === true).length;
     const tieneKcal = M.num(dia?.kcalConsumidas) !== null;
-    const peso = energia.imputado ? 0.18 : tieneKcal && !energia.ingestaIncompleta ? 1 : energia.ingestaIncompleta ? 0.62 : 0.35 + (habitos / totalHabitosPerfil(estado.perfil)) * 0.45;
+    const peso = energia.imputado ? 0.18 : tieneKcal && !energia.ingestaIncompleta ? 1 : energia.ingestaIncompleta ? 0.62 : 0.35 + (habitos / totalHabitosPerfil(perfil)) * 0.45;
     total += energia.balance * peso;
     pesoTotal += peso;
   }
@@ -641,8 +659,6 @@ export function balanceMedioPonderado(estado: Estado, ventanaDias = 21): number 
  * tramo vivo hasta el próximo pesaje.
  */
 export function balanceRitmoActual(estado: Estado, ventanaDias = 3): { balance: number; dias: number; perfectosSeguidos: number } | null {
-  const activos = habitosModelo(estado.perfil).map((h) => h.clave);
-  const total = Math.max(1, totalHabitosPerfil(estado.perfil));
   let suma = 0;
   let pesos = 0;
   let dias = 0;
@@ -651,6 +667,9 @@ export function balanceRitmoActual(estado: Estado, ventanaDias = 3): { balance: 
 
   for (let i = 0; i < ventanaDias; i++) {
     const fecha = sumarDias(hoy(), -i);
+    const perfil = perfilEnFecha(estado, fecha);
+    const activos = habitosModelo(perfil).map((h) => h.clave);
+    const total = Math.max(1, totalHabitosPerfil(perfil));
     const dia = estado.dias[fecha];
     if (!dia) {
       rachaAbierta = false;
@@ -822,8 +841,8 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
   // Cualquier hábito marcado ya valida el día; cuantos más haya, más sólida es
   // la señal que el modelo usa para su estimación energética.
   let diasConHabitos = 0;
-  const clavesActivas = new Set(habitosModelo(estado.perfil).map((h) => h.clave));
   for (let f = sumarDias(hoy(), -27); f <= hoy(); f = sumarDias(f, 1)) {
+    const clavesActivas = new Set(habitosModelo(perfilEnFecha(estado, f)).map((h) => h.clave));
     const d = (estado.dias || {})[f];
     if (d && Object.entries(d.habitos || {}).some(([clave, v]) => clavesActivas.has(clave) && v === true)) diasConHabitos++;
   }

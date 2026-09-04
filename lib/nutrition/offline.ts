@@ -8,6 +8,7 @@
    ========================================================================= */
 
 import type { AnalisisNutricional, ItemNutricional } from "./types";
+import { REFERENCIAS_VERIFICADAS, referenciaLocal } from "./catalog";
 
 interface Alimento {
   claves: string[];
@@ -62,7 +63,7 @@ const DB: Alimento[] = [
 
   /* --- Grasas --- */
   { claves: ["aceite de sesamo", "aceite de sésamo"], kcal: 884, p: 0, c: 0, g: 100, porcion: 13.5, unidades: { cucharada: 13.5, cda: 13.5, chorro: 8, chorrito: 5 }, liquido: true },
-  { claves: ["aceite de oliva", "aove", "aceite"], kcal: 884, p: 0, c: 0, g: 100, porcion: 13.5, unidades: { cucharada: 13.5, cda: 13.5, chorro: 8, chorrito: 5 }, liquido: true },
+  { claves: ["aceite de oliva", "aove", "aceite"], kcal: 884, p: 0, c: 0, g: 100, porcion: 13.5, unidades: { cucharada: 13.5, cda: 13.5, cucharadita: 4.5, cdta: 4.5, chorro: 8, chorrito: 5 }, liquido: true },
   { claves: ["mantequilla"], kcal: 717, p: 0.9, c: 0.1, g: 81, porcion: 10, unidades: { cucharada: 12 } },
   { claves: ["aguacate"], kcal: 160, p: 2, c: 9, g: 15, porcion: 150 },
   { claves: ["almendras"], kcal: 579, p: 21, c: 22, g: 50, porcion: 30, unidades: { punado: 25, puñado: 25 } },
@@ -168,18 +169,20 @@ function aNumero(bruto: string): number | null {
 }
 
 /** Patrón de cantidad: cifra o palabra ("2", "1,5", "media"). */
-const CANTIDAD = "(\\d+(?:[.,]\\d+)?|un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|media|medio)";
+const CANTIDAD = "\\b(\\d+(?:[.,]\\d+)?|un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|media|medio)\\b";
+
+interface CantidadInterpretada { gramos: number; tipo: NonNullable<ItemNutricional["tipoCantidad"]>; original?: string }
 
 /**
  * Traduce el contexto de un alimento a gramos.
  * Prioridad: masa explícita → volumen (si líquido) → unidad nombrada → cuenta simple.
  */
-function gramosDe(contexto: string, alimento: Alimento): number {
+function gramosDe(contexto: string, alimento: Alimento): CantidadInterpretada {
   // 1. Masa explícita: "50 gr", "1,5 kg"
   const masa = contexto.match(new RegExp(`${CANTIDAD}\\s*(kg|kilos?|g|gr|grs|gramos?)\\b`));
   if (masa) {
     const n = aNumero(masa[1]);
-    if (n !== null) return /^k/.test(masa[2]) ? n * 1000 : n;
+    if (n !== null) return { gramos: /^k/.test(masa[2]) ? n * 1000 : n, tipo: "masa_declarada", original: masa[0] };
   }
 
   // 2. Volumen para líquidos: "200 ml", "1 l"
@@ -188,9 +191,8 @@ function gramosDe(contexto: string, alimento: Alimento): number {
     if (vol) {
       const n = aNumero(vol[1]);
       if (n !== null) {
-        if (/^l/.test(vol[2])) return n * 1000;
-        if (vol[2] === "cl") return n * 10;
-        return n;
+        const gramos = /^l/.test(vol[2]) ? n * 1000 : vol[2] === "cl" ? n * 10 : n;
+        return { gramos, tipo: "volumen_declarado", original: vol[0] };
       }
     }
   }
@@ -203,14 +205,14 @@ function gramosDe(contexto: string, alimento: Alimento): number {
     const m = contexto.match(re);
     if (m) {
       const n = m[1] ? aNumero(m[1]) : 1;
-      return (n ?? 1) * gramos;
+      return { gramos: (n ?? 1) * gramos, tipo: "unidades_declaradas", original: m[0].trim() };
     }
   }
 
   // 4. Cuenta simple: "2 huevos" → 2 porciones
   const cuenta = contexto.match(new RegExp(`${CANTIDAD}(?!\\s*(?:kg|kilos?|g|gr|grs|gramos?|l|litros?|ml|cl)\\b)`));
   const n = cuenta ? aNumero(cuenta[1]) : 1;
-  return (n ?? 1) * alimento.porcion;
+  return { gramos: (n ?? 1) * (cuenta ? alimento.unidades?.unidad ?? alimento.porcion : alimento.porcion), tipo: cuenta ? "unidades_declaradas" : "porcion_supuesta", original: cuenta ? `${cuenta[0]} unidades` : undefined };
 }
 
 interface Coincidencia {
@@ -218,12 +220,6 @@ interface Coincidencia {
   inicio: number;
   fin: number;
 }
-
-/** Valores por 100 g para cuando el texto aclara el peso en crudo. La base
- * canónica guarda arroz y pasta ya cocidos, que es el caso más frecuente. */
-const SECOS_EN_CRUDO: Alimento = {
-  claves: [], kcal: 350, p: 12, c: 72, g: 1.5, porcion: 100,
-};
 
 /** Localiza alimentos en el texto sin solaparse, preferiendo la clave más larga. */
 function localizar(texto: string): Coincidencia[] {
@@ -262,12 +258,35 @@ function localizar(texto: string): Coincidencia[] {
     const siguiente = ordenadas[indice + 1];
     if (!siguiente || siguiente.alimento !== actual.alimento) return true;
     const puente = texto.slice(actual.fin, siguiente.inicio).trim();
-    return puente !== "" && puente !== "de";
+    const contenedor = /^(ensalada|verdura|verduras)$/.test(texto.slice(actual.inicio, actual.fin));
+    return !contenedor || (puente !== "" && puente !== "de");
   });
 }
 
 // Una coma decimal no separa ingredientes: «1,5 kg» debe conservarse entero.
 const SEPARADOR = /\s*(?:(?<!\d),|,(?!\d)|\by\b|\bcon\b|\bmas\b|\+|\n|;)\s*/;
+
+/** Residuo conservador: mostramos texto sin interpretar, no afirmamos que sea
+ * una lista perfecta de ingredientes. Nunca se convierte en calorías ocultas. */
+function fragmentosNoInterpretados(texto: string, coincidencias: Coincidencia[]): string[] {
+  const mascara = texto.split("");
+  for (const c of coincidencias) for (let p = c.inicio; p < c.fin; p++) mascara[p] = " ";
+  return [...new Set(mascara.join("").split(SEPARADOR).map(parte => parte
+    .replace(new RegExp(`${CANTIDAD}\\s*(?:kg|kilos?|g|gr|grs|gramos?|ml|cl|litros?|l|cucharadas?|cda|cucharaditas?|cdta|filetes?|lonchas?|rebanadas?|latas?|vasos?|tazas?|unidades?|piezas?)?\\b`, "g"), " ")
+    .replace(/\b(?:de|del|la|el|los|las|a|al|en|un|una|unos|unas|y|con|sin|para|por|sobre|ensalada|bowl|plato|acompanad[oa]s?|aderezad[oa]s?|cocinad[oa]s?|saltead[oa]s?|cocid[oa]s?|cocinado|crudo|cruda|peso|plancha|horno|vapor|asado|asada|dados|tiras|rallad[oa]|pelad[oa]s?|escurrid[oa]s?|virgen|extra|fresco|fresca|natural|entera|entero|piel|rodajas|laminas)\b/g, " ")
+    .replace(/[().:·≈]/g, " ").replace(/\s+/g, " ").trim())
+    .filter(parte => /[a-z]{2}/.test(parte)))];
+}
+
+function referenciaPara(alimento: Alimento, crudo: boolean) {
+  if (alimento.claves[0] === "arroz") return crudo ? REFERENCIAS_VERIFICADAS.arroz_crudo : REFERENCIAS_VERIFICADAS.arroz_cocido;
+  if (alimento.claves[0] === "pasta penne rigate") return crudo ? REFERENCIAS_VERIFICADAS.pasta_cruda : REFERENCIAS_VERIFICADAS.pasta_cocida;
+  if (alimento.claves[0] === "aceite de oliva") return REFERENCIAS_VERIFICADAS.aceite_oliva;
+  return referenciaLocal(alimento.claves[0], alimento);
+}
+
+/** Catálogo auditable también sin analizar una comida. */
+export const CATALOGO_NUTRICIONAL = [...DB.map(alimento => referenciaPara(alimento, false)), REFERENCIAS_VERIFICADAS.arroz_crudo, REFERENCIAS_VERIFICADAS.pasta_cruda];
 
 /** Estima kcal y macros a partir de texto libre, sin IA externa. */
 export function estimarOffline(texto: string): AnalisisNutricional {
@@ -277,7 +296,7 @@ export function estimarOffline(texto: string): AnalisisNutricional {
   // Las aclaraciones son metadatos del plato, no ingredientes adicionales.
   let base = normalizado.replace(/\n?\s*aclaracion:[^\n]*/g, "");
   if (aceiteTotal) {
-    base = base.replace(/\b(?:aceite(?: de oliva(?: virgen extra)?)?|aove)\b/g, "aliño");
+    base = base.replace(/\b(?:aceite(?: de oliva(?: virgen extra)?)?|aove)\b/g, " ");
     base += `; ${aceiteTotal[1]} ml de aceite de oliva`;
   }
   const limpio = base
@@ -297,25 +316,36 @@ export function estimarOffline(texto: string): AnalisisNutricional {
     // para no heredar la cantidad del alimento vecino.
     const antes = limpio.slice(finAnterior, c.inicio).split(SEPARADOR);
     const prefijo = antes[antes.length - 1] ?? "";
-    const sufijo = limpio.slice(c.fin, inicioSiguiente).split(SEPARADOR)[0] ?? "";
+    let sufijo = limpio.slice(c.fin, inicioSiguiente).split(SEPARADOR)[0] ?? "";
+    // «arroz 150 g de pollo»: la cantidad antes del siguiente ingrediente no
+    // pertenece también al arroz. Una cantidad pospuesta «pan de 50 g» sí.
+    if (i < coincidencias.length - 1) sufijo = sufijo.replace(new RegExp(`${CANTIDAD}\\s*(?:kg|g|gr|gramos?|ml|filetes?|lonchas?)?\\s+de\\s*$`), "");
     // La propia palabra entra en el contexto porque a veces ES la unidad
     // ("2 cañas" → caña = 200 ml, no 2 tercios).
     const surface = limpio.slice(c.inicio, c.fin);
     const contexto = `${prefijo} ${surface} ${sufijo}`;
 
-    const gramos = Math.min(2000, Math.max(1, gramosDe(contexto, c.alimento)));
-    const esSecoEnCrudo = /\b(?:pasta|penne|arroz|basmati)\b/.test(surface) && (estadoCoccion === "en crudo" || (!estadoCoccion && /\bcrudo\b/.test(contexto)));
-    const alimento = esSecoEnCrudo ? SECOS_EN_CRUDO : c.alimento;
+    const cantidad = gramosDe(contexto, c.alimento);
+    if (cantidad.gramos > 10000) throw new Error("Hay una cantidad superior a 10.000 g. Revisa los gramos y las unidades de la descripción.");
+    const gramos = Math.max(0, cantidad.gramos);
+    const esSecoEnCrudo = /\b(?:pasta|penne|arroz|basmati)\b/.test(surface) && (estadoCoccion === "en crudo" || (!estadoCoccion && /\bcrud[oa]s?\b/.test(contexto)));
+    const referencia = referenciaPara(c.alimento, esSecoEnCrudo);
+    const alimento = referencia.por100g;
     const f = gramos / 100;
+    const pesoTexto = `${Number(gramos.toFixed(2)).toLocaleString("es-ES", { useGrouping: false })} g`;
 
     items.push({
       nombre: `${limpio.slice(c.inicio, c.fin)} · ${Math.round(gramos)} g`,
-      cantidad: `${Math.round(gramos)} g`,
-      cantidadEstimada: !new RegExp(`${CANTIDAD}\\s*(?:kg|kilos?|g|gr|grs|gramos?|l|litros?|ml|cl|cucharadas?|cda|cucharaditas?|cdta|lonchas?|rebanadas?|filetes?|vasos?|tazas?|latas?|piezas?|unidades?)\\b`).test(contexto),
+      cantidad: cantidad.tipo === "masa_declarada" ? pesoTexto : `${cantidad.original ? `${cantidad.original} · ` : ""}≈${pesoTexto}`,
+      cantidadEstimada: cantidad.tipo !== "masa_declarada",
+      tipoCantidad: cantidad.tipo,
+      cantidadOriginal: cantidad.original,
+      gramos,
+      referencia,
       kcal: Math.round(alimento.kcal * f),
-      proteinas: Math.round(alimento.p * f),
-      carbohidratos: Math.round(alimento.c * f),
-      grasas: Math.round(alimento.g * f),
+      proteinas: Math.round(alimento.proteinas * f * 10) / 10,
+      carbohidratos: Math.round(alimento.carbohidratos * f * 10) / 10,
+      grasas: Math.round(alimento.grasas * f * 10) / 10,
     });
   }
 
@@ -333,6 +363,7 @@ export function estimarOffline(texto: string): AnalisisNutricional {
     resumen: texto.trim(),
     ...total,
     items,
+    noReconocidos: fragmentosNoInterpretados(limpio, coincidencias),
     fuente: "offline",
     aviso:
       items.length === 0

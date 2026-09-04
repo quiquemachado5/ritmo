@@ -51,6 +51,7 @@ export type PreferenciasPerfil = Partial<
 >;
 
 export interface MealPrefs {
+  /** Solo compatibilidad con copias anteriores; el plan ya no forma parte de la interfaz. */
   plan: ComidaPlanificada[];
   fav: string[];
   hidden: string[];
@@ -283,9 +284,6 @@ export function quitarPlantilla(id: string) {
   escribir({ ...p, templates: p.templates.filter((x) => x.id !== id) });
 }
 
-export function guardarPlan(plan: ComidaPlanificada[]) {
-  return escribir({ ...snapshot(), plan });
-}
 export function exportarPreferencias(): MealPrefs { return structuredClone(snapshot()); }
 export function importarPreferencias(prefs: MealPrefs) {
   const p = snapshot();
@@ -303,7 +301,7 @@ export function guardarCorreccionesNutricion(items: ItemNutricional[]) {
   for (const item of items) {
     const clave = normalizarNombreIngrediente(item.nombre);
     if (!clave) continue;
-    nutritionCorrections[clave] = { ...item, clave, actualizada: Date.now(), cantidadEstimada: false };
+    nutritionCorrections[clave] = { ...item, clave, actualizada: Date.now() };
   }
   const limitadas = Object.fromEntries(
     Object.entries(nutritionCorrections)

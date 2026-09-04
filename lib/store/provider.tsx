@@ -3,6 +3,7 @@
 import * as React from "react";
 import { toast } from "sonner";
 import { PERFIL_DEFECTO } from "@/lib/model/config";
+import { perfilesEquivalentes } from "@/lib/model/profile-history";
 import type { Comida, Composicion, Dia, Estado, Perfil } from "@/lib/model/types";
 import { createClient } from "@/lib/supabase/client";
 import { CloudAdapter } from "./cloud";
@@ -13,6 +14,10 @@ import { analizarImportacion, type ArchivoRitmo } from "./import";
 import { registrarDiagnostico, configurarDiagnosticoUsuario } from "@/lib/observability";
 import { recalcularKcalComidas } from "./day";
 import { BACKUP_FORMAT_VERSION, DATABASE_MIGRATION_VERSION } from "@/lib/version";
+import { cargarAuditoria, emitirPredicciones, leerAuditoriaLocal, limpiarAuditoriaLocal, registrarConfiguracion } from "@/lib/model-audit/client";
+import type { AuditoriaModelo } from "@/lib/model-audit/types";
+import { conservarAuditoriaDocumental, leerAuditoriaDocumental, limpiarAuditoriaDocumental } from "@/lib/model-audit/documentary";
+import { hoy } from "@/lib/model/dates";
 import {
   activarPreferenciasUsuario,
   guardarPreferenciasPerfil,
@@ -39,6 +44,9 @@ function diaVacio(dia: Dia | undefined): boolean {
 
 export interface RitmoContextValue {
   estado: Estado;
+  auditoriaModelo: AuditoriaModelo;
+  errorAuditoria: boolean;
+  reintentarAuditoria: () => Promise<void>;
   modo: Modo;
   cargando: boolean;
   cargaValida: boolean;
@@ -72,6 +80,7 @@ export function useRitmo(): RitmoContextValue {
 }
 
 const VACIO: StoreData = { perfil: { ...PERFIL_DEFECTO }, dias: {}, composicion: [] };
+const AUDITORIA_VACIA: AuditoriaModelo = { configuraciones: [], predicciones: [] };
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = React.useState<StoreData>(VACIO);
@@ -85,6 +94,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [userEmail, setUserEmail] = React.useState<string | null>(null);
   const [authUserId, setAuthUserId] = React.useState<string | null | undefined>(undefined);
   const [supabase] = React.useState(createClient);
+  const [auditoriaModelo, setAuditoriaModelo] = React.useState<AuditoriaModelo>(AUDITORIA_VACIA);
+  const [errorAuditoria, setErrorAuditoria] = React.useState(false);
+  const auditoriaRef = React.useRef(AUDITORIA_VACIA);
+  const auditoriaCargada = React.useRef<string | null>(null);
+  const colaAuditoria = React.useRef<Promise<void>>(Promise.resolve());
+  const [fechaAuditoria, setFechaAuditoria] = React.useState(hoy);
 
   const adapterRef = React.useRef<Adapter | null>(null);
   const dataRef = React.useRef<StoreData>(data);
@@ -125,6 +140,62 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   }, [aplicar]);
 
+  const actualizarAuditoria = React.useCallback((forzar: boolean) => {
+    const adapter = adapterRef.current;
+    const userId = authUserId;
+    const vigente = () => Boolean(userId && adapter && adapterRef.current === adapter && cargaValidaRef.current);
+    const tarea = async () => {
+      if (!vigente() || !userId || !dataRef.current.perfil.onboardingCompleto) return;
+      try {
+        if (forzar || auditoriaCargada.current !== userId) {
+          await cargarAuditoria(userId);
+          if (!vigente()) return;
+          auditoriaCargada.current = userId;
+        }
+        const observado: Estado = { ...clonar(dataRef.current), version: revisionRef.current };
+        const perfil = observado.perfil;
+        const anterior = leerAuditoriaLocal(userId);
+        const ultima = anterior.configuraciones.at(-1);
+        const configuraciones = ultima && perfilesEquivalentes(ultima.perfil, perfil)
+          ? anterior.configuraciones : await registrarConfiguracion(userId, perfil);
+        if (!vigente()) return;
+        // Perfil, hábitos y pesos pertenecen al mismo instante. Una edición
+        // durante el guardado del snapshot no mezcla ajustes nuevos y antiguos.
+        observado.perfilHistorial = configuraciones;
+        await emitirPredicciones(userId, observado);
+        if (!vigente()) return;
+        const audit = leerAuditoriaLocal(userId);
+        auditoriaRef.current = audit;
+        setAuditoriaModelo(audit);
+        setErrorAuditoria(false);
+      } catch {
+        if (!vigente() || !userId) return;
+        // Una caída de la auditoría nunca debe bloquear Hoy ni sustituir datos.
+        try { const audit = leerAuditoriaLocal(userId); auditoriaRef.current = audit; setAuditoriaModelo(audit); } catch { /* Copia dañada: recuperar del servidor al reintentar. */ }
+        setErrorAuditoria(true);
+        registrarDiagnostico("sync", "warning", "historial del modelo pendiente de sincronizar");
+      }
+    };
+    colaAuditoria.current = colaAuditoria.current.then(tarea, tarea);
+    return colaAuditoria.current;
+  }, [authUserId]);
+  const reintentarAuditoria = React.useCallback(() => actualizarAuditoria(true), [actualizarAuditoria]);
+  const perfilAuditable = JSON.stringify(data.perfil);
+  const tienePesajes = data.composicion.length > 0 || Object.values(data.dias).some(d => typeof d.peso === "number");
+  React.useEffect(() => {
+    if (cargando || !cargaValida || sincronizando) return;
+    const timer = setTimeout(() => { void actualizarAuditoria(false); }, 750);
+    return () => clearTimeout(timer);
+  }, [actualizarAuditoria, cargando, cargaValida, sincronizando, perfilAuditable, tienePesajes, fechaAuditoria]);
+  React.useEffect(() => {
+    const comprobar = () => setFechaAuditoria(hoy());
+    const reconectar = () => { comprobar(); void actualizarAuditoria(true); };
+    const timer = setInterval(comprobar, 60_000);
+    window.addEventListener("focus", comprobar);
+    window.addEventListener("online", reconectar);
+    return () => { clearInterval(timer); window.removeEventListener("focus", comprobar); window.removeEventListener("online", reconectar); };
+  }, [actualizarAuditoria]);
+
   // Escucha el cambio de identidad, no solo el primer montaje. Así no se
   // conserva en memoria el perfil de la cuenta anterior tras cerrar sesión.
   React.useEffect(() => {
@@ -156,6 +227,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       // de onboarding de la anterior.
       adapterRef.current?.dispose?.();
       adapterRef.current = null;
+      auditoriaCargada.current = null;
+      auditoriaRef.current = AUDITORIA_VACIA;
+      setAuditoriaModelo(AUDITORIA_VACIA);
+      setErrorAuditoria(false);
       aplicar(clonar(VACIO));
       setUserEmail(null);
       setCargando(true);
@@ -430,8 +505,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       dias: dataRef.current.dias,
       composicion: dataRef.current.composicion,
       preferencias: exportarPreferencias(),
+      auditoriaModelo: auditoriaRef.current,
+      auditoriaDocumental: authUserId ? leerAuditoriaDocumental(authUserId) : AUDITORIA_VACIA,
     }),
-    [],
+    [authUserId],
   );
 
   const importar = React.useCallback(
@@ -459,6 +536,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         if (adapterRef.current !== adapter) throw new Error("La cuenta cambió durante la importación.");
         if (!guardarPreferenciasPerfil(next.perfil)) throw new Error("No se pudieron conservar los ajustes del perfil.");
         if ((datos as ArchivoRitmo).preferencias && !importarPreferencias((datos as ArchivoRitmo).preferencias!)) throw new Error("No se pudo conservar la biblioteca importada.");
+        if (authUserId) conservarAuditoriaDocumental(authUserId, (datos as ArchivoRitmo).auditoriaModelo, (datos as ArchivoRitmo).auditoriaDocumental);
         registrarDiagnostico("import", "ok", "respaldo fusionado");
         toast.success("Datos importados.");
       } catch (e) {
@@ -471,7 +549,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         setSincronizando(false);
       }
     },
-    [aplicar],
+    [aplicar, authUserId],
   );
 
   const cerrarSesion = React.useCallback(async () => {
@@ -479,6 +557,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setCargaValida(false);
     adapterRef.current?.dispose?.();
     adapterRef.current = null;
+    auditoriaRef.current = AUDITORIA_VACIA;
+    setAuditoriaModelo(AUDITORIA_VACIA);
     await activarPreferenciasUsuario(null);
     aplicar(clonar(VACIO));
     setUserEmail(null);
@@ -500,22 +580,31 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     cargaValidaRef.current = false;
     setCargaValida(false);
     try {
+      await colaAuditoria.current;
       await adapter.borrarTodo();
-      if (adapterRef.current === adapter) aplicar(clonar(VACIO));
+      if (adapterRef.current === adapter) {
+        if (authUserId) { limpiarAuditoriaLocal(authUserId); limpiarAuditoriaDocumental(authUserId); }
+        auditoriaRef.current = AUDITORIA_VACIA;
+        setAuditoriaModelo(AUDITORIA_VACIA);
+        aplicar(clonar(VACIO));
+      }
     } catch (error) {
       if (adapterRef.current === adapter) setErrorCarga(true);
       throw error;
     }
-  }, [aplicar]);
+  }, [aplicar, authUserId]);
 
   const estado = React.useMemo<Estado>(
-    () => ({ perfil: data.perfil, dias: data.dias, composicion: data.composicion, version }),
-    [data, version],
+    () => ({ perfil: data.perfil, dias: data.dias, composicion: data.composicion, perfilHistorial: auditoriaModelo.configuraciones, version }),
+    [data, version, auditoriaModelo.configuraciones],
   );
 
   const value = React.useMemo<RitmoContextValue>(
     () => ({
       estado,
+      auditoriaModelo,
+      errorAuditoria,
+      reintentarAuditoria,
       modo,
       cargando,
       cargaValida,
@@ -539,7 +628,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       cerrarSesion,
       borrarDatos,
     }),
-    [estado, modo, cargando, cargaValida, errorCarga, sincronizando, authUserId, userEmail, dia, medicion, alternarHabito, actualizarDia, registrarComida, editarComida, borrarComida, guardarMedicion, borrarMedicion, actualizarPerfil, exportar, importar, recargar, cerrarSesion, borrarDatos],
+    [estado, auditoriaModelo, errorAuditoria, reintentarAuditoria, modo, cargando, cargaValida, errorCarga, sincronizando, authUserId, userEmail, dia, medicion, alternarHabito, actualizarDia, registrarComida, editarComida, borrarComida, guardarMedicion, borrarMedicion, actualizarPerfil, exportar, importar, recargar, cerrarSesion, borrarDatos],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

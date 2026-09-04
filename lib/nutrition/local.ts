@@ -15,7 +15,13 @@ export function analizarLocal(texto: string, correcciones: CorreccionNutricional
       && [c.kcal, c.proteinas, c.carbohidratos, c.grasas].every(n => Number.isFinite(n) && n >= 0 && n <= 6000));
     if (!correccion) return item;
     usadas++;
-    return { ...item, kcal: correccion.kcal, proteinas: correccion.proteinas, carbohidratos: correccion.carbohidratos, grasas: correccion.grasas, cantidadEstimada: false };
+    const factor = item.gramos && item.gramos > 0 ? 100 / item.gramos : null;
+    return { ...item, kcal: correccion.kcal, proteinas: correccion.proteinas, carbohidratos: correccion.carbohidratos, grasas: correccion.grasas,
+      // Corregir macros no convierte dos filetes en gramos realmente pesados.
+      referencia: factor && item.referencia ? { ...item.referencia, estado: "correccion_personal" as const,
+        fuente: "Tus valores corregidos para esta cantidad", url: undefined, revisadaEn: undefined,
+        por100g: { kcal: correccion.kcal * factor, proteinas: correccion.proteinas * factor,
+          carbohidratos: correccion.carbohidratos * factor, grasas: correccion.grasas * factor } } : undefined };
   });
   return { ...recalcularAnalisis(base, items), confianza: "baja" as const,
     aviso: items.length ? "Estimación local, sin IA externa. Revisa los ingredientes reconocidos y las cantidades; puede faltar algún alimento." : base.aviso,
