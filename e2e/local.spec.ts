@@ -20,6 +20,26 @@ async function iniciarSesion(page: Page) {
   await expect(page.getByText(/Buenas|Buenos/).first()).toBeVisible();
 }
 
+const secciones = { "/": "Hoy", "/ajustes": "Ajustes", "/nutricion": "Nutrición", "/progreso": "Progreso", "/habitos": "Hábitos" } as const;
+
+async function irA(page: Page, ruta: keyof typeof secciones) {
+  // Las pestañas se recorren como en la app, sin destruir el documento y
+  // abortar peticiones de autenticación en vuelo. La recarga se prueba aparte.
+  const documento = await page.evaluate(() => performance.timeOrigin);
+  const sidebar = page.locator("aside nav");
+  if (await sidebar.isVisible()) {
+    await sidebar.getByRole("link", { name: secciones[ruta], exact: true }).click();
+  } else if (ruta === "/ajustes") {
+    await page.getByRole("button", { name: "Menú", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Ajustes", exact: true }).click();
+  } else {
+    await page.getByRole("navigation", { name: "Navegación principal móvil" })
+      .getByRole("link", { name: secciones[ruta], exact: true }).click();
+  }
+  await expect(page).toHaveURL(url => url.pathname === ruta);
+  expect(await page.evaluate(() => performance.timeOrigin), "La navegación entre pestañas debe conservar el documento").toBe(documento);
+}
+
 async function sinDesbordamiento(page: Page) {
   const resultado = await page.evaluate(() => {
     const ancho = document.documentElement.clientWidth;
@@ -37,8 +57,8 @@ test("recorrido visual y guardado con datos sintéticos", async ({ page, request
   await request.post("http://127.0.0.1:3199/__reset");
   await iniciarSesion(page);
   await page.screenshot({ path: `test-results/${info.project.name}-hoy.png`, fullPage: true });
-  for (const route of ["ajustes", "nutricion", "progreso", "habitos"]) {
-    await page.goto(`/${route}`);
+  for (const route of ["ajustes", "nutricion", "progreso", "habitos"] as const) {
+    await irA(page, `/${route}`);
     await expect(page.locator("main h1").first()).toBeVisible();
     await expect(page.locator('main [data-slot="skeleton"]')).toHaveCount(0);
     await expect(page.getByText("Esta sección falló", { exact: true })).toHaveCount(0);
@@ -53,7 +73,7 @@ test("recorrido visual y guardado con datos sintéticos", async ({ page, request
       await page.screenshot({ path: `test-results/${info.project.name}-progreso-abierto.png`, fullPage: true });
     }
   }
-  await page.goto("/nutricion");
+  await irA(page, "/nutricion");
   await page.getByRole("button", { name: "Analizar otra comida" }).click();
   const prompt = page.getByRole("textbox", { name: "Descripción de la comida" });
   await prompt.fill("Ensalada con pollo y aceite de oliva");
@@ -77,25 +97,29 @@ test("recorrido visual y guardado con datos sintéticos", async ({ page, request
   await page.getByRole("button", { name: "Aplicar corrección", exact: true }).click();
   await expect(page.getByRole("dialog").getByText(/295\s*kcal/).first()).toBeVisible();
   await sinDesbordamiento(page);
-  await page.screenshot({ path: `test-results/${info.project.name}-registro.png`, fullPage: true });
+  // Capturamos el diálogo en su viewport real: Chromium fullPage puede emitir
+  // un resize transitorio de 1×1 y alternar artificialmente Dialog/Drawer.
+  await page.screenshot({ path: `test-results/${info.project.name}-registro.png` });
+  await expect(page.getByRole("button", { name: "Añadir a comida", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Añadir a comida", exact: true }).click();
   await expect(page.getByText(/Comida añadida/).first()).toBeVisible();
+  await page.getByRole("button", { name: "Close toast", exact: true }).click();
   await expect(page.getByText("Plan de comidas", { exact: true })).toHaveCount(0);
-  await page.goto("/");
+  await irA(page, "/");
   await page.getByRole("button", { name: "Preparar informe mensual" }).click();
   await expect(page.getByRole("switch", { name: "Evolución de peso" })).not.toBeChecked();
   await expect(page.getByRole("switch", { name: "Número de comidas" })).not.toBeChecked();
   await expect(page.getByRole("img", { name: /Vista previa de/ })).toBeVisible();
   await page.screenshot({ path: `test-results/${info.project.name}-informe.png`, fullPage: true });
   await page.getByRole("button", { name: "Close", exact: true }).click();
-  await page.goto("/ajustes");
+  await irA(page, "/ajustes");
   await page.getByRole("button", { name: "Cerrar sesión", exact: true }).click();
   await expect(page).toHaveURL(/login/);
   await page.getByLabel("Email").fill("bea@ritmo.test");
   await page.getByLabel("Contraseña", { exact: true }).fill("RitmoTest123");
   await page.getByRole("button", { name: "Iniciar sesión", exact: true }).click();
   await expect(page.getByText(/Buenas tardes, Bea|Buenos días, Bea|Buenas noches, Bea/)).toBeVisible();
-  await page.goto("/nutricion");
+  await irA(page, "/nutricion");
   await expect(page.getByText("100 g de arroz cocido con 2 filetes de pollo y 30 g de tahini", { exact: false })).toHaveCount(0);
   expect(analisisRemotos).toEqual([]);
 });
@@ -104,7 +128,7 @@ test("ajustes con un solo guardado, validación, descarte y aviso al salir", asy
   test.setTimeout(90000);
   await request.post("http://127.0.0.1:3199/__reset");
   await iniciarSesion(page);
-  await page.goto("/ajustes");
+  await irA(page, "/ajustes");
   const barra = page.getByRole("region", { name: "Guardar ajustes", exact: true });
   const guardar = page.getByRole("button", { name: "Guardar cambios", exact: true });
   await expect(barra).toHaveCount(1);
@@ -138,14 +162,14 @@ test("móvil: paisaje, texto ampliado y registro con viewport de teclado", async
   await iniciarSesion(page);
   const vertical = page.viewportSize()!;
   await page.setViewportSize({ width: vertical.height, height: vertical.width });
-  for (const ruta of ["/ajustes", "/nutricion"]) {
-    await page.goto(ruta);
+  for (const ruta of ["/ajustes", "/nutricion"] as const) {
+    await irA(page, ruta);
     await expect(page.locator("main h1").first()).toBeVisible();
     await sinDesbordamiento(page);
   }
   await page.screenshot({ path: `test-results/${info.project.name}-paisaje.png`, fullPage: true });
   await page.setViewportSize(vertical);
-  await page.goto("/ajustes");
+  await irA(page, "/ajustes");
   // Aumento de texto al 200 %, no un zoom de captura que oculte desbordamientos.
   await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
   await expect(page.getByLabel("Nombre", { exact: true })).toBeVisible();
@@ -172,7 +196,7 @@ test("móvil: paisaje, texto ampliado y registro con viewport de teclado", async
   expect(etiquetasCaben, "Las etiquetas ampliadas de navegación deben envolver sin pisarse").toBe(true);
   await page.screenshot({ path: `test-results/${info.project.name}-texto-ampliado.png` });
   await page.evaluate(() => { document.documentElement.style.fontSize = ""; });
-  await page.goto("/nutricion");
+  await irA(page, "/nutricion");
   await page.getByRole("button", { name: "Analizar otra comida" }).click();
   const prompt = page.getByRole("textbox", { name: "Descripción de la comida" });
   await prompt.fill("100 g de pan");
