@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronLeft, ChevronRight, Dumbbell, HeartPulse, MessageSquareText, Plane, Plus, UtensilsCrossed } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Dumbbell, HeartPulse, MessageSquareText, Plane, UtensilsCrossed } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
 import { energiaDe } from "@/lib/model/analytics";
@@ -126,7 +126,7 @@ function CalendarioContenido({ fechaInicial }: { fechaInicial: string }) {
 
       {/* Resumen del día seleccionado */}
       <section>
-        <SectionLabel action={<Button size="sm" variant="secondary" className="h-7 gap-1.5" onClick={() => abrir(undefined, sel)}><Plus className="size-3.5" /> Registrar</Button>}>
+        <SectionLabel action={<Button size="sm" variant="secondary" className="h-8 gap-1.5" onClick={() => abrir("habitos", sel)}><Check className="size-3.5" /> Editar hábitos</Button>}>
           {sel === hoyISO ? "Hoy" : capitalizar(fmtFechaLarga(sel))}
         </SectionLabel>
         <Card className="overflow-hidden p-0">

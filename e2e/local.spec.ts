@@ -71,6 +71,21 @@ test("recorrido visual y guardado con datos sintéticos", async ({ page, request
       await expect(confianza.locator("..")).toHaveAttribute("open");
       await sinDesbordamiento(page);
       await page.screenshot({ path: `test-results/${info.project.name}-progreso-abierto.png`, fullPage: true });
+    } else if (route === "habitos") {
+      const selectorFecha = page.getByLabel("Día que quieres editar", { exact: true });
+      const fechaHoy = await selectorFecha.inputValue();
+      await page.getByRole("button", { name: "Día anterior", exact: true }).click();
+      const fechaAnterior = await selectorFecha.inputValue();
+      expect(fechaAnterior).not.toBe(fechaHoy);
+      const habito = page.getByRole("button", { name: "Beber agua", exact: true });
+      const estadoAnterior = await habito.getAttribute("aria-pressed");
+      const escritura = page.waitForResponse(response => response.url().includes("/rest/v1/dias") && ["PATCH", "POST", "DELETE"].includes(response.request().method()) && response.ok());
+      await habito.click();
+      await escritura;
+      await expect(habito).toHaveAttribute("aria-pressed", estadoAnterior === "true" ? "false" : "true");
+      await page.reload();
+      await selectorFecha.fill(fechaAnterior);
+      await expect(habito).toHaveAttribute("aria-pressed", estadoAnterior === "true" ? "false" : "true");
     }
   }
   await irA(page, "/nutricion");

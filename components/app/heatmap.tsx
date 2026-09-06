@@ -28,11 +28,14 @@ export function Heatmap({
   estado,
   semanas,
   semanasMinimas = 26,
+  onSelect,
 }: {
   estado: Estado;
   /** Nº fijo de semanas. Si se omite, abarca todo el historial registrado. */
   semanas?: number;
   semanasMinimas?: number;
+  /** Permite abrir o editar el día desde el propio histórico. */
+  onSelect?: (fecha: string) => void;
 }) {
   const scroller = React.useRef<HTMLDivElement>(null);
   const [activo, setActivo] = React.useState<Celda | null>(null);
@@ -115,18 +118,19 @@ export function Heatmap({
             <div key={i} className="flex flex-col gap-1">
               {col.map((cell, j) =>
                 cell && !cell.futuro ? (
-                  <div
+                  <button
                     key={j}
-                    tabIndex={0}
-                    role="img"
+                    type="button"
                     aria-label={etiquetaDia(cell)}
                     title={etiquetaDia(cell)}
+                    onClick={() => onSelect?.(cell.fecha)}
                     onMouseEnter={() => setActivo(cell)}
                     onFocus={() => setActivo(cell)}
                     onMouseLeave={() => setActivo(null)}
                     onBlur={() => setActivo(null)}
                     className={cn(
-                      "size-5 cursor-default rounded-[4px] outline-none transition-shadow sm:size-6",
+                      "size-5 rounded-[4px] border-0 p-0 outline-none transition-shadow sm:size-6",
+                      onSelect ? "cursor-pointer" : "cursor-default",
                       habitScaleClass(cell.cumplidos, cell.total),
                       activo?.fecha === cell.fecha && "ring-2 ring-foreground/50",
                     )}

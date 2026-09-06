@@ -1,15 +1,17 @@
 "use client";
 
-import { fmtFechaCorta } from "@/lib/format";
+import { capitalizar, fmtFechaCorta, fmtFechaLarga } from "@/lib/format";
 
 import * as React from "react";
 import dynamic from "next/dynamic";
-import { Check, Flame } from "lucide-react";
+import { CalendarDays, Check, ChevronLeft, ChevronRight, Flame } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { resumen, adherenciaPorHabito } from "@/lib/model/analytics";
 import { habitosModelo } from "@/lib/model/config";
 import { DIAS_SEMANA, diaSemanaLunes, hoy, sumarDias } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SectionLabel } from "@/components/app/primitives";
 import { cn } from "@/lib/utils";
@@ -36,10 +38,13 @@ function tonoCumplimiento(valor: number, maximo: number) {
 export default function HabitosPage() {
   const { estado, cargando, dia, alternarHabito } = useRitmo();
   const hoyISO = hoy();
+  const [fechaSeleccionada, setFechaSeleccionada] = React.useState(hoyISO);
+  const editorRef = React.useRef<HTMLElement>(null);
   const r = React.useMemo(() => resumen(estado), [estado]);
   const activos = React.useMemo(() => habitosModelo(estado.perfil), [estado.perfil]);
   const porHabito = React.useMemo(() => adherenciaPorHabito(estado, activos, 30), [estado, activos]);
-  const diaHoy = dia(hoyISO);
+  const diaSeleccionado = dia(fechaSeleccionada);
+  const habitosSeleccionados = activos.filter((h) => diaSeleccionado.habitos?.[h.clave] === true).length;
   const semanaReciente = React.useMemo(() => Array.from({ length: 7 }, (_, i) => {
     const fecha = sumarDias(hoyISO, i - 6);
     const cumplidos = activos.filter((h) => estado.dias[fecha]?.habitos?.[h.clave] === true).length;
@@ -51,6 +56,13 @@ export default function HabitosPage() {
   const sinRacha = r.habitos.rachaActual.longitud === 0;
   const tonoRacha = sinRacha ? ESCALA_CUMPLIMIENTO[0] : null;
   const tonoSemana = tonoCumplimiento(r.habitos.adherencia7, 100);
+  const esHoy = fechaSeleccionada === hoyISO;
+
+  function seleccionarFecha(fecha: string, desplazar = false) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || fecha > hoyISO) return;
+    setFechaSeleccionada(fecha);
+    if (desplazar) window.requestAnimationFrame(() => editorRef.current?.scrollIntoView({ block: "start" }));
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -73,17 +85,17 @@ export default function HabitosPage() {
             <div><h2 className="font-display text-lg font-bold">Últimos 7 días</h2><p className="mt-0.5 text-xs text-muted-foreground">Tu ritmo reciente, de un vistazo.</p></div>
             <div className="shrink-0 text-right"><p className={cn("font-display text-3xl font-bold leading-none tabular", tonoSemana.tinta)}>{r.habitos.adherencia7}%</p><p className="mt-1 text-[0.65rem] font-medium uppercase tracking-[0.1em] text-muted-foreground">constancia</p></div>
           </div>
-          <div className="grid grid-cols-7 gap-1 sm:gap-1.5" role="list" aria-label="Cumplimiento de hábitos de los últimos siete días">
+          <div className="grid grid-cols-7 gap-1 sm:gap-1.5" role="group" aria-label="Cumplimiento de hábitos de los últimos siete días">
             {semanaReciente.map((d) => {
               const altura = (d.cumplidos / activos.length) * 100;
               const tono = tonoCumplimiento(d.cumplidos, activos.length);
-              return <div key={d.fecha} role="listitem" aria-label={`${DIAS_SEMANA[diaSemanaLunes(d.fecha)]}: ${d.cumplidos} de ${activos.length} hábitos`} className={cn("min-w-0 rounded-xl border px-0.5 py-1.5 text-center sm:p-2", tono.superficie, d.esHoy && "ring-1 ring-habit-border")}>
+              return <button key={d.fecha} type="button" aria-pressed={fechaSeleccionada === d.fecha} aria-label={`Editar ${DIAS_SEMANA[diaSemanaLunes(d.fecha)]}: ${d.cumplidos} de ${activos.length} hábitos`} onClick={() => seleccionarFecha(d.fecha, true)} className={cn("min-w-0 rounded-xl border px-0.5 py-1.5 text-center transition-[box-shadow,transform] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-2", tono.superficie, d.esHoy && "ring-1 ring-habit-border", fechaSeleccionada === d.fecha && "shadow-sm ring-2 ring-primary")}>
                 <p className={cn("text-[0.65rem] font-semibold sm:text-xs", d.esHoy ? "text-habit-ink" : "text-muted-foreground")}>{DIAS_SEMANA[diaSemanaLunes(d.fecha)]}</p>
                 <div className="mt-2 flex h-11 items-end rounded-lg bg-card/85 p-1" aria-hidden="true">
                   <div className={cn("w-full rounded-md transition-[height] duration-500", tono.barra)} style={{ height: `${altura}%` }} />
                 </div>
                 <p className={cn("mt-1.5 font-display text-lg font-bold leading-none tabular", tono.tinta)}>{d.cumplidos}<span className="ml-0.5 text-[0.6rem] font-medium text-muted-foreground">/{activos.length}</span></p>
-              </div>;
+              </button>;
             })}
           </div>
         </Card>
@@ -95,17 +107,34 @@ export default function HabitosPage() {
         </div>
       </div>
 
-      {/* Hoy */}
-      <section>
-        <SectionLabel>Marca los de hoy</SectionLabel>
-        <Card className="grid grid-cols-2 gap-2 p-4 sm:grid-cols-3">
+      {/* Editor por fecha */}
+      <section ref={editorRef} className="scroll-mt-20">
+        <SectionLabel>Editar hábitos</SectionLabel>
+        <Card className="gap-0 overflow-hidden p-0">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-secondary/35 px-4 py-3 sm:px-5">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-card text-primary shadow-sm"><CalendarDays className="size-4" /></span>
+                <div className="min-w-0">
+                  <h2 className="truncate font-display text-base font-bold sm:text-lg">{esHoy ? "Hoy" : capitalizar(fmtFechaLarga(fechaSeleccionada))}</h2>
+                  <p className="text-xs text-muted-foreground">{habitosSeleccionados}/{activos.length} hábitos marcados</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex max-w-full items-center gap-1 rounded-xl border border-border bg-card p-1">
+              <Button type="button" variant="ghost" size="icon" className="size-9 rounded-lg" onClick={() => seleccionarFecha(sumarDias(fechaSeleccionada, -1))} aria-label="Día anterior"><ChevronLeft className="size-4" /></Button>
+              <Input type="date" aria-label="Día que quieres editar" max={hoyISO} value={fechaSeleccionada} onChange={(event) => seleccionarFecha(event.target.value)} className="h-9 w-[9.1rem] rounded-lg border-0 bg-transparent px-1.5 text-sm shadow-none focus-visible:ring-2" />
+              <Button type="button" variant="ghost" size="icon" className="size-9 rounded-lg" onClick={() => seleccionarFecha(sumarDias(fechaSeleccionada, 1))} disabled={esHoy} aria-label="Día siguiente"><ChevronRight className="size-4" /></Button>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 p-4 sm:grid-cols-3 sm:p-5">
           {activos.map((h) => {
-            const hecho = diaHoy.habitos?.[h.clave] === true;
+            const hecho = diaSeleccionado.habitos?.[h.clave] === true;
             return (
               <button
                 key={h.clave}
                 type="button"
-                onClick={() => alternarHabito(hoyISO, h.clave)}
+                onClick={() => void alternarHabito(fechaSeleccionada, h.clave)}
                 aria-pressed={hecho}
                 className={cn(
                   "flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors",
@@ -119,6 +148,11 @@ export default function HabitosPage() {
               </button>
             );
           })}
+          </div>
+          {!esHoy && <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-3 text-xs text-muted-foreground sm:px-5">
+            <span>Los cambios actualizan el histórico y las estimaciones de este día.</span>
+            <Button type="button" variant="ghost" size="sm" className="h-8 rounded-lg px-2.5" onClick={() => seleccionarFecha(hoyISO)}>Volver a hoy</Button>
+          </div>}
         </Card>
       </section>
 
@@ -164,7 +198,7 @@ export default function HabitosPage() {
                   <span>{activos.length}/{activos.length}</span>
                 </div>
               </div>
-              <Heatmap estado={estado} />
+              <Heatmap estado={estado} onSelect={(fecha) => seleccionarFecha(fecha, true)} />
               <p className="mt-2 text-xs text-muted-foreground">
                 Desplázate en horizontal para ver todo el histórico. El color sube de rojo a verde según hábitos cumplidos.
               </p>
