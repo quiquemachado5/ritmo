@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
-import { Download, FileSpreadsheet, FlaskConical, HistoryIcon, LogOut, Monitor, Moon, Plane, ShieldCheck, Sun, Trash2, Upload, UserRound } from "lucide-react";
+import { Database, Download, FileSpreadsheet, FlaskConical, HistoryIcon, ListChecks, LogOut, Monitor, Moon, Palette, Plane, Shield, ShieldCheck, SlidersHorizontal, Sun, Target, Trash2, Upload, UserRound } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { FACTORES_ACTIVIDAD } from "@/lib/model/metrics";
 import { Card } from "@/components/ui/card";
@@ -28,6 +28,16 @@ import { EXTERNAL_NUTRITION_ENABLED } from "@/lib/nutrition/policy";
 import { ProfessionalReport } from "@/components/app/professional-report";
 
 type Densidad = "compacta" | "espaciosa";
+const SECCIONES_AJUSTES = [
+  { id: "ajuste-perfil", etiqueta: "Perfil", icono: UserRound },
+  { id: "ajuste-objetivo", etiqueta: "Estrategia", icono: Target },
+  { id: "ajuste-modelo", etiqueta: "Modelo", icono: SlidersHorizontal },
+  { id: "ajuste-habitos", etiqueta: "Hábitos", icono: ListChecks },
+  { id: "ajuste-contexto", etiqueta: "Contexto", icono: Plane },
+  { id: "ajuste-experiencia", etiqueta: "Apariencia", icono: Palette },
+  { id: "ajuste-datos", etiqueta: "Datos", icono: Database },
+  { id: "ajuste-privacidad", etiqueta: "Privacidad", icono: Shield },
+] as const;
 const CAMPOS_NUMERICOS = ["edad", "alturaCm", "pesoObjetivo", "kcalObjetivo", "proteinaObjetivo"] as const;
 type CampoNumerico = typeof CAMPOS_NUMERICOS[number];
 function numerosDelPerfil(perfil: Perfil): Record<CampoNumerico, string> {
@@ -349,10 +359,21 @@ export default function AjustesPage() {
     <div className="flex flex-col gap-7">
       <PageHeader title="Ajustes" description="Perfil, objetivos y hábitos se guardan juntos. Apariencia y privacidad se aplican al momento." />
 
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[12.5rem_minmax(0,1fr)] xl:items-start">
+      <nav aria-label="Secciones de ajustes" className="settings-index -mx-1 flex gap-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] xl:sticky xl:top-6 xl:mx-0 xl:flex-col xl:overflow-visible xl:px-0 xl:pb-0">
+        {SECCIONES_AJUSTES.map(({ id, etiqueta, icono: Icono }) => (
+          <a key={id} href={`#${id}`} className="group flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-3 text-xs font-semibold text-muted-foreground transition-colors hover:bg-card hover:text-foreground xl:w-full">
+            <Icono className="size-4 text-primary/80 transition-transform group-hover:scale-105" />
+            {etiqueta}
+          </a>
+        ))}
+      </nav>
+      <div className="flex min-w-0 flex-col gap-7">
+
       {/* Datos que alimentan el modelo, separados para una lectura más clara. */}
       <form id="perfil-ajustes" onSubmit={event => { event.preventDefault(); void guardarPerfil(); }}>
       <fieldset disabled={guardandoPerfil || importando || borrandoDatos} className="flex min-w-0 flex-col gap-7" aria-busy={guardandoPerfil || importando || borrandoDatos}>
-      <section>
+      <section id="ajuste-perfil" className="scroll-mt-24">
         <SectionLabel>Datos personales</SectionLabel>
         <SettingsCard>
           <SettingsSubhead title="Tu perfil" description="Los datos que orientan las estimaciones de RITMO." />
@@ -375,7 +396,7 @@ export default function AjustesPage() {
         </SettingsCard>
       </section>
 
-      <section>
+      <section id="ajuste-objetivo" className="scroll-mt-24">
         <SectionLabel>Objetivo y nutrición</SectionLabel>
         <SettingsCard>
           <SettingsSubhead title="Tu estrategia" description="Las referencias con las que RITMO interpreta tu evolución." />
@@ -433,7 +454,7 @@ export default function AjustesPage() {
       </section>
 
       {/* Reglas del modelo */}
-      <section>
+      <section id="ajuste-modelo" className="scroll-mt-24">
         <SectionLabel>Modelo y adherencia</SectionLabel>
         <SettingsCard>
           <SettingsSubhead title="Días sin hábitos" description="Cómo interpreta RITMO una jornada sin adherencia registrada." />
@@ -450,7 +471,7 @@ export default function AjustesPage() {
         </SettingsCard>
       </section>
 
-      <section>
+      <section id="ajuste-habitos" className="scroll-mt-24">
         <SectionLabel>Hábitos personales</SectionLabel>
         <SettingsCard>
           <SettingsSubhead title="Qué cuenta en tu modelo" description={`Los ${habitosModelo(form).length} hábitos activos definen la constancia y recalibran el peso. Desactiva los que no quieras usar.`} />
@@ -461,7 +482,7 @@ export default function AjustesPage() {
       </fieldset>
       </form>
 
-      <section>
+      <section id="ajuste-contexto" className="scroll-mt-24">
         <SectionLabel>Contexto y viaje</SectionLabel>
         <SettingsCard>
           <SettingsSubhead title="Modo viaje / vacaciones" description="Un contexto visual para interpretar tus días sin alterar kcal, hábitos ni predicciones." />
@@ -472,7 +493,7 @@ export default function AjustesPage() {
         </SettingsCard>
       </section>
 
-      <section>
+      <section id="ajuste-experiencia" className="scroll-mt-24">
         <SectionLabel>Experiencia</SectionLabel>
         <SettingsCard>
           <SettingsSubhead title="Apariencia" description="Elige color y densidad para tu forma de usar RITMO." />
@@ -504,7 +525,7 @@ export default function AjustesPage() {
       </section>
 
       {/* Respaldo y portabilidad */}
-      <section>
+      <section id="ajuste-datos" className="scroll-mt-24">
         <SectionLabel>Datos y respaldo</SectionLabel>
         <SettingsCard className="gap-3.5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -588,7 +609,7 @@ export default function AjustesPage() {
         </div>
       )}
 
-      <section>
+      <section id="ajuste-privacidad" className="scroll-mt-24">
         <SectionLabel>Privacidad</SectionLabel>
         <SettingsCard className="gap-3.5">
           <Row label="Compartir errores técnicos"><Switch checked={diagnostico} onCheckedChange={v => { permitirDiagnostico(userId, v); setDiagnostico(v); }} aria-label="Compartir errores técnicos" /></Row>
@@ -601,7 +622,7 @@ export default function AjustesPage() {
         </SettingsCard>
       </section>
 
-      <section>
+      <section id="ajuste-cuenta" className="scroll-mt-24">
         <SectionLabel>Cuenta</SectionLabel>
         <SettingsCard className="gap-0">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -610,9 +631,11 @@ export default function AjustesPage() {
           </div>
         </SettingsCard>
       </section>
-      <div ref={barraGuardarRef} role="region" aria-label="Guardar ajustes" className={cn("z-30 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-3 shadow-lg", barraGuardarFija ? "sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] md:bottom-4" : "relative")}>
+      <div ref={barraGuardarRef} role="region" aria-label="Guardar ajustes" className={cn("z-30 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 transition-[background-color,border-color,box-shadow]", perfilPendiente || guardandoPerfil || errorGuardado ? "border-border bg-card shadow-lg" : "border-border/60 bg-secondary/35 shadow-none", barraGuardarFija && (perfilPendiente || guardandoPerfil || !!errorGuardado) ? "sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] md:bottom-4" : "relative")}>
         <div className="min-w-0"><p className={cn("text-sm font-semibold", errorGuardado && "text-destructive")} role={errorGuardado ? "alert" : "status"}>{errorGuardado ?? (guardandoPerfil ? "Guardando tus cambios…" : perfilPendiente ? "Cambios pendientes" : "Todo al día")}</p><p className="mt-0.5 text-xs text-muted-foreground">Perfil, objetivos y hábitos</p></div>
         <div className="flex w-full min-w-0 flex-wrap gap-2 sm:w-auto"><Button type="button" variant="secondary" className="h-auto min-h-11 min-w-0 flex-1 basis-32 px-3 py-2 whitespace-normal sm:flex-none" onClick={descartarPerfil} disabled={!perfilPendiente || guardandoPerfil || importando || borrandoDatos}>Descartar</Button><Button type="submit" form="perfil-ajustes" className="h-auto min-h-11 min-w-0 flex-1 basis-32 px-3 py-2 whitespace-normal sm:flex-none" disabled={!perfilPendiente || guardandoPerfil || importando || borrandoDatos}>{guardandoPerfil ? "Guardando…" : "Guardar cambios"}</Button></div>
+      </div>
+      </div>
       </div>
     </div>
   );

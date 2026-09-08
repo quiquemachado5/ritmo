@@ -14,10 +14,10 @@ export function PageHeader({
   className?: string;
 }) {
   return (
-    <header data-slot="page-header" className={cn("flex flex-col gap-4 border-b border-border/75 pb-5 sm:flex-row sm:items-end sm:justify-between", className)}>
+    <header data-slot="page-header" className={cn("page-header flex flex-col gap-4 border-b border-border/75 pb-5 sm:flex-row sm:items-end sm:justify-between", className)}>
       <div className="min-w-0">
-        <h1 className="font-display text-2xl font-bold tracking-tight text-balance sm:text-[1.7rem]">{title}</h1>
-        {description && <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</p>}
+        <h1 className="font-display text-[1.7rem] font-bold leading-tight tracking-tight text-balance sm:text-[2rem]">{title}</h1>
+        {description && <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</p>}
       </div>
       {action && <div className="flex w-full shrink-0 items-center sm:w-auto sm:justify-end">{action}</div>}
     </header>
@@ -35,10 +35,13 @@ export function SectionLabel({
   action?: React.ReactNode;
 }) {
   return (
-    <div className={cn("mb-3 flex items-center justify-between gap-2", className)}>
-      <h2 className="text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-        {children}
-      </h2>
+    <div data-slot="section-header" className={cn("mb-3 flex min-w-0 items-center justify-between gap-3", className)}>
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <h2 className="shrink-0 text-[0.7rem] font-bold uppercase tracking-[0.11em] text-muted-foreground">
+          {children}
+        </h2>
+        <span className="hidden h-px min-w-5 flex-1 bg-border/70 sm:block" aria-hidden="true" />
+      </div>
       {action}
     </div>
   );

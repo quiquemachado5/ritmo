@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, MoreHorizontal, Plus, Search, Settings } from "lucide-react";
+import { ChevronUp, LogOut, MoreHorizontal, Plus, Search, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,7 +29,7 @@ import { siguienteAccion } from "@/lib/model/next-action";
 import { useExperimentos } from "@/lib/experiments";
 import { estadoVisualRitmo } from "@/lib/model/insights";
 
-function UserMenu({ compact = false }: { compact?: boolean }) {
+function UserMenu({ compact = false, expanded = false }: { compact?: boolean; expanded?: boolean }) {
   const { userEmail, cerrarSesion } = useRitmo();
   const inicial = (userEmail?.[0] ?? "R").toUpperCase();
   const secundarios = NAV_ITEMS.filter((i) => !i.primary);
@@ -40,6 +40,17 @@ function UserMenu({ compact = false }: { compact?: boolean }) {
         {compact ? (
           <Button variant="ghost" size="icon" className="size-9 rounded-xl" aria-label="Más opciones">
             <MoreHorizontal className="size-5" />
+          </Button>
+        ) : expanded ? (
+          <Button variant="ghost" className="h-auto min-w-0 flex-1 justify-start gap-2.5 rounded-xl px-2 py-2 text-left" aria-label="Menú de la cuenta">
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/12 text-sm font-bold text-primary">
+              {inicial}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-xs font-semibold text-foreground">Tu cuenta</span>
+              <span className="block truncate text-[0.68rem] font-normal text-muted-foreground">{userEmail ?? "Modo demo"}</span>
+            </span>
+            <ChevronUp className="size-3.5 shrink-0 text-muted-foreground" />
           </Button>
         ) : (
           <Button variant="ghost" size="icon" className="rounded-full" aria-label="Menú">
@@ -82,6 +93,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const activo = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
   const primarios = NAV_ITEMS.filter((i) => i.primary);
+  const herramientas = NAV_ITEMS.filter((i) => !i.primary && i.href !== "/ajustes");
 
   // Atajos de teclado globales. Se ignoran si el foco está en un campo de texto
   // o si el panel de registro ya está abierto (para no capturar su escritura).
@@ -137,7 +149,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div data-ritmo={experimentos.interfazViva ? pulso.estado : "neutro"} className="app-canvas min-h-dvh bg-background">
       <TravelBanner />
       {/* Sidebar — escritorio */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-border/85 bg-card/95 px-4 py-5 shadow-[6px_0_24px_-24px_var(--foreground)] md:flex">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[17rem] flex-col border-r border-border/85 bg-card/95 px-4 py-5 shadow-[6px_0_24px_-24px_var(--foreground)] md:flex">
         <div className="flex items-center justify-between gap-3 border-b border-border pb-4">
           <Link href="/" aria-label="RITMO — inicio" className="inline-flex">
             <RitmoLogo wordmarkClassName="h-10" />
@@ -157,31 +169,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <button type="button" onClick={() => setBusquedaAbierta(true)} className="mt-2 flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
           <Search className="size-4" /><span className="flex-1 text-left">Buscar</span><kbd className="rounded-md border border-border px-1.5 py-0.5 text-[0.6rem]">⌘K</kbd>
         </button>
-        <nav className="mt-5 flex flex-1 flex-col gap-1">
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "group flex items-center gap-2.5 rounded-xl px-2 py-1.5 text-[0.92rem] font-medium transition-colors",
-                activo(item.href)
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-secondary hover:text-foreground",
-              )}
-            >
-              <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg transition-colors", activo(item.href) ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground group-hover:bg-card")}><item.icon className="size-[1.05rem]" /></span>
-              {item.label}
-            </Link>
-          ))}
+        <nav className="mt-5 flex flex-1 flex-col" aria-label="Secciones de RITMO">
+          <p className="px-2 pb-2 text-[0.62rem] font-bold uppercase tracking-[0.12em] text-muted-foreground/75">Seguimiento</p>
+          <div className="flex flex-col gap-1">
+            {primarios.map((item) => <SidebarNavLink key={item.href} item={item} active={activo(item.href)} />)}
+          </div>
+          <p className="mt-6 border-t border-border/70 px-2 pb-2 pt-4 text-[0.62rem] font-bold uppercase tracking-[0.12em] text-muted-foreground/75">Tu espacio</p>
+          <div className="flex flex-col gap-1">
+            {herramientas.map((item) => <SidebarNavLink key={item.href} item={item} active={activo(item.href)} />)}
+          </div>
         </nav>
-        <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-          <UserMenu />
-          <div className="flex items-center gap-1">
-            <Link href="/ajustes" aria-label="Ajustes" className="inline-flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
-              <Settings className="size-[1.1rem]" />
-            </Link>
+        <div className="mt-3 border-t border-border pt-3">
+          <div className="flex min-w-0 items-center gap-1">
+            <UserMenu expanded />
             <ThemeToggle />
           </div>
+          <nav aria-label="Cuenta y preferencias">
+            <Link href="/ajustes" className={cn("mt-1.5 flex h-10 items-center gap-2.5 rounded-xl px-3 text-sm font-medium transition-colors", activo("/ajustes") ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary hover:text-foreground")}>
+              <Settings className="size-4" /> Ajustes
+            </Link>
+          </nav>
         </div>
       </aside>
 
@@ -198,7 +205,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Contenido */}
-      <div className="md:pl-64">
+      <div className="md:pl-[17rem]">
         <main className="app-content mx-auto w-full max-w-[88rem] px-[clamp(1rem,3vw,3.5rem)] pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-5 md:pb-14 md:pt-9">
           <PageTransition>{children}</PageTransition>
           <footer className="mt-10 border-t border-border pt-4 text-center text-[0.68rem] text-muted-foreground/60 md:text-left">
@@ -235,6 +242,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <QuickLog />
       <GlobalSearch open={busquedaAbierta} onOpenChange={setBusquedaAbierta} />
     </div>
+  );
+}
+
+function SidebarNavLink({ item, active }: { item: (typeof NAV_ITEMS)[number]; active: boolean }) {
+  return (
+    <Link
+      href={item.href}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "group flex min-h-11 items-center gap-2.5 rounded-xl px-2 py-1.5 text-[0.92rem] font-medium transition-[background-color,color,transform]",
+        active
+          ? "bg-primary/10 text-primary"
+          : "text-muted-foreground hover:translate-x-0.5 hover:bg-secondary hover:text-foreground",
+      )}
+    >
+      <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg transition-colors", active ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground group-hover:bg-card")}>
+        <item.icon className="size-[1.05rem]" />
+      </span>
+      <span className="truncate">{item.label}</span>
+    </Link>
   );
 }
 

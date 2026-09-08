@@ -26,7 +26,7 @@ async function irA(page: Page, ruta: keyof typeof secciones) {
   // Las pestañas se recorren como en la app, sin destruir el documento y
   // abortar peticiones de autenticación en vuelo. La recarga se prueba aparte.
   const documento = await page.evaluate(() => performance.timeOrigin);
-  const sidebar = page.locator("aside nav");
+  const sidebar = page.locator("aside");
   if (await sidebar.isVisible()) {
     await sidebar.getByRole("link", { name: secciones[ruta], exact: true }).click();
   } else if (ruta === "/laboratorio" && new URL(page.url()).pathname === "/ajustes") {

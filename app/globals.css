@@ -355,6 +355,45 @@
 }
 .scenario-range { accent-color: var(--primary); }
 
+/* Hoy se lee como un panel de decisión: la energía lidera y peso/hábitos
+   forman una columna de contexto. En pantallas estrechas vuelve al orden
+   natural del documento, sin duplicar contenido ni alterar el foco. */
+.today-overview,
+.today-overview-side {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+@media (min-width: 72rem) {
+  .today-overview {
+    display: grid;
+    grid-template-columns: minmax(0, 1.22fr) minmax(22rem, 0.78fr);
+    align-items: stretch;
+  }
+  .today-overview-main {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+  }
+  .today-overview-main > [data-slot="card"] { flex: 1; }
+  .today-overview-side { justify-content: flex-start; }
+  .today-overview-side > section { min-width: 0; }
+}
+
+/* Índice de Ajustes: el mapa permanece cerca del contenido en escritorio y
+   se convierte en una cinta táctil en móvil. */
+.settings-index {
+  scroll-snap-type: x proximity;
+  overscroll-behavior-inline: contain;
+}
+.settings-index > a { scroll-snap-align: start; }
+@media (max-width: 79.999rem) {
+  .settings-index {
+    mask-image: linear-gradient(to right, transparent 0, black .35rem, black calc(100% - 1.75rem), transparent 100%);
+  }
+}
+
 /* Utilidad de superficie base para tarjetas de la app (sombra cálida RITMO). */
 @utility card-ritmo {
   background: var(--card);

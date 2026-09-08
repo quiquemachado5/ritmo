@@ -112,12 +112,13 @@ export default function HoyPage() {
         )}
       </header>
 
+      <div className="today-overview">
       {/* Energía de hoy */}
-      <section>
+      <section className="today-overview-main">
         <SectionLabel action={<Link href="/nutricion" className="text-xs font-medium text-primary hover:underline">Ver nutrición</Link>}>
           Energía de hoy
         </SectionLabel>
-        <Card className="p-4 sm:p-5">
+        <Card className="h-full p-4 sm:p-5">
           <div className="mb-4 flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
             <div><h2 className="font-display text-xl font-bold">{lecturaPrincipal}</h2><p className="mt-1 text-sm text-muted-foreground">{habitosHechos === habitosActivos.length ? "Por hoy, tu base está completa." : "Un paso cada vez. Lo demás puede esperar."}</p></div>
             <div className="flex flex-wrap gap-2">
@@ -191,6 +192,7 @@ export default function HoyPage() {
         </Card>
       </section>
 
+      <div className="today-overview-side">
       {/* Último pesaje */}
       <section>
         <SectionLabel action={<Link href="/progreso" className="text-xs font-medium text-primary hover:underline">Ver progreso</Link>}>
@@ -266,6 +268,8 @@ export default function HoyPage() {
           </div>
         </Card>
       </section>
+      </div>
+      </div>
 
       {/* Comidas de hoy */}
       <section>
