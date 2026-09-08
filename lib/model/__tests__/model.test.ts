@@ -382,15 +382,22 @@ describe("Imputación y arrastre", () => {
     casi(arr.pesoEstimado, 90.65, 0.01);
 
     const r = A.resumen(conHuecos);
-    casi(r.prediccion.partida, 90.65, 0.01);
-    casi(r.peso.restante, 5.7, 0.15);
+    // El diagnóstico legado conserva la equivalencia de 7.700 kcal/kg, pero
+    // la predicción separa masa grasa y magra y por eso responde algo más a
+    // este superávit sostenido.
+    casi(r.prediccion.partida, 90.86, 0.01);
+    casi(r.peso.restante, 5.9, 0.15);
     expect(r.energia.balanceMedio!).toBeGreaterThan(400);
     expect(r.energia.balanceMedio!).toBeLessThanOrEqual(500);
 
     const proy = A.proyeccionPesoConfiable(conHuecos);
     igual(proy.disponible, true);
-    casi(proy.hoy!.peso, 90.65, 0.01);
+    casi(proy.hoy!.peso, 90.86, 0.01);
+    igual(proy.modelo!.fuenteComposicion, "medida");
+    expect(proy.composicion).toBeDefined();
+    casi(proy.composicion!.hoy.grasaKg + proy.composicion!.hoy.magraKg, proy.hoy!.peso, 0.02);
     expect(proy.mes!.margen).toBeGreaterThan(proy.hoy!.margen);
+    expect(proy.cuatroSemanas!.margen).toBeGreaterThan(proy.semana!.margen);
     expect(proy.quincena!.margen).toBeGreaterThan(proy.semana!.margen);
     igual(proy.proximoPesaje, F.sumarDias(HOY, 4));
     igual(r.prediccion.diasObjetivo, null);
@@ -447,6 +454,9 @@ describe("Imputación y arrastre", () => {
     expect(proy.hoy!.peso).toBeGreaterThan(95.1);
     expect(proy.hoy!.peso).toBeLessThan(95.3);
     expect(proy.semana!.peso).toBeLessThan(proy.hoy!.peso);
+    expect(proy.cuatroSemanas!.peso).toBeLessThan(proy.semana!.peso);
+    igual(proy.modelo!.fuenteComposicion, "estimada");
+    casi(proy.composicion!.cuatroSemanas.grasaKg + proy.composicion!.cuatroSemanas.magraKg, proy.cuatroSemanas!.peso, 0.02);
   });
 });
 

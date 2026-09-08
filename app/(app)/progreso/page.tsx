@@ -186,6 +186,15 @@ export default function ProgresoPage() {
   const cambioModeloDesdeBascula = r.peso.actual != null && r.peso.estimadoHoy != null
     ? Math.round((r.peso.estimadoHoy - r.peso.actual) * 10) / 10
     : null;
+  const composicionModelo = r.prediccion.composicion;
+  const ritmoModelo = r.prediccion.modelo?.kgSemana ?? null;
+  const explicacionModelo = ritmoModelo == null
+    ? "Una nueva medición recalibrará esta orientación."
+    : Math.abs(ritmoModelo) < 0.1
+      ? "Tu ritmo reciente apunta a un peso estable."
+      : ritmoModelo < 0
+        ? "Tus registros recientes apuntan a una bajada gradual."
+        : "Tus registros recientes apuntan a una subida gradual.";
 
   return (
     <div className="flex flex-col gap-8">
@@ -248,8 +257,33 @@ export default function ProgresoPage() {
                       : cambioModeloDesdeBascula != null
                         ? <><span className={cn("font-semibold tabular", cambioModeloDesdeBascula <= 0 ? "text-weight" : "text-energy")}>{fmtSigno(cambioModeloDesdeBascula, 1)} kg</span> desde la última medición.</>
                         : "Se actualizará con tu próxima medición."}
+                    {intervaloHoy && <span className="ml-1.5 tabular">Rango {fmtPeso(intervaloHoy.minimo)}–{fmtPeso(intervaloHoy.maximo)} kg.</span>}
                   </p>
-                  {r.prediccion.disponible && <div className="mt-4 border-t border-body-border pt-4"><p className="mb-2 text-[0.68rem] font-semibold text-muted-foreground">Si mantienes el ritmo</p><div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pr-0 [scrollbar-width:none] sm:grid sm:grid-cols-4 sm:overflow-visible"><PredCell etiqueta="Mañana" iv={r.prediccion.manana} base={r.peso.estimadoHoy} /><PredCell etiqueta="3 días" iv={r.prediccion.tresDias} base={r.peso.estimadoHoy} /><PredCell etiqueta="1 semana" iv={r.prediccion.semana} base={r.peso.estimadoHoy} /><PredCell etiqueta="1 mes" iv={r.prediccion.mes} base={r.peso.estimadoHoy} /></div></div>}
+                  {r.prediccion.disponible && (
+                    <div className="mt-4 border-t border-body-border pt-4">
+                      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                        <p className="text-[0.68rem] font-semibold text-muted-foreground">Si mantienes el ritmo</p>
+                        <p className="text-[0.68rem] text-body-ink">{explicacionModelo}</p>
+                      </div>
+                      <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pr-0 [scrollbar-width:none] sm:grid sm:grid-cols-5 sm:overflow-visible">
+                        <PredCell etiqueta="Mañana" iv={r.prediccion.manana} base={r.peso.estimadoHoy} />
+                        <PredCell etiqueta="3 días" iv={r.prediccion.tresDias} base={r.peso.estimadoHoy} />
+                        <PredCell etiqueta="1 semana" iv={r.prediccion.semana} base={r.peso.estimadoHoy} />
+                        <PredCell etiqueta="2 semanas" iv={r.prediccion.quincena} base={r.peso.estimadoHoy} />
+                        <PredCell etiqueta="4 semanas" iv={r.prediccion.cuatroSemanas} base={r.peso.estimadoHoy} />
+                      </div>
+                      {composicionModelo && (
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 text-[0.68rem] text-muted-foreground">
+                          <p><span className="font-semibold text-foreground">Composición estimada</span> · no es una medición</p>
+                          <p className="tabular">
+                            Hoy: <span className="font-semibold text-body-ink">{fmtPeso(composicionModelo.hoy.grasaKg)} kg grasa</span> · {fmtPeso(composicionModelo.hoy.magraKg)} kg masa libre
+                            <span className="mx-1.5 text-border">→</span>
+                            4 sem.: <span className="font-semibold text-body-ink">{fmtPeso(composicionModelo.cuatroSemanas.grasaKg)} kg</span> · {fmtPeso(composicionModelo.cuatroSemanas.magraKg)} kg
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </Card>

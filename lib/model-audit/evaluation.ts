@@ -2,7 +2,7 @@ import { pesajes } from "../model/analytics";
 import type { Estado } from "../model/types";
 import type { PrediccionEmitida, ResultadoPrediccion } from "./types";
 
-export const VERSION_MODELO_AUDITADO = "ritmo-2026-09-v1";
+export const VERSION_MODELO_AUDITADO = "ritmo-2026-09-v2-composicion";
 
 /** Solo fecha exacta y pronósticos sellados en un día anterior; no interpola. */
 export function evaluarPredicciones(estado: Estado, predicciones: PrediccionEmitida[], fechaHoy: string) {
