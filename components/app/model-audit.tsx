@@ -32,6 +32,9 @@ export function ModelAudit() {
       </div>}
 
       {evaluacion.casos > 0 ? <>
+        <p className="mt-3 text-xs text-muted-foreground">
+          Modelo actual: <span className="font-semibold text-foreground">{evaluacion.actual.casos ? `${fmtPeso(evaluacion.actual.maeKg, 2)} kg MAE en ${evaluacion.actual.casos} comparaciones` : "aún sin pesajes evaluables"}</span>. El resumen inferior conserva versiones anteriores sin mezclarlas con esta cifra.
+        </p>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-left text-sm">
             <caption className="sr-only">Error real de pronósticos emitidos antes del pesaje, separado por horizonte</caption>

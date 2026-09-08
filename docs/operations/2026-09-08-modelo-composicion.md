@@ -28,6 +28,8 @@ Desde el último pesaje se simula cada día disponible. La señal energética se
 
 La corrección de tendencia se redistribuye entre FM y FFM conservando siempre `peso = FM + FFM`. Las proyecciones se ofrecen para hoy, mañana, 3, 7, 14 y 28 días, además del horizonte técnico de 30 días que conserva la auditoría histórica.
 
+La báscula se modela como `FM + FFM + líquido transitorio`. En un día observado, no marcar «Sin alcohol» se interpreta como alcohol; un día totalmente vacío continúa siendo desconocido. El prior de producto —una heurística, no una constante fisiológica— añade 0,45 kg al día siguiente y lo hace decaer durante tres días. Si existen al menos dos tramos diarios con alcohol y tres sin alcohol, RITMO sustituye ese prior por la diferencia mediana personal, limitada entre 0,15 y 1,20 kg. Esta capa modifica la lectura esperada de báscula y su incertidumbre, pero nunca se transforma en grasa, masa libre de grasa o balance calórico.
+
 Los rangos combinan el error histórico walk-forward con la incertidumbre diaria. Se amplían cuando faltan registros, hay días imputados o pasa más tiempo sin pesarse. La calibración y el backtest usan ahora la misma densidad energética efectiva de dos compartimentos; no mezclan esa predicción con la equivalencia antigua de 7.700 kcal/kg.
 
 ## Límites honestos
@@ -37,4 +39,12 @@ Los rangos combinan el error histórico walk-forward con la incertidumbre diaria
 - Un backtest retrospectivo mide el comportamiento sobre datos pasados, no garantiza el siguiente peso.
 - El aprendizaje solo usa tramos de pesaje cerrados y, en cada evaluación walk-forward, excluye los datos futuros.
 
-La versión de auditoría asociada es `ritmo-2026-09-v2-composicion`.
+La auditoría separa el MAE de cada versión para no atribuir al modelo actual los errores de fórmulas anteriores. La versión asociada es `ritmo-2026-09-v3-liquidos`.
+
+## Calidad operativa
+
+- Hoy, Nutrición y Progreso indican cuál es el siguiente dato concreto que más mejora la lectura.
+- El banco nutricional contiene doce platos complejos y mide MAE, MAPE, percentil 90 y sesgo en kcal y cada macro.
+- El diagnóstico opcional solo comparte tipo, estado, versión, sección y familia de navegador; no envía ruta completa, user-agent, correo ni datos de salud. El servidor limita veinte eventos por minuto y por sesión autenticada.
+- Producción bloquea framing, tipos MIME ambiguos, políticas cross-domain y fuerza HSTS.
+- CI verifica RLS también sobre la auditoría del modelo y detiene el despliegue si el JavaScript supera 700 kB gzip totales o 130 kB en un único chunk.

@@ -188,7 +188,21 @@ export default function ProgresoPage() {
     : null;
   const composicionModelo = r.prediccion.composicion;
   const ritmoModelo = r.prediccion.modelo?.kgSemana ?? null;
-  const explicacionModelo = ritmoModelo == null
+  const retencionHoy = r.prediccion.modelo?.retencionLiquidosHoyKg ?? 0;
+  const retencionManana = r.prediccion.modelo?.retencionLiquidosMananaKg ?? 0;
+  const energiaHoyModelo = energiaDe(estado, hoyISO);
+  const siguienteDato = diasDesdeBascula >= 7
+    ? "un pesaje nuevo, preferiblemente al levantarte"
+    : energiaHoyModelo.sinRegistro
+      ? "marcar al menos un hábito de hoy"
+      : energiaHoyModelo.ingestaIncompleta
+        ? "revisar las cantidades de las comidas estimadas"
+        : "mantener el próximo pesaje en condiciones parecidas";
+  const explicacionModelo = retencionHoy > 0
+    ? `El alcohol reciente puede sumar unos ${fmtPeso(retencionHoy)} kg de líquido hoy; no es grasa.`
+    : retencionManana > 0
+      ? `Al no marcar “Sin alcohol” hoy, mañana se contemplan unos ${fmtPeso(retencionManana)} kg de líquido.`
+      : ritmoModelo == null
     ? "Una nueva medición recalibrará esta orientación."
     : Math.abs(ritmoModelo) < 0.1
       ? "Tu ritmo reciente apunta a un peso estable."
@@ -263,7 +277,7 @@ export default function ProgresoPage() {
                     <div className="mt-4 border-t border-body-border pt-4">
                       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                         <p className="text-[0.68rem] font-semibold text-muted-foreground">Si mantienes el ritmo</p>
-                        <p className="text-[0.68rem] text-body-ink">{explicacionModelo}</p>
+                        <p className={cn("text-[0.68rem]", retencionHoy > 0 || retencionManana > 0 ? "text-water-ink" : "text-body-ink")}>{explicacionModelo}</p>
                       </div>
                       <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pr-0 [scrollbar-width:none] sm:grid sm:grid-cols-5 sm:overflow-visible">
                         <PredCell etiqueta="Mañana" iv={r.prediccion.manana} base={r.peso.estimadoHoy} />
@@ -277,11 +291,13 @@ export default function ProgresoPage() {
                           <p><span className="font-semibold text-foreground">Composición estimada</span> · no es una medición</p>
                           <p className="tabular">
                             Hoy: <span className="font-semibold text-body-ink">{fmtPeso(composicionModelo.hoy.grasaKg)} kg grasa</span> · {fmtPeso(composicionModelo.hoy.magraKg)} kg masa libre
+                            {composicionModelo.hoy.liquidoTransitorioKg > 0 && <span className="text-water-ink"> · +{fmtPeso(composicionModelo.hoy.liquidoTransitorioKg)} kg líquido</span>}
                             <span className="mx-1.5 text-border">→</span>
                             4 sem.: <span className="font-semibold text-body-ink">{fmtPeso(composicionModelo.cuatroSemanas.grasaKg)} kg</span> · {fmtPeso(composicionModelo.cuatroSemanas.magraKg)} kg
                           </p>
                         </div>
                       )}
+                      <p className="mt-2 text-[0.68rem] text-muted-foreground"><span className="font-semibold text-foreground">Para afinarlo:</span> {siguienteDato}.</p>
                     </div>
                   )}
                 </div>

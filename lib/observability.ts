@@ -32,6 +32,20 @@ function limpio(detalle?: unknown): string | undefined {
   return detalle.replace(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/gi, "[correo]").replace(/(?:https?:\/\/|Bearer\s+)[^\s]+/gi, "[oculto]").replace(/[A-Za-z0-9_-]{32,}/g, "[oculto]").replace(/[\r\n]+/g, " ").slice(0, 120) || undefined;
 }
 
+const RUTAS = ["progreso", "nutricion", "habitos", "ajustes", "login", "registro", "onboarding", "minimo", "calendario", "cuerpo", "offline"];
+export function rutaDiagnostica(pathname: string): string {
+  if (pathname === "/") return "hoy";
+  const segmento = pathname.split("/").filter(Boolean)[0] || "hoy";
+  return RUTAS.includes(segmento) ? segmento : segmento === "auth" ? "auth" : "otra";
+}
+export function navegadorDiagnostico(userAgent: string): string {
+  if (/Edg\//.test(userAgent)) return "edge";
+  if (/Firefox\//.test(userAgent)) return "firefox";
+  if (/Chrome\//.test(userAgent) || /CriOS\//.test(userAgent)) return "chrome";
+  if (/Safari\//.test(userAgent)) return "safari";
+  return "otro";
+}
+
 export function registrarDiagnostico(evento: EventoDiagnostico, estado: EstadoDiagnostico, detalle?: unknown): void {
   const dato: Diagnostico = { at: new Date().toISOString(), evento, estado, detalle: limpio(detalle) };
   // En Vercel queda disponible como log estructurado; en cliente se conserva
@@ -51,7 +65,14 @@ export function registrarDiagnostico(evento: EventoDiagnostico, estado: EstadoDi
   if (estado !== "ok" && diagnosticoCompartido(usuario) && Date.now() - (enviados.get(key) ?? 0) > 60000) {
     enviados.set(key, Date.now());
     void fetch("/api/diagnostico", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ evento, estado, build: process.env.NEXT_PUBLIC_RITMO_BUILD_ID || "dev" }), keepalive: true,
+      body: JSON.stringify({
+        evento,
+        estado,
+        build: process.env.NEXT_PUBLIC_RITMO_BUILD_ID || "dev",
+        ruta: rutaDiagnostica(window.location.pathname),
+        navegador: navegadorDiagnostico(window.navigator.userAgent),
+      }),
+      keepalive: true,
     }).catch(() => {});
   }
 }

@@ -14,7 +14,8 @@
     "test:e2e:local": "playwright test --config=playwright.local.config.ts",
     "test:nutrition:local": "vitest run lib/nutrition/__tests__/local.test.ts lib/nutrition/__tests__/offline.test.ts lib/nutrition/__tests__/portions.test.ts --reporter=verbose",
     "test:nutrition:eval": "RUN_GEMINI_EVAL=1 node --env-file-if-exists=.env.local ./node_modules/vitest/vitest.mjs run lib/nutrition/__tests__/reference.eval.test.ts --reporter=verbose",
-    "check:versions": "node scripts/check-versions.mjs"
+    "check:versions": "node scripts/check-versions.mjs",
+    "check:bundle": "node scripts/check-bundle-budget.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

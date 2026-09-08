@@ -458,6 +458,38 @@ describe("Imputación y arrastre", () => {
     igual(proy.modelo!.fuenteComposicion, "estimada");
     casi(proy.composicion!.cuatroSemanas.grasaKg + proy.composicion!.cuatroSemanas.magraKg, proy.cuatroSemanas!.peso, 0.02);
   });
+
+  it("separa la retención por alcohol del cambio de grasa y masa libre", () => {
+    const fechaPeso = F.sumarDias(HOY, -1);
+    const base = {
+      perfil: { ...perfilBase, imputarActiva: false },
+      dias: {
+        [fechaPeso]: { fecha: fechaPeso, peso: 95, habitos: { deporte: true } },
+      },
+      composicion: [],
+    };
+    const conAlcohol = A.proyeccionPesoConfiable(estado(base));
+    const sinAlcohol = A.proyeccionPesoConfiable(estado({
+      ...base,
+      dias: { [fechaPeso]: { ...base.dias[fechaPeso], habitos: { deporte: true, noAlcohol: true } } },
+    }));
+    expect(conAlcohol.modelo!.retencionLiquidosHoyKg).toBeGreaterThan(0.4);
+    expect(conAlcohol.hoy!.peso - sinAlcohol.hoy!.peso).toBeGreaterThan(0.35);
+    casi(
+      conAlcohol.composicion!.hoy.grasaKg + conAlcohol.composicion!.hoy.magraKg + conAlcohol.composicion!.hoy.liquidoTransitorioKg,
+      conAlcohol.hoy!.peso,
+      0.03,
+    );
+    expect(conAlcohol.composicion!.cuatroSemanas.liquidoTransitorioKg).toBe(0);
+
+    const bebidoHoy = A.proyeccionPesoConfiable(estado({
+      perfil: { ...perfilBase, imputarActiva: false },
+      dias: { [HOY]: { fecha: HOY, peso: 95, habitos: { deporte: true } } },
+      composicion: [],
+    }));
+    expect(bebidoHoy.modelo!.retencionLiquidosHoyKg).toBe(0);
+    expect(bebidoHoy.modelo!.retencionLiquidosMananaKg).toBeGreaterThan(0.4);
+  });
 });
 
 describe("Integración: resumen sobre estado completo", () => {

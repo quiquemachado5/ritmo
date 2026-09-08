@@ -36,6 +36,14 @@ describe("Auditoría prospectiva", () => {
     expect(r.horizontes.find((h) => h.dias === 1)?.maeKg).toBeCloseTo(0.2);
     expect(r.horizontes.find((h) => h.dias === 30)?.maeKg).toBeCloseTo(1.2);
   });
+  it("no mezcla la precisión de versiones anteriores con la actual", () => {
+    const actual = { ...prediccion, id: "actual", versionModelo: "ritmo-2026-09-v3-liquidos" };
+    const vieja = { ...prediccion, id: "vieja", peso: 88, versionModelo: "ritmo-2026-09-v2-composicion" };
+    const r = evaluarPredicciones(base, [actual, vieja], "2026-09-05");
+    expect(r.actual.casos).toBe(1);
+    expect(r.actual.maeKg).toBeCloseTo(0.2);
+    expect(r.versiones).toHaveLength(2);
+  });
 });
 
 describe("Vigencia del perfil", () => {

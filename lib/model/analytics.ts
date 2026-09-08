@@ -17,6 +17,7 @@ import {
   proyectarComposicion,
   type ComposicionDinamica,
 } from "./body-composition";
+import { impactoLiquidosEnFecha } from "./fluid-retention";
 import { configuracionEnFecha, perfilEnFecha } from "./profile-history";
 import type {
   Comida,
@@ -223,8 +224,14 @@ export function seriePesoDiaria(estado: Estado, desde: string, hasta: string): P
   if (!p.length) return [];
 
   const porFecha = new Map(p.map((x) => [x.fecha, x.peso]));
+  const grasaPorFecha = new Map((estado.composicion || []).filter((c) => M.num(c.grasaPct) !== null).map((c) => [c.fecha, c.grasaPct as number]));
   const salida: PuntoPesoDiario[] = [];
-  let ancla = p[0].peso;
+  const liquidoInicial = impactoLiquidosEnFecha(estado, p[0].fecha).kg;
+  let composicion = composicionInicial(
+    p[0].peso - liquidoInicial,
+    perfilEnFecha(estado, p[0].fecha),
+    grasaPorFecha.get(p[0].fecha),
+  );
   let cursor = p[0].fecha;
   let guarda = 0;
 
@@ -234,14 +241,21 @@ export function seriePesoDiaria(estado: Estado, desde: string, hasta: string): P
     // El primer día es el propio pesaje inicial: no hay nada que acumular.
     if (salida.length > 0) {
       const e = energiaDe(estado, cursor);
-      if (!e.sinRegistro || e.imputado) ancla += e.balance / M.KCAL_POR_KG;
+      if (!e.sinRegistro || e.imputado) composicion = avanzarComposicion(composicion, e.balance, e.quemadas);
     }
 
-    const estimado = Math.round(ancla * 100) / 100;
+    const liquido = impactoLiquidosEnFecha(estado, cursor).kg;
+    const estimado = Math.round((composicion.peso + liquido) * 100) / 100;
     if (cursor >= desde) salida.push({ fecha: cursor, real, estimado });
 
     // Una báscula real manda sobre la estimación a partir de aquí.
-    if (real !== null) ancla = real;
+    if (real !== null) {
+      const pesoTisular = Math.max(20, real - liquido);
+      const grasaPct = grasaPorFecha.get(cursor);
+      composicion = grasaPct == null
+        ? ajustarComposicionAPeso(composicion, pesoTisular)
+        : composicionInicial(pesoTisular, perfilEnFecha(estado, cursor), grasaPct, composicion.diasDeficit);
+    }
     cursor = sumarDias(cursor, 1);
   }
 
@@ -772,17 +786,20 @@ export interface ComposicionProyectada {
   peso: number;
   grasaKg: number;
   magraKg: number;
+  /** Desviación temporal de báscula; no forma parte de FM ni FFM. */
+  liquidoTransitorioKg: number;
   grasaPct: number;
   particionGrasa: number;
   factorAdaptacion: number;
   fuenteGrasa: "medida" | "estimada";
 }
 
-function resumirComposicion(valor: ComposicionDinamica): ComposicionProyectada {
+function resumirComposicion(valor: ComposicionDinamica, liquidoTransitorioKg = 0): ComposicionProyectada {
   return {
-    peso: redondearPeso(valor.peso),
+    peso: redondearPeso(valor.peso + liquidoTransitorioKg),
     grasaKg: redondearPeso(valor.grasaKg),
     magraKg: redondearPeso(valor.magraKg),
+    liquidoTransitorioKg: redondearPeso(liquidoTransitorioKg),
     grasaPct: Math.round(valor.grasaPct * 10) / 10,
     particionGrasa: Math.round(valor.particionGrasa * 1000) / 1000,
     factorAdaptacion: Math.round(valor.factorAdaptacion * 1000) / 1000,
@@ -813,6 +830,9 @@ export interface ModeloProyeccion {
   alphaEnergetico: number;
   adaptacionMetabolica: number;
   fuenteComposicion: "medida" | "estimada";
+  retencionLiquidosHoyKg: number;
+  retencionLiquidosMananaKg: number;
+  retencionLiquidosFuente: "ninguna" | "generica" | "personalizada";
 }
 
 export interface ProyeccionConfiable {
@@ -849,7 +869,13 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
 
   const hoyDia = diaAbsoluto(hoy());
   const diasSinPesaje = Math.max(0, hoyDia - ultimo.dia);
-  const tendenciaRobusta = M.tendenciaRobustaPeso(puntos);
+  // La báscula contiene tejido + oscilaciones transitorias. Se limpia la señal
+  // conocida antes de calcular la tendencia para no aprender alcohol como grasa.
+  const puntosTisulares = puntos.map((punto) => ({
+    ...punto,
+    peso: punto.peso - impactoLiquidosEnFecha(estado, punto.fecha).kg,
+  }));
+  const tendenciaRobusta = M.tendenciaRobustaPeso(puntosTisulares);
   const calibracion = tdeeDesdeHistorial(estado);
   const personalizacion = calibracionPersonalizada(estado);
   const validacion = backtestModelo(estado);
@@ -864,8 +890,9 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
   const composicionMedida = (estado.composicion || [])
     .filter((c) => c.fecha <= ultimo.fecha && M.num(c.grasaPct) !== null)
     .sort((a, b) => b.fecha.localeCompare(a.fecha))[0];
+  const liquidoUltimo = impactoLiquidosEnFecha(estado, ultimo.fecha);
   let composicionEnergetica = composicionInicial(
-    ultimo.peso,
+    Math.max(20, ultimo.peso - liquidoUltimo.kg),
     perfilEnFecha(estado, ultimo.fecha),
     composicionMedida?.grasaPct,
     diasDeficitAntesDe(estado, ultimo.fecha),
@@ -896,7 +923,7 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
     : 0;
   if (diasSinPesaje > 0 && balanceDesdeBascula !== balanceAcumuladoSeguro) {
     composicionEnergetica = composicionInicial(
-      ultimo.peso,
+      Math.max(20, ultimo.peso - liquidoUltimo.kg),
       perfilEnFecha(estado, ultimo.fecha),
       composicionMedida?.grasaPct,
       diasDeficitAntesDe(estado, ultimo.fecha),
@@ -909,7 +936,7 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
   const pesoTendenciaRobusta = tendenciaReciente
     ? tendenciaReciente.intercepto + tendenciaReciente.pendiente * hoyDia
     : null;
-  const tendenciaExponencial = tendenciaReciente ? tendenciaExponencialPeso(puntos, hoyDia) : null;
+  const tendenciaExponencial = tendenciaReciente ? tendenciaExponencialPeso(puntosTisulares, hoyDia) : null;
   const pesoTendencia = pesoTendenciaRobusta !== null && tendenciaExponencial
     ? pesoTendenciaRobusta * 0.65 + tendenciaExponencial.peso * 0.35
     : pesoTendenciaRobusta ?? tendenciaExponencial?.peso ?? null;
@@ -927,12 +954,14 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
         : 0.82;
   // Si hoy hay báscula, ese dato es el ancla exacta. Alpha se reserva para
   // combinar las trayectorias futuras, no para mover una lectura real.
-  const pesoHoy = diasSinPesaje === 0
-    ? ultimo.peso
+  const liquidoHoy = impactoLiquidosEnFecha(estado, hoy());
+  const pesoHoyTisular = diasSinPesaje === 0
+    ? Math.max(20, ultimo.peso - liquidoHoy.kg)
     : pesoTendencia === null
     ? pesoEnergetico
     : pesoEnergetico * alphaEnergetico + pesoTendencia * (1 - alphaEnergetico);
-  const composicionHoy = ajustarComposicionAPeso(composicionEnergetica, pesoHoy);
+  const pesoHoy = pesoHoyTisular + liquidoHoy.kg;
+  const composicionHoy = ajustarComposicionAPeso(composicionEnergetica, pesoHoyTisular);
   if (pesoTendencia !== null) {
     errorKcalCuadrado += (
       (pesoEnergetico - pesoTendencia)
@@ -953,7 +982,7 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
   const balanceEnergetico = ritmoActual
     ? balanceEnergeticoBase * (1 - pesoRitmoActual) + ritmoActual.balance * pesoRitmoActual
     : balanceEnergeticoBase;
-  const balanceModeloEnergetico = limitarBalanceEstimado(balanceEnergetico, pesoHoy);
+  const balanceModeloEnergetico = limitarBalanceEstimado(balanceEnergetico, pesoHoyTisular);
   const evaluablesRecientes = diasEvaluables(estado, sumarDias(hoy(), -13), hoy());
   const errorDiario = evaluablesRecientes.length
     ? evaluablesRecientes.reduce((suma, d) => suma + incertidumbreEnergia(d.energia), 0) / evaluablesRecientes.length
@@ -977,15 +1006,22 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
 
   const pronosticar = (dias: number) => {
     const energetica = proyectarComposicion(composicionHoy, balanceModeloEnergetico, tdeeVigente(estado), dias);
-    const pesoPorTendencia = pesoTendencia === null ? null : pesoHoy + pendienteTendencia * dias;
-    const pesoFinal = pesoPorTendencia === null
+    const pesoPorTendencia = pesoTendencia === null ? null : pesoHoyTisular + pendienteTendencia * dias;
+    const pesoTisular = pesoPorTendencia === null
       ? energetica.peso
       : energetica.peso * alphaEnergetico + pesoPorTendencia * (1 - alphaEnergetico);
-    const composicion = ajustarComposicionAPeso(energetica, pesoFinal);
+    const composicion = ajustarComposicionAPeso(energetica, pesoTisular);
+    const liquido = impactoLiquidosEnFecha(estado, sumarDias(hoy(), dias));
+    const pesoFinal = pesoTisular + liquido.kg;
     const densidad = densidadEnergeticaEfectiva(composicion.particionGrasa);
     return {
-      intervalo: pesoConIntervalo(pesoFinal, errorKcalCuadrado + dias * errorDiario ** 2, densidad),
+      intervalo: pesoConIntervalo(
+        pesoFinal,
+        errorKcalCuadrado + dias * errorDiario ** 2 + (liquido.incertidumbreKg * densidad) ** 2,
+        densidad,
+      ),
       composicion,
+      liquido,
     };
   };
   const manana = pronosticar(1);
@@ -995,7 +1031,7 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
   const cuatroSemanas = pronosticar(28);
   const mes = pronosticar(30);
   const balanceDiario = (
-    (semana.intervalo.peso - pesoHoy)
+    (semana.composicion.peso - composicionHoy.peso)
     * densidadEnergeticaEfectiva(composicionHoy.particionGrasa)
   ) / 7;
   const ciclosHastaSiguientePesaje = Math.max(1, Math.ceil(diasSinPesaje / 14));
@@ -1025,6 +1061,9 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
       alphaEnergetico,
       adaptacionMetabolica: composicionHoy.factorAdaptacion,
       fuenteComposicion: composicionHoy.fuenteGrasa,
+      retencionLiquidosHoyKg: liquidoHoy.kg,
+      retencionLiquidosMananaKg: manana.liquido.kg,
+      retencionLiquidosFuente: liquidoHoy.fuente !== "ninguna" ? liquidoHoy.fuente : manana.liquido.fuente,
     },
     diasSinPesaje,
     pesajes: puntos.length,
@@ -1032,7 +1071,11 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
     diasImputados,
     diasDesconocidos,
     balanceDiario,
-    hoy: pesoConIntervalo(pesoHoy, errorKcalCuadrado, densidadEnergeticaEfectiva(composicionHoy.particionGrasa)),
+    hoy: pesoConIntervalo(
+      pesoHoy,
+      errorKcalCuadrado + (liquidoHoy.incertidumbreKg * densidadEnergeticaEfectiva(composicionHoy.particionGrasa)) ** 2,
+      densidadEnergeticaEfectiva(composicionHoy.particionGrasa),
+    ),
     manana: manana.intervalo,
     tresDias: tresDias.intervalo,
     semana: semana.intervalo,
@@ -1040,10 +1083,10 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
     cuatroSemanas: cuatroSemanas.intervalo,
     mes: mes.intervalo,
     composicion: {
-      hoy: resumirComposicion(composicionHoy),
-      semana: resumirComposicion(semana.composicion),
-      quincena: resumirComposicion(quincena.composicion),
-      cuatroSemanas: resumirComposicion(cuatroSemanas.composicion),
+      hoy: resumirComposicion(composicionHoy, liquidoHoy.kg),
+      semana: resumirComposicion(semana.composicion, semana.liquido.kg),
+      quincena: resumirComposicion(quincena.composicion, quincena.liquido.kg),
+      cuatroSemanas: resumirComposicion(cuatroSemanas.composicion, cuatroSemanas.liquido.kg),
     },
     proximoPesaje: sumarDias(ultimo.fecha, ciclosHastaSiguientePesaje * 14),
   };

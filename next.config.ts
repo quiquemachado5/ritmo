@@ -34,7 +34,7 @@ const nextConfig: NextConfig = {
       "default-src 'self'",
       "base-uri 'self'",
       "object-src 'none'",
-      "frame-ancestors 'self'",
+      "frame-ancestors 'none'",
       "form-action 'self'",
       "img-src 'self' data: blob:",
       "font-src 'self' data:",
@@ -53,7 +53,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'X-Frame-Options',
-            value: 'SAMEORIGIN',
+            value: 'DENY',
           },
           {
             key: 'X-XSS-Protection',
@@ -78,6 +78,14 @@ const nextConfig: NextConfig = {
           {
             key: 'Cross-Origin-Resource-Policy',
             value: 'same-origin',
+          },
+          ...(desarrollo ? [] : [{
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains',
+          }]),
+          {
+            key: 'X-Permitted-Cross-Domain-Policies',
+            value: 'none',
           },
         ],
       },

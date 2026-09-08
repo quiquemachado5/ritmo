@@ -1,8 +1,9 @@
 import { Database, ShieldCheck } from "lucide-react";
-import type { Comida } from "@/lib/model/types";
 import { cn } from "@/lib/utils";
+import { qualityForDay, type RecordQualityLevel } from "@/lib/record-quality";
 
-export type RecordQualityLevel = "alta" | "media" | "baja" | "sin-datos";
+export { qualityForDay };
+export type { RecordQualityLevel };
 
 const STYLE: Record<RecordQualityLevel, { bar: string; icon: string; label: string }> = {
   alta: { bar: "bg-weight", icon: "bg-weight-wash text-weight-ink", label: "Alta" },
@@ -10,15 +11,6 @@ const STYLE: Record<RecordQualityLevel, { bar: string; icon: string; label: stri
   baja: { bar: "bg-warning", icon: "bg-warning-wash text-warning-ink", label: "Baja" },
   "sin-datos": { bar: "bg-muted-foreground/30", icon: "bg-secondary text-muted-foreground", label: "Sin datos" },
 };
-
-export function qualityForDay(comidas: Comida[], habitosHechos: number, totalHabitos: number): { level: RecordQualityLevel; detail: string } {
-  const aproximadas = comidas.filter((comida) => comida.estimado || comida.fuente === "offline").length;
-  const señales = (comidas.length > 0 ? 1 : 0) + (habitosHechos > 0 ? 1 : 0);
-  if (señales === 0) return { level: "sin-datos", detail: "Añade una comida o marca un hábito para iniciar la lectura." };
-  if (señales === 2 && habitosHechos >= Math.ceil(totalHabitos * 0.66) && aproximadas === 0) return { level: "alta", detail: `${habitosHechos}/${totalHabitos} hábitos · ${comidas.length} comida${comidas.length === 1 ? "" : "s"} revisada${comidas.length === 1 ? "" : "s"}.` };
-  if (señales === 2 || (comidas.length > 0 && aproximadas < comidas.length)) return { level: "media", detail: `${habitosHechos}/${totalHabitos} hábitos · ${comidas.length} comida${comidas.length === 1 ? "" : "s"}; revisa las cantidades estimadas.` };
-  return { level: "baja", detail: comidas.length > 0 ? "Hay comida registrada, pero faltan hábitos o cantidades por confirmar." : "Los hábitos orientan el día; registrar comidas afinará kcal y macros." };
-}
 
 export function RecordQuality({ level, detail, className }: { level: RecordQualityLevel; detail: string; className?: string }) {
   const style = STYLE[level];

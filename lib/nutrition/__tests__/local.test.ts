@@ -46,5 +46,11 @@ describe("nutrición sin facturación", () => {
     // Informe de regresión, no certificación nutricional ni equivalencia a Gemini.
     console.info("Evaluación local frente a referencias aproximadas:", JSON.stringify(metricas));
     expect(metricas.casos).toBe(REFERENCE_MEALS.length);
+    expect(metricas.mape.kcal).toBeLessThanOrEqual(30);
+    expect(metricas.mape.proteinas).toBeLessThanOrEqual(40);
+    expect(metricas.mape.carbohidratos).toBeLessThanOrEqual(20);
+    expect(metricas.mape.grasas).toBeLessThanOrEqual(40);
+    expect(metricas.p90.kcal).toBeLessThanOrEqual(450);
+    expect(Math.abs(metricas.sesgo.kcal)).toBeLessThanOrEqual(150);
   });
 });

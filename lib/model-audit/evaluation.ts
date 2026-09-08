@@ -2,7 +2,7 @@ import { pesajes } from "../model/analytics";
 import type { Estado } from "../model/types";
 import type { PrediccionEmitida, ResultadoPrediccion } from "./types";
 
-export const VERSION_MODELO_AUDITADO = "ritmo-2026-09-v2-composicion";
+export const VERSION_MODELO_AUDITADO = "ritmo-2026-09-v3-liquidos";
 
 /** Solo fecha exacta y pronósticos sellados en un día anterior; no interpola. */
 export function evaluarPredicciones(estado: Estado, predicciones: PrediccionEmitida[], fechaHoy: string) {
@@ -22,8 +22,14 @@ export function evaluarPredicciones(estado: Estado, predicciones: PrediccionEmit
     maeKg: filas.length ? filas.reduce((s, p) => s + p.errorKg, 0) / filas.length : null,
     coberturaPct: filas.length ? 100 * filas.filter((p) => p.dentroIntervalo).length / filas.length : null,
   });
+  const versiones = [...new Set(evaluadas.map((p) => p.versionModelo))]
+    .map((version) => ({ version, ...resumen(evaluadas.filter((p) => p.versionModelo === version)) }))
+    .sort((a, b) => b.version.localeCompare(a.version));
+  const actuales = evaluadas.filter((p) => p.versionModelo === VERSION_MODELO_AUDITADO);
   return {
     ...resumen(evaluadas), pendientes, sinPesaje,
+    actual: { version: VERSION_MODELO_AUDITADO, ...resumen(actuales) },
+    versiones,
     evaluadas: evaluadas.sort((a, b) => b.fechaObjetivo.localeCompare(a.fechaObjetivo) || a.horizonteDias - b.horizonteDias),
     horizontes: ([1, 3, 7, 30] as const).map((dias) => ({ dias, ...resumen(evaluadas.filter((p) => p.horizonteDias === dias)) })),
   };

@@ -55,6 +55,8 @@ jobs:
       - run: npm run lint
       - run: npm run test
       - run: npm run build
+      - name: Presupuesto de JavaScript móvil
+        run: npm run check:bundle
       - name: Alcance de las pruebas
         run: echo 'Pruebas automáticas con datos sintéticos. OAuth, correo y cuentas reales requieren la ejecución manual de staging.' >> "$GITHUB_STEP_SUMMARY"
 

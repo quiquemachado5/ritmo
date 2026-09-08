@@ -5,10 +5,12 @@ select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001'
 insert into public.dias(user_id,fecha,habitos) values(auth.uid(),'2026-09-04','{"agua":true}');
 update public.perfiles set proteina_objetivo=1.6 where user_id=auth.uid();
 insert into storage.objects(bucket_id,name) values('backups',auth.uid()::text || '/latest.json');
+select public.model_audit_snapshot('{"edad":30,"alturaCm":180,"sexo":"hombre","kcalObjetivo":2000,"factorActividad":1.375,"umbralRacha":4}'::jsonb,'UTC');
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',false);
 do $$ begin
   if exists(select 1 from public.dias) then raise exception 'RLS: datos de otra cuenta visibles'; end if;
   if exists(select 1 from storage.objects) then raise exception 'RLS: respaldo ajeno visible'; end if;
+  if exists(select 1 from public.historial_modelo) then raise exception 'RLS: auditoría de otra cuenta visible'; end if;
   if (select count(*) from public.perfiles) <> 1 then raise exception 'RLS: perfiles no aislados'; end if;
   begin
     insert into public.dias(user_id,fecha) values('00000000-0000-4000-8000-000000000001','2026-09-05');
@@ -17,6 +19,11 @@ do $$ begin
   begin
     perform public.claim_nutrition_request(auth.uid(),repeat('a',64));
     raise exception 'Presupuesto accesible desde navegador';
+  exception when insufficient_privilege then null; end;
+  begin
+    insert into public.historial_modelo(user_id,effective_date,perfil)
+      values(auth.uid(),current_date,'{}');
+    raise exception 'RLS: inserción directa de auditoría permitida';
   exception when insufficient_privilege then null; end;
 end $$;
 reset role;

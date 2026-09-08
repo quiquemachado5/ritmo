@@ -25,6 +25,8 @@ if (live && !process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY es obli
       "sin respuesta": unavailable.join(", ") || "ninguno",
       "MAE kcal": metrics.mae.kcal,
       "MAPE kcal %": metrics.mape.kcal,
+      "P90 kcal": metrics.p90.kcal,
+      "Sesgo kcal": metrics.sesgo.kcal,
       "MAE proteína g": metrics.mae.proteinas,
       "MAE carbohidratos g": metrics.mae.carbohidratos,
       "MAE grasas g": metrics.mae.grasas,

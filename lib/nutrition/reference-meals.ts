@@ -67,4 +67,28 @@ export const REFERENCE_MEALS: ReferenceMeal[] = [
     referencia: { kcal: 515, proteinas: 40, carbohidratos: 8, grasas: 34 },
     toleranciaPct: 16,
   },
+  {
+    id: "desayuno-avena-yogur",
+    texto: "Bol con 60 g de copos de avena, 200 g de yogur griego natural 2%, 100 g de plátano, 15 g de crema de cacahuete y 10 g de miel",
+    referencia: { kcal: 590, proteinas: 30, carbohidratos: 82, grasas: 18 },
+    toleranciaPct: 16,
+  },
+  {
+    id: "lentejas-arroz-huevo",
+    texto: "Plato con 250 g de lentejas guisadas, 100 g de arroz blanco cocido, 1 huevo L, 50 g de espinacas y 10 ml de AOVE",
+    referencia: { kcal: 660, proteinas: 31, carbohidratos: 88, grasas: 21 },
+    toleranciaPct: 18,
+  },
+  {
+    id: "bocadillo-pollo-aguacate",
+    texto: "Bocadillo con 120 g de pan, 140 g de pechuga de pollo a la plancha, 60 g de aguacate, 40 g de tomate y 15 g de mayonesa",
+    referencia: { kcal: 760, proteinas: 57, carbohidratos: 73, grasas: 27 },
+    toleranciaPct: 18,
+  },
+  {
+    id: "tofu-quinoa-verduras",
+    texto: "Bowl con 180 g de tofu firme, 150 g de quinoa cocida, 120 g de verduras salteadas, 10 ml de aceite de sésamo, 15 ml de salsa de soja y 10 g de anacardos",
+    referencia: { kcal: 610, proteinas: 35, carbohidratos: 55, grasas: 30 },
+    toleranciaPct: 18,
+  },
 ];
