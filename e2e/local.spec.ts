@@ -20,7 +20,7 @@ async function iniciarSesion(page: Page) {
   await expect(page.getByText(/Buenas|Buenos/).first()).toBeVisible();
 }
 
-const secciones = { "/": "Hoy", "/ajustes": "Ajustes", "/nutricion": "Nutrición", "/progreso": "Progreso", "/habitos": "Hábitos" } as const;
+const secciones = { "/": "Hoy", "/ajustes": "Ajustes", "/laboratorio": "Laboratorio", "/nutricion": "Nutrición", "/progreso": "Progreso", "/habitos": "Hábitos" } as const;
 
 async function irA(page: Page, ruta: keyof typeof secciones) {
   // Las pestañas se recorren como en la app, sin destruir el documento y
@@ -29,7 +29,9 @@ async function irA(page: Page, ruta: keyof typeof secciones) {
   const sidebar = page.locator("aside nav");
   if (await sidebar.isVisible()) {
     await sidebar.getByRole("link", { name: secciones[ruta], exact: true }).click();
-  } else if (ruta === "/ajustes") {
+  } else if (ruta === "/laboratorio" && new URL(page.url()).pathname === "/ajustes") {
+    await page.getByRole("link", { name: "Abrir laboratorio", exact: true }).click();
+  } else if (ruta === "/ajustes" || ruta === "/laboratorio") {
     await page.getByRole("button", { name: "Menú", exact: true }).click();
     await page.getByRole("menuitem", { name: "Ajustes", exact: true }).click();
   } else {
@@ -64,7 +66,7 @@ test("recorrido visual y guardado con datos sintéticos", async ({ page, request
   await expect(page.getByRole("dialog").getByRole("tab", { name: "Peso", exact: true })).toHaveAttribute("aria-selected", "true");
   await page.keyboard.press("Escape");
   await page.screenshot({ path: `test-results/${info.project.name}-hoy.png`, fullPage: true });
-  for (const route of ["ajustes", "nutricion", "progreso", "habitos"] as const) {
+  for (const route of ["ajustes", "laboratorio", "nutricion", "progreso", "habitos"] as const) {
     await irA(page, `/${route}`);
     await expect(page.locator("main h1").first()).toBeVisible();
     await expect(page.locator('main [data-slot="skeleton"]')).toHaveCount(0);
@@ -78,6 +80,13 @@ test("recorrido visual y guardado con datos sintéticos", async ({ page, request
       await expect(confianza.locator("..")).toHaveAttribute("open");
       await sinDesbordamiento(page);
       await page.screenshot({ path: `test-results/${info.project.name}-progreso-abierto.png`, fullPage: true });
+    } else if (route === "laboratorio") {
+      const interfazViva = page.getByRole("switch", { name: "Interfaz viva", exact: true });
+      await expect(interfazViva).toBeChecked();
+      await interfazViva.click();
+      await expect(interfazViva).not.toBeChecked();
+      await interfazViva.click();
+      await expect(interfazViva).toBeChecked();
     } else if (route === "habitos") {
       const selectorFecha = page.getByLabel("Día que quieres editar", { exact: true });
       const fechaHoy = await selectorFecha.inputValue();
@@ -129,6 +138,7 @@ test("recorrido visual y guardado con datos sintéticos", async ({ page, request
   await expect(page.getByText("Plan de comidas", { exact: true })).toHaveCount(0);
   await irA(page, "/");
   await page.getByRole("button", { name: "Preparar informe mensual" }).click();
+  await expect(page.getByRole("button", { name: "Póster editorial", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("switch", { name: "Evolución de peso" })).not.toBeChecked();
   await expect(page.getByRole("switch", { name: "Número de comidas" })).not.toBeChecked();
   await expect(page.getByRole("img", { name: /Vista previa de/ })).toBeVisible();
@@ -183,6 +193,26 @@ test("ajustes con un solo guardado, validación, descarte y aviso al salir", asy
   await page.reload();
   await expect(page.getByLabel("Nombre", { exact: true })).toHaveValue("Alex guardado");
   await sinDesbordamiento(page);
+});
+
+test("modo rescate reduce Hoy a una misión y devuelve el panel al completarla", async ({ page, request }, info) => {
+  test.skip(info.project.name !== "mobile", "La composición de rescate se verifica una vez en móvil");
+  await request.post("http://127.0.0.1:3199/__reset");
+  const userId = "00000000-0000-4000-8000-000000000001";
+  const payload = Buffer.from(JSON.stringify({ sub: userId })).toString("base64url");
+  const headers = { authorization: `Bearer local.${payload}.signature`, apikey: "local-test-public-key", "content-type": "application/json" };
+  await request.get("http://127.0.0.1:3199/rest/v1/dias", { headers });
+  for (let i = 1; i <= 3; i++) {
+    const fecha = new Date(); fecha.setDate(fecha.getDate() - i);
+    const iso = fecha.toLocaleDateString("en-CA");
+    await request.patch(`http://127.0.0.1:3199/rest/v1/dias?fecha=eq.${iso}`, { headers, data: { habitos: { comida: true }, comidas: [] } });
+  }
+  await iniciarSesion(page);
+  await expect(page.getByRole("heading", { name: "Hoy no toca remontarlo todo.", exact: true })).toBeVisible();
+  await expect(page.getByText("La misión de hoy", { exact: true })).toBeVisible();
+  await page.screenshot({ path: "test-results/mobile-rescate.png", fullPage: true });
+  await page.getByRole("button", { name: "Marcar como hecho", exact: true }).click();
+  await expect(page.getByText("Energía de hoy", { exact: true })).toBeVisible();
 });
 
 test("móvil: paisaje, texto ampliado y registro con viewport de teclado", async ({ page, request }, info) => {

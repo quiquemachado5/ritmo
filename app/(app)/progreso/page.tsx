@@ -30,6 +30,11 @@ import { cn } from "@/lib/utils";
 import { DataLegend } from "@/components/app/data-legend";
 import { ModelAudit } from "@/components/app/model-audit";
 import { evaluarCicloModelos } from "@/lib/model-audit/lifecycle";
+import { habitosModelo } from "@/lib/model/config";
+import { escenariosRitmo, memoriaCorporal } from "@/lib/model/insights";
+import { useExperimentos } from "@/lib/experiments";
+import { Counterfactual } from "@/components/app/counterfactual";
+import { BodyMemory } from "@/components/app/body-memory";
 
 const WeightChart = dynamic(() => import("@/components/app/charts").then((m) => m.WeightChart), { loading: () => <Skeleton className="h-72 w-full rounded-xl" /> });
 const CompositionChart = dynamic(() => import("@/components/app/charts").then((m) => m.CompositionChart), { loading: () => <Skeleton className="h-64 w-full rounded-xl" /> });
@@ -50,8 +55,9 @@ type HistorialRegistro = { fecha: string; peso: number; delta: number | null; gr
  * hechos registrados; el modelo ocupa deliberadamente su propio bloque.
  */
 export default function ProgresoPage() {
-  const { estado, auditoriaModelo, cargando, medicion, actualizarDia, borrarMedicion } = useRitmo();
+  const { estado, userId, auditoriaModelo, cargando, medicion, actualizarDia, borrarMedicion } = useRitmo();
   const { abrir } = useQuickLog();
+  const experimentos = useExperimentos(userId);
   const [rango, setRango] = React.useState<(typeof RANGOS)[number]["id"]>("1A");
   const [confirmBorrar, setConfirmBorrar] = React.useState<string | null>(null);
   const hoyISO = hoy();
@@ -139,6 +145,9 @@ export default function ProgresoPage() {
       mejorBajada,
     };
   }, [historial]);
+  const escenarios = React.useMemo(() => escenariosRitmo(estado), [estado]);
+  const memoria = React.useMemo(() => memoriaCorporal(estado), [estado]);
+  const habitosHoy = React.useMemo(() => habitosModelo(estado.perfil).filter((habito) => estado.dias[hoyISO]?.habitos?.[habito.clave]).length, [estado, hoyISO]);
 
   const { datosPeso, statsWin } = React.useMemo(() => {
     const dias = RANGOS.find((x) => x.id === rango)!.dias;
@@ -307,6 +316,10 @@ export default function ProgresoPage() {
               </div>
             </Card>
           </section>
+
+          {experimentos.memoriaCorporal && memoria && <BodyMemory memoria={memoria} />}
+
+          {experimentos.escenarios && escenarios.length > 0 && <Counterfactual escenarios={escenarios} actual={habitosHoy} />}
 
           <section aria-labelledby="evolucion-real">
             <div className="mb-3 flex flex-wrap items-end justify-between gap-3">

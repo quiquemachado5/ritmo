@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Award, CheckCircle2, Flame, Plus, Scale, Target, TrendingDown, TrendingUp, Utensils } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
-import { resumen, adherenciaPorHabito, patronesHabitos, recordsPersonales, resumenPorMes } from "@/lib/model/analytics";
+import { resumen, adherenciaPorHabito, recordsPersonales, resumenPorMes } from "@/lib/model/analytics";
 import { macrosObjetivo } from "@/lib/model/metrics";
 import { habitosModelo } from "@/lib/model/config";
 import { hoy, sumarDias } from "@/lib/model/dates";
@@ -19,6 +19,10 @@ import { MonthlyShare } from "@/components/app/monthly-share";
 import { RitmoDisclosure } from "@/components/ui/ritmo-disclosure";
 import { qualityForDay, RecordQuality } from "@/components/app/record-quality";
 import { evaluarCicloModelos } from "@/lib/model-audit/lifecycle";
+import { detectarSenales, diagnosticoRescate } from "@/lib/model/insights";
+import { useExperimentos } from "@/lib/experiments";
+import { RescueMode } from "@/components/app/rescue-mode";
+import { SignalDetector } from "@/components/app/signal-detector";
 
 function saludo(): string {
   const h = new Date().getHours();
@@ -29,9 +33,11 @@ function saludo(): string {
 }
 
 export default function HoyPage() {
-  const { estado, auditoriaModelo, cargando, dia, alternarHabito } = useRitmo();
+  const { estado, userId, auditoriaModelo, cargando, dia, alternarHabito } = useRitmo();
   const { abrir } = useQuickLog();
   const hoyISO = hoy();
+  const experimentos = useExperimentos(userId);
+  const [mostrarPanelCompleto, setMostrarPanelCompleto] = React.useState(false);
 
   const cicloModelo = React.useMemo(
     () => evaluarCicloModelos(estado, auditoriaModelo.predicciones, hoyISO),
@@ -40,6 +46,7 @@ export default function HoyPage() {
   const r = React.useMemo(() => resumen(estado, cicloModelo.estrategia), [estado, cicloModelo.estrategia]);
   const habitosActivos = React.useMemo(() => habitosModelo(estado.perfil), [estado.perfil]);
   const diaHoy = dia(hoyISO);
+  const rescate = React.useMemo(() => diagnosticoRescate(estado, hoyISO), [estado, hoyISO]);
 
   if (cargando) return <CargandoHoy />;
 
@@ -76,6 +83,15 @@ export default function HoyPage() {
         : comidas.length === 0
           ? "Tus hábitos ya orientan el día"
           : "Tu día está tomando forma";
+
+  if (experimentos.rescateAutomatico && rescate.activo && !mostrarPanelCompleto && rescate.habitoClave) {
+    return (
+      <div className="flex min-h-[calc(100dvh-10rem)] flex-col gap-4">
+        <header><p className="text-sm text-muted-foreground">{capitalizar(new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long" }).format(new Date()))}</p><h1 className="font-display text-2xl font-bold tracking-tight">{saludo()}{nombre ? `, ${nombre}` : ""}.</h1></header>
+        <RescueMode rescate={rescate} onCompletar={() => { void alternarHabito(hoyISO, rescate.habitoClave!).then((guardado) => { if (guardado) setMostrarPanelCompleto(true); }); }} onVerTodo={() => setMostrarPanelCompleto(true)} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -279,7 +295,7 @@ export default function HoyPage() {
       </section>
 
       {/* Insights semanales */}
-      <WeeklyInsights r={r} estado={estado} />
+      <WeeklyInsights r={r} estado={estado} detectorAvanzado={experimentos.detectorAvanzado} />
     </div>
   );
 }
@@ -294,13 +310,13 @@ const VEREDICTO: Record<Veredicto, { titulo: string; clase: string; punto: strin
   mal: { titulo: "Semana floja", clase: "text-energy", punto: "bg-energy" },
 };
 
-function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: Parameters<typeof resumen>[0] }) {
+function WeeklyInsights({ r, estado, detectorAvanzado }: { r: ReturnType<typeof resumen>; estado: Parameters<typeof resumen>[0]; detectorAvanzado: boolean }) {
   const porHabito = React.useMemo(
     () => [...adherenciaPorHabito(estado, habitosModelo(estado.perfil), 7)].sort((a, b) => b.pct - a.pct),
     [estado],
   );
   const rec = React.useMemo(() => recordsPersonales(estado), [estado]);
-  const patrones = React.useMemo(() => patronesHabitos(estado), [estado]);
+  const senales = React.useMemo(() => detectarSenales(estado), [estado]);
   const meses = React.useMemo(() => resumenPorMes(estado), [estado]);
 
   const adh = r.habitos.adherencia7;
@@ -381,22 +397,7 @@ function WeeklyInsights({ r, estado }: { r: ReturnType<typeof resumen>; estado: 
           </div>
         </RitmoDisclosure>
 
-        {patrones.length > 0 && <RitmoDisclosure title="Patrones observados" openLabel="Ver patrones">
-          <div className="border-t border-border px-4 py-3 sm:px-5">
-            <div className="grid gap-2">
-              {patrones.slice(0, 2).map((patron) => {
-                const etiqueta = habitosModelo(estado.perfil).find((h) => h.clave === patron.clave)?.etiqueta ?? patron.clave;
-                const favorable = patron.diferencia > 0;
-                return (
-                  <div key={patron.clave} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border pb-2 last:border-0 last:pb-0">
-                    <p className="text-xs leading-5 text-muted-foreground">Con <span className="font-semibold text-foreground">{etiqueta.toLowerCase()}</span>, el balance fue <span className="font-semibold text-foreground tabular">{Math.abs(patron.diferencia)} kcal</span> {favorable ? "más bajo" : "más alto"}.</p>
-                    <span className={cn("text-xs font-semibold tabular", favorable ? "text-weight" : "text-energy")}>{patron.muestra} días</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </RitmoDisclosure>}
+        {detectorAvanzado && <RitmoDisclosure title="Detector de señales" openLabel={senales.length ? `${senales.length} señales` : "Aún aprendiendo"}><div className="border-t border-border"><SignalDetector senales={senales} /></div></RitmoDisclosure>}
       </Card>
     </section>
   );

@@ -6,13 +6,14 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 
-export interface ShareOptions { peso: boolean; comidas: boolean; habitos: boolean }
+export interface ShareOptions { peso: boolean; comidas: boolean; habitos: boolean; formato: "poster" | "detalle" }
 export function SharePreview({ render, filename, title, monthly = false }: {
   render: (options: ShareOptions) => Promise<Blob | null>; filename: string; title: string; monthly?: boolean;
 }) {
   const [open, setOpen] = React.useState(false);
-  const [options, setOptions] = React.useState<ShareOptions>({ peso: false, comidas: false, habitos: true });
+  const [options, setOptions] = React.useState<ShareOptions>({ peso: false, comidas: false, habitos: true, formato: "poster" });
   const [preview, setPreview] = React.useState<{ url: string; blob: Blob } | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [sharing, setSharing] = React.useState(false);
@@ -47,8 +48,9 @@ export function SharePreview({ render, filename, title, monthly = false }: {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="flex max-h-[92dvh] flex-col gap-4 overflow-hidden sm:max-w-2xl">
         <DialogHeader><DialogTitle>{title}</DialogTitle><DialogDescription>Elige qué mostrar. No se incluye tu nombre, correo ni notas personales.</DialogDescription></DialogHeader>
+        {monthly && <div className="grid grid-cols-2 rounded-xl bg-secondary p-1" role="group" aria-label="Formato de la imagen">{([['poster', 'Póster editorial'], ['detalle', 'Informe visual']] as const).map(([valor, etiqueta]) => <button key={valor} type="button" aria-pressed={options.formato === valor} onClick={() => setOptions(actual => ({ ...actual, formato: valor }))} className={cn("min-h-9 rounded-lg px-3 text-sm font-medium transition-colors", options.formato === valor ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}>{etiqueta}</button>)}</div>}
         <div className="flex flex-wrap gap-x-5 gap-y-3 border-y border-border py-3">
-          {([...(monthly ? [["peso", "Evolución de peso"]] : []), ["comidas", "Número de comidas"], ["habitos", "Constancia"]] as Array<[keyof ShareOptions, string]>).map(([key, label]) => <label key={key} className="flex items-center gap-2 text-sm"><Switch checked={options[key]} onCheckedChange={checked => setOptions(o => ({ ...o, [key]: checked }))} aria-label={label} />{label}</label>)}
+          {([...(monthly ? [["peso", "Evolución de peso"]] : []), ["comidas", "Número de comidas"], ["habitos", "Constancia"]] as Array<["peso" | "comidas" | "habitos", string]>).map(([key, label]) => <label key={key} className="flex items-center gap-2 text-sm"><Switch checked={options[key]} onCheckedChange={checked => setOptions(o => ({ ...o, [key]: checked }))} aria-label={label} />{label}</label>)}
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto rounded-xl bg-secondary p-3" aria-busy={loading}>
           {loading ? <div className="grid min-h-48 place-items-center"><Loader2 className="size-6 motion-safe:animate-spin" aria-label="Preparando imagen" /></div> : preview && (

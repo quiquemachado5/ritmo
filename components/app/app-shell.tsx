@@ -26,6 +26,8 @@ import { TravelBanner } from "./travel-banner";
 import { GlobalSearch } from "./global-search";
 import { hoy } from "@/lib/model/dates";
 import { siguienteAccion } from "@/lib/model/next-action";
+import { useExperimentos } from "@/lib/experiments";
+import { estadoVisualRitmo } from "@/lib/model/insights";
 
 function UserMenu({ compact = false }: { compact?: boolean }) {
   const { userEmail, cerrarSesion } = useRitmo();
@@ -73,8 +75,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { abrir, abierto } = useQuickLog();
   const [busquedaAbierta, setBusquedaAbierta] = React.useState(false);
   const modoMinimo = pathname === "/minimo";
-  const { estado, errorCarga, recargar } = useRitmo();
+  const { estado, userId, errorCarga, recargar } = useRitmo();
   const recomendada = React.useMemo(() => siguienteAccion(estado, hoy()), [estado]);
+  const experimentos = useExperimentos(userId);
+  const pulso = React.useMemo(() => estadoVisualRitmo(estado), [estado]);
 
   const activo = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
   const primarios = NAV_ITEMS.filter((i) => i.primary);
@@ -130,7 +134,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="app-canvas min-h-dvh bg-background">
+    <div data-ritmo={experimentos.interfazViva ? pulso.estado : "neutro"} className="app-canvas min-h-dvh bg-background">
       <TravelBanner />
       {/* Sidebar — escritorio */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-border/85 bg-card/95 px-4 py-5 shadow-[6px_0_24px_-24px_var(--foreground)] md:flex">

@@ -1,5 +1,6 @@
 import {
   Flame,
+  FlaskConical,
   Home,
   Minimize2,
   Settings,
@@ -22,5 +23,6 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/habitos", label: "Hábitos", icon: Flame, primary: true },
   { href: "/progreso", label: "Progreso", icon: TrendingUp, primary: true },
   { href: "/minimo", label: "Modo mínimo", icon: Minimize2, primary: false },
+  { href: "/laboratorio", label: "Laboratorio", icon: FlaskConical, primary: false },
   { href: "/ajustes", label: "Ajustes", icon: Settings, primary: false },
 ];

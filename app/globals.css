@@ -317,6 +317,44 @@
     var(--background);
 }
 
+/* La interfaz viva cambia de atmósfera, no de semántica: verde, ámbar y coral
+   siguen significando lo mismo en gráficos y estados. */
+.app-canvas[data-ritmo="flujo"] {
+  background:
+    radial-gradient(circle at 94% -4%, color-mix(in oklab, var(--weight) 12%, transparent), transparent 31rem),
+    radial-gradient(circle at 34% 110%, color-mix(in oklab, var(--habit) 7%, transparent), transparent 35rem),
+    var(--background);
+}
+.app-canvas[data-ritmo="estable"] {
+  background:
+    radial-gradient(circle at 94% -4%, color-mix(in oklab, var(--habit) 9%, transparent), transparent 31rem),
+    var(--background);
+}
+.app-canvas[data-ritmo="recuperacion"] {
+  background:
+    radial-gradient(circle at 94% -4%, color-mix(in oklab, var(--energy) 7%, transparent), transparent 31rem),
+    var(--background);
+}
+.rescue-surface {
+  background:
+    radial-gradient(circle at 92% 5%, color-mix(in oklab, var(--primary) 16%, transparent), transparent 20rem),
+    linear-gradient(145deg, var(--card), color-mix(in oklab, var(--card) 92%, var(--weight-wash)));
+}
+.lab-pulse {
+  background:
+    radial-gradient(circle at 85% 18%, color-mix(in oklab, var(--body) 16%, transparent), transparent 22rem),
+    linear-gradient(140deg, var(--card), color-mix(in oklab, var(--card) 94%, var(--habit-wash)));
+}
+.counterfactual-surface {
+  background: linear-gradient(120deg, color-mix(in oklab, var(--body-wash) 70%, var(--card)), var(--card));
+}
+.body-memory-surface {
+  background:
+    radial-gradient(circle at 92% 0%, color-mix(in oklab, var(--weight) 10%, transparent), transparent 22rem),
+    var(--card);
+}
+.scenario-range { accent-color: var(--primary); }
+
 /* Utilidad de superficie base para tarjetas de la app (sombra cálida RITMO). */
 @utility card-ritmo {
   background: var(--card);
