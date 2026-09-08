@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRitmo } from "@/lib/store/provider";
-import { guardarBackupLocal, subirBackupNube } from "@/lib/backup";
+import { ejecutarSimulacroRestauracion, guardarBackupLocal, subirBackupNube } from "@/lib/backup";
 import { useMealPrefs } from "@/lib/meal-prefs";
 import { registrarDiagnostico } from "@/lib/observability";
 
@@ -20,7 +20,7 @@ export function AutoBackup() {
       try {
         const snapshot = exportar();
         guardarBackupLocal(snapshot, userId);
-        void subirBackupNube(snapshot, userId);
+        void subirBackupNube(snapshot, userId).finally(() => ejecutarSimulacroRestauracion(snapshot, userId));
       } catch { registrarDiagnostico("sync", "warning", "copia documental no disponible; se conserva el respaldo anterior"); }
     }, 2000);
     return () => clearTimeout(id);

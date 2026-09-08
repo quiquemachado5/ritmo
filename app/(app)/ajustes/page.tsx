@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SectionLabel } from "@/components/app/primitives";
-import { limpiarDatosLocales, marcarExportacion, diasDesdeExportacion, leerBackupLocal } from "@/lib/backup";
+import { ejecutarSimulacroRestauracion, limpiarDatosLocales, marcarExportacion, diasDesdeExportacion, leerBackupLocal, leerSimulacroRestauracion, type RestoreDrillResult } from "@/lib/backup";
 import { limpiarPreferenciasComidas } from "@/lib/meal-prefs";
 import { fmtFechaCorta } from "@/lib/format";
 import { cn, uid } from "@/lib/utils";
@@ -25,6 +25,7 @@ import { HABITOS, habitosModelo, habitosUsuario } from "@/lib/model/config";
 import { erroresPerfil } from "@/lib/profile-validation";
 import { diagnosticoCompartido, permitirDiagnostico } from "@/lib/observability";
 import { EXTERNAL_NUTRITION_ENABLED } from "@/lib/nutrition/policy";
+import { ProfessionalReport } from "@/components/app/professional-report";
 
 type Densidad = "compacta" | "espaciosa";
 const CAMPOS_NUMERICOS = ["edad", "alturaCm", "pesoObjetivo", "kcalObjetivo", "proteinaObjetivo"] as const;
@@ -89,6 +90,8 @@ export default function AjustesPage() {
   // el mismo número y orden en cada render (cargando vs cargado incluido).
   const [diasSinExportar, setDiasSinExportar] = React.useState<number | null>(null);
   const [backupInfo, setBackupInfo] = React.useState<{ at: string } | null>(null);
+  const [simulacroInfo, setSimulacroInfo] = React.useState<RestoreDrillResult | null>(null);
+  const [probandoCopia, setProbandoCopia] = React.useState(false);
   const [importando, setImportando] = React.useState(false);
   const importacionEnCurso = React.useRef(false);
   const [previewDatos, setPreviewDatos] = React.useState<ArchivoRitmo | null>(null);
@@ -124,6 +127,12 @@ export default function AjustesPage() {
     setDiasSinExportar(diasDesdeExportacion(userId));
     const b = leerBackupLocal(userId);
     setBackupInfo(b ? { at: b.at } : null);
+    setSimulacroInfo(leerSimulacroRestauracion(userId));
+    const actualizar = (event: Event) => {
+      if ((event as CustomEvent<string>).detail === userId) setSimulacroInfo(leerSimulacroRestauracion(userId));
+    };
+    window.addEventListener("ritmo:backup-drill", actualizar);
+    return () => window.removeEventListener("ritmo:backup-drill", actualizar);
   }, [userId]);
   React.useEffect(() => {
     const guardada = window.localStorage.getItem("ritmo:densidad");
@@ -271,6 +280,17 @@ export default function AjustesPage() {
     const analisis = analizarImportacion(b.data, { perfil: estado.perfil, dias: estado.dias, composicion: estado.composicion });
     if (!analisis.valido) { toast.error(analisis.error); return; }
     setPreviewDatos(b.data as ArchivoRitmo); setResumenImportacion(analisis);
+  }
+
+  async function probarRestauracion() {
+    if (!userId || probandoCopia) return;
+    setProbandoCopia(true);
+    try {
+      const resultado = await ejecutarSimulacroRestauracion(exportar(), userId, true);
+      setSimulacroInfo(resultado);
+      if (resultado.ok) toast.success("Copia preparada para restaurarse");
+      else toast.error(resultado.detail);
+    } finally { setProbandoCopia(false); }
   }
 
   async function subirArchivo(e: React.ChangeEvent<HTMLInputElement>) {
@@ -492,6 +512,7 @@ export default function AjustesPage() {
               <Button variant="secondary" onClick={descargar} className="h-10 rounded-xl gap-1.5 px-2.5 text-xs sm:px-3 sm:text-sm"><Download className="size-4" /> JSON</Button>
               <Button variant="secondary" onClick={descargarCSV} className="h-10 rounded-xl gap-1.5 px-2.5 text-xs sm:px-3 sm:text-sm"><FileSpreadsheet className="size-4" /> CSV</Button>
               <Button variant="secondary" onClick={() => fileRef.current?.click()} className="h-10 rounded-xl gap-1.5 px-2.5 text-xs sm:px-3 sm:text-sm"><Upload className="size-4" /> Importar</Button>
+              <ProfessionalReport estado={estado} />
             </div>
           </div>
           {/* Aviso si hace mucho de la última exportación manual */}
@@ -514,6 +535,17 @@ export default function AjustesPage() {
                 <HistoryIcon className="size-3.5" /> Restaurar copia local
               </Button>
             )}
+          </div>
+          <div className="flex flex-col gap-2.5 rounded-xl border border-border/70 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0 text-xs">
+              <p className="font-semibold text-foreground">Prueba de restauración</p>
+              <p className={cn("mt-0.5 leading-relaxed", simulacroInfo?.ok === false ? "text-destructive" : "text-muted-foreground")}>
+                {simulacroInfo ? `${simulacroInfo.detail} · ${fmtFechaCorta(simulacroInfo.at.slice(0, 10))}` : "RITMO comprobará automáticamente la copia una vez por semana."}
+              </p>
+            </div>
+            <Button variant="ghost" size="sm" disabled={!backupInfo || probandoCopia} onClick={() => void probarRestauracion()} className="h-auto min-h-9 w-full rounded-lg py-2 text-xs sm:w-auto">
+              <ShieldCheck className="size-3.5" /> {probandoCopia ? "Comprobando…" : "Probar ahora"}
+            </Button>
           </div>
         </SettingsCard>
       </section>

@@ -32,7 +32,7 @@ describe("Auditoría prospectiva", () => {
     expect(evaluarPredicciones(base, [{ ...prediccion, fechaEmision: "2026-09-05" }], "2026-09-05").casos).toBe(0);
   });
   it("separa el error por horizonte en lugar de confundir mañana con un mes", () => {
-    const r = evaluarPredicciones(base, [prediccion, { ...prediccion, id: "p-2", fechaEmision: "2026-08-06", horizonteDias: 30, peso: 89 }], "2026-09-05");
+    const r = evaluarPredicciones(base, [prediccion, { ...prediccion, id: "p-2", fechaEmision: "2026-08-06", horizonteDias: 30, peso: 89 }], "2026-09-05", "test");
     expect(r.horizontes.find((h) => h.dias === 1)?.maeKg).toBeCloseTo(0.2);
     expect(r.horizontes.find((h) => h.dias === 30)?.maeKg).toBeCloseTo(1.2);
   });

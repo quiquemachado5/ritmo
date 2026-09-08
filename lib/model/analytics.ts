@@ -861,8 +861,74 @@ export interface ProyeccionConfiable {
   proximoPesaje?: string;
 }
 
+export type EstrategiaProyeccion = "estable" | "candidata-conservadora";
+
+function intervaloConMovimiento(
+  intervalo: PesoIntervalo | undefined,
+  pesoHoy: number,
+  factor: number,
+): PesoIntervalo | undefined {
+  if (!intervalo) return undefined;
+  const peso = pesoHoy + (intervalo.peso - pesoHoy) * factor;
+  const margen = Math.max(0.25, intervalo.margen * 1.05);
+  return {
+    peso: redondearPeso(peso),
+    minimo: redondearPeso(peso - margen),
+    maximo: redondearPeso(peso + margen),
+    margen: redondearPeso(margen),
+  };
+}
+
+/**
+ * Candidato deliberadamente conservador: atenúa un 18% el movimiento futuro
+ * sin cambiar el peso de hoy ni confundir líquido con tejido. Solo llega a la
+ * interfaz cuando su auditoría prospectiva demuestra que mejora al estable.
+ */
+function aplicarCandidatoConservador(base: ProyeccionConfiable): ProyeccionConfiable {
+  if (!base.disponible || !base.hoy) return base;
+  const factor = 0.82;
+  const hoyPeso = base.hoy.peso;
+  const ajustarComposicion = (destino: ComposicionProyectada): ComposicionProyectada => {
+    const origen = base.composicion?.hoy;
+    if (!origen) return destino;
+    const grasaKg = origen.grasaKg + (destino.grasaKg - origen.grasaKg) * factor;
+    const magraKg = origen.magraKg + (destino.magraKg - origen.magraKg) * factor;
+    const peso = grasaKg + magraKg + destino.liquidoTransitorioKg;
+    return {
+      ...destino,
+      peso: redondearPeso(peso),
+      grasaKg: redondearPeso(grasaKg),
+      magraKg: redondearPeso(magraKg),
+      grasaPct: Math.round((grasaKg / Math.max(1, grasaKg + magraKg)) * 1000) / 10,
+    };
+  };
+  const semana = intervaloConMovimiento(base.semana, hoyPeso, factor);
+  return {
+    ...base,
+    manana: intervaloConMovimiento(base.manana, hoyPeso, factor),
+    tresDias: intervaloConMovimiento(base.tresDias, hoyPeso, factor),
+    semana,
+    quincena: intervaloConMovimiento(base.quincena, hoyPeso, factor),
+    cuatroSemanas: intervaloConMovimiento(base.cuatroSemanas, hoyPeso, factor),
+    mes: intervaloConMovimiento(base.mes, hoyPeso, factor),
+    composicion: base.composicion ? {
+      hoy: base.composicion.hoy,
+      semana: ajustarComposicion(base.composicion.semana),
+      quincena: ajustarComposicion(base.composicion.quincena),
+      cuatroSemanas: ajustarComposicion(base.composicion.cuatroSemanas),
+    } : undefined,
+    modelo: base.modelo ? {
+      ...base.modelo,
+      kgSemana: semana ? redondearPeso(semana.peso - hoyPeso) : base.modelo.kgSemana,
+    } : null,
+  };
+}
+
 /** Proyección energética calibrada (el corazón de RITMO). */
-export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
+export function proyeccionPesoConfiable(
+  estado: Estado,
+  estrategia: EstrategiaProyeccion = "estable",
+): ProyeccionConfiable {
   const puntos = pesajes(estado);
   const ultimo = puntos.length ? puntos[puntos.length - 1] : null;
   if (!ultimo) return { disponible: false, motivo: "sin-pesajes", modelo: null };
@@ -1036,7 +1102,7 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
   ) / 7;
   const ciclosHastaSiguientePesaje = Math.max(1, Math.ceil(diasSinPesaje / 14));
 
-  return {
+  const resultado: ProyeccionConfiable = {
     disponible: true,
     motivo: null,
     modelo: {
@@ -1090,6 +1156,9 @@ export function proyeccionPesoConfiable(estado: Estado): ProyeccionConfiable {
     },
     proximoPesaje: sumarDias(ultimo.fecha, ciclosHastaSiguientePesaje * 14),
   };
+  return estrategia === "candidata-conservadora"
+    ? aplicarCandidatoConservador(resultado)
+    : resultado;
 }
 
 /** Días con su recuento de hábitos cumplidos, para rachas. */
@@ -1184,7 +1253,7 @@ export function serieBalance(estado: Estado, ventanaDias = 30): Array<{ fecha: s
 /* ------------------------------------------------------------- RESUMEN */
 
 /** Todo lo que necesita el panel principal, en una sola pasada. */
-export function resumen(estado: Estado) {
+export function resumen(estado: Estado, estrategia: EstrategiaProyeccion = "estable") {
   const perfil = estado.perfil || ({} as Estado["perfil"]);
   const actual = pesoActual(estado);
   const todos = pesajes(estado);
@@ -1193,7 +1262,7 @@ export function resumen(estado: Estado) {
   const energiaHoy = energiaDe(estado, hoy());
   const balanceProm = balanceMedio(estado, 14);
   const tdeeObs = tdeeDesdeHistorial(estado);
-  const proyeccionConfiable = proyeccionPesoConfiable(estado);
+  const proyeccionConfiable = proyeccionPesoConfiable(estado, estrategia);
   const tend = tendencia(estado);
 
   const comp = ultimaComposicion(estado);

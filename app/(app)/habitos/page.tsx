@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SectionLabel } from "@/components/app/primitives";
 import { cn } from "@/lib/utils";
+import { evaluarCicloModelos } from "@/lib/model-audit/lifecycle";
 
 const Heatmap = dynamic(() => import("@/components/app/heatmap").then((m) => m.Heatmap), {
   loading: () => <Skeleton className="h-36 w-full rounded-xl" />,
@@ -36,11 +37,15 @@ function tonoCumplimiento(valor: number, maximo: number) {
 }
 
 export default function HabitosPage() {
-  const { estado, cargando, dia, alternarHabito } = useRitmo();
+  const { estado, auditoriaModelo, cargando, dia, alternarHabito } = useRitmo();
   const hoyISO = hoy();
   const [fechaSeleccionada, setFechaSeleccionada] = React.useState(hoyISO);
   const editorRef = React.useRef<HTMLElement>(null);
-  const r = React.useMemo(() => resumen(estado), [estado]);
+  const cicloModelo = React.useMemo(
+    () => evaluarCicloModelos(estado, auditoriaModelo.predicciones, hoyISO),
+    [estado, auditoriaModelo.predicciones, hoyISO],
+  );
+  const r = React.useMemo(() => resumen(estado, cicloModelo.estrategia), [estado, cicloModelo.estrategia]);
   const activos = React.useMemo(() => habitosModelo(estado.perfil), [estado.perfil]);
   const porHabito = React.useMemo(() => adherenciaPorHabito(estado, activos, 30), [estado, activos]);
   const diaSeleccionado = dia(fechaSeleccionada);

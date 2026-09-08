@@ -8,9 +8,12 @@ import { registrarDiagnostico } from "./observability";
 import { limpiarBorradores } from "./drafts";
 import { limpiarAuditoriaLocal } from "./model-audit/storage";
 import { limpiarAuditoriaDocumental } from "./model-audit/documentary";
+import { analizarImportacion } from "./store/import";
+import type { StoreData } from "./store/types";
 
 const BACKUP_KEY = "ritmo:backup";
 const LAST_EXPORT_KEY = "ritmo:lastExport";
+const RESTORE_DRILL_KEY = "ritmo:restoreDrill";
 
 function clave(base: string, userId: string): string {
   return `${base}:${userId}`;
@@ -19,6 +22,79 @@ function clave(base: string, userId: string): string {
 export interface BackupSnapshot {
   at: string; // ISO
   data: unknown;
+}
+
+export interface RestoreDrillResult {
+  at: string;
+  ok: boolean;
+  local: boolean;
+  cloud: boolean;
+  detail: string;
+}
+
+/** Recorre la misma validación que una importación, pero sin modificar datos. */
+export function validarRestauracionLocal(snapshot: BackupSnapshot | null, actual: StoreData): boolean {
+  if (!snapshot || !snapshot.data || typeof snapshot.data !== "object") return false;
+  try {
+    const copiaAislada: unknown = JSON.parse(JSON.stringify(snapshot.data));
+    return analizarImportacion(copiaAislada, actual).valido;
+  } catch {
+    return false;
+  }
+}
+
+export function leerSimulacroRestauracion(userId: string | null): RestoreDrillResult | null {
+  if (!userId) return null;
+  try {
+    const raw = localStorage.getItem(clave(RESTORE_DRILL_KEY, userId));
+    if (!raw) return null;
+    const valor = JSON.parse(raw) as RestoreDrillResult;
+    return valor && typeof valor.at === "string" && typeof valor.ok === "boolean" ? valor : null;
+  } catch { return null; }
+}
+
+function guardarSimulacro(userId: string, resultado: RestoreDrillResult) {
+  localStorage.setItem(clave(RESTORE_DRILL_KEY, userId), JSON.stringify(resultado));
+  window.dispatchEvent(new CustomEvent("ritmo:backup-drill", { detail: userId }));
+}
+
+/**
+ * Simulacro semanal: deserializa y valida la copia local y, si está disponible,
+ * descarga el último objeto privado de Storage y lo valida sin restaurarlo.
+ */
+export async function ejecutarSimulacroRestauracion(actual: StoreData, userId: string, forzar = false): Promise<RestoreDrillResult> {
+  const previo = leerSimulacroRestauracion(userId);
+  if (!forzar && previo && Date.now() - Date.parse(previo.at) < 7 * 86400000) return previo;
+  const at = new Date().toISOString();
+  try {
+    const local = validarRestauracionLocal(leerBackupLocal(userId), actual);
+    if (!local) throw new Error("La copia local no supera la validación de restauración.");
+    let cloud = false;
+    try {
+      const { createClient } = await import("@/lib/supabase/client");
+      const sb = createClient();
+      const { data: usuario } = await sb.auth.getUser();
+      if (usuario.user?.id === userId) {
+        const { data, error } = await sb.storage.from("backups").download(`${userId}/latest.json`);
+        if (!error && data) {
+          const remoto: unknown = JSON.parse(await data.text());
+          cloud = analizarImportacion(remoto, actual).valido;
+        }
+      }
+    } catch { /* La copia local sigue siendo restaurable aunque Storage no responda. */ }
+    const resultado: RestoreDrillResult = {
+      at, ok: true, local: true, cloud,
+      detail: cloud ? "Copia local y copia privada en la nube verificadas." : "Copia local verificada; la nube no estaba disponible para esta prueba.",
+    };
+    guardarSimulacro(userId, resultado);
+    registrarDiagnostico("sync", "ok", cloud ? "simulacro de restauración local y nube" : "simulacro de restauración local");
+    return resultado;
+  } catch {
+    const resultado: RestoreDrillResult = { at, ok: false, local: false, cloud: false, detail: "La copia no superó la prueba. Genera una exportación manual." };
+    guardarSimulacro(userId, resultado);
+    registrarDiagnostico("sync", "error", "simulacro de restauración fallido");
+    return resultado;
+  }
 }
 
 export function guardarBackupLocal(data: unknown, userId: string | null): void {
@@ -85,6 +161,7 @@ export function limpiarDatosLocales(userId: string | null): void {
       localStorage.removeItem(clave(BACKUP_KEY + ":previous", userId));
       localStorage.removeItem(clave(LAST_EXPORT_KEY, userId));
       localStorage.removeItem(clave(CLOUD_MARK, userId));
+      localStorage.removeItem(clave(RESTORE_DRILL_KEY, userId));
     }
   } catch {}
 }

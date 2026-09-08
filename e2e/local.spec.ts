@@ -128,6 +128,14 @@ test("recorrido visual y guardado con datos sintéticos", async ({ page, request
   await page.screenshot({ path: `test-results/${info.project.name}-informe.png`, fullPage: true });
   await page.getByRole("button", { name: "Close", exact: true }).click();
   await irA(page, "/ajustes");
+  await page.getByRole("button", { name: "Informe profesional", exact: true }).click();
+  await expect(page.getByRole("dialog").getByText("Informe para nutricionista", { exact: true })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "Notas contextuales", exact: true })).not.toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "Texto de las comidas", exact: true })).not.toBeChecked();
+  await expect(page.getByRole("button", { name: "Imprimir / guardar PDF", exact: true })).toBeEnabled();
+  await sinDesbordamiento(page);
+  await page.screenshot({ path: `test-results/${info.project.name}-informe-profesional.png` });
+  await page.getByRole("button", { name: "Close", exact: true }).click();
   await page.getByRole("button", { name: "Cerrar sesión", exact: true }).click();
   await expect(page).toHaveURL(/login/);
   await page.getByLabel("Email").fill("bea@ritmo.test");
@@ -237,4 +245,21 @@ test("móvil: paisaje, texto ampliado y registro con viewport de teclado", async
   await expect(page.getByRole("button", { name: "Añadir a comida", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Añadir a comida", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
+});
+
+test("tema oscuro y anchuras extremas mantienen la interfaz utilizable", async ({ page, request }, info) => {
+  test.setTimeout(120000);
+  await request.post("http://127.0.0.1:3199/__reset");
+  const movil = info.project.name.includes("mobile");
+  await page.setViewportSize(movil ? { width: 320, height: 568 } : { width: 2560, height: 1200 });
+  await iniciarSesion(page);
+  await irA(page, "/ajustes");
+  await page.getByRole("button", { name: "Oscuro", exact: true }).click();
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  for (const ruta of ["/", "/nutricion", "/progreso", "/habitos", "/ajustes"] as const) {
+    await irA(page, ruta);
+    await expect(page.locator("main h1").first()).toBeVisible();
+    await sinDesbordamiento(page);
+  }
+  await page.screenshot({ path: `test-results/${info.project.name}-${movil ? "320" : "2560"}-oscuro.png`, fullPage: true });
 });

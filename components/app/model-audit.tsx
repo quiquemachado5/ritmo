@@ -8,13 +8,16 @@ import { hoy } from "@/lib/model/dates";
 import { habitosModelo } from "@/lib/model/config";
 import { fmtFechaCorta, fmtNum, fmtPeso } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/app/primitives";
+import { evaluarCicloModelos } from "@/lib/model-audit/lifecycle";
 
 /** Detalle opcional dentro de la sección de confianza; no añade otra tarjeta. */
 export function ModelAudit() {
   const { estado, auditoriaModelo, errorAuditoria, reintentarAuditoria } = useRitmo();
   const [reintentando, setReintentando] = React.useState(false);
   const [visibles, setVisibles] = React.useState(5);
-  const evaluacion = React.useMemo(() => evaluarPredicciones(estado, auditoriaModelo.predicciones, hoy()), [estado, auditoriaModelo.predicciones]);
+  const ciclo = React.useMemo(() => evaluarCicloModelos(estado, auditoriaModelo.predicciones, hoy()), [estado, auditoriaModelo.predicciones]);
+  const evaluacion = React.useMemo(() => evaluarPredicciones(estado, auditoriaModelo.predicciones, hoy(), ciclo.versionActiva), [estado, auditoriaModelo.predicciones, ciclo.versionActiva]);
   const configuraciones = [...auditoriaModelo.configuraciones].reverse();
   const primera = auditoriaModelo.configuraciones[0];
   async function reintentar() {
@@ -25,6 +28,12 @@ export function ModelAudit() {
     <div className="border-t border-border px-5 py-5 sm:px-6">
       <h3 className="font-display text-base font-bold">Lo que predijo antes de pesarte</h3>
       <p className="mt-1 max-w-prose text-sm leading-relaxed text-muted-foreground">Guardamos la primera predicción de cada día para mañana, 3, 7 y 30 días. No cambia al añadir un pesaje ni al editar tus hábitos.</p>
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <Chip tone={ciclo.estado === "activo" ? "weight" : ciclo.estado === "revertido" ? "warning" : "muted"}>
+          {ciclo.estado === "activo" ? "Candidato activado" : ciclo.estado === "revertido" ? "Reversión automática" : "Candidato en sombra"}
+        </Chip>
+        <span>{ciclo.motivo}</span>
+      </div>
 
       {errorAuditoria && <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-warning-wash p-3 text-sm text-warning-ink" role="status">
         <p className="min-w-0 flex-1 basis-56">No se ha podido verificar el historial en la nube. Las cifras guardadas en este dispositivo pueden estar desactualizadas; las nuevas emisiones requieren conexión.</p>

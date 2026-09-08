@@ -1,20 +1,22 @@
 import { pesajes } from "../model/analytics";
 import type { Estado } from "../model/types";
 import type { PrediccionEmitida, ResultadoPrediccion } from "./types";
+import { VERSION_MODELO_ESTABLE } from "./lifecycle";
 
-export const VERSION_MODELO_AUDITADO = "ritmo-2026-09-v3-liquidos";
+export const VERSION_MODELO_AUDITADO = VERSION_MODELO_ESTABLE;
 
 /** Solo fecha exacta y pronósticos sellados en un día anterior; no interpola. */
-export function evaluarPredicciones(estado: Estado, predicciones: PrediccionEmitida[], fechaHoy: string) {
+export function evaluarPredicciones(estado: Estado, predicciones: PrediccionEmitida[], fechaHoy: string, versionActual = VERSION_MODELO_AUDITADO) {
   const reales = new Map(pesajes(estado).filter((p) => p.fecha <= fechaHoy).map((p) => [p.fecha, p.peso]));
   const evaluadas: ResultadoPrediccion[] = [];
-  let pendientes = 0;
-  let sinPesaje = 0;
+  const pendientes = new Set<string>();
+  const sinPesaje = new Set<string>();
   for (const p of predicciones) {
     if (p.fechaObjetivo <= p.fechaEmision || !Number.isFinite(p.peso)) continue;
-    if (p.fechaObjetivo > fechaHoy) { pendientes++; continue; }
+    const caso = `${p.fechaObjetivo}|${p.horizonteDias}`;
+    if (p.fechaObjetivo > fechaHoy) { pendientes.add(caso); continue; }
     const real = reales.get(p.fechaObjetivo);
-    if (real === undefined) { sinPesaje++; continue; }
+    if (real === undefined) { sinPesaje.add(caso); continue; }
     evaluadas.push({ ...p, pesoReal: real, errorKg: Math.abs(real - p.peso), dentroIntervalo: real >= p.minimo && real <= p.maximo });
   }
   const resumen = (filas: ResultadoPrediccion[]) => ({
@@ -25,12 +27,12 @@ export function evaluarPredicciones(estado: Estado, predicciones: PrediccionEmit
   const versiones = [...new Set(evaluadas.map((p) => p.versionModelo))]
     .map((version) => ({ version, ...resumen(evaluadas.filter((p) => p.versionModelo === version)) }))
     .sort((a, b) => b.version.localeCompare(a.version));
-  const actuales = evaluadas.filter((p) => p.versionModelo === VERSION_MODELO_AUDITADO);
+  const actuales = evaluadas.filter((p) => p.versionModelo === versionActual);
   return {
-    ...resumen(evaluadas), pendientes, sinPesaje,
-    actual: { version: VERSION_MODELO_AUDITADO, ...resumen(actuales) },
+    ...resumen(evaluadas), pendientes: pendientes.size, sinPesaje: sinPesaje.size,
+    actual: { version: versionActual, ...resumen(actuales) },
     versiones,
-    evaluadas: evaluadas.sort((a, b) => b.fechaObjetivo.localeCompare(a.fechaObjetivo) || a.horizonteDias - b.horizonteDias),
-    horizontes: ([1, 3, 7, 30] as const).map((dias) => ({ dias, ...resumen(evaluadas.filter((p) => p.horizonteDias === dias)) })),
+    evaluadas: actuales.sort((a, b) => b.fechaObjetivo.localeCompare(a.fechaObjetivo) || a.horizonteDias - b.horizonteDias),
+    horizontes: ([1, 3, 7, 30] as const).map((dias) => ({ dias, ...resumen(actuales.filter((p) => p.horizonteDias === dias)) })),
   };
 }

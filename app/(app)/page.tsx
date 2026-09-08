@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { MonthlyShare } from "@/components/app/monthly-share";
 import { RitmoDisclosure } from "@/components/ui/ritmo-disclosure";
 import { qualityForDay, RecordQuality } from "@/components/app/record-quality";
+import { evaluarCicloModelos } from "@/lib/model-audit/lifecycle";
 
 function saludo(): string {
   const h = new Date().getHours();
@@ -28,11 +29,15 @@ function saludo(): string {
 }
 
 export default function HoyPage() {
-  const { estado, cargando, dia, alternarHabito } = useRitmo();
+  const { estado, auditoriaModelo, cargando, dia, alternarHabito } = useRitmo();
   const { abrir } = useQuickLog();
   const hoyISO = hoy();
 
-  const r = React.useMemo(() => resumen(estado), [estado]);
+  const cicloModelo = React.useMemo(
+    () => evaluarCicloModelos(estado, auditoriaModelo.predicciones, hoyISO),
+    [estado, auditoriaModelo.predicciones, hoyISO],
+  );
+  const r = React.useMemo(() => resumen(estado, cicloModelo.estrategia), [estado, cicloModelo.estrategia]);
   const habitosActivos = React.useMemo(() => habitosModelo(estado.perfil), [estado.perfil]);
   const diaHoy = dia(hoyISO);
 

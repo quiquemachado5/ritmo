@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { guardarBackupLocal, leerBackupLocal, limpiarDatosLocales } from "../backup";
+import { guardarBackupLocal, leerBackupLocal, limpiarDatosLocales, validarRestauracionLocal } from "../backup";
+import { PERFIL_DEFECTO } from "../model/config";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -20,5 +21,13 @@ describe("copias locales por cuenta", () => {
     limpiarDatosLocales("usuario-a");
     expect(leerBackupLocal("usuario-a")).toBeNull();
     expect(leerBackupLocal("usuario-b")?.data).toEqual({ perfil: "B" });
+  });
+
+  it("simula la deserialización y validación sin tocar el estado activo", () => {
+    const actual = { perfil: PERFIL_DEFECTO, dias: { "2026-09-08": { fecha: "2026-09-08", habitos: { agua: true } } }, composicion: [] };
+    const snapshot = { at: "2026-09-08T10:00:00Z", data: { app: "ritmo", version: 4, ...actual } };
+    expect(validarRestauracionLocal(snapshot, actual)).toBe(true);
+    expect(validarRestauracionLocal({ ...snapshot, data: { app: "otra", ...actual } }, actual)).toBe(false);
+    expect(actual.dias["2026-09-08"].habitos.agua).toBe(true);
   });
 });

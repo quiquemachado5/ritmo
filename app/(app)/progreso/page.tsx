@@ -29,6 +29,7 @@ import { capitalizar, fmtPeso, fmtSigno, fmtNum, fmtFechaCorta, relativo } from 
 import { cn } from "@/lib/utils";
 import { DataLegend } from "@/components/app/data-legend";
 import { ModelAudit } from "@/components/app/model-audit";
+import { evaluarCicloModelos } from "@/lib/model-audit/lifecycle";
 
 const WeightChart = dynamic(() => import("@/components/app/charts").then((m) => m.WeightChart), { loading: () => <Skeleton className="h-72 w-full rounded-xl" /> });
 const CompositionChart = dynamic(() => import("@/components/app/charts").then((m) => m.CompositionChart), { loading: () => <Skeleton className="h-64 w-full rounded-xl" /> });
@@ -49,16 +50,20 @@ type HistorialRegistro = { fecha: string; peso: number; delta: number | null; gr
  * hechos registrados; el modelo ocupa deliberadamente su propio bloque.
  */
 export default function ProgresoPage() {
-  const { estado, cargando, medicion, actualizarDia, borrarMedicion } = useRitmo();
+  const { estado, auditoriaModelo, cargando, medicion, actualizarDia, borrarMedicion } = useRitmo();
   const { abrir } = useQuickLog();
   const [rango, setRango] = React.useState<(typeof RANGOS)[number]["id"]>("1A");
   const [confirmBorrar, setConfirmBorrar] = React.useState<string | null>(null);
-  const r = React.useMemo(() => resumen(estado), [estado]);
+  const hoyISO = hoy();
+  const cicloModelo = React.useMemo(
+    () => evaluarCicloModelos(estado, auditoriaModelo.predicciones, hoyISO),
+    [estado, auditoriaModelo.predicciones, hoyISO],
+  );
+  const r = React.useMemo(() => resumen(estado, cicloModelo.estrategia), [estado, cicloModelo.estrategia]);
   const curvaModelo = React.useMemo(() => curvaBalanceModelo(estado), [estado]);
   // Algunos historiales pueden ofrecer proyecciones futuras antes de tener un
   // intervalo calibrado para hoy. La UI no debe asumir que ese rango existe.
   const intervaloHoy = r.prediccion.hoy ?? null;
-  const hoyISO = hoy();
 
   const lecturaModelo = React.useMemo(() => {
     const acumulado = { validos: 0, completadosPorHabitos: 0, sinHabitos: 0, imputados: 0, sinRegistro: 0 };

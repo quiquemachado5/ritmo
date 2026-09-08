@@ -4,7 +4,7 @@ import { createClient } from "../supabase/client";
 import { hoy } from "../model/dates";
 import { pesajes, proyeccionPesoConfiable } from "../model/analytics";
 import type { ConfiguracionModeloVersion, Estado, Perfil } from "../model/types";
-import { VERSION_MODELO_AUDITADO } from "./evaluation";
+import { VERSION_MODELO_CANDIDATO, VERSION_MODELO_ESTABLE } from "./lifecycle";
 import type { AuditoriaModelo, PrediccionEmitida } from "./types";
 import { guardarAuditoriaLocal as guardarLocal, leerAuditoriaLocal, limpiarAuditoriaLocal } from "./storage";
 export { leerAuditoriaLocal, limpiarAuditoriaLocal } from "./storage";
@@ -81,24 +81,38 @@ export async function registrarConfiguracion(userId: string, perfil: Perfil): Pr
 export async function emitirPredicciones(userId: string, estado: Estado, zona = zonaLocal()): Promise<PrediccionEmitida[]> {
   const fecha = hoy();
   const anterior = leerAuditoriaLocal(userId);
-  if (anterior.predicciones.filter((p) => p.fechaEmision === fecha).length >= 4) return anterior.predicciones;
+  const emitidasHoy = anterior.predicciones.filter((p) => p.fechaEmision === fecha);
+  if ([VERSION_MODELO_ESTABLE, VERSION_MODELO_CANDIDATO].every((version) => emitidasHoy.filter((p) => p.versionModelo === version).length >= 4)) return anterior.predicciones;
   const puntos = pesajes(estado).filter((p) => p.fecha <= fecha);
   const base = puntos.at(-1);
   if (!base) return anterior.predicciones;
   // Ni un pesaje ni hábitos de fechas futuras pueden filtrarse al pronóstico.
   const observado: Estado = { ...estado, dias: Object.fromEntries(Object.entries(estado.dias).filter(([f]) => f <= fecha)), composicion: estado.composicion.filter((c) => c.fecha <= fecha) };
-  const modelo = proyeccionPesoConfiable(observado);
+  const variantes = [
+    { version: VERSION_MODELO_ESTABLE, modelo: proyeccionPesoConfiable(observado, "estable") },
+    { version: VERSION_MODELO_CANDIDATO, modelo: proyeccionPesoConfiable(observado, "candidata-conservadora") },
+  ];
   const config = estado.perfilHistorial?.at(-1);
   if (!config) throw new Error("Verifica la configuración del modelo antes de guardar predicciones.");
-  const forecasts = ([ [1, modelo.manana], [3, modelo.tresDias], [7, modelo.semana], [30, modelo.mes] ] as const)
-    .flatMap(([horizonteDias, intervalo]) => intervalo ? [{
-      horizonteDias, peso: intervalo.peso, minimo: intervalo.minimo, maximo: intervalo.maximo,
-      pesoBase: base.peso, fechaBase: base.fecha, versionModelo: VERSION_MODELO_AUDITADO,
-      diasUtilizados: Object.keys(observado.dias).length, pesajesUtilizados: puntos.length,
-    }] : []);
+  const forecasts = variantes.flatMap(({ version, modelo }) =>
+    ([ [1, modelo.manana], [3, modelo.tresDias], [7, modelo.semana], [30, modelo.mes] ] as const)
+      .flatMap(([horizonteDias, intervalo]) => intervalo ? [{
+        horizonteDias, peso: intervalo.peso, minimo: intervalo.minimo, maximo: intervalo.maximo,
+        pesoBase: base.peso, fechaBase: base.fecha, versionModelo: version,
+        diasUtilizados: Object.keys(observado.dias).length, pesajesUtilizados: puntos.length,
+      }] : []));
   if (!forecasts.length) return anterior.predicciones;
   const { client, authorization } = await verificarCuenta(userId);
-  const { data, error } = await client.rpc("model_audit_forecast", { p_fecha: fecha, p_zona: zona, p_predicciones: forecasts, p_configuracion: config.id }).setHeader("Authorization", authorization);
+  let { data, error } = await client.rpc("model_audit_forecast", { p_fecha: fecha, p_zona: zona, p_predicciones: forecasts, p_configuracion: config.id }).setHeader("Authorization", authorization);
+  // Despliegue tolerante: si la aplicación llega antes que la migración, se
+  // conserva la emisión estable y el modo sombra comenzará al aplicar la BD.
+  if (error?.message?.includes("invalid forecasts")) {
+    ({ data, error } = await client.rpc("model_audit_forecast", {
+      p_fecha: fecha, p_zona: zona,
+      p_predicciones: forecasts.filter((p) => p.versionModelo === VERSION_MODELO_ESTABLE),
+      p_configuracion: config.id,
+    }).setHeader("Authorization", authorization));
+  }
   if (error) throw error;
   if (!Array.isArray(data)) throw new Error("El servidor no ha confirmado las predicciones. Reintenta con conexión.");
   await verificarCuenta(userId);

@@ -64,7 +64,7 @@ export interface RitmoContextValue {
   guardarMedicion: (m: Composicion) => Promise<boolean>;
   borrarMedicion: (fecha: string) => Promise<boolean>;
   actualizarPerfil: (campos: Partial<Perfil>) => Promise<boolean>;
-  exportar: () => object;
+  exportar: () => ArchivoRitmo & StoreData;
   importar: (datos: Partial<StoreData>) => Promise<void>;
   recargar: () => Promise<void>;
   cerrarSesion: () => Promise<void>;
