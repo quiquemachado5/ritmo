@@ -24,6 +24,8 @@ import { PageTransition } from "@/components/page-transition";
 import { UserCount } from "./user-count";
 import { TravelBanner } from "./travel-banner";
 import { GlobalSearch } from "./global-search";
+import { hoy } from "@/lib/model/dates";
+import { siguienteAccion } from "@/lib/model/next-action";
 
 function UserMenu({ compact = false }: { compact?: boolean }) {
   const { userEmail, cerrarSesion } = useRitmo();
@@ -71,7 +73,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { abrir, abierto } = useQuickLog();
   const [busquedaAbierta, setBusquedaAbierta] = React.useState(false);
   const modoMinimo = pathname === "/minimo";
-  const { errorCarga, recargar } = useRitmo();
+  const { estado, errorCarga, recargar } = useRitmo();
+  const recomendada = React.useMemo(() => siguienteAccion(estado, hoy()), [estado]);
 
   const activo = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
   const primarios = NAV_ITEMS.filter((i) => i.primary);
@@ -127,10 +130,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-dvh bg-background">
+    <div className="app-canvas min-h-dvh bg-background">
       <TravelBanner />
       {/* Sidebar — escritorio */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-border bg-card px-4 py-5 md:flex">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-border/85 bg-card/95 px-4 py-5 shadow-[6px_0_24px_-24px_var(--foreground)] md:flex">
         <div className="flex items-center justify-between gap-3 border-b border-border pb-4">
           <Link href="/" aria-label="RITMO — inicio" className="inline-flex">
             <RitmoLogo wordmarkClassName="h-10" />
@@ -138,11 +141,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <UserCount compact className="rounded-full bg-secondary px-2.5 py-1.5" />
         </div>
         <Button
-          onClick={() => abrir()}
-          className="mt-4 h-11 justify-start gap-2 rounded-xl px-4 text-[0.95rem] shadow-sm"
+          onClick={() => abrir(recomendada.tab)}
+          className="mt-4 h-11 justify-start gap-2 rounded-xl px-3.5 text-[0.95rem] shadow-sm"
+          aria-label="Registrar"
+          title={`${recomendada.etiqueta}. ${recomendada.detalle}`}
         >
           <Plus className="size-5" />
           Registrar
+          <span className="ml-auto rounded-md bg-primary-foreground/14 px-1.5 py-0.5 text-[0.64rem] font-bold tabular">{recomendada.corta}</span>
         </Button>
         <button type="button" onClick={() => setBusquedaAbierta(true)} className="mt-2 flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
           <Search className="size-4" /><span className="flex-1 text-left">Buscar</span><kbd className="rounded-md border border-border px-1.5 py-0.5 text-[0.6rem]">⌘K</kbd>
@@ -153,13 +159,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[0.92rem] font-medium transition-colors",
+                "group flex items-center gap-2.5 rounded-xl px-2 py-1.5 text-[0.92rem] font-medium transition-colors",
                 activo(item.href)
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:bg-secondary hover:text-foreground",
               )}
             >
-              <item.icon className="size-[1.15rem]" />
+              <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg transition-colors", activo(item.href) ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground group-hover:bg-card")}><item.icon className="size-[1.05rem]" /></span>
               {item.label}
             </Link>
           ))}
@@ -208,8 +214,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ))}
           <div className="flex items-center">
             <button
-              onClick={() => abrir()}
+              onClick={() => abrir(recomendada.tab)}
               aria-label="Registrar"
+              title={`${recomendada.etiqueta}. ${recomendada.detalle}`}
               className="grid size-14 -translate-y-4 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-transform active:scale-95"
             >
               <Plus className="size-7" />
@@ -236,7 +243,7 @@ function NavTab({ item, active }: { item: (typeof NAV_ITEMS)[number]; active: bo
         active ? "text-primary" : "text-muted-foreground",
       )}
     >
-      <item.icon className={cn("size-[1.35rem] shrink-0", active && "fill-primary/10")} />
+      <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg transition-colors", active && "bg-primary/10")}><item.icon className="size-[1.25rem]" /></span>
       <span className="w-full hyphens-auto [overflow-wrap:anywhere]">{item.label}</span>
     </Link>
   );

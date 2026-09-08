@@ -11,7 +11,7 @@ import { claveMes, DIAS_SEMANA, diaSemanaLunes, hoy, limitesMes, sumarDias, suma
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { SectionLabel, Chip } from "@/components/app/primitives";
+import { PageHeader, SectionLabel, Chip } from "@/components/app/primitives";
 import { fmtPeso, fmtKcal, fmtFechaLarga, fmtMes, capitalizar, fmtSigno, fmtFechaCorta } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { EnergiaDia } from "@/lib/model/types";
@@ -53,9 +53,7 @@ function CalendarioContenido({ fechaInicial }: { fechaInicial: string }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <header>
-        <h1 className="font-display text-2xl font-bold tracking-tight">Calendario</h1>
-      </header>
+      <PageHeader title="Calendario" description="Revisa el contexto y los registros de cualquier día." />
 
       <Card className="w-full overflow-hidden p-0">
         <div className="flex items-center justify-between gap-4 border-b border-border bg-secondary/35 px-4 py-3.5 sm:px-5">

@@ -1,6 +1,29 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
+/** Cabecera común de las herramientas de RITMO. */
+export function PageHeader({
+  title,
+  description,
+  action,
+  className,
+}: {
+  title: string;
+  description?: React.ReactNode;
+  action?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <header data-slot="page-header" className={cn("flex flex-col gap-4 border-b border-border/75 pb-5 sm:flex-row sm:items-end sm:justify-between", className)}>
+      <div className="min-w-0">
+        <h1 className="font-display text-2xl font-bold tracking-tight text-balance sm:text-[1.7rem]">{title}</h1>
+        {description && <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</p>}
+      </div>
+      {action && <div className="flex w-full shrink-0 items-center sm:w-auto sm:justify-end">{action}</div>}
+    </header>
+  );
+}
+
 /* Etiqueta de sección en versalitas — el "show, don't tell" de RITMO. */
 export function SectionLabel({
   children,

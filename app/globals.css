@@ -301,6 +301,22 @@
     linear-gradient(135deg, var(--weight-wash), var(--card) 52%, var(--secondary));
 }
 
+/* El lienzo comparte una atmósfera sutil entre secciones sin teñir las cards ni
+   comprometer el contraste. Los datos siguen siendo el primer plano. */
+.app-canvas {
+  background:
+    radial-gradient(circle at 96% -6%, color-mix(in oklab, var(--primary) 7%, transparent), transparent 30rem),
+    radial-gradient(circle at 36% 108%, color-mix(in oklab, var(--body) 5%, transparent), transparent 34rem),
+    var(--background);
+  background-attachment: fixed;
+}
+.dark .app-canvas {
+  background:
+    radial-gradient(circle at 96% -6%, color-mix(in oklab, var(--primary) 10%, transparent), transparent 30rem),
+    radial-gradient(circle at 36% 108%, color-mix(in oklab, var(--body) 7%, transparent), transparent 34rem),
+    var(--background);
+}
+
 /* Utilidad de superficie base para tarjetas de la app (sombra cálida RITMO). */
 @utility card-ritmo {
   background: var(--card);

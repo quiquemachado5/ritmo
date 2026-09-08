@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SectionLabel } from "@/components/app/primitives";
+import { PageHeader, SectionLabel } from "@/components/app/primitives";
 import { ejecutarSimulacroRestauracion, limpiarDatosLocales, marcarExportacion, diasDesdeExportacion, leerBackupLocal, leerSimulacroRestauracion, type RestoreDrillResult } from "@/lib/backup";
 import { limpiarPreferenciasComidas } from "@/lib/meal-prefs";
 import { fmtFechaCorta } from "@/lib/format";
@@ -347,7 +347,7 @@ export default function AjustesPage() {
 
   return (
     <div className="flex flex-col gap-7">
-      <header className="flex flex-col gap-1 border-b border-border/70 pb-5"><h1 className="font-display text-2xl font-bold tracking-tight">Ajustes</h1><p className="text-sm text-muted-foreground">Perfil, objetivos y hábitos se guardan juntos. Apariencia y privacidad se aplican al momento.</p></header>
+      <PageHeader title="Ajustes" description="Perfil, objetivos y hábitos se guardan juntos. Apariencia y privacidad se aplican al momento." />
 
       {/* Datos que alimentan el modelo, separados para una lectura más clara. */}
       <form id="perfil-ajustes" onSubmit={event => { event.preventDefault(); void guardarPerfil(); }}>

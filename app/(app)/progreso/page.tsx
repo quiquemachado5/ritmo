@@ -24,7 +24,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PuntoPeso } from "@/components/app/charts";
-import { Metric, SectionLabel, Chip, EmptyState } from "@/components/app/primitives";
+import { Metric, SectionLabel, Chip, EmptyState, PageHeader } from "@/components/app/primitives";
 import { capitalizar, fmtPeso, fmtSigno, fmtNum, fmtFechaCorta, relativo } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { DataLegend } from "@/components/app/data-legend";
@@ -217,13 +217,11 @@ export default function ProgresoPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl font-bold tracking-tight">Progreso</h1>
-          <p className="mt-1 max-w-xl text-sm text-muted-foreground">Tu historial confirmado y la orientación del modelo se leen por separado.</p>
-        </div>
-        <Button onClick={() => abrir("peso")} className="min-h-11 gap-2"><Scale className="size-4" /> Registrar medición</Button>
-      </header>
+      <PageHeader
+        title="Progreso"
+        description="Tu historial confirmado y la orientación del modelo se leen por separado."
+        action={<Button onClick={() => abrir("peso")} className="min-h-11 w-full gap-2 sm:w-auto"><Scale className="size-4" /> Registrar medición</Button>}
+      />
 
       {!hayPesajes ? (
         <EmptyState icon={<Scale className="size-8" />} title="Empieza con una medición real" unlocks={["1 pesaje: punto de partida", "2 pesajes: cambio real", "4+ pesajes: error personalizado"]} action={<Button onClick={() => abrir("peso")} className="mt-1 gap-2"><Scale className="size-4" /> Registrar peso</Button>}>

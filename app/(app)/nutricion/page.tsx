@@ -12,7 +12,7 @@ import { hoy, sumarDias, diasEntre } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Ring, MacroBar, Chip, EmptyState } from "@/components/app/primitives";
+import { Ring, MacroBar, Chip, EmptyState, PageHeader } from "@/components/app/primitives";
 import { fmtKcal, fmtFechaLarga, capitalizar } from "@/lib/format";
 import { uid } from "@/lib/utils";
 import type { TipoComida } from "@/lib/model/types";
@@ -101,13 +101,11 @@ export default function NutricionPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Cabecera con navegación de día */}
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">Nutrición</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Registra, revisa y ajusta cada estimación.</p>
-        </div>
-        <div className="flex w-full items-center justify-between rounded-xl border border-border bg-card p-1 sm:w-auto sm:border-0 sm:bg-transparent sm:p-0">
+      <PageHeader
+        title="Nutrición"
+        description="Registra, revisa y ajusta cada estimación."
+        action={(
+        <div className="flex w-full items-center justify-between rounded-xl border border-border bg-card p-1 shadow-sm sm:w-auto sm:min-w-48">
           <Button variant="ghost" size="icon" onClick={() => setFecha((f) => sumarDias(f, -1))} aria-label="Día anterior">
             <ChevronLeft className="size-5" />
           </Button>
@@ -118,7 +116,8 @@ export default function NutricionPage() {
             <ChevronRight className="size-5" />
           </Button>
         </div>
-      </header>
+        )}
+      />
 
       {/* Resumen del día */}
       <Card className="p-4 sm:p-5">

@@ -56,6 +56,13 @@ test("recorrido visual y guardado con datos sintéticos", async ({ page, request
   page.on("request", request => { if (request.url().includes("/api/nutricion") || /generativelanguage|api\.edamam/.test(request.url())) analisisRemotos.push(request.url()); });
   await request.post("http://127.0.0.1:3199/__reset");
   await iniciarSesion(page);
+  await page.getByRole("button", { name: /Buscar/ }).click();
+  await expect(page.getByRole("option", { name: /Registrar una comida/ })).toBeVisible();
+  const comando = page.getByLabel("Buscar o ejecutar una acción", { exact: true });
+  await comando.press("ArrowDown");
+  await comando.press("Enter");
+  await expect(page.getByRole("dialog").getByRole("tab", { name: "Peso", exact: true })).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("Escape");
   await page.screenshot({ path: `test-results/${info.project.name}-hoy.png`, fullPage: true });
   for (const route of ["ajustes", "nutricion", "progreso", "habitos"] as const) {
     await irA(page, `/${route}`);

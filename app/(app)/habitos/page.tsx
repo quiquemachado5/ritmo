@@ -13,7 +13,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SectionLabel } from "@/components/app/primitives";
+import { PageHeader, SectionLabel } from "@/components/app/primitives";
 import { cn } from "@/lib/utils";
 import { evaluarCicloModelos } from "@/lib/model-audit/lifecycle";
 
@@ -71,9 +71,7 @@ export default function HabitosPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex items-center justify-between">
-        <h1 className="font-display text-2xl font-bold tracking-tight">Hábitos</h1>
-      </header>
+      <PageHeader title="Hábitos" description="Tu constancia real, editable día a día." />
 
       {/* Rachas */}
       <div className="grid gap-3 lg:grid-cols-[minmax(15rem,.72fr)_minmax(0,1.28fr)]">
