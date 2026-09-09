@@ -180,24 +180,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Link href="/" aria-label="RITMO — inicio" className="inline-flex rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring">
             <RitmoLogo wordmarkClassName="h-8" />
           </Link>
-          <UserCount compact className="rounded-lg border border-border/80 bg-secondary/55 px-2 py-1" />
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="size-9 rounded-xl text-muted-foreground hover:bg-secondary hover:text-foreground" onClick={() => setBusquedaAbierta(true)} aria-label="Buscar en RITMO" title="Buscar · ⌘K">
+              <Search className="size-[1.05rem]" />
+            </Button>
+            <UserCount compact className="rounded-lg border border-border/80 bg-secondary/55 px-2 py-1" />
+          </div>
         </div>
-        <div className="mt-3 grid gap-2">
+        <div className="mt-3">
           <Button
             onClick={() => abrir(recomendada.tab)}
-            className="h-12 justify-start gap-2.5 rounded-xl px-2.5 text-sm shadow-sm"
+            className="h-14 w-full justify-start gap-2.5 rounded-2xl px-2.5 text-sm shadow-sm"
             aria-label="Registrar"
             title={`${recomendada.etiqueta}. ${recomendada.detalle}`}
           >
-            <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary-foreground/12"><Plus className="size-[1.125rem]" /></span>
-            <span className="font-semibold">Registrar</span>
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary-foreground/12"><Plus className="size-[1.125rem]" /></span>
+            <span className="min-w-0 flex-1 text-left">
+              <span className="block font-semibold leading-tight">Registrar</span>
+              <span className="mt-0.5 block truncate text-[0.62rem] font-medium text-primary-foreground/70">{recomendada.etiqueta}</span>
+            </span>
             <span className="ml-auto rounded-md bg-primary-foreground/12 px-2 py-1 text-[0.62rem] font-bold tabular">{recomendada.corta}</span>
           </Button>
-          <button type="button" onClick={() => setBusquedaAbierta(true)} className="flex h-10 items-center gap-2.5 rounded-xl border border-border/80 bg-background/65 px-2.5 text-sm font-medium text-muted-foreground shadow-sm transition-colors hover:border-primary/25 hover:bg-secondary/70 hover:text-foreground">
-            <span className="grid size-7 shrink-0 place-items-center"><Search className="size-4" /></span><span className="flex-1 text-left">Buscar</span><kbd className="rounded-md bg-secondary px-1.5 py-1 text-[0.58rem] font-semibold text-muted-foreground">⌘K</kbd>
-          </button>
         </div>
-        <nav className="mt-3 min-h-0 flex-1 overflow-y-auto rounded-2xl border border-border/75 bg-secondary/30 p-2 [scrollbar-width:none]" aria-label="Secciones de RITMO">
+        <nav className="mt-3 overflow-y-auto rounded-2xl bg-secondary/35 p-2 [scrollbar-width:none]" aria-label="Secciones de RITMO">
           <p className="px-2 pb-1.5 pt-1 text-[0.58rem] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">Principal</p>
           <div className="flex flex-col gap-0.5">
             {primarios.map((item) => <SidebarNavLink key={item.href} item={item} active={activo(item.href)} />)}
@@ -208,6 +213,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {herramientas.map((item) => <SidebarNavLink key={item.href} item={item} active={activo(item.href)} />)}
           </div>
         </nav>
+        <div className="min-h-3 flex-1" aria-hidden="true" />
         <div className="mt-3 rounded-2xl border border-border/80 bg-background/60 p-1 shadow-sm">
           <div className="flex min-w-0 items-center gap-0.5">
             <UserMenu expanded />
