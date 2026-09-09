@@ -53,15 +53,15 @@ function UserMenu({ compact = false, expanded = false }: { compact?: boolean; ex
             <MoreHorizontal className="size-5" />
           </Button>
         ) : expanded ? (
-          <Button variant="ghost" className="h-auto min-w-0 flex-1 justify-start gap-2.5 rounded-xl px-2 py-2 text-left" aria-label="Menú de la cuenta">
-            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/12 text-sm font-bold text-primary">
+          <Button variant="ghost" className="h-12 min-w-0 flex-1 justify-start gap-2.5 rounded-xl px-2 text-left hover:bg-secondary/70" aria-label="Menú de la cuenta">
+            <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/12 text-xs font-bold text-primary">
               {inicial}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-xs font-semibold text-foreground">Tu cuenta</span>
+              <span className="block text-[0.68rem] font-semibold text-foreground">Cuenta</span>
               <span className="block truncate text-[0.68rem] font-normal text-muted-foreground">{userEmail ?? "Modo demo"}</span>
             </span>
-            <ChevronUp className="size-3.5 shrink-0 text-muted-foreground" />
+            <ChevronUp className="size-3.5 shrink-0 text-muted-foreground/75" />
           </Button>
         ) : (
           <Button variant="ghost" size="icon" className="rounded-full" aria-label="Menú">
@@ -74,15 +74,15 @@ function UserMenu({ compact = false, expanded = false }: { compact?: boolean; ex
       <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuLabel className="truncate">{userEmail ?? "Modo demo"}</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {secundarios.map((item) => (
-          <DropdownMenuItem key={item.href} asChild>
-            <Link href={item.href}>
-              <item.icon className="size-4" />
-              {item.label}
-            </Link>
-          </DropdownMenuItem>
-        ))}
-        <DropdownMenuSeparator />
+        {!expanded && secundarios.map((item) => (
+            <DropdownMenuItem key={item.href} asChild>
+              <Link href={item.href}>
+                <item.icon className="size-4" />
+                {item.label}
+              </Link>
+            </DropdownMenuItem>
+          ))}
+        {!expanded && <DropdownMenuSeparator />}
         <DropdownMenuItem onSelect={() => void cerrarSesion()}>
           <LogOut className="size-4" />
           Cerrar sesión
@@ -175,39 +175,43 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {experimentos.interfazViva && <div className="biological-ambient" aria-hidden="true" />}
       <TravelBanner />
       {/* Sidebar — escritorio */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[17rem] flex-col border-r border-border/85 bg-card/95 px-4 py-5 shadow-[6px_0_24px_-24px_var(--foreground)] md:flex">
-        <div className="flex items-center justify-between gap-3 border-b border-border pb-4">
-          <Link href="/" aria-label="RITMO — inicio" className="inline-flex">
-            <RitmoLogo wordmarkClassName="h-10" />
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[16.25rem] flex-col border-r border-border/80 bg-card/97 px-3 py-3 shadow-[8px_0_28px_-28px_var(--foreground)] md:flex">
+        <div className="flex h-12 items-center justify-between gap-3 px-2">
+          <Link href="/" aria-label="RITMO — inicio" className="inline-flex rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <RitmoLogo wordmarkClassName="h-8" />
           </Link>
-          <UserCount compact className="rounded-full bg-secondary px-2.5 py-1.5" />
+          <UserCount compact className="rounded-lg border border-border/80 bg-secondary/55 px-2 py-1" />
         </div>
-        <Button
-          onClick={() => abrir(recomendada.tab)}
-          className="mt-4 h-11 justify-start gap-2 rounded-xl px-3.5 text-[0.95rem] shadow-sm"
-          aria-label="Registrar"
-          title={`${recomendada.etiqueta}. ${recomendada.detalle}`}
-        >
-          <Plus className="size-5" />
-          Registrar
-          <span className="ml-auto rounded-md bg-primary-foreground/14 px-1.5 py-0.5 text-[0.64rem] font-bold tabular">{recomendada.corta}</span>
-        </Button>
-        <button type="button" onClick={() => setBusquedaAbierta(true)} className="mt-2 flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
-          <Search className="size-4" /><span className="flex-1 text-left">Buscar</span><kbd className="rounded-md border border-border px-1.5 py-0.5 text-[0.6rem]">⌘K</kbd>
-        </button>
-        <nav className="mt-5 flex flex-1 flex-col" aria-label="Secciones de RITMO">
-          <p className="px-2 pb-2 text-[0.62rem] font-bold uppercase tracking-[0.12em] text-muted-foreground/75">Seguimiento</p>
-          <div className="flex flex-col gap-1">
+        <div className="mt-3 grid gap-2">
+          <Button
+            onClick={() => abrir(recomendada.tab)}
+            className="h-12 justify-start gap-2.5 rounded-xl px-2.5 text-sm shadow-sm"
+            aria-label="Registrar"
+            title={`${recomendada.etiqueta}. ${recomendada.detalle}`}
+          >
+            <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary-foreground/12"><Plus className="size-[1.125rem]" /></span>
+            <span className="font-semibold">Registrar</span>
+            <span className="ml-auto rounded-md bg-primary-foreground/12 px-2 py-1 text-[0.62rem] font-bold tabular">{recomendada.corta}</span>
+          </Button>
+          <button type="button" onClick={() => setBusquedaAbierta(true)} className="flex h-10 items-center gap-2.5 rounded-xl border border-border/80 bg-background/65 px-2.5 text-sm font-medium text-muted-foreground shadow-sm transition-colors hover:border-primary/25 hover:bg-secondary/70 hover:text-foreground">
+            <span className="grid size-7 shrink-0 place-items-center"><Search className="size-4" /></span><span className="flex-1 text-left">Buscar</span><kbd className="rounded-md bg-secondary px-1.5 py-1 text-[0.58rem] font-semibold text-muted-foreground">⌘K</kbd>
+          </button>
+        </div>
+        <nav className="mt-3 min-h-0 flex-1 overflow-y-auto rounded-2xl border border-border/75 bg-secondary/30 p-2 [scrollbar-width:none]" aria-label="Secciones de RITMO">
+          <p className="px-2 pb-1.5 pt-1 text-[0.58rem] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">Principal</p>
+          <div className="flex flex-col gap-0.5">
             {primarios.map((item) => <SidebarNavLink key={item.href} item={item} active={activo(item.href)} />)}
           </div>
-          <p className="mt-6 border-t border-border/70 px-2 pb-2 pt-4 text-[0.62rem] font-bold uppercase tracking-[0.12em] text-muted-foreground/75">Tu espacio</p>
-          <div className="flex flex-col gap-1">
+          <div className="mx-2 my-2.5 h-px bg-border/80" aria-hidden="true" />
+          <p className="px-2 pb-1.5 text-[0.58rem] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">Herramientas</p>
+          <div className="flex flex-col gap-0.5">
             {herramientas.map((item) => <SidebarNavLink key={item.href} item={item} active={activo(item.href)} />)}
           </div>
         </nav>
-        <div className="mt-3 border-t border-border pt-3">
-          <div className="flex min-w-0 items-center gap-1">
+        <div className="mt-3 rounded-2xl border border-border/80 bg-background/60 p-1 shadow-sm">
+          <div className="flex min-w-0 items-center gap-0.5">
             <UserMenu expanded />
+            <span className="h-7 w-px bg-border" aria-hidden="true" />
             <ThemeToggle />
           </div>
         </div>
@@ -226,7 +230,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Contenido */}
-      <div className="md:pl-[17rem]">
+      <div className="md:pl-[16.25rem]">
         <main className="app-content mx-auto w-full max-w-[88rem] px-[clamp(1rem,3vw,3.5rem)] pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-5 md:pb-14 md:pt-9">
           <PageTransition>{children}</PageTransition>
           <footer className="mt-10 border-t border-border pt-4 text-center text-[0.68rem] text-muted-foreground/60 md:text-left">
@@ -272,16 +276,17 @@ function SidebarNavLink({ item, active }: { item: (typeof NAV_ITEMS)[number]; ac
       href={item.href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "group flex min-h-11 items-center gap-2.5 rounded-xl px-2 py-1.5 text-[0.92rem] font-medium transition-[background-color,color,transform]",
+        "group flex h-10 items-center gap-2.5 rounded-xl px-2 text-[0.84rem] font-medium outline-none transition-[background-color,color,box-shadow,transform] focus-visible:ring-2 focus-visible:ring-ring",
         active
-          ? "bg-primary/10 text-primary"
-          : "text-muted-foreground hover:translate-x-0.5 hover:bg-secondary hover:text-foreground",
+          ? "bg-card text-foreground shadow-sm ring-1 ring-border/75"
+          : "text-muted-foreground hover:translate-x-0.5 hover:bg-card/70 hover:text-foreground",
       )}
     >
-      <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg transition-colors", active ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground group-hover:bg-card")}>
-        <item.icon className="size-[1.05rem]" />
+      <span className={cn("grid size-7 shrink-0 place-items-center rounded-lg transition-colors", active ? "bg-primary text-primary-foreground" : "text-muted-foreground group-hover:text-foreground")}>
+        <item.icon className="size-4" />
       </span>
       <span className="truncate">{item.label}</span>
+      {active && <span className="ml-auto size-1.5 rounded-full bg-primary" aria-hidden="true" />}
     </Link>
   );
 }
