@@ -592,6 +592,8 @@ export interface BacktestModelo {
   coberturaIntervaloPct: number | null;
   intervalosEvaluados: number;
   radio80DiarioKg: number | null;
+  /** Real − predicho. Positivo significa que el modelo tendía a quedarse corto. */
+  sesgoFirmadoKg: number | null;
 }
 
 /**
@@ -607,6 +609,7 @@ export function backtestModelo(estado: Estado): BacktestModelo {
   let evaluados = 0;
   let dentroMedioKg = 0;
   const erroresPersonal: number[] = [];
+  const residuosFirmados: number[] = [];
   const residuosDiarios: number[] = [];
   let errorUltimoPeso = 0;
   let intervalosEvaluados = 0;
@@ -632,6 +635,7 @@ export function backtestModelo(estado: Estado): BacktestModelo {
     errorBase += errorB;
     errorPersonal += errorP;
     erroresPersonal.push(errorP);
+    residuosFirmados.push(tramo.deltaRealKg - deltaPersonal);
     if (errorP <= 0.5) dentroMedioKg++;
     evaluados++;
   }
@@ -640,6 +644,12 @@ export function backtestModelo(estado: Estado): BacktestModelo {
   const personal = evaluados ? errorPersonal / evaluados : null;
   const ordenados = erroresPersonal.sort((a, b) => a - b);
   const p80 = ordenados.length ? ordenados[Math.max(0, Math.ceil(ordenados.length * 0.8) - 1)] : null;
+  const sesgosOrdenados = residuosFirmados.sort((a, b) => a - b);
+  const sesgoMediano = sesgosOrdenados.length
+    ? sesgosOrdenados.length % 2
+      ? sesgosOrdenados[Math.floor(sesgosOrdenados.length / 2)]
+      : (sesgosOrdenados[sesgosOrdenados.length / 2 - 1] + sesgosOrdenados[sesgosOrdenados.length / 2]) / 2
+    : null;
   const valor: BacktestModelo = {
     tramos: evaluados,
     errorBaseKg: base === null ? null : redondearPeso(base),
@@ -651,6 +661,7 @@ export function backtestModelo(estado: Estado): BacktestModelo {
     coberturaIntervaloPct: intervalosEvaluados ? Math.round(100 * intervalosAcertados / intervalosEvaluados) : null,
     intervalosEvaluados,
     radio80DiarioKg: residuosDiarios.length >= 5 ? percentil80(residuosDiarios) : null,
+    sesgoFirmadoKg: sesgoMediano === null ? null : redondearPeso(Math.max(-0.6, Math.min(0.6, sesgoMediano))),
   };
   cacheBacktest.set(estado, { version: estado.version ?? 0, valor });
   return valor;
@@ -833,6 +844,10 @@ export interface ModeloProyeccion {
   retencionLiquidosHoyKg: number;
   retencionLiquidosMananaKg: number;
   retencionLiquidosFuente: "ninguna" | "generica" | "personalizada";
+  /** Sesgo mediano observado: positivo cuando históricamente predijo de menos. */
+  sesgoHistoricoKg: number | null;
+  /** Corrección gradual aplicada al peso estimado de hoy. */
+  correccionSesgoHoyKg: number;
 }
 
 export interface ProyeccionConfiable {
@@ -1021,11 +1036,18 @@ export function proyeccionPesoConfiable(
   // Si hoy hay báscula, ese dato es el ancla exacta. Alpha se reserva para
   // combinar las trayectorias futuras, no para mover una lectura real.
   const liquidoHoy = impactoLiquidosEnFecha(estado, hoy());
-  const pesoHoyTisular = diasSinPesaje === 0
+  const pesoHoyTisularBase = diasSinPesaje === 0
     ? Math.max(20, ultimo.peso - liquidoHoy.kg)
     : pesoTendencia === null
     ? pesoEnergetico
     : pesoEnergetico * alphaEnergetico + pesoTendencia * (1 - alphaEnergetico);
+  // El backtest ya conocía la magnitud del error, pero antes descartaba su
+  // dirección. Aplicamos la mediana firmada de forma gradual y acotada: nunca
+  // mueve una báscula de hoy y necesita al menos cinco predicciones cerradas.
+  const sesgoHistoricoKg = validacion.tramos >= 5 ? validacion.sesgoFirmadoKg ?? 0 : 0;
+  const progresoCorreccionHoy = Math.min(1, diasSinPesaje / 7);
+  const correccionSesgoHoyKg = diasSinPesaje === 0 ? 0 : sesgoHistoricoKg * progresoCorreccionHoy;
+  const pesoHoyTisular = pesoHoyTisularBase + correccionSesgoHoyKg;
   const pesoHoy = pesoHoyTisular + liquidoHoy.kg;
   const composicionHoy = ajustarComposicionAPeso(composicionEnergetica, pesoHoyTisular);
   if (pesoTendencia !== null) {
@@ -1073,9 +1095,12 @@ export function proyeccionPesoConfiable(
   const pronosticar = (dias: number) => {
     const energetica = proyectarComposicion(composicionHoy, balanceModeloEnergetico, tdeeVigente(estado), dias);
     const pesoPorTendencia = pesoTendencia === null ? null : pesoHoyTisular + pendienteTendencia * dias;
-    const pesoTisular = pesoPorTendencia === null
+    const pesoTisularBase = pesoPorTendencia === null
       ? energetica.peso
       : energetica.peso * alphaEnergetico + pesoPorTendencia * (1 - alphaEnergetico);
+    const progresoCorreccionDestino = Math.min(1, (diasSinPesaje + dias) / 7);
+    const correccionAdicional = sesgoHistoricoKg * (progresoCorreccionDestino - progresoCorreccionHoy);
+    const pesoTisular = pesoTisularBase + correccionAdicional;
     const composicion = ajustarComposicionAPeso(energetica, pesoTisular);
     const liquido = impactoLiquidosEnFecha(estado, sumarDias(hoy(), dias));
     const pesoFinal = pesoTisular + liquido.kg;
@@ -1130,6 +1155,8 @@ export function proyeccionPesoConfiable(
       retencionLiquidosHoyKg: liquidoHoy.kg,
       retencionLiquidosMananaKg: manana.liquido.kg,
       retencionLiquidosFuente: liquidoHoy.fuente !== "ninguna" ? liquidoHoy.fuente : manana.liquido.fuente,
+      sesgoHistoricoKg: validacion.tramos >= 5 ? validacion.sesgoFirmadoKg : null,
+      correccionSesgoHoyKg: redondearPeso(correccionSesgoHoyKg),
     },
     diasSinPesaje,
     pesajes: puntos.length,

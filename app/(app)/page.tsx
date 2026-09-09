@@ -2,13 +2,13 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Award, CheckCircle2, Flame, Plus, Scale, Target, TrendingDown, TrendingUp, Utensils } from "lucide-react";
+import { Award, CheckCircle2, Eye, EyeOff, Flame, Plus, Scale, Target, TrendingDown, TrendingUp, Utensils } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
 import { resumen, adherenciaPorHabito, recordsPersonales, resumenPorMes } from "@/lib/model/analytics";
 import { macrosObjetivo } from "@/lib/model/metrics";
 import { habitosModelo } from "@/lib/model/config";
-import { hoy, sumarDias } from "@/lib/model/dates";
+import { diasEntre, hoy, sumarDias } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,6 +38,7 @@ export default function HoyPage() {
   const hoyISO = hoy();
   const experimentos = useExperimentos(userId);
   const [mostrarPanelCompleto, setMostrarPanelCompleto] = React.useState(false);
+  const [mostrarLecturasSecundarias, setMostrarLecturasSecundarias] = React.useState(false);
 
   const cicloModelo = React.useMemo(
     () => evaluarCicloModelos(estado, auditoriaModelo.predicciones, hoyISO),
@@ -73,6 +74,9 @@ export default function HoyPage() {
 
   const habitosHechos = habitosActivos.filter((h) => diaHoy.habitos?.[h.clave]).length;
   const tendKg = r.prediccion.modelo?.kgSemana ?? r.tendencia?.kgSemana ?? null;
+  const diasDesdePeso = r.peso.fecha ? Math.max(0, diasEntre(r.peso.fecha, hoyISO)) : Infinity;
+  const pesoRequiereAtencion = r.peso.actual == null || diasDesdePeso >= 7 || (tendKg != null && Math.abs(tendKg) >= 0.25);
+  const pesoEnSegundoPlano = experimentos.modoInvisible && !pesoRequiereAtencion && !mostrarLecturasSecundarias;
   const calidadRegistro = qualityForDay(comidas, habitosHechos, habitosActivos.length);
   const lecturaPrincipal = comidas.length === 0 && habitosHechos === 0
     ? "Tu día empieza con un registro"
@@ -194,7 +198,13 @@ export default function HoyPage() {
 
       <div className="today-overview-side">
       {/* Último pesaje */}
-      <section>
+      {pesoEnSegundoPlano ? (
+        <div className="invisible-reading" role="status">
+          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-weight-wash text-weight"><EyeOff className="size-4" /></span>
+          <span className="min-w-0 flex-1"><span className="block text-xs font-semibold">Peso estable, en segundo plano</span><span className="block truncate text-[0.68rem] text-muted-foreground">Tu último pesaje es reciente y no requiere una acción.</span></span>
+          <button type="button" onClick={() => setMostrarLecturasSecundarias(true)} className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-primary hover:bg-primary/8"><Eye className="size-3.5" /> Mostrar</button>
+        </div>
+      ) : <section className="today-weight">
         <SectionLabel action={<Link href="/progreso" className="text-xs font-medium text-primary hover:underline">Ver progreso</Link>}>
           Peso
         </SectionLabel>
@@ -232,10 +242,10 @@ export default function HoyPage() {
             </div>
           )}
         </Card>
-      </section>
+      </section>}
 
       {/* Hábitos de hoy */}
-      <section>
+      <section className="today-habits">
         <SectionLabel action={<Link href="/habitos" className="text-xs font-medium text-primary hover:underline">Ver hábitos</Link>}>
           Hábitos de hoy · {habitosHechos}/{habitosActivos.length}
         </SectionLabel>

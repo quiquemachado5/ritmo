@@ -319,6 +319,15 @@ describe("Calibración personalizada", () => {
     expect(backtest.coberturaIntervaloPct).toBeGreaterThanOrEqual(0);
     expect(backtest.coberturaIntervaloPct).toBeLessThanOrEqual(100);
     expect(backtest.radio80DiarioKg).toBeGreaterThan(0);
+    expect(backtest.sesgoFirmadoKg).not.toBeNull();
+    expect(Math.abs(backtest.sesgoFirmadoKg!)).toBeLessThanOrEqual(0.6);
+
+    const proyeccion = A.proyeccionPesoConfiable(historico);
+    expect(proyeccion.modelo!.sesgoHistoricoKg).toBe(backtest.sesgoFirmadoKg);
+    expect(Math.abs(proyeccion.modelo!.correccionSesgoHoyKg)).toBeLessThanOrEqual(Math.abs(backtest.sesgoFirmadoKg!));
+    if (Math.abs(backtest.sesgoFirmadoKg!) >= 0.05) {
+      expect(Math.sign(proyeccion.modelo!.correccionSesgoHoyKg)).toBe(Math.sign(backtest.sesgoFirmadoKg!));
+    }
   });
 
   it("mantiene la biología como prior para una persona nueva", () => {
@@ -489,6 +498,7 @@ describe("Imputación y arrastre", () => {
     }));
     expect(bebidoHoy.modelo!.retencionLiquidosHoyKg).toBe(0);
     expect(bebidoHoy.modelo!.retencionLiquidosMananaKg).toBeGreaterThan(0.4);
+    expect(bebidoHoy.modelo!.correccionSesgoHoyKg).toBe(0);
   });
 });
 

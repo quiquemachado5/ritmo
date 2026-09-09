@@ -4,6 +4,7 @@ import * as React from "react";
 import dynamic from "next/dynamic";
 import {
   AlertTriangle,
+  ArrowRight,
   ArrowDownRight,
   ArrowUpRight,
   Minus,
@@ -204,6 +205,7 @@ export default function ProgresoPage() {
   const ritmoModelo = r.prediccion.modelo?.kgSemana ?? null;
   const retencionHoy = r.prediccion.modelo?.retencionLiquidosHoyKg ?? 0;
   const retencionManana = r.prediccion.modelo?.retencionLiquidosMananaKg ?? 0;
+  const correccionSesgo = r.prediccion.modelo?.correccionSesgoHoyKg ?? 0;
   const energiaHoyModelo = energiaDe(estado, hoyISO);
   const siguienteDato = diasDesdeBascula >= 7
     ? "un pesaje nuevo, preferiblemente al levantarte"
@@ -241,79 +243,55 @@ export default function ProgresoPage() {
           <section aria-labelledby="estado-actual">
             <h2 id="estado-actual" className="sr-only">Estado actual</h2>
             <Card className="overflow-hidden p-0">
-              <div className="grid divide-y divide-border lg:grid-cols-[1.15fr_.85fr] lg:divide-x lg:divide-y-0">
-                <div className="p-5 sm:p-6">
-                  <div className="mb-5 flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold">Última medición real</p>
-                      <p className="mt-1 text-xs text-muted-foreground">Dato introducido por ti · no es una predicción</p>
-                    </div>
-                    <Chip tone="weight">Báscula</Chip>
-                  </div>
-                  <div className="flex items-end gap-2">
-                    <span className="font-display text-5xl font-bold leading-none tabular text-weight">{fmtPeso(r.peso.actual)}</span>
-                    <span className="mb-1 text-base font-medium text-muted-foreground">kg</span>
-                  </div>
-                  <p className="mt-3 text-sm text-muted-foreground">
-                    {r.peso.fecha ? <>Registrado el <span className="font-medium text-foreground">{fmtFechaCorta(r.peso.fecha)}</span></> : "Sin fecha"}
-                  </p>
-                  {tendKg != null && (
-                    <div className={cn("mt-5 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold tabular", tendKg <= 0 ? "bg-weight-wash text-weight-ink" : "bg-energy-wash text-energy-ink")}>
-                      {tendKg <= 0 ? <TrendingDown className="size-4" /> : <TrendingUp className="size-4" />}
-                      Tendencia de pesajes: {fmtSigno(tendKg, 2)} kg/semana
-                    </div>
-                  )}
+              <div className="p-5 sm:p-6">
+                <div className="mb-5 flex items-start justify-between gap-4">
+                  <div><p className="text-sm font-semibold">De la báscula a hoy</p><p className="mt-1 text-xs text-muted-foreground">El dato real manda; el modelo solo completa el tramo sin pesajes.</p></div>
+                  <Chip tone="weight">Anclado</Chip>
                 </div>
+                <div className="grid items-stretch gap-3 md:grid-cols-[minmax(0,1fr)_2rem_minmax(0,1fr)]">
+                  <div className="rounded-xl border border-weight-border bg-weight-wash/45 p-4 sm:p-5">
+                    <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.08em] text-weight">Última medición real</p><p className="mt-1 text-xs text-muted-foreground">Tu báscula · sin interpretar</p></div><Scale className="size-4 text-weight" /></div>
+                    <div className="mt-5 flex items-end gap-1.5"><span className="font-display text-4xl font-bold leading-none tabular text-weight sm:text-5xl">{fmtPeso(r.peso.actual)}</span><span className="mb-1 text-sm font-medium text-muted-foreground">kg</span></div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      {r.peso.fecha && <span>{fmtFechaCorta(r.peso.fecha)} · {relativo(r.peso.fecha, hoyISO)}</span>}
+                      {tendKg != null && <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-1 font-semibold tabular", tendKg <= 0 ? "bg-weight/10 text-weight" : "bg-energy-wash text-energy")}>{tendKg <= 0 ? <TrendingDown className="size-3" /> : <TrendingUp className="size-3" />}{fmtSigno(tendKg, 2)} kg/sem</span>}
+                    </div>
+                  </div>
 
-                <div className="bg-body-wash/45 p-5 sm:p-6">
-                  <div className="mb-4 flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold">Estimación del modelo para hoy</p>
-                      <p className="mt-1 text-xs text-muted-foreground">Orientación desde tu último pesaje</p>
-                    </div>
-                    <Chip tone="body">Modelo</Chip>
+                  <div className="hidden items-center justify-center text-muted-foreground md:flex"><ArrowRight className="size-4" /></div>
+
+                  <div className="rounded-xl border border-body-border bg-body-wash/35 p-4 sm:p-5">
+                    <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.08em] text-body">Estimación del modelo para hoy</p><p className="mt-1 text-xs text-muted-foreground">Orientación · nunca sustituye a la báscula</p></div><Chip tone="body">Modelo</Chip></div>
+                    <div className="mt-5 flex items-end gap-1.5"><span className="font-display text-3xl font-bold leading-none tabular text-body sm:text-4xl">{fmtPeso(r.peso.estimadoHoy)}</span><span className="mb-1 text-sm font-medium text-muted-foreground">kg</span></div>
+                    <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                      {diasDesdeBascula === 0
+                        ? "Coincide con el pesaje confirmado de hoy."
+                        : cambioModeloDesdeBascula != null
+                          ? <><span className={cn("font-semibold tabular", cambioModeloDesdeBascula <= 0 ? "text-weight" : "text-energy")}>{fmtSigno(cambioModeloDesdeBascula, 1)} kg</span> desde la báscula</>
+                          : "Se actualizará con tu próxima medición"}
+                      {intervaloHoy && <> · rango <span className="tabular">{fmtPeso(intervaloHoy.minimo)}–{fmtPeso(intervaloHoy.maximo)}</span></>}
+                    </p>
+                    {Math.abs(correccionSesgo) >= 0.05 && <p className="mt-2 text-[0.68rem] leading-relaxed text-body-ink">Incluye una corrección de {fmtSigno(correccionSesgo, 1)} kg porque tus predicciones anteriores {correccionSesgo > 0 ? "se quedaban por debajo" : "se quedaban por encima"}.</p>}
                   </div>
-                  <div className="flex items-end gap-2">
-                    <span className="font-display text-3xl font-bold leading-none tabular text-body">{fmtPeso(r.peso.estimadoHoy)}</span>
-                    <span className="mb-1 text-base font-medium text-muted-foreground">kg</span>
-                  </div>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {diasDesdeBascula === 0
-                      ? "Coincide con tu pesaje de hoy."
-                      : cambioModeloDesdeBascula != null
-                        ? <><span className={cn("font-semibold tabular", cambioModeloDesdeBascula <= 0 ? "text-weight" : "text-energy")}>{fmtSigno(cambioModeloDesdeBascula, 1)} kg</span> desde la última medición.</>
-                        : "Se actualizará con tu próxima medición."}
-                    {intervaloHoy && <span className="ml-1.5 tabular">Rango {fmtPeso(intervaloHoy.minimo)}–{fmtPeso(intervaloHoy.maximo)} kg.</span>}
-                  </p>
-                  {r.prediccion.disponible && (
-                    <div className="mt-4 border-t border-body-border pt-4">
-                      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                        <p className="text-[0.68rem] font-semibold text-muted-foreground">Si mantienes el ritmo</p>
-                        <p className={cn("text-[0.68rem]", retencionHoy > 0 || retencionManana > 0 ? "text-water-ink" : "text-body-ink")}>{explicacionModelo}</p>
-                      </div>
-                      <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pr-0 [scrollbar-width:none] sm:grid sm:grid-cols-5 sm:overflow-visible">
-                        <PredCell etiqueta="Mañana" iv={r.prediccion.manana} base={r.peso.estimadoHoy} />
-                        <PredCell etiqueta="3 días" iv={r.prediccion.tresDias} base={r.peso.estimadoHoy} />
-                        <PredCell etiqueta="1 semana" iv={r.prediccion.semana} base={r.peso.estimadoHoy} />
-                        <PredCell etiqueta="2 semanas" iv={r.prediccion.quincena} base={r.peso.estimadoHoy} />
-                        <PredCell etiqueta="4 semanas" iv={r.prediccion.cuatroSemanas} base={r.peso.estimadoHoy} />
-                      </div>
-                      {composicionModelo && (
-                        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 text-[0.68rem] text-muted-foreground">
-                          <p><span className="font-semibold text-foreground">Composición estimada</span> · no es una medición</p>
-                          <p className="tabular">
-                            Hoy: <span className="font-semibold text-body-ink">{fmtPeso(composicionModelo.hoy.grasaKg)} kg grasa</span> · {fmtPeso(composicionModelo.hoy.magraKg)} kg masa libre
-                            {composicionModelo.hoy.liquidoTransitorioKg > 0 && <span className="text-water-ink"> · +{fmtPeso(composicionModelo.hoy.liquidoTransitorioKg)} kg líquido</span>}
-                            <span className="mx-1.5 text-border">→</span>
-                            4 sem.: <span className="font-semibold text-body-ink">{fmtPeso(composicionModelo.cuatroSemanas.grasaKg)} kg</span> · {fmtPeso(composicionModelo.cuatroSemanas.magraKg)} kg
-                          </p>
-                        </div>
-                      )}
-                      <p className="mt-2 text-[0.68rem] text-muted-foreground"><span className="font-semibold text-foreground">Para afinarlo:</span> {siguienteDato}.</p>
-                    </div>
-                  )}
                 </div>
               </div>
+
+              {r.prediccion.disponible && (
+                <div className="border-t border-border bg-body-wash/20 px-5 py-4 sm:px-6 sm:py-5">
+                  <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"><p className="text-xs font-semibold">Si mantienes tu ritmo actual</p><p className={cn("text-[0.68rem]", retencionHoy > 0 || retencionManana > 0 ? "text-water-ink" : "text-body-ink")}>{explicacionModelo}</p></div>
+                  <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto [scrollbar-width:none] sm:grid sm:grid-cols-5 sm:overflow-visible">
+                    <PredCell etiqueta="Mañana" iv={r.prediccion.manana} base={r.peso.estimadoHoy} />
+                    <PredCell etiqueta="3 días" iv={r.prediccion.tresDias} base={r.peso.estimadoHoy} />
+                    <PredCell etiqueta="1 semana" iv={r.prediccion.semana} base={r.peso.estimadoHoy} />
+                    <PredCell etiqueta="2 semanas" iv={r.prediccion.quincena} base={r.peso.estimadoHoy} />
+                    <PredCell etiqueta="4 semanas" iv={r.prediccion.cuatroSemanas} base={r.peso.estimadoHoy} />
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[0.68rem] text-muted-foreground">
+                    <p><span className="font-semibold text-foreground">Para afinarlo:</span> {siguienteDato}.</p>
+                    {composicionModelo && <p>Composición orientativa disponible en la auditoría del modelo.</p>}
+                  </div>
+                </div>
+              )}
             </Card>
           </section>
 
@@ -386,6 +364,11 @@ export default function ProgresoPage() {
                   {r.prediccion.modelo?.errorUltimoPesoKg != null ? `Sin modelo, repetir el último peso habría tenido un error medio de ${fmtPeso(r.prediccion.modelo.errorUltimoPesoKg)} kg. ` : "Añade pesajes en fechas distintas para comparar el modelo con repetir el último peso. "}
                   {r.prediccion.modelo?.coberturaIntervaloPct != null ? `En el ensayo histórico, bandas fijadas con errores anteriores incluyeron el siguiente peso en el ${r.prediccion.modelo.coberturaIntervaloPct}% de ${r.prediccion.modelo.intervalosEvaluados} tramos. Esta cobertura no garantiza la del rango de tu proyección futura.` : "Aún faltan tramos para evaluar las bandas del ensayo histórico."}
                 </p>
+                {r.prediccion.modelo?.sesgoHistoricoKg != null && Math.abs(r.prediccion.modelo.sesgoHistoricoKg) >= 0.05 && (
+                  <p className="mt-2 rounded-lg bg-body-wash px-3 py-2 text-xs leading-relaxed text-body-ink">
+                    <span className="font-semibold">Sesgo aprendido:</span> el modelo solía quedarse {r.prediccion.modelo.sesgoHistoricoKg > 0 ? "por debajo" : "por encima"} del siguiente pesaje en unos {fmtPeso(Math.abs(r.prediccion.modelo.sesgoHistoricoKg))} kg. Las nuevas estimaciones lo compensan de forma gradual y limitada.
+                  </p>
+                )}
                 <p className="mt-2 text-xs leading-relaxed text-muted-foreground">Es un ensayo retrospectivo condicionado a hábitos ya registrados, no una predicción guardada ni una garantía sobre el futuro. Las fechas anteriores al primer historial de configuración usan un supuesto inicial fijo, no ajustes observados entonces.</p>
                 <div className="grid overflow-hidden rounded-xl border border-border bg-secondary/20 sm:grid-cols-3 sm:divide-x sm:divide-border">
                   <ModeloDato icon={Gauge} label="MAE observado" value={r.prediccion.modelo?.errorHistoricoKg != null ? `${fmtPeso(r.prediccion.modelo.errorHistoricoKg)} kg` : "—"} detail="error absoluto medio del backtest" />

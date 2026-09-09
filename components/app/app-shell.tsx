@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronUp, LogOut, MoreHorizontal, Plus, Search, Settings } from "lucide-react";
+import { ChevronUp, LogOut, MoreHorizontal, Plus, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +28,17 @@ import { hoy } from "@/lib/model/dates";
 import { siguienteAccion } from "@/lib/model/next-action";
 import { useExperimentos } from "@/lib/experiments";
 import { estadoVisualRitmo } from "@/lib/model/insights";
+import { useModoViaje } from "@/lib/travel-mode";
+
+type MomentoRitmo = "dia" | "manana" | "tarde" | "noche";
+
+function momentoActual(): MomentoRitmo {
+  const hora = new Date().getHours();
+  if (hora < 6 || hora >= 21) return "noche";
+  if (hora < 13) return "manana";
+  if (hora < 18) return "tarde";
+  return "noche";
+}
 
 function UserMenu({ compact = false, expanded = false }: { compact?: boolean; expanded?: boolean }) {
   const { userEmail, cerrarSesion } = useRitmo();
@@ -90,10 +101,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const recomendada = React.useMemo(() => siguienteAccion(estado, hoy()), [estado]);
   const experimentos = useExperimentos(userId);
   const pulso = React.useMemo(() => estadoVisualRitmo(estado), [estado]);
+  const viaje = useModoViaje(userId);
+  const [momento, setMomento] = React.useState<MomentoRitmo>("dia");
 
   const activo = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
   const primarios = NAV_ITEMS.filter((i) => i.primary);
-  const herramientas = NAV_ITEMS.filter((i) => !i.primary && i.href !== "/ajustes");
+  const herramientas = NAV_ITEMS.filter((i) => !i.primary);
 
   // Atajos de teclado globales. Se ignoran si el foco está en un campo de texto
   // o si el panel de registro ya está abierto (para no capturar su escritura).
@@ -105,6 +118,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       window.history.replaceState(window.history.state, "", url.pathname + url.search);
     }
   }, [abrir]);
+
+  React.useEffect(() => {
+    const actualizarMomento = () => setMomento(momentoActual());
+    actualizarMomento();
+    const intervalo = window.setInterval(actualizarMomento, 5 * 60_000);
+    return () => window.clearInterval(intervalo);
+  }, []);
 
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -146,7 +166,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div data-ritmo={experimentos.interfazViva ? pulso.estado : "neutro"} className="app-canvas min-h-dvh bg-background">
+    <div
+      data-ritmo={experimentos.interfazViva ? pulso.estado : "neutro"}
+      data-momento={experimentos.interfazViva ? momento : "dia"}
+      data-contexto={experimentos.interfazViva && viaje.activo ? "viaje" : pulso.estado}
+      className="app-canvas min-h-dvh bg-background"
+    >
+      {experimentos.interfazViva && <div className="biological-ambient" aria-hidden="true" />}
       <TravelBanner />
       {/* Sidebar — escritorio */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-[17rem] flex-col border-r border-border/85 bg-card/95 px-4 py-5 shadow-[6px_0_24px_-24px_var(--foreground)] md:flex">
@@ -184,11 +210,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <UserMenu expanded />
             <ThemeToggle />
           </div>
-          <nav aria-label="Cuenta y preferencias">
-            <Link href="/ajustes" className={cn("mt-1.5 flex h-10 items-center gap-2.5 rounded-xl px-3 text-sm font-medium transition-colors", activo("/ajustes") ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary hover:text-foreground")}>
-              <Settings className="size-4" /> Ajustes
-            </Link>
-          </nav>
         </div>
       </aside>
 

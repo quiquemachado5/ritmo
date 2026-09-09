@@ -22,7 +22,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/nutricion", label: "Nutrición", icon: UtensilsCrossed, primary: true },
   { href: "/habitos", label: "Hábitos", icon: Flame, primary: true },
   { href: "/progreso", label: "Progreso", icon: TrendingUp, primary: true },
+  { href: "/ajustes", label: "Ajustes", icon: Settings, primary: false },
   { href: "/minimo", label: "Modo mínimo", icon: Minimize2, primary: false },
   { href: "/laboratorio", label: "Laboratorio", icon: FlaskConical, primary: false },
-  { href: "/ajustes", label: "Ajustes", icon: Settings, primary: false },
 ];

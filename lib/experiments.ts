@@ -8,6 +8,7 @@ export interface ExperimentosRitmo {
   detectorAvanzado: boolean;
   escenarios: boolean;
   memoriaCorporal: boolean;
+  modoInvisible: boolean;
 }
 
 export const EXPERIMENTOS_POR_DEFECTO: ExperimentosRitmo = {
@@ -16,6 +17,7 @@ export const EXPERIMENTOS_POR_DEFECTO: ExperimentosRitmo = {
   detectorAvanzado: true,
   escenarios: true,
   memoriaCorporal: true,
+  modoInvisible: true,
 };
 
 const EVENTO = "ritmo:experimentos";

@@ -304,11 +304,41 @@
 /* El lienzo comparte una atmósfera sutil entre secciones sin teñir las cards ni
    comprometer el contraste. Los datos siguen siendo el primer plano. */
 .app-canvas {
+  isolation: isolate;
   background:
     radial-gradient(circle at 96% -6%, color-mix(in oklab, var(--primary) 7%, transparent), transparent 30rem),
     radial-gradient(circle at 36% 108%, color-mix(in oklab, var(--body) 5%, transparent), transparent 34rem),
     var(--background);
   background-attachment: fixed;
+}
+.biological-ambient {
+  --ambient-color: var(--primary);
+  --ambient-x: 88%;
+  --ambient-y: 16%;
+  position: fixed;
+  z-index: 0;
+  top: var(--ambient-y);
+  left: var(--ambient-x);
+  width: min(34rem, 58vw);
+  aspect-ratio: 1;
+  pointer-events: none;
+  border-radius: 9999px;
+  background: radial-gradient(circle, color-mix(in oklab, var(--ambient-color) 8%, transparent), transparent 68%);
+  filter: blur(8px);
+  opacity: .72;
+  transform: translate3d(-50%, -50%, 0) scale(.92);
+  animation: biological-breathe 14s cubic-bezier(.37,0,.63,1) infinite alternate;
+  transition: top 900ms cubic-bezier(.22,1,.36,1), left 900ms cubic-bezier(.22,1,.36,1), opacity 400ms ease;
+}
+.app-canvas .app-content { position: relative; z-index: 1; }
+.app-canvas[data-momento="manana"] .biological-ambient { --ambient-x: 82%; --ambient-y: 8%; --ambient-color: var(--habit); }
+.app-canvas[data-momento="tarde"] .biological-ambient { --ambient-x: 92%; --ambient-y: 46%; --ambient-color: var(--primary); }
+.app-canvas[data-momento="noche"] .biological-ambient { --ambient-x: 74%; --ambient-y: 80%; --ambient-color: var(--body); opacity: .52; }
+.app-canvas[data-contexto="viaje"] .biological-ambient { --ambient-color: var(--water); opacity: .82; }
+.app-canvas[data-contexto="recuperacion"] .biological-ambient { --ambient-color: var(--energy); opacity: .56; }
+@keyframes biological-breathe {
+  from { transform: translate3d(-50%, -50%, 0) scale(.9); }
+  to { transform: translate3d(-50%, -50%, 0) scale(1.08); }
 }
 .dark .app-canvas {
   background:
@@ -365,6 +395,17 @@
   flex-direction: column;
   gap: 1.5rem;
 }
+.invisible-reading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: .625rem;
+  min-height: 3.5rem;
+  padding: .5rem .625rem;
+  border: 1px dashed color-mix(in oklab, var(--weight) 24%, var(--border));
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklab, var(--weight-wash) 40%, var(--card));
+}
 @media (min-width: 72rem) {
   .today-overview {
     display: grid;
@@ -379,6 +420,8 @@
   .today-overview-main > [data-slot="card"] { flex: 1; }
   .today-overview-side { justify-content: flex-start; }
   .today-overview-side > section { min-width: 0; }
+  .app-canvas[data-momento="noche"] .today-overview-side .today-habits { order: -1; }
+  .app-canvas[data-contexto="viaje"] .today-overview { grid-template-columns: minmax(0, 1.08fr) minmax(23rem, .92fr); }
 }
 
 /* Índice de Ajustes: el mapa permanece cerca del contenido en escritorio y
@@ -455,5 +498,5 @@ html[data-densidad="espaciosa"] .app-content > div > .flex.flex-col {
 .auth-grain { position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .16; background-image: radial-gradient(color-mix(in oklab, var(--foreground) 14%, transparent) .55px, transparent .55px); background-size: 5px 5px; mask-image: linear-gradient(to bottom, transparent, black 18%, black 82%, transparent); }
 @keyframes auth-drift { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(4rem, -2rem, 0) scale(1.16); } }
 @media (prefers-reduced-motion: reduce) {
-  .animate-check-pop, .animate-check-ring, .auth-orb { animation: none; }
+  .animate-check-pop, .animate-check-ring, .auth-orb, .biological-ambient { animation: none; }
 }

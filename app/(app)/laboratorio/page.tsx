@@ -16,6 +16,7 @@ const MODULOS: Array<{ clave: keyof ExperimentosRitmo; titulo: string; descripci
   { clave: "detectorAvanzado", titulo: "Detector de señales", descripcion: "Busca asociaciones repetidas entre sueño, deporte, alcohol, días de la semana y recuperación." },
   { clave: "escenarios", titulo: "Escenarios contrafactuales", descripcion: "Compara el peso orientativo a 7, 28 y 90 días para cada nivel posible de hábitos." },
   { clave: "memoriaCorporal", titulo: "Memoria corporal", descripcion: "Reconoce cuándo vuelves a un peso antiguo y compara cómo llegaste entonces y ahora." },
+  { clave: "modoInvisible", titulo: "Modo invisible", descripcion: "Aparta de Hoy las lecturas estables que no requieren ninguna decisión y permite recuperarlas en un toque." },
 ];
 
 export default function LaboratorioPage() {
