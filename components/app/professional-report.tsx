@@ -40,7 +40,7 @@ export function ProfessionalReport({ estado }: { estado: Estado }) {
   }
 
   return <Dialog open={open} onOpenChange={setOpen}>
-    <DialogTrigger asChild><Button variant="secondary" className="h-10 rounded-lg gap-2"><FileHeart className="size-4" /> Informe profesional</Button></DialogTrigger>
+    <DialogTrigger asChild><Button variant="secondary" className="h-auto min-h-10 w-full rounded-lg gap-2 py-2 whitespace-normal sm:w-auto"><FileHeart className="size-4" /> Informe profesional</Button></DialogTrigger>
     <DialogContent className="grid h-[calc(100dvh-1rem)] min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden rounded-xl p-0 sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:max-w-2xl">
       <DialogHeader className="border-b border-border px-5 py-5 text-left sm:px-6">
         <DialogTitle className="font-display text-xl">Informe para nutricionista</DialogTitle>

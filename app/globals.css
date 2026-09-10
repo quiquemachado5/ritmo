@@ -12,7 +12,7 @@
 
 /* Una misma geometría de controles; los switches conservan su forma nativa. */
 .settings-card :is(input, select, [data-slot="button"], button[aria-pressed]) {
-  border-radius: 0.5rem;
+  border-radius: 0.625rem;
   min-height: 2.75rem;
 }
 .settings-row [data-slot="input"] { width: 100%; text-align: start; }
@@ -95,6 +95,12 @@
 @media (pointer: coarse) {
   [data-slot="button"]:not([data-size="xs"]):not([data-size="icon-xs"]) {
     min-height: 2.75rem;
+  }
+
+  [data-slot="button"][data-size="icon"],
+  [data-slot="button"][data-size="icon-sm"],
+  [data-slot="button"][data-size="icon-lg"] {
+    min-width: 2.75rem;
   }
 
   [data-slot="input"] {
@@ -424,19 +430,17 @@
   .app-canvas[data-contexto="viaje"] .today-overview { grid-template-columns: minmax(0, 1.08fr) minmax(23rem, .92fr); }
 }
 
-/* Índice de Ajustes: el mapa permanece cerca del contenido en escritorio y
-   se convierte en una cinta táctil en móvil. */
-.settings-index {
-  scroll-snap-type: x proximity;
-  overscroll-behavior-inline: contain;
+/* Centro de control de Ajustes: una sola área visible reduce la carga mental;
+   el selector se vuelve una matriz legible antes de pasar al panel lateral. */
+.settings-workspace {
+  width: 100%;
+  max-width: 75rem;
 }
-.settings-index > a { scroll-snap-align: start; }
-@media (max-width: 79.999rem) {
-  .settings-index {
-    mask-image: linear-gradient(to right, transparent 0, black .35rem, black calc(100% - 1.75rem), transparent 100%);
-  }
+.settings-panel-intro {
+  background:
+    radial-gradient(circle at 92% 0%, color-mix(in oklab, var(--primary) 10%, transparent), transparent 15rem),
+    linear-gradient(135deg, var(--card), color-mix(in oklab, var(--primary) 5%, var(--card)));
 }
-
 /* Utilidad de superficie base para tarjetas de la app (sombra cálida RITMO). */
 @utility card-ritmo {
   background: var(--card);

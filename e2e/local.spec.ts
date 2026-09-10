@@ -136,6 +136,7 @@ test("recorrido visual y guardado con datos sintéticos", async ({ page, request
   await page.screenshot({ path: `test-results/${info.project.name}-informe.png`, fullPage: true });
   await page.getByRole("button", { name: "Close", exact: true }).click();
   await irA(page, "/ajustes");
+  await page.getByRole("navigation", { name: "Áreas de ajustes" }).getByRole("button", { name: /Datos y cuenta/ }).click();
   await page.getByRole("button", { name: "Informe profesional", exact: true }).click();
   await expect(page.getByRole("dialog").getByText("Informe para nutricionista", { exact: true })).toBeVisible();
   await expect(page.getByRole("checkbox", { name: "Notas contextuales", exact: true })).not.toBeChecked();
@@ -236,6 +237,29 @@ test("ajustes con un solo guardado, validación, descarte y aviso al salir", asy
   await sinDesbordamiento(page);
 });
 
+test("ajustes organiza cada área sin apilar toda la cuenta", async ({ page, request }, info) => {
+  await request.post("http://127.0.0.1:3199/__reset");
+  await iniciarSesion(page);
+  await irA(page, "/ajustes");
+  const areas = page.getByRole("navigation", { name: "Áreas de ajustes" });
+  await expect(areas.getByRole("button")).toHaveCount(4);
+  await expect(page.getByLabel("Nombre", { exact: true })).toBeVisible();
+  await expect(page.getByText("Modo viaje / vacaciones", { exact: true })).toBeHidden();
+
+  await areas.getByRole("button", { name: /Rutina y modelo/ }).click();
+  await expect(page.getByText("Modo viaje / vacaciones", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Nombre", { exact: true })).toBeHidden();
+
+  await areas.getByRole("button", { name: /Experiencia/ }).click();
+  await expect(page.getByText("Densidad visual", { exact: true })).toBeVisible();
+
+  await areas.getByRole("button", { name: /Datos y cuenta/ }).click();
+  await expect(page.getByText("Tu historial, siempre contigo", { exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Guardar ajustes", exact: true })).toBeHidden();
+  await sinDesbordamiento(page);
+  await page.screenshot({ path: `test-results/${info.project.name}-ajustes-redisenados.png`, fullPage: true });
+});
+
 test("modo rescate reduce Hoy a una misión y devuelve el panel al completarla", async ({ page, request }, info) => {
   test.skip(info.project.name !== "mobile", "La composición de rescate se verifica una vez en móvil");
   await request.post("http://127.0.0.1:3199/__reset");
@@ -332,6 +356,7 @@ test("tema oscuro y anchuras extremas mantienen la interfaz utilizable", async (
   await page.setViewportSize(movil ? { width: 320, height: 568 } : { width: 2560, height: 1200 });
   await iniciarSesion(page);
   await irA(page, "/ajustes");
+  await page.getByRole("navigation", { name: "Áreas de ajustes" }).getByRole("button", { name: /Experiencia/ }).click();
   await page.getByRole("button", { name: "Oscuro", exact: true }).click();
   await expect(page.locator("html")).toHaveClass(/dark/);
   for (const ruta of ["/", "/nutricion", "/progreso", "/habitos", "/ajustes"] as const) {
