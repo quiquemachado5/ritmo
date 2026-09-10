@@ -1,5 +1,32 @@
 import * as React from "react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+export function IntegratedFlow({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <div className={cn("relative flex flex-col gap-8 before:absolute before:bottom-5 before:left-[1.12rem] before:top-5 before:hidden before:w-px before:bg-border/80 sm:gap-10 sm:before:block", className)}>{children}</div>;
+}
+
+export function FlowChapter({ title, description, icon: Icon, tone = "primary", children, className }: {
+  title: string;
+  description: React.ReactNode;
+  icon: LucideIcon;
+  tone?: "primary" | "energy" | "habit" | "body" | "weight";
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const tonos = {
+    primary: "border-primary/25 bg-primary text-primary-foreground",
+    energy: "border-energy-border bg-energy text-energy-foreground",
+    habit: "border-habit-border bg-habit text-habit-foreground",
+    body: "border-body-border bg-body text-body-foreground",
+    weight: "border-weight-border bg-weight text-weight-foreground",
+  } as const;
+  return <section className={cn("relative sm:pl-12", className)}>
+    <span className={cn("absolute left-0 top-0 z-10 grid size-9 place-items-center rounded-xl border-4 border-background shadow-sm", tonos[tone])} aria-hidden="true"><Icon className="size-4" /></span>
+    <header className="mb-4 min-w-0 pl-12 pt-0.5 sm:pl-0"><h2 className="font-display text-xl font-bold tracking-tight">{title}</h2><p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</p></header>
+    <div className="flex min-w-0 flex-col gap-4">{children}</div>
+  </section>;
+}
 
 /** Cabecera común de las herramientas de RITMO. */
 export function PageHeader({

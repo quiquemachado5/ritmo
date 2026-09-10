@@ -3,7 +3,7 @@
 import * as React from "react";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
-import { AlertTriangle, Beef, ChevronLeft, ChevronRight, Pencil, Plus, RotateCcw, Sparkles, Trash2 } from "lucide-react";
+import { AlertTriangle, Beef, BookOpen, ChartNoAxesColumnIncreasing, ChevronLeft, ChevronRight, Pencil, Plus, RotateCcw, Sparkles, Trash2, UtensilsCrossed } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
 import { macrosObjetivo } from "@/lib/model/metrics";
@@ -12,7 +12,7 @@ import { hoy, sumarDias, diasEntre } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Ring, MacroBar, Chip, EmptyState, PageHeader } from "@/components/app/primitives";
+import { Ring, MacroBar, Chip, EmptyState, PageHeader, IntegratedFlow, FlowChapter } from "@/components/app/primitives";
 import { fmtKcal, fmtFechaLarga, capitalizar } from "@/lib/format";
 import { uid } from "@/lib/utils";
 import type { TipoComida } from "@/lib/model/types";
@@ -116,6 +116,9 @@ export default function NutricionPage() {
         )}
       />
 
+      <IntegratedFlow>
+      <FlowChapter icon={UtensilsCrossed} tone="energy" title={fecha === hoy() ? "Tu día de hoy" : capitalizar(fmtFechaLarga(fecha))} description="El resumen y cada comida pertenecen a la misma lectura; revisa una estimación o añade lo que falte sin perder el contexto.">
+
       {/* Resumen del día */}
       <Card className="p-4 sm:p-5">
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:gap-7">
@@ -139,11 +142,6 @@ export default function NutricionPage() {
         </div>
         <RecordQuality level={calidadRegistro.level} detail={calidadRegistro.detail} className="mt-4" />
       </Card>
-
-      <section>
-        <div className="mb-3"><h2 className="font-display text-xl font-bold">Balance calórico</h2><p className="mt-1 text-sm text-muted-foreground">Tu energía reciente. Los días con poca información se muestran como estimaciones.</p></div>
-        <Card className="p-4 sm:p-5"><BalanceChart data={balanceReciente} /><DataLegend className="mt-3" items={[{ label: "Déficit", colorVar: "--weight", style: "bar" }, { label: "Superávit", colorVar: "--energy", style: "bar" }, { label: "Día imputado", colorVar: "--energy", style: "wash" }]} /><p className="mt-2 text-xs text-muted-foreground">Un día sin hábitos nunca se interpreta como déficit.</p></Card>
-      </section>
 
       {/* Comidas por tipo */}
       {comidas.length === 0 ? (
@@ -219,9 +217,17 @@ export default function NutricionPage() {
           </Button>
         </div>
       )}
+      </FlowChapter>
 
       {/* Biblioteca personal de comidas: reutiliza cualquier plato en este día */}
-      <MealLibrary fecha={fecha} />
+      <FlowChapter icon={BookOpen} tone="habit" title="Tu biblioteca" description="Reutiliza platos que ya conoces y conserva sus cantidades como punto de partida editable.">
+        <MealLibrary fecha={fecha} />
+      </FlowChapter>
+
+      <FlowChapter icon={ChartNoAxesColumnIncreasing} tone="weight" title="La tendencia energética" description="Después del detalle diario, consulta cómo se encadenan tus balances recientes y qué días dependen de una estimación.">
+        <Card className="p-4 sm:p-5"><BalanceChart data={balanceReciente} /><DataLegend className="mt-3" items={[{ label: "Déficit", colorVar: "--weight", style: "bar" }, { label: "Superávit", colorVar: "--energy", style: "bar" }, { label: "Día imputado", colorVar: "--energy", style: "wash" }]} /><p className="mt-2 text-xs text-muted-foreground">Un día sin hábitos nunca se interpreta como déficit.</p></Card>
+      </FlowChapter>
+      </IntegratedFlow>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { capitalizar, fmtFechaCorta, fmtFechaLarga } from "@/lib/format";
 
 import * as React from "react";
 import dynamic from "next/dynamic";
-import { CalendarDays, Check, ChevronLeft, ChevronRight, Flame } from "lucide-react";
+import { CalendarDays, Check, ChevronLeft, ChevronRight, Flame, History, ListChecks } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { resumen, adherenciaPorHabito } from "@/lib/model/analytics";
 import { habitosModelo } from "@/lib/model/config";
@@ -13,7 +13,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PageHeader, SectionLabel } from "@/components/app/primitives";
+import { FlowChapter, IntegratedFlow, PageHeader } from "@/components/app/primitives";
 import { cn } from "@/lib/utils";
 import { useWeightModelCycle } from "@/components/app/platform-provider";
 
@@ -70,6 +70,9 @@ export default function HabitosPage() {
     <div className="flex flex-col gap-6">
       <PageHeader title="Hábitos" description="Tu constancia real, editable día a día." />
 
+      <IntegratedFlow>
+      <FlowChapter icon={Flame} tone="habit" title="Tu ritmo reciente" description="La racha, la última semana y el mes forman una única lectura antes de decidir qué hábito tocar hoy.">
+
       {/* Rachas */}
       <div className="grid gap-3 lg:grid-cols-[minmax(15rem,.72fr)_minmax(0,1.28fr)]">
         <Card className={cn("gap-0 overflow-hidden p-4 sm:p-5", sinRacha ? tonoRacha!.superficie : "border-streak/20 bg-streak/5")}>
@@ -106,10 +109,11 @@ export default function HabitosPage() {
         </Card>
         </div>
       </div>
+      </FlowChapter>
 
       {/* Editor por fecha */}
+      <FlowChapter icon={ListChecks} tone="primary" title="Registrar o corregir" description="Selecciona cualquier día pasado o vuelve a hoy. Cada cambio actualiza la misma historia de constancia.">
       <section ref={editorRef} className="scroll-mt-20">
-        <SectionLabel>Editar hábitos</SectionLabel>
         <Card className="gap-0 overflow-hidden p-0">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-secondary/35 px-4 py-3 sm:px-5">
             <div className="min-w-0">
@@ -155,33 +159,11 @@ export default function HabitosPage() {
           </div>}
         </Card>
       </section>
-
-      {/* Progreso por hábito */}
-      <section className="hidden lg:block">
-        <SectionLabel>Cumplimiento (30 días)</SectionLabel>
-        <Card className="flex flex-col gap-3 p-5">
-          {porHabito.map((h) => {
-            const tono = tonoCumplimiento(h.pct, 100);
-            return (
-              <div key={h.clave} className="flex flex-col gap-1.5">
-              <div className="flex items-baseline justify-between text-sm">
-                <span className="font-medium">{h.etiqueta}</span>
-                <span className="tabular text-muted-foreground">
-                  <span className={cn("font-semibold", tono.tinta)}>{h.pct}%</span> · {h.hechos}/{h.total}
-                </span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-secondary">
-                <div className={cn("h-full rounded-full transition-[width] duration-700", tono.barra)} style={{ width: `${h.pct}%` }} />
-              </div>
-              </div>
-            );
-          })}
-        </Card>
-      </section>
+      </FlowChapter>
 
       {/* Constancia histórica */}
+      <FlowChapter icon={History} tone="weight" title="Tu constancia en el tiempo" description="El calendario y el detalle por hábito explican juntos dónde se sostiene tu ritmo y dónde se rompe.">
       <section>
-        <SectionLabel>Constancia</SectionLabel>
         <Card className="overflow-hidden p-0">
           <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_18rem]">
             <div className="min-w-0 p-4 sm:p-5">
@@ -212,7 +194,7 @@ export default function HabitosPage() {
                 <p className={cn("font-display text-4xl font-bold leading-none tabular", tonoCumplimiento(r.habitos.adherencia30, 100).tinta)}>{r.habitos.adherencia30}%</p>
               </div>
               <div className="mt-5 grid gap-3">
-                {porHabito.slice(0, 5).map((h) => {
+                {porHabito.map((h) => {
                   const tono = tonoCumplimiento(h.pct, 100);
                   return (
                     <div key={h.clave} className="min-w-0">
@@ -231,6 +213,8 @@ export default function HabitosPage() {
           </div>
         </Card>
       </section>
+      </FlowChapter>
+      </IntegratedFlow>
     </div>
   );
 }

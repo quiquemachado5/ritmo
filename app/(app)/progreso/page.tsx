@@ -5,6 +5,8 @@ import dynamic from "next/dynamic";
 import {
   AlertTriangle,
   BellOff,
+  BrainCircuit,
+  ChartNoAxesCombined,
   ArrowRight,
   ArrowDownRight,
   ArrowUpRight,
@@ -14,6 +16,7 @@ import {
   Gauge,
   Ruler,
   Scale,
+  Share2,
   Trash2,
   TrendingDown,
   TrendingUp,
@@ -26,7 +29,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PuntoPeso } from "@/components/app/charts";
-import { Metric, SectionLabel, Chip, EmptyState, PageHeader } from "@/components/app/primitives";
+import { FlowChapter, IntegratedFlow, Metric, SectionLabel, Chip, EmptyState, PageHeader } from "@/components/app/primitives";
 import { capitalizar, fmtPeso, fmtSigno, fmtNum, fmtFechaCorta, relativo } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { DataLegend } from "@/components/app/data-legend";
@@ -244,6 +247,8 @@ export default function ProgresoPage() {
         </EmptyState>
       ) : (
         <>
+          <IntegratedFlow>
+          <FlowChapter icon={Scale} tone="weight" title="De la última medición a hoy" description="Primero va el dato confirmado; después, y siempre separado, la lectura que completa el modelo.">
           <section aria-labelledby="estado-actual">
             <h2 id="estado-actual" className="sr-only">Estado actual</h2>
             <Card className="overflow-hidden p-0">
@@ -308,7 +313,9 @@ export default function ProgresoPage() {
           {experimentos.memoriaCorporal && memoria && <BodyMemory memoria={memoria} />}
 
           {experimentos.escenarios && escenarios.length > 0 && <Counterfactual escenarios={escenarios} actual={habitosHoy} />}
+          </FlowChapter>
 
+          <FlowChapter icon={ChartNoAxesCombined} tone="primary" title="La evolución completa" description="Gráfica, cronología y mapa corporal usan la misma historia para pasar del cambio medido al contexto que lo rodea.">
           <section aria-labelledby="evolucion-real">
             <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
               <div>
@@ -335,15 +342,10 @@ export default function ProgresoPage() {
           <ProgressStudio estado={estado} />
 
           <BodyHeatmap estado={estado} />
+          </FlowChapter>
 
+          <FlowChapter icon={BrainCircuit} tone="body" title="Cómo te interpreta RITMO" description="Tus patrones personales y la auditoría del modelo viven juntos para que ninguna estimación aparezca sin explicación.">
           <PersonalPatterns estado={estado} />
-
-          <section aria-labelledby="resumen-anual">
-            <Card className="flex flex-col gap-4 overflow-hidden border-primary/15 bg-primary/[0.035] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-              <div><h2 id="resumen-anual" className="font-display text-xl font-bold">Tu año, contado por RITMO</h2><p className="mt-1 max-w-xl text-sm text-muted-foreground">Un resumen editorial privado con constancia, días completos, meses y evolución medida. Tú decides qué entra en la imagen.</p></div>
-              <AnnualShare estado={estado} />
-            </Card>
-          </section>
 
           <section aria-labelledby="confianza-modelo">
             <details className="group overflow-hidden rounded-xl border border-border bg-card shadow-sm">
@@ -410,7 +412,9 @@ export default function ProgresoPage() {
               </div>
             </details>
           </section>
+          </FlowChapter>
 
+          <FlowChapter icon={Ruler} tone="energy" title="Tus mediciones confirmadas" description="Composición e historial pertenecen a la báscula y permanecen fuera de las proyecciones del modelo.">
           {(composicion || compSerie.length > 1 || ultimaMedicion) && (
             <section aria-labelledby="composicion">
               <div className="mb-3">
@@ -482,6 +486,15 @@ export default function ProgresoPage() {
               </div>
             </Card>
           </section>
+          </FlowChapter>
+
+          <FlowChapter icon={Share2} tone="habit" title="Conserva el recorrido" description="Convierte el año completo en una pieza visual privada y decide qué datos quieres incluir antes de compartirla.">
+            <Card className="flex flex-col gap-4 overflow-hidden border-primary/15 bg-primary/[0.035] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+              <div><h2 className="font-display text-lg font-bold">Tu año, contado por RITMO</h2><p className="mt-1 max-w-xl text-sm text-muted-foreground">Constancia, días completos, meses y evolución medida en una sola imagen.</p></div>
+              <AnnualShare estado={estado} />
+            </Card>
+          </FlowChapter>
+          </IntegratedFlow>
         </>
       )}
     </div>
