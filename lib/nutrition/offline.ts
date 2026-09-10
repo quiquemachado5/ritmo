@@ -227,7 +227,13 @@ function aNumero(bruto: string): number | null {
 const NUMERO = "(?:\\d+(?:[.,]\\d+)?|un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|media|medio)";
 const CANTIDAD = `\\b(${NUMERO}(?:\\s*(?:-|–|a)\\s*${NUMERO})?)\\b`;
 
-interface CantidadInterpretada { gramos: number; tipo: NonNullable<ItemNutricional["tipoCantidad"]>; original?: string }
+interface CantidadInterpretada {
+  gramos: number;
+  tipo: NonNullable<ItemNutricional["tipoCantidad"]>;
+  original?: string;
+  unidades?: number;
+  unidad?: string;
+}
 
 /**
  * Traduce el contexto de un alimento a gramos.
@@ -261,7 +267,7 @@ function gramosDe(contexto: string, alimento: Alimento): CantidadInterpretada {
     const m = contexto.match(re);
     if (m) {
       const n = m[1] ? aNumero(m[1]) : 1;
-      return { gramos: (n ?? 1) * gramos, tipo: "unidades_declaradas", original: m[0].trim() };
+      return { gramos: (n ?? 1) * gramos, tipo: "unidades_declaradas", original: m[0].trim(), unidades: n ?? 1, unidad: base };
     }
   }
 
@@ -445,6 +451,8 @@ export function estimarOffline(texto: string): AnalisisNutricional {
       tipoCantidad: cantidad.tipo,
       cantidadOriginal: cantidad.original,
       gramos,
+      unidades: cantidad.unidades,
+      unidad: cantidad.unidad,
       referencia,
       kcal: Math.round(alimento.kcal * f),
       proteinas: Math.round(alimento.proteinas * f * 10) / 10,

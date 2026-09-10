@@ -30,6 +30,7 @@ export function referenciaLocal(nombre: string, datos: { kcal: number; p: number
 
 /** Solo una masa explícita es peso indicado; piezas/volúmenes conservan su incertidumbre. */
 export function etiquetaCantidad(item: ItemNutricional): string {
+  if (item.cantidadAprendida) return "Porción aprendida";
   switch (item.tipoCantidad) {
     case "masa_declarada": return "Peso indicado";
     case "volumen_declarado": return "Volumen · peso aprox.";
@@ -45,7 +46,7 @@ export function corregirGramos(item: ItemNutricional, gramos: number): ItemNutri
   const escalar = (n: number) => Math.round(n * gramos / 100 * 10) / 10;
   return { ...item, nombre: item.nombre.split(" · ")[0], gramos,
     cantidad: `${gramos.toLocaleString("es-ES", { maximumFractionDigits: 2, useGrouping: false })} g`,
-    cantidadOriginal: `${gramos} g`, tipoCantidad: "masa_declarada", cantidadEstimada: false,
+    cantidadOriginal: item.cantidadOriginal ?? `${gramos} g`, tipoCantidad: "masa_declarada", cantidadEstimada: false,
     kcal: Math.round(base.kcal * gramos / 100), proteinas: escalar(base.proteinas),
     carbohidratos: escalar(base.carbohidratos), grasas: escalar(base.grasas) };
 }
@@ -57,6 +58,9 @@ export function metadataIngredienteValida(v: Record<string, unknown>): boolean {
   const str = (x: unknown, max: number) => typeof x === "string" && x.length <= max;
   if (v.gramos !== undefined && !num(v.gramos, 240000)) return false;
   if (v.cantidadOriginal !== undefined && !str(v.cantidadOriginal, 500)) return false;
+  if (v.unidades !== undefined && !num(v.unidades, 1000)) return false;
+  if (v.unidad !== undefined && !str(v.unidad, 40)) return false;
+  if (v.cantidadAprendida !== undefined && typeof v.cantidadAprendida !== "boolean") return false;
   if (v.tipoCantidad !== undefined && !["masa_declarada", "volumen_declarado", "unidades_declaradas", "porcion_supuesta"].includes(String(v.tipoCantidad))) return false;
   if (v.referencia === undefined) return true;
   if (!v.referencia || typeof v.referencia !== "object" || Array.isArray(v.referencia)) return false;

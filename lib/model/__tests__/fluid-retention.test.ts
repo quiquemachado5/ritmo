@@ -45,4 +45,19 @@ describe("retención transitoria de líquidos", () => {
     expect(impacto.kg).toBeGreaterThan(0.6);
     expect(impacto.incertidumbreKg).toBe(0.2);
   });
+
+  it("incorpora un evento contextual aprendido solo como oscilación líquida", () => {
+    const dias: Estado["dias"] = {};
+    const filas = [
+      ["2026-09-01", 90, true], ["2026-09-02", 90.8, false],
+      ["2026-09-03", 90.7, true], ["2026-09-04", 91.5, false],
+      ["2026-09-05", 91.4, false], ["2026-09-06", 91.3, false],
+      ["2026-09-07", 91.2, true], ["2026-09-08", 92, false],
+      ["2026-09-09", 91.9, false],
+    ] as const;
+    for (const [fecha, peso, comidaLibre] of filas) dias[fecha] = { fecha, peso, habitos: { noAlcohol: true }, notas: comidaLibre ? "Comida libre" : undefined };
+    const impacto = impactoLiquidosEnFecha(estado(dias), "2026-09-08");
+    expect(impacto.kg).toBeGreaterThan(0.7);
+    expect(impacto.eventosContexto[0]).toMatchObject({ tipo: "comida-libre", personalizada: true });
+  });
 });

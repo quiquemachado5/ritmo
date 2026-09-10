@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Shield, CheckCircle2, Lock, Check, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,8 @@ export default function ResetearPage() {
 
 function ResetearForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [supabase] = React.useState(() => createClient());
   const [nuevaContrasena, setNuevaContrasena] = React.useState("");
   const [confirmar, setConfirmar] = React.useState("");
   const [cargando, setCargando] = React.useState(false);
@@ -29,6 +32,55 @@ function ResetearForm() {
   const [shaking, setShaking] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
   const [showConfirm, setShowConfirm] = React.useState(false);
+  const [verificandoSesion, setVerificandoSesion] = React.useState(true);
+  const [sesionLista, setSesionLista] = React.useState(false);
+  const [errorSesion, setErrorSesion] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let activa = true;
+    const code = searchParams.get("code");
+    const flowId = searchParams.get("sb_flow_id");
+    const agotado = window.setTimeout(() => {
+      if (!activa) return;
+      setSesionLista(false);
+      setErrorSesion("El enlace ya se usó, ha caducado o se abrió en otro navegador. Solicita uno nuevo y ábrelo en este mismo dispositivo.");
+      setVerificandoSesion(false);
+    }, 4_000);
+    const confirmarSesion = () => {
+      if (!activa) return;
+      window.clearTimeout(agotado);
+      setSesionLista(true);
+      setErrorSesion(null);
+      setVerificandoSesion(false);
+    };
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session && (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN")) confirmarSesion();
+    });
+    void (async () => {
+      try {
+        if (code) {
+          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code, flowId ? { flowId } : undefined);
+          if (exchangeError) throw exchangeError;
+          if (data.session) {
+            window.history.replaceState(null, "", "/recuperar-contrasena");
+            confirmarSesion();
+            return;
+          }
+        }
+        const { data, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        if (data.session) confirmarSesion();
+        else throw new Error("missing_recovery_session");
+      } catch {
+        if (!activa) return;
+        window.clearTimeout(agotado);
+        setSesionLista(false);
+        setErrorSesion("El enlace ya se usó, ha caducado o se abrió en otro navegador. Solicita uno nuevo y ábrelo en este mismo dispositivo.");
+        setVerificandoSesion(false);
+      }
+    })();
+    return () => { activa = false; window.clearTimeout(agotado); listener.subscription.unsubscribe(); };
+  }, [searchParams, supabase]);
 
   const passwordStrength = getPasswordStrength(nuevaContrasena);
 
@@ -47,17 +99,18 @@ function ResetearForm() {
     e.preventDefault();
     setError(null);
 
+    if (!sesionLista) { triggerShake("Abre un enlace de recuperación válido antes de continuar."); return; }
     if (!nuevaContrasena) { triggerShake("Ingresa una contraseña."); return; }
     if (!validatePassword(nuevaContrasena).valid) { triggerShake(validatePassword(nuevaContrasena).errors[0]); return; }
     if (nuevaContrasena !== confirmar) { triggerShake("No coinciden."); return; }
 
     setCargando(true);
     try {
-      const supabase = createClient();
       const { error: updateError } = await supabase.auth.updateUser({ password: nuevaContrasena });
       if (updateError) throw updateError;
+      await supabase.auth.signOut({ scope: "local" });
       setExito(true);
-      setTimeout(() => router.push("/login"), 2000);
+      setTimeout(() => router.replace("/login"), 2000);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       triggerShake(msg.includes("Failed to fetch") ? "Sin conexión." : (msg || "Error al actualizar."));
@@ -104,7 +157,11 @@ function ResetearForm() {
               </div>
             )}
 
-            <form onSubmit={resetear} className="space-y-2.5">
+            {verificandoSesion && <div role="status" className="flex min-h-24 items-center justify-center gap-2 rounded-xl bg-secondary/55 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />Validando tu enlace seguro…</div>}
+
+            {errorSesion && !verificandoSesion && <div role="alert" className="rounded-xl border border-warning-border bg-warning-wash p-4 text-sm text-warning-ink"><p className="font-semibold">Necesitas un enlace nuevo</p><p className="mt-1 text-xs leading-relaxed">{errorSesion}</p><Button asChild variant="outline" className="mt-3 w-full"><Link href="/recuperar">Solicitar otro enlace</Link></Button></div>}
+
+            {sesionLista && !verificandoSesion && <form onSubmit={resetear} className="space-y-2.5">
               <div style={stagger(1)}>
                 <Label htmlFor="password" className="text-sm font-semibold mb-1.5 block">Contraseña</Label>
                 <div className="relative">
@@ -166,7 +223,7 @@ function ResetearForm() {
                 style={stagger(3)}>
                 {cargando ? <><Loader2 className="size-3.5 animate-spin mr-1.5" />Actualizando...</> : "Actualizar contraseña"}
               </Button>
-            </form>
+            </form>}
           </div>
         </div>
       </div>

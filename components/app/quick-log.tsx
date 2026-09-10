@@ -8,6 +8,8 @@ import {
   CircleHelp,
   ListChecks,
   Loader2,
+  Mic,
+  MicOff,
   Pencil,
   Plus,
   Scale,
@@ -191,6 +193,19 @@ const TIPOS: { id: TipoComida; label: string }[] = [
   { id: "snack", label: "Snack" },
 ];
 
+interface SpeechRecognitionLike {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  start(): void;
+  stop(): void;
+  onresult: ((event: { results: ArrayLike<{ 0: { transcript: string } }> }) => void) | null;
+  onerror: ((event: { error: string }) => void) | null;
+  onend: (() => void) | null;
+}
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+
 function PanelComida({
   fecha,
   onDone,
@@ -233,6 +248,13 @@ function PanelComida({
   const descripcionRef = React.useRef<HTMLTextAreaElement>(null);
   const [itemsCorregidos, setItemsCorregidos] = React.useState<Set<number>>(() => new Set());
   const [textoAnalizado, setTextoAnalizado] = React.useState(comidaEdit?.texto.trim() ?? "");
+  const dictadoDisponible = React.useSyncExternalStore(
+    () => () => {},
+    () => Boolean((window as typeof window & { SpeechRecognition?: SpeechRecognitionConstructor; webkitSpeechRecognition?: SpeechRecognitionConstructor }).SpeechRecognition || (window as typeof window & { webkitSpeechRecognition?: SpeechRecognitionConstructor }).webkitSpeechRecognition),
+    () => false,
+  );
+  const [escuchando, setEscuchando] = React.useState(false);
+  const reconocimiento = React.useRef<SpeechRecognitionLike | null>(null);
   const [firmaAnomaliaConfirmada, setFirmaAnomaliaConfirmada] = React.useState<string | null>(null);
   // Valores editables a mano (fuente de verdad al guardar). Se rellenan al
   // analizar o al abrir en modo edición.
@@ -245,6 +267,33 @@ function PanelComida({
   React.useEffect(() => {
     if (userId && !guardado.current) guardarBorrador(draftKey, { texto, tipo });
   }, [draftKey, texto, tipo, userId]);
+
+  React.useEffect(() => () => reconocimiento.current?.stop(), []);
+
+  function alternarDictado() {
+    if (escuchando) { reconocimiento.current?.stop(); return; }
+    const navegador = window as typeof window & {
+      SpeechRecognition?: SpeechRecognitionConstructor;
+      webkitSpeechRecognition?: SpeechRecognitionConstructor;
+    };
+    const Constructor = navegador.SpeechRecognition || navegador.webkitSpeechRecognition;
+    if (!Constructor) return;
+    const siguiente = new Constructor();
+    siguiente.lang = "es-ES";
+    siguiente.continuous = false;
+    siguiente.interimResults = false;
+    siguiente.onresult = (event) => {
+      const transcripcion = event.results[0]?.[0]?.transcript?.trim();
+      if (transcripcion) setTexto(actual => `${actual.trim()}${actual.trim() ? " " : ""}${transcripcion}`.slice(0, 2500));
+    };
+    siguiente.onerror = (event) => {
+      if (event.error !== "aborted") toast.error("No pude escuchar la comida. Revisa el permiso del micrófono.");
+    };
+    siguiente.onend = () => { setEscuchando(false); reconocimiento.current = null; };
+    reconocimiento.current = siguiente;
+    setEscuchando(true);
+    siguiente.start();
+  }
 
   async function analizar() {
     if (!texto.trim() || ocupado.current) return;
@@ -391,8 +440,14 @@ function PanelComida({
         className="min-h-28 resize-none rounded-xl bg-card text-base leading-relaxed"
       />
       <div className="flex items-start justify-between gap-3 text-xs text-muted-foreground">
-        <p className="max-w-[52ch]">Describe el plato completo. RITMO separa ingredientes, cantidades y aliños.</p>
-        <span className="shrink-0 tabular">{texto.length}/2.500</span>
+        <div className="flex min-w-0 items-start gap-2">
+          {dictadoDisponible && <button type="button" onClick={alternarDictado} aria-pressed={escuchando} className={cn("-mt-1 inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl border px-3 font-semibold transition-colors", escuchando ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground hover:bg-secondary")}>
+            {escuchando ? <MicOff className="size-4" /> : <Mic className="size-4" />}
+            {escuchando ? "Parar" : "Dictar"}
+          </button>}
+          <p className="max-w-[52ch] pt-1">Describe el plato completo. RITMO separa ingredientes, cantidades y aliños.</p>
+        </div>
+        <span className="shrink-0 pt-1 tabular">{texto.length}/2.500</span>
       </div>
       {aclaracion && <div className="rounded-xl border border-warning-border bg-warning-wash p-3 text-warning-ink">
         <p className="text-sm font-medium">{aclaracion.pregunta}</p>

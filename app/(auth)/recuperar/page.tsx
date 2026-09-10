@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { validateEmail } from "@/lib/validation";
 import { transitionCSS, springBezier, stagger } from "@/lib/transitions";
+import { urlRecuperacionConCallback } from "@/lib/auth-redirect";
 
 export default function RecuperarPage() {
   return (
@@ -46,7 +47,7 @@ function RecuperarForm() {
     try {
       const supabase = createClient();
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/recuperar-contrasena`,
+        redirectTo: urlRecuperacionConCallback(window.location.origin),
       });
       if (resetError) throw resetError;
       setExito(true);

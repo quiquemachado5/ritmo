@@ -9,8 +9,8 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
 export interface ShareOptions { peso: boolean; comidas: boolean; habitos: boolean; formato: "poster" | "detalle" }
-export function SharePreview({ render, filename, title, monthly = false }: {
-  render: (options: ShareOptions) => Promise<Blob | null>; filename: string; title: string; monthly?: boolean;
+export function SharePreview({ render, filename, title, monthly = false, triggerLabel }: {
+  render: (options: ShareOptions) => Promise<Blob | null>; filename: string; title: string; monthly?: boolean; triggerLabel?: string;
 }) {
   const [open, setOpen] = React.useState(false);
   const [options, setOptions] = React.useState<ShareOptions>({ peso: false, comidas: false, habitos: true, formato: "poster" });
@@ -44,7 +44,7 @@ export function SharePreview({ render, filename, title, monthly = false }: {
     const a = document.createElement("a"); a.href = preview.url; a.download = filename; a.click();
   }
   return <>
-    <Button variant="secondary" size="sm" onClick={() => setOpen(true)} aria-label={monthly ? "Preparar informe mensual" : "Preparar resumen semanal"} className="gap-2"><Share2 className="size-4" />{monthly ? "Informe" : "Compartir"}</Button>
+    <Button variant="secondary" size="sm" onClick={() => setOpen(true)} aria-label={triggerLabel ? `Preparar ${triggerLabel.toLocaleLowerCase("es-ES")}` : monthly ? "Preparar informe mensual" : "Preparar resumen semanal"} className="gap-2"><Share2 className="size-4" />{triggerLabel ?? (monthly ? "Informe" : "Compartir")}</Button>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="flex max-h-[92dvh] flex-col gap-4 overflow-hidden sm:max-w-2xl">
         <DialogHeader><DialogTitle>{title}</DialogTitle><DialogDescription>Elige qué mostrar. No se incluye tu nombre, correo ni notas personales.</DialogDescription></DialogHeader>

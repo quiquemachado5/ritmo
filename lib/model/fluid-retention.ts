@@ -1,5 +1,6 @@
 import { diasEntre, sumarDias } from "./dates";
 import { perfilEnFecha } from "./profile-history";
+import { eventosDeNota, memoriaEventosContexto, type EventoContextual } from "./personal-patterns";
 import type { Dia, Estado } from "./types";
 
 const RETENCION_ALCOHOL_PRIOR_KG = 0.45;
@@ -11,6 +12,7 @@ export interface ImpactoLiquidos {
   eventosAlcohol: number;
   fuente: "ninguna" | "generica" | "personalizada";
   muestrasPersonales: number;
+  eventosContexto: Array<{ tipo: EventoContextual; etiqueta: string; kg: number; personalizada: boolean }>;
 }
 
 function mediana(valores: number[]): number {
@@ -86,6 +88,7 @@ export function calibracionLiquidosAlcohol(estado: Estado): CalibracionLiquidos 
  */
 export function impactoLiquidosEnFecha(estado: Estado, fecha: string): ImpactoLiquidos {
   const calibracion = calibracionLiquidosAlcohol(estado);
+  const memoriaContexto = memoriaEventosContexto(estado);
   let kg = 0;
   let eventosAlcohol = 0;
   for (let indice = 0; indice < DECAIMIENTO.length; indice++) {
@@ -93,12 +96,24 @@ export function impactoLiquidosEnFecha(estado: Estado, fecha: string): ImpactoLi
     kg += calibracion.kgDiaSiguiente * DECAIMIENTO[indice];
     eventosAlcohol++;
   }
-  kg = Math.min(1.5, kg);
+  const eventosContexto: ImpactoLiquidos["eventosContexto"] = [];
+  for (let indice = 0; indice < 2; indice++) {
+    const eventos = eventosDeNota(estado.dias[sumarDias(fecha, -(indice + 1))]?.notas);
+    for (const tipo of eventos) {
+      const memoria = memoriaContexto.find((item) => item.id === tipo);
+      if (!memoria || memoria.efectoKg <= 0.08) continue;
+      const impacto = memoria.efectoKg * (indice === 0 ? 1 : 0.35);
+      kg += impacto;
+      eventosContexto.push({ tipo, etiqueta: memoria.etiqueta, kg: Math.round(impacto * 100) / 100, personalizada: memoria.personalizada });
+    }
+  }
+  kg = Math.min(1.8, kg);
   return {
     kg: Math.round(kg * 100) / 100,
-    incertidumbreKg: kg > 0 ? (calibracion.personalizada ? 0.2 : 0.35) : 0,
+    incertidumbreKg: kg > 0 ? (calibracion.personalizada && eventosContexto.every((evento) => evento.personalizada) ? 0.2 : 0.35) : 0,
     eventosAlcohol,
     fuente: kg === 0 ? "ninguna" : calibracion.personalizada ? "personalizada" : "generica",
     muestrasPersonales: calibracion.muestras,
+    eventosContexto,
   };
 }

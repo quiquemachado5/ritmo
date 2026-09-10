@@ -10,7 +10,7 @@ type Op =
   | { type: "borrarMedicion"; payload: string }
   | { type: "guardarPerfil"; payload: Perfil };
 type Entrada = Op & { id: string; bloqueada?: boolean; revision: number; revisionRemota?: string | null };
-export interface EstadoCola { pendientes: number; requiereAtencion: boolean; sincronizando: boolean }
+export interface EstadoCola { pendientes: number; requiereAtencion: boolean; sincronizando: boolean; ultimaSincronizacion?: string }
 const listeners = new Set<(estado: EstadoCola) => void>();
 let estadoCola: EstadoCola = { pendientes: 0, requiereAtencion: false, sincronizando: false };
 let activo: QueuedAdapter | null = null;
@@ -54,11 +54,13 @@ export class QueuedAdapter implements Adapter {
   private cerrado = false;
   private revision = 0;
   private recientes: Entrada[] = [];
+  private ultimaSincronizacion?: string;
   hydrationSource: "cloud" | "backup" = "cloud";
   private readonly alVolverOnline = () => { void this.flush(); };
 
   constructor(private inner: Adapter, private userId: string) {
     this.key = "ritmo:writequeue:" + userId;
+    this.ultimaSincronizacion = localStorage.getItem(`${this.key}:last-sync`) ?? undefined;
     const raw = localStorage.getItem(this.key);
     const datos: unknown = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(datos) || datos.some(o => !o || !["guardarDia", "borrarDia", "guardarMedicion", "borrarMedicion", "guardarPerfil"].includes(o.type) || !o.payload || (o.revisionRemota !== undefined && o.revisionRemota !== null && typeof o.revisionRemota !== "string"))) {
@@ -83,7 +85,7 @@ export class QueuedAdapter implements Adapter {
   }
   private notificar() {
     if (activo !== this) return;
-    estadoCola = { pendientes: this.cola.length, requiereAtencion: this.cola.some(o => o.bloqueada), sincronizando: Boolean(this.vuelo) };
+    estadoCola = { pendientes: this.cola.length, requiereAtencion: this.cola.some(o => o.bloqueada), sincronizando: Boolean(this.vuelo), ultimaSincronizacion: this.ultimaSincronizacion };
     listeners.forEach(l => l(estadoCola));
   }
   private revisionRemota(op: Op): string | null | undefined {
@@ -127,6 +129,8 @@ export class QueuedAdapter implements Adapter {
       this.notificar();
       try {
         await this.ejecutar(op);
+        this.ultimaSincronizacion = new Date().toISOString();
+        localStorage.setItem(`${this.key}:last-sync`, this.ultimaSincronizacion);
         // Una segunda edición propia depende de esta confirmación, no de la
         // revisión anterior que había cuando se pulsó por segunda vez.
         const revisionRemota = this.revisionRemota(op);
@@ -193,7 +197,7 @@ export class QueuedAdapter implements Adapter {
     if (typeof window !== "undefined") window.removeEventListener("online", this.alVolverOnline);
     if (activo === this) {
       activo = null;
-      estadoCola = { pendientes: 0, requiereAtencion: false, sincronizando: false };
+      estadoCola = { pendientes: 0, requiereAtencion: false, sincronizando: false, ultimaSincronizacion: this.ultimaSincronizacion };
       listeners.forEach(l => l(estadoCola));
     }
   }

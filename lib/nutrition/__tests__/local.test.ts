@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { analizarLocal } from "../local";
 import { REFERENCE_MEALS } from "../reference-meals";
 import { evaluateNutrition } from "../evaluation";
+import { corregirGramos } from "../catalog";
 
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.resetModules(); });
 describe("nutrición sin facturación", () => {
@@ -27,6 +28,15 @@ describe("nutrición sin facturación", () => {
     expect(analizarLocal("100 g de pan", [correccion]).kcal).toBe(240);
     expect(analizarLocal("50 g de pan", [correccion]).kcal).not.toBe(240);
     expect(analizarLocal("100 g de pan", [correccion]).observaciones?.[0]).toContain("una corrección");
+  });
+  it("aprende el peso habitual de una unidad corregida y lo escala", () => {
+    const inicial = analizarLocal("2 filetes de pollo").items[0];
+    expect(inicial.unidad).toBe("filete");
+    const corregida = corregirGramos(inicial, 300);
+    const resultado = analizarLocal("3 filetes de pollo", [{ ...corregida, clave: "pollo-personal", actualizada: 1 }]);
+    expect(resultado.items[0]).toMatchObject({ gramos: 450, unidades: 3, unidad: "filete", cantidadAprendida: true });
+    expect(resultado.items[0].kcal).toBe(540);
+    expect(resultado.observaciones?.join(" ")).toContain("porción aprendida");
   });
   it("no inventa un resultado completo si no reconoce el alimento", () => {
     const resultado = analizarLocal("Un plato desconocido");

@@ -26,8 +26,10 @@ import { erroresPerfil } from "@/lib/profile-validation";
 import { diagnosticoCompartido, permitirDiagnostico } from "@/lib/observability";
 import { EXTERNAL_NUTRITION_ENABLED } from "@/lib/nutrition/policy";
 import { ProfessionalReport } from "@/components/app/professional-report";
+import { AccountHealth, PrivacyMap } from "@/components/app/account-health";
+import { guardarExperimentos, useExperimentos } from "@/lib/experiments";
 
-type Densidad = "compacta" | "espaciosa";
+type Densidad = "automatica" | "compacta" | "espaciosa";
 const SECCIONES_AJUSTES = [
   { id: "ajuste-perfil", etiqueta: "Perfil", icono: UserRound },
   { id: "ajuste-objetivo", etiqueta: "Estrategia", icono: Target },
@@ -35,6 +37,7 @@ const SECCIONES_AJUSTES = [
   { id: "ajuste-habitos", etiqueta: "Hábitos", icono: ListChecks },
   { id: "ajuste-contexto", etiqueta: "Contexto", icono: Plane },
   { id: "ajuste-experiencia", etiqueta: "Apariencia", icono: Palette },
+  { id: "ajuste-estado", etiqueta: "Estado", icono: ShieldCheck },
   { id: "ajuste-datos", etiqueta: "Datos", icono: Database },
   { id: "ajuste-privacidad", etiqueta: "Privacidad", icono: Shield },
 ] as const;
@@ -106,7 +109,7 @@ export default function AjustesPage() {
   const importacionEnCurso = React.useRef(false);
   const [previewDatos, setPreviewDatos] = React.useState<ArchivoRitmo | null>(null);
   const [resumenImportacion, setResumenImportacion] = React.useState<ResumenImportacion | null>(null);
-  const [densidad, setDensidad] = React.useState<Densidad>("espaciosa");
+  const [densidad, setDensidad] = React.useState<Densidad>("automatica");
   const [nombreViaje, setNombreViaje] = React.useState(viaje.etiqueta);
   const [finViaje, setFinViaje] = React.useState(viaje.hasta ?? "");
   const [confirmarBorrado, setConfirmarBorrado] = React.useState(false);
@@ -114,6 +117,7 @@ export default function AjustesPage() {
   const borradoEnCurso = React.useRef(false);
   const [nuevoHabito, setNuevoHabito] = React.useState("");
   const [diagnostico, setDiagnostico] = React.useState(() => diagnosticoCompartido(userId));
+  const preferenciasExperimentos = useExperimentos(userId);
   React.useEffect(() => {
     // Ningún borrador, confirmación ni archivo de la cuenta anterior cruza a la nueva.
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -146,7 +150,7 @@ export default function AjustesPage() {
   }, [userId]);
   React.useEffect(() => {
     const guardada = window.localStorage.getItem("ritmo:densidad");
-    const proxima: Densidad = guardada === "compacta" ? "compacta" : "espaciosa";
+    const proxima: Densidad = guardada === "compacta" || guardada === "espaciosa" ? guardada : "automatica";
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDensidad(proxima);
     document.documentElement.setAttribute("data-densidad", proxima);
@@ -468,6 +472,9 @@ export default function AjustesPage() {
           <div className="border-t border-border pt-4"><Row label="Contar días totalmente vacíos">
             <Switch checked={form.imputarActiva !== false} onCheckedChange={(v) => set("imputarActiva", v)} aria-label="Contar días totalmente vacíos" />
           </Row><p className="mt-1.5 text-xs text-muted-foreground">También aplica ese superávit a huecos sin ningún dato desde la fecha de corte configurada.</p></div>
+          <div className="border-t border-border pt-4"><Row label="Predicción silenciosa">
+            <Switch checked={preferenciasExperimentos.modoInvisible} onCheckedChange={(valor) => guardarExperimentos(userId, { ...preferenciasExperimentos, modoInvisible: valor })} aria-label="Predicción silenciosa" />
+          </Row><p className="mt-1.5 text-xs text-muted-foreground">Oculta horizontes rutinarios y los vuelve a mostrar si detecta retención, un cambio relevante o falta un pesaje reciente.</p></div>
         </SettingsCard>
       </section>
 
@@ -475,6 +482,7 @@ export default function AjustesPage() {
         <SectionLabel>Hábitos personales</SectionLabel>
         <SettingsCard>
           <SettingsSubhead title="Qué cuenta en tu modelo" description={`Los ${habitosModelo(form).length} hábitos activos definen la constancia y recalibran el peso. Desactiva los que no quieras usar.`} />
+          <p className="rounded-xl bg-body-wash/45 px-3 py-2 text-xs leading-relaxed text-body-ink">Los cambios empiezan hoy. RITMO conserva la configuración anterior en los días pasados para no reescribir tu historia.</p>
           <div className="grid gap-2 sm:grid-cols-2">{habitosUsuario(form).map((h) => { const activo = !(form.habitosDesactivados || []).includes(h.clave); const esBase = HABITOS.some((base) => base.clave === h.clave); return <div key={h.clave} className={cn("flex min-h-12 items-center gap-2 rounded-xl border px-3", activo ? "border-primary/25 bg-primary/5" : "border-border bg-secondary/30 text-muted-foreground")}><button type="button" onClick={() => void alternarHabitoModelo(h.clave)} className="min-w-0 flex-1 text-left text-sm font-medium" aria-pressed={activo}>{h.etiqueta}<span className="mt-0.5 block text-[0.68rem] font-normal text-muted-foreground">{activo ? "Activo en el modelo" : "No cuenta en el modelo"}</span></button><Switch checked={activo} onCheckedChange={() => void alternarHabitoModelo(h.clave)} aria-label={`${activo ? "Desactivar" : "Activar"} ${h.etiqueta}`} />{!esBase && <button type="button" onClick={() => void quitarHabitoPersonal(h.clave)} className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-card hover:text-destructive" aria-label={`Eliminar ${h.etiqueta}`}>×</button>}</div>; })}</div>
           <div className="flex flex-col gap-2 sm:flex-row"><Input aria-label="Nombre del nuevo hábito" value={nuevoHabito} onChange={(e) => setNuevoHabito(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void anadirHabitoPersonal(); } }} placeholder="Ej. Caminar 8.000 pasos" maxLength={28} className="h-11 rounded-xl" /><Button type="button" onClick={() => void anadirHabitoPersonal()} variant="secondary" className="h-11 shrink-0 rounded-xl">Añadir hábito</Button></div>
         </SettingsCard>
@@ -514,12 +522,21 @@ export default function AjustesPage() {
           <div className="border-t border-border pt-5">
             <div className="flex flex-wrap items-end justify-between gap-2">
               <div><p className="text-sm font-semibold">Densidad visual</p><p className="mt-0.5 text-xs text-muted-foreground">Ajusta el espacio entre secciones y el aire de lectura.</p></div>
-              <span className="text-xs font-medium text-primary">{densidad === "compacta" ? "Compacta" : "Espaciosa"}</span>
+              <span className="text-xs font-medium text-primary">{densidad === "automatica" ? "Automática" : densidad === "compacta" ? "Compacta" : "Espaciosa"}</span>
             </div>
             <div className="mt-3 inline-flex max-w-full flex-wrap rounded-xl bg-secondary p-1" role="group" aria-label="Densidad visual">
-              {(["compacta", "espaciosa"] as const).map((opcion) => <button key={opcion} type="button" onClick={() => cambiarDensidad(opcion)} aria-pressed={densidad === opcion} className={cn("h-9 rounded-xl px-4 text-sm font-medium transition-colors", densidad === opcion ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>{opcion === "compacta" ? "Compacta" : "Espaciosa"}</button>)}
+              {(["automatica", "compacta", "espaciosa"] as const).map((opcion) => <button key={opcion} type="button" onClick={() => cambiarDensidad(opcion)} aria-pressed={densidad === opcion} className={cn("h-9 rounded-xl px-4 text-sm font-medium transition-colors", densidad === opcion ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>{opcion === "automatica" ? "Automática" : opcion === "compacta" ? "Compacta" : "Espaciosa"}</button>)}
             </div>
+            <p className="mt-2 text-xs text-muted-foreground">Automática compacta la navegación en móvil y mantiene más aire en pantallas grandes.</p>
           </div>
+        </SettingsCard>
+      </section>
+
+      <section id="ajuste-estado" className="scroll-mt-24">
+        <SectionLabel>Estado de la cuenta</SectionLabel>
+        <SettingsCard>
+          <SettingsSubhead title="Todo lo importante, en una mirada" description="Conexión, cambios pendientes y copias sin mensajes técnicos." />
+          <AccountHealth cloud={modo === "nube"} backupAt={backupInfo?.at} />
         </SettingsCard>
       </section>
 
@@ -611,6 +628,7 @@ export default function AjustesPage() {
       <section id="ajuste-privacidad" className="scroll-mt-24">
         <SectionLabel>Privacidad</SectionLabel>
         <SettingsCard className="gap-3.5">
+          <PrivacyMap externalNutrition={EXTERNAL_NUTRITION_ENABLED} />
           <Row label="Compartir errores técnicos"><Switch checked={diagnostico} onCheckedChange={v => { permitirDiagnostico(userId, v); setDiagnostico(v); }} aria-label="Compartir errores técnicos" /></Row>
           <p className="text-xs leading-relaxed text-muted-foreground">Opcional: envía el tipo de error y la versión de RITMO, nunca tus comidas, peso ni notas. <Link href="/privacidad" className="font-medium text-primary underline underline-offset-4">Cómo se usan mis datos</Link></p>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

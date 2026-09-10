@@ -17,6 +17,11 @@ export interface ItemNutricional {
   tipoCantidad?: "masa_declarada" | "volumen_declarado" | "unidades_declaradas" | "porcion_supuesta";
   cantidadOriginal?: string;
   gramos?: number;
+  /** Cuenta y unidad detectadas, para aprender el tamaño habitual de la persona. */
+  unidades?: number;
+  unidad?: string;
+  /** La masa se ha inferido de una corrección anterior de la misma unidad. */
+  cantidadAprendida?: boolean;
   referencia?: ReferenciaNutricional;
   kcal: number;
   proteinas: number;

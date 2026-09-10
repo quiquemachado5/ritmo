@@ -5,11 +5,12 @@ import { rutaInternaSegura } from "@/lib/auth-redirect";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
+  const flowId = searchParams.get("sb_flow_id");
   const next = rutaInternaSegura(searchParams.get("next"));
 
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await supabase.auth.exchangeCodeForSession(code, flowId ? { flowId } : undefined);
     if (!error) return NextResponse.redirect(new URL(next, origin));
   }
 

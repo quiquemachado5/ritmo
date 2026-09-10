@@ -451,14 +451,23 @@ html[data-densidad="compacta"] .app-content {
   padding-top: 1rem;
   padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
 }
+html[data-densidad="automatica"] .app-content {
+  padding-top: 1rem;
+  padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
+}
 html[data-densidad="compacta"] .app-content > div > .flex.flex-col {
   gap: 1.25rem;
+}
+html[data-densidad="automatica"] .app-content > div > .flex.flex-col {
+  gap: 1.35rem;
 }
 html[data-densidad="espaciosa"] .app-content > div > .flex.flex-col {
   gap: 2rem;
 }
 @media (min-width: 48rem) {
   html[data-densidad="compacta"] .app-content { padding-top: 1.5rem; padding-bottom: 3rem; }
+  html[data-densidad="automatica"] .app-content { padding-top: 2.25rem; padding-bottom: 4rem; }
+  html[data-densidad="automatica"] .app-content > div > .flex.flex-col { gap: 1.75rem; }
   html[data-densidad="espaciosa"] .app-content { padding-top: 2.75rem; padding-bottom: 4.5rem; }
 }
 

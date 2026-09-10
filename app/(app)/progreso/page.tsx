@@ -4,6 +4,7 @@ import * as React from "react";
 import dynamic from "next/dynamic";
 import {
   AlertTriangle,
+  BellOff,
   ArrowRight,
   ArrowDownRight,
   ArrowUpRight,
@@ -35,6 +36,10 @@ import { escenariosRitmo, memoriaCorporal } from "@/lib/model/insights";
 import { useReleasedExperiments, useWeightModelCycle } from "@/components/app/platform-provider";
 import { Counterfactual } from "@/components/app/counterfactual";
 import { BodyMemory } from "@/components/app/body-memory";
+import { ProgressStudio } from "@/components/app/progress-studio";
+import { BodyHeatmap } from "@/components/app/body-heatmap";
+import { PersonalPatterns } from "@/components/app/personal-patterns";
+import { AnnualShare } from "@/components/app/annual-share";
 
 const WeightChart = dynamic(() => import("@/components/app/charts").then((m) => m.WeightChart), { loading: () => <Skeleton className="h-72 w-full rounded-xl" /> });
 const CompositionChart = dynamic(() => import("@/components/app/charts").then((m) => m.CompositionChart), { loading: () => <Skeleton className="h-64 w-full rounded-xl" /> });
@@ -60,6 +65,7 @@ export default function ProgresoPage() {
   const experimentos = useReleasedExperiments(userId);
   const [rango, setRango] = React.useState<(typeof RANGOS)[number]["id"]>("1A");
   const [confirmBorrar, setConfirmBorrar] = React.useState<string | null>(null);
+  const [mostrarPronostico, setMostrarPronostico] = React.useState(false);
   const hoyISO = hoy();
   const cicloModelo = useWeightModelCycle(estado, auditoriaModelo.predicciones, hoyISO);
   const r = React.useMemo(() => resumen(estado, cicloModelo.estrategia), [estado, cicloModelo.estrategia]);
@@ -221,6 +227,8 @@ export default function ProgresoPage() {
       : ritmoModelo < 0
         ? "Tus registros recientes apuntan a una bajada gradual."
         : "Tus registros recientes apuntan a una subida gradual.";
+  const pronosticoAccionable = diasDesdeBascula >= 7 || retencionHoy >= 0.2 || retencionManana >= 0.2 || (ritmoModelo != null && Math.abs(ritmoModelo) >= 0.35);
+  const pronosticoVisible = !experimentos.modoInvisible || pronosticoAccionable || mostrarPronostico;
 
   return (
     <div className="flex flex-col gap-8">
@@ -257,7 +265,7 @@ export default function ProgresoPage() {
                   <div className="hidden items-center justify-center text-muted-foreground md:flex"><ArrowRight className="size-4" /></div>
 
                   <div className="rounded-xl border border-body-border bg-body-wash/35 p-4 sm:p-5">
-                    <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.08em] text-body">Estimación del modelo para hoy</p><p className="mt-1 text-xs text-muted-foreground">Orientación · nunca sustituye a la báscula</p></div><Chip tone="body">Modelo</Chip></div>
+                    <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.08em] text-body">Pronóstico corporal de hoy</p><p className="mt-1 text-xs text-muted-foreground">Tejido + líquidos · nunca sustituye a la báscula</p></div><Chip tone={retencionHoy > 0 ? "water" : "body"}>{retencionHoy > 0 ? "Retención probable" : ritmoModelo != null && ritmoModelo < -0.1 ? "Descenso gradual" : ritmoModelo != null && ritmoModelo > 0.1 ? "Subida gradual" : "Estable"}</Chip></div>
                     <div className="mt-5 flex items-end gap-1.5"><span className="font-display text-3xl font-bold leading-none tabular text-body sm:text-4xl">{fmtPeso(r.peso.estimadoHoy)}</span><span className="mb-1 text-sm font-medium text-muted-foreground">kg</span></div>
                     <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
                       {diasDesdeBascula === 0
@@ -272,7 +280,7 @@ export default function ProgresoPage() {
                 </div>
               </div>
 
-              {r.prediccion.disponible && (
+              {r.prediccion.disponible && pronosticoVisible && (
                 <div className="border-t border-border bg-body-wash/20 px-5 py-4 sm:px-6 sm:py-5">
                   <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"><p className="text-xs font-semibold">Si mantienes tu ritmo actual</p><p className={cn("text-[0.68rem]", retencionHoy > 0 || retencionManana > 0 ? "text-water-ink" : "text-body-ink")}>{explicacionModelo}</p></div>
                   <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto [scrollbar-width:none] sm:grid sm:grid-cols-5 sm:overflow-visible">
@@ -286,6 +294,12 @@ export default function ProgresoPage() {
                     <p><span className="font-semibold text-foreground">Para afinarlo:</span> {siguienteDato}.</p>
                     {composicionModelo && <p>Composición orientativa disponible en la auditoría del modelo.</p>}
                   </div>
+                </div>
+              )}
+              {r.prediccion.disponible && !pronosticoVisible && (
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-secondary/25 px-5 py-3 sm:px-6">
+                  <p className="inline-flex items-center gap-2 text-xs text-muted-foreground"><BellOff className="size-4 text-primary" /><span><strong className="font-semibold text-foreground">Sin cambios relevantes.</strong> La previsión queda en segundo plano.</span></p>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setMostrarPronostico(true)}>Ver previsión</Button>
                 </div>
               )}
             </Card>
@@ -315,6 +329,19 @@ export default function ProgresoPage() {
               </div>
               <WeightChart data={datosPeso} objetivo={estado.perfil.pesoObjetivo} />
               <DataLegend className="mt-4" items={[{ label: "Peso medido", colorVar: "--weight" }, { label: "Estimación del modelo", colorVar: "--body", style: "dashed" }, { label: "Rango orientativo", colorVar: "--body", style: "wash" }, ...(estado.perfil.pesoObjetivo != null ? [{ label: "Objetivo", colorVar: "--weight" as const, style: "dotted" as const }] : [])]} />
+            </Card>
+          </section>
+
+          <ProgressStudio estado={estado} />
+
+          <BodyHeatmap estado={estado} />
+
+          <PersonalPatterns estado={estado} />
+
+          <section aria-labelledby="resumen-anual">
+            <Card className="flex flex-col gap-4 overflow-hidden border-primary/15 bg-primary/[0.035] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+              <div><h2 id="resumen-anual" className="font-display text-xl font-bold">Tu año, contado por RITMO</h2><p className="mt-1 max-w-xl text-sm text-muted-foreground">Un resumen editorial privado con constancia, días completos, meses y evolución medida. Tú decides qué entra en la imagen.</p></div>
+              <AnnualShare estado={estado} />
             </Card>
           </section>
 
