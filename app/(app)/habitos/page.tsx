@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader, SectionLabel } from "@/components/app/primitives";
 import { cn } from "@/lib/utils";
-import { evaluarCicloModelos } from "@/lib/model-audit/lifecycle";
+import { useWeightModelCycle } from "@/components/app/platform-provider";
 
 const Heatmap = dynamic(() => import("@/components/app/heatmap").then((m) => m.Heatmap), {
   loading: () => <Skeleton className="h-36 w-full rounded-xl" />,
@@ -41,10 +41,7 @@ export default function HabitosPage() {
   const hoyISO = hoy();
   const [fechaSeleccionada, setFechaSeleccionada] = React.useState(hoyISO);
   const editorRef = React.useRef<HTMLElement>(null);
-  const cicloModelo = React.useMemo(
-    () => evaluarCicloModelos(estado, auditoriaModelo.predicciones, hoyISO),
-    [estado, auditoriaModelo.predicciones, hoyISO],
-  );
+  const cicloModelo = useWeightModelCycle(estado, auditoriaModelo.predicciones, hoyISO);
   const r = React.useMemo(() => resumen(estado, cicloModelo.estrategia), [estado, cicloModelo.estrategia]);
   const activos = React.useMemo(() => habitosModelo(estado.perfil), [estado.perfil]);
   const porHabito = React.useMemo(() => adherenciaPorHabito(estado, activos, 30), [estado, activos]);

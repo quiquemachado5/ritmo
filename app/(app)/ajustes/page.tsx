@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
-import { Database, Download, FileSpreadsheet, FlaskConical, HistoryIcon, ListChecks, LogOut, Monitor, Moon, Palette, Plane, Shield, ShieldCheck, SlidersHorizontal, Sun, Target, Trash2, Upload, UserRound } from "lucide-react";
+import { Database, Download, FileSpreadsheet, HistoryIcon, ListChecks, LogOut, Monitor, Moon, Palette, Plane, Shield, ShieldCheck, SlidersHorizontal, Sun, Target, Trash2, Upload, UserRound } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { FACTORES_ACTIVIDAD } from "@/lib/model/metrics";
 import { Card } from "@/components/ui/card";
@@ -520,7 +520,6 @@ export default function AjustesPage() {
               {(["compacta", "espaciosa"] as const).map((opcion) => <button key={opcion} type="button" onClick={() => cambiarDensidad(opcion)} aria-pressed={densidad === opcion} className={cn("h-9 rounded-xl px-4 text-sm font-medium transition-colors", densidad === opcion ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>{opcion === "compacta" ? "Compacta" : "Espaciosa"}</button>)}
             </div>
           </div>
-          <div className="flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-semibold">RITMO Lab</p><p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">Controla la interfaz viva, el rescate automático, las señales y los escenarios.</p></div><Button asChild variant="secondary" className="w-full gap-2 sm:w-auto"><Link href="/laboratorio"><FlaskConical className="size-4" /> Abrir laboratorio</Link></Button></div>
         </SettingsCard>
       </section>
 

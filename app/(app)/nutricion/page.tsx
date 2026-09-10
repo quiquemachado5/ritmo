@@ -19,7 +19,7 @@ import type { TipoComida } from "@/lib/model/types";
 import { DataLegend } from "@/components/app/data-legend";
 import { qualityForDay, RecordQuality } from "@/components/app/record-quality";
 import { habitosModelo } from "@/lib/model/config";
-import { evaluarCicloModelos } from "@/lib/model-audit/lifecycle";
+import { useWeightModelCycle } from "@/components/app/platform-provider";
 
 // La biblioteca es rica pero secundaria al registro del día; cargarla al final
 // evita bloquear la primera interacción en móvil.
@@ -60,10 +60,7 @@ export default function NutricionPage() {
     const { toast } = await import("sonner");
     toast.success(fecha === hoy() ? "Comida duplicada" : "Añadida a hoy");
   }
-  const cicloModelo = React.useMemo(
-    () => evaluarCicloModelos(estado, auditoriaModelo.predicciones, hoy()),
-    [estado, auditoriaModelo.predicciones],
-  );
+  const cicloModelo = useWeightModelCycle(estado, auditoriaModelo.predicciones, hoy());
   const r = React.useMemo(() => resumen(estado, cicloModelo.estrategia), [estado, cicloModelo.estrategia]);
   const balanceReciente = React.useMemo(() => serieBalance(estado, 30).map((b) => ({ label: fmtFechaLarga(b.fecha), balance: b.balance, imputado: b.imputado })), [estado]);
 

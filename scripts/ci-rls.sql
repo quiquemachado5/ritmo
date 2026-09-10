@@ -1,5 +1,10 @@
 \set ON_ERROR_STOP on
-insert into auth.users(id) values('00000000-0000-4000-8000-000000000001'),('00000000-0000-4000-8000-000000000002');
+insert into auth.users(id,email) values
+  ('00000000-0000-4000-8000-000000000001','quiquemachadodguez@gmail.com'),
+  ('00000000-0000-4000-8000-000000000002','another@example.com');
+insert into public.platform_admins(user_id)
+values('00000000-0000-4000-8000-000000000001')
+on conflict(user_id) do nothing;
 set role authenticated;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',false);
 insert into public.dias(user_id,fecha,habitos) values(auth.uid(),'2026-09-04','{"agua":true}');
@@ -25,6 +30,10 @@ do $$ begin
       values(auth.uid(),current_date,'{}');
     raise exception 'RLS: inserción directa de auditoría permitida';
   exception when insufficient_privilege then null; end;
+  begin
+    perform public.ritmo_admin_snapshot();
+    raise exception 'Administración accesible desde una cuenta normal';
+  exception when insufficient_privilege then null; end;
 end $$;
 reset role;
 update public.nutrition_policy set enabled=true,user_daily=1;
@@ -48,6 +57,15 @@ end $$;
 set role authenticated;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',false);
 select public.clear_my_nutrition_data();
+select public.ritmo_admin_snapshot();
+select public.ritmo_admin_command('{"type":"feature_state","key":"escenarios","value":"hidden"}'::jsonb);
+do $$ begin
+  if (public.ritmo_public_config()->'features'->>'escenarios')::boolean then
+    raise exception 'La publicación administrativa no gobierna la función';
+  end if;
+end $$;
+select public.ritmo_admin_command('{"type":"feature_state","key":"escenarios","value":"public"}'::jsonb);
+select public.ritmo_admin_command('{"type":"user_role","userId":"00000000-0000-4000-8000-000000000002","value":"pilot"}'::jsonb);
 reset role;
 do $$ begin
   if exists(select 1 from public.nutrition_requests where user_id='00000000-0000-4000-8000-000000000001') then raise exception 'Queda caché nutricional tras el borrado'; end if;

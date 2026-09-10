@@ -30,10 +30,9 @@ import { capitalizar, fmtPeso, fmtSigno, fmtNum, fmtFechaCorta, relativo } from 
 import { cn } from "@/lib/utils";
 import { DataLegend } from "@/components/app/data-legend";
 import { ModelAudit } from "@/components/app/model-audit";
-import { evaluarCicloModelos } from "@/lib/model-audit/lifecycle";
 import { habitosModelo } from "@/lib/model/config";
 import { escenariosRitmo, memoriaCorporal } from "@/lib/model/insights";
-import { useExperimentos } from "@/lib/experiments";
+import { useReleasedExperiments, useWeightModelCycle } from "@/components/app/platform-provider";
 import { Counterfactual } from "@/components/app/counterfactual";
 import { BodyMemory } from "@/components/app/body-memory";
 
@@ -58,14 +57,11 @@ type HistorialRegistro = { fecha: string; peso: number; delta: number | null; gr
 export default function ProgresoPage() {
   const { estado, userId, auditoriaModelo, cargando, medicion, actualizarDia, borrarMedicion } = useRitmo();
   const { abrir } = useQuickLog();
-  const experimentos = useExperimentos(userId);
+  const experimentos = useReleasedExperiments(userId);
   const [rango, setRango] = React.useState<(typeof RANGOS)[number]["id"]>("1A");
   const [confirmBorrar, setConfirmBorrar] = React.useState<string | null>(null);
   const hoyISO = hoy();
-  const cicloModelo = React.useMemo(
-    () => evaluarCicloModelos(estado, auditoriaModelo.predicciones, hoyISO),
-    [estado, auditoriaModelo.predicciones, hoyISO],
-  );
+  const cicloModelo = useWeightModelCycle(estado, auditoriaModelo.predicciones, hoyISO);
   const r = React.useMemo(() => resumen(estado, cicloModelo.estrategia), [estado, cicloModelo.estrategia]);
   const curvaModelo = React.useMemo(() => curvaBalanceModelo(estado), [estado]);
   // Algunos historiales pueden ofrecer proyecciones futuras antes de tener un

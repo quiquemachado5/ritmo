@@ -126,6 +126,12 @@ legacy/             La app anterior, intacta
 
 Regla que mantiene el orden: **`lib/model/` es puro** (sin React, sin DOM), por eso se testea en aislamiento.
 
+### Administración
+
+`/admin` es un espacio separado y validado en servidor. El propietario inicial se incorpora con la migración `202609100001_admin_console.sql`; desde ahí puede gestionar acceso y cohortes piloto, publicar u ocultar experimentos, fijar el canal del modelo de peso, mostrar avisos operativos y revisar un registro de cambios. La lista de usuarios solo expone metadatos de cuenta con el correo enmascarado: nunca comidas, pesos, hábitos ni medidas.
+
+El Laboratorio es exclusivo del administrador. “Modo mínimo” y el contador público de usuarios ya no forman parte de la navegación del producto.
+
 ---
 
 ## 7. Diseño

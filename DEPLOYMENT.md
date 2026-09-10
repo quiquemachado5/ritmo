@@ -18,6 +18,8 @@ El origen reproducible es `supabase/migrations/`, en orden de nombre. `supabase/
 2. Probar con datos representativos y revisar la copia antes de aplicar a producción.
 3. Aplicar solo las pendientes en producción, una vez. No ejecutar a ciegas todo el directorio sobre una instalación ya migrada.
 
+La migración `202609100001_admin_console.sql` crea el control de acceso administrativo, las cohortes piloto, la publicación de funciones, el canal global del modelo y la auditoría. Debe aplicarse antes de usar `/admin`; hasta entonces la aplicación normal mantiene valores seguros por defecto y el panel muestra un aviso de activación, sin degradar los datos del usuario.
+
 La nueva línea base crea el esquema desde cero y conserva tablas existentes. La migración de perfil admite proteína decimal y alinea límites con el formulario. Sus restricciones nuevas son `NOT VALID`: los datos históricos no se borran ni se corrigen automáticamente; las nuevas escrituras sí se validan.
 
 `npm run test:db` aplica el esquema a PostgreSQL embebido y prueba aislamiento de dos cuentas, Storage y cuota de IA. CI repite las comprobaciones con PostgreSQL 17. Esto no sustituye verificar configuración real de RLS, Storage, Realtime y proveedores en staging.

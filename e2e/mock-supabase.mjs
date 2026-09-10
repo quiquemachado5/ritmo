@@ -4,7 +4,13 @@ import { randomUUID } from 'node:crypto';
 const stores = new Map();
 let tick = 0;
 const ids = ['00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002'];
-function user(id = ids[0]) { return { id, aud: 'authenticated', role: 'authenticated', email: id === ids[0] ? 'alex@ritmo.test' : 'bea@ritmo.test', created_at: new Date().toISOString(), app_metadata: { provider: 'email' }, user_metadata: {} }; }
+const features = [
+  ['interfaz_viva','Interfaz viva'], ['rescate_automatico','Rescate automático'],
+  ['detector_avanzado','Detector de señales'], ['escenarios','Escenarios de peso'],
+  ['memoria_corporal','Memoria corporal'], ['modo_invisible','Lecturas en segundo plano'],
+].map(([key,label]) => ({ key, label, description: `${label} en entorno de prueba.`, state: 'public', updatedAt: new Date().toISOString() }));
+let platformControl = { weightModelMode: 'automatic', announcementEnabled: false, announcementText: '', updatedAt: new Date().toISOString() };
+function user(id = ids[0]) { return { id, aud: 'authenticated', role: 'authenticated', email: id === ids[0] ? 'alex@ritmo.test' : 'quiquemachadodguez@gmail.com', created_at: new Date().toISOString(), app_metadata: { provider: 'email' }, user_metadata: {} }; }
 function session(id) {
   const encoded = value => Buffer.from(JSON.stringify(value)).toString('base64url');
   const now = Math.floor(Date.now() / 1000);
@@ -36,7 +42,7 @@ const server = http.createServer(async (req, res) => {
   const body = raw && req.headers['content-type']?.includes('application/json') ? JSON.parse(raw) : {};
   const send = (data, code = 200) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(data)); };
   if (url.pathname === '/health') return send({ ok: true });
-  if (url.pathname === '/__reset') { stores.clear(); return send({ ok: true }); }
+  if (url.pathname === '/__reset') { stores.clear(); features.forEach(item => { item.state = 'public'; }); platformControl = { weightModelMode: 'automatic', announcementEnabled: false, announcementText: '', updatedAt: new Date().toISOString() }; return send({ ok: true }); }
   let id = ids[0];
   try { id = JSON.parse(Buffer.from((req.headers.authorization || '').split('.')[1], 'base64url').toString()).sub; } catch {}
   if (!ids.includes(id)) return send({ message: 'Invalid local test user' }, 401);
@@ -46,6 +52,30 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname.includes('/rpc/ritmo_user_count')) return send(2);
   if (url.pathname.startsWith('/rest/v1/rpc/')) {
     const rpc = url.pathname.split('/').at(-1); const db = state(id);
+    if (rpc === 'is_ritmo_admin') return send(id === ids[1]);
+    if (rpc === 'ritmo_public_config') return send({
+      features: Object.fromEntries(features.map(item => [item.key, item.state === 'public' || id === ids[1]])),
+      weightModelMode: platformControl.weightModelMode,
+      announcement: platformControl.announcementEnabled ? platformControl.announcementText : null,
+      updatedAt: platformControl.updatedAt,
+    });
+    if (rpc === 'ritmo_admin_snapshot') {
+      if (id !== ids[1]) return send({ message: 'Acceso no autorizado' }, 403);
+      return send({ metrics: { users: 2, onboarded: 2, active30: 2, suspended: 0, admins: 1, pilots: 0 }, features, control: platformControl, audit: [] });
+    }
+    if (rpc === 'ritmo_admin_users') {
+      if (id !== ids[1]) return send({ message: 'Acceso no autorizado' }, 403);
+      return send(ids.map((userId,index) => ({ user_id: userId, email_masked: index ? 'q••••••••@gmail.com' : 'a•••@ritmo.test', provider: 'email', created_at: new Date().toISOString(), last_sign_in_at: new Date().toISOString(), status: 'active', role: index ? 'admin' : 'user', onboarding_complete: true, is_self: userId === id })));
+    }
+    if (rpc === 'ritmo_admin_command') {
+      if (id !== ids[1]) return send({ message: 'Acceso no autorizado' }, 403);
+      const command = body.p_command || {};
+      if (command.type === 'feature_state') { const feature = features.find(item => item.key === command.key); if (feature) feature.state = command.value; }
+      if (command.type === 'weight_model_mode') platformControl.weightModelMode = command.value;
+      if (command.type === 'announcement') { platformControl.announcementEnabled = Boolean(command.enabled); platformControl.announcementText = String(command.text || ''); }
+      platformControl.updatedAt = new Date().toISOString();
+      return send({ ok: true });
+    }
     if (rpc === 'clear_my_model_audit') { db.predicciones_modelo = []; db.historial_modelo = []; return send(null); }
     if (rpc === 'model_audit_snapshot') {
       const previous = db.historial_modelo.at(-1);

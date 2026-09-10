@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronUp, LogOut, MoreHorizontal, Plus, Search } from "lucide-react";
+import { ChevronUp, LogOut, MoreHorizontal, Plus, Search, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,14 +21,13 @@ import { useQuickLog } from "./quick-log-provider";
 import { useRitmo } from "@/lib/store/provider";
 import { QuickLog } from "./quick-log";
 import { PageTransition } from "@/components/page-transition";
-import { UserCount } from "./user-count";
 import { TravelBanner } from "./travel-banner";
 import { GlobalSearch } from "./global-search";
 import { hoy } from "@/lib/model/dates";
 import { siguienteAccion } from "@/lib/model/next-action";
-import { useExperimentos } from "@/lib/experiments";
 import { estadoVisualRitmo } from "@/lib/model/insights";
 import { useModoViaje } from "@/lib/travel-mode";
+import { usePlatformConfig, useReleasedExperiments } from "./platform-provider";
 
 type MomentoRitmo = "dia" | "manana" | "tarde" | "noche";
 
@@ -40,7 +39,7 @@ function momentoActual(): MomentoRitmo {
   return "noche";
 }
 
-function UserMenu({ compact = false, expanded = false }: { compact?: boolean; expanded?: boolean }) {
+function UserMenu({ compact = false, expanded = false, isAdmin = false }: { compact?: boolean; expanded?: boolean; isAdmin?: boolean }) {
   const { userEmail, cerrarSesion } = useRitmo();
   const inicial = (userEmail?.[0] ?? "R").toUpperCase();
   const secundarios = NAV_ITEMS.filter((i) => !i.primary);
@@ -82,6 +81,11 @@ function UserMenu({ compact = false, expanded = false }: { compact?: boolean; ex
               </Link>
             </DropdownMenuItem>
           ))}
+        {!expanded && isAdmin && (
+          <DropdownMenuItem asChild>
+            <Link href="/admin"><ShieldCheck className="size-4" />Administración</Link>
+          </DropdownMenuItem>
+        )}
         {!expanded && <DropdownMenuSeparator />}
         <DropdownMenuItem onSelect={() => void cerrarSesion()}>
           <LogOut className="size-4" />
@@ -92,14 +96,14 @@ function UserMenu({ compact = false, expanded = false }: { compact?: boolean; ex
   );
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({ children, isAdmin = false }: { children: React.ReactNode; isAdmin?: boolean }) {
   const pathname = usePathname();
   const { abrir, abierto } = useQuickLog();
   const [busquedaAbierta, setBusquedaAbierta] = React.useState(false);
-  const modoMinimo = pathname === "/minimo";
   const { estado, userId, errorCarga, recargar } = useRitmo();
   const recomendada = React.useMemo(() => siguienteAccion(estado, hoy()), [estado]);
-  const experimentos = useExperimentos(userId);
+  const experimentos = useReleasedExperiments(userId);
+  const platform = usePlatformConfig();
   const pulso = React.useMemo(() => estadoVisualRitmo(estado), [estado]);
   const viaje = useModoViaje(userId);
   const [momento, setMomento] = React.useState<MomentoRitmo>("dia");
@@ -128,7 +132,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (modoMinimo) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setBusquedaAbierta(true); return; }
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const t = e.target as HTMLElement | null;
@@ -142,7 +145,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [abrir, abierto, busquedaAbierta, modoMinimo]);
+  }, [abrir, abierto, busquedaAbierta]);
 
   if (errorCarga) {
     return <main className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center gap-4 px-6">
@@ -154,17 +157,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </main>;
   }
 
-  if (modoMinimo) {
-    return (
-      <div className="min-h-dvh bg-background">
-        <main className="mx-auto flex min-h-dvh w-full items-start px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] sm:items-center sm:px-6 sm:py-8">
-          <PageTransition>{children}</PageTransition>
-        </main>
-        <QuickLog />
-      </div>
-    );
-  }
-
   return (
     <div
       data-ritmo={experimentos.interfazViva ? pulso.estado : "neutro"}
@@ -173,6 +165,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       className="app-canvas min-h-dvh bg-background"
     >
       {experimentos.interfazViva && <div className="biological-ambient" aria-hidden="true" />}
+      {platform.announcement && <div className="border-b border-primary/20 bg-primary/8 px-4 py-2 text-center text-xs font-medium text-primary md:pl-[16.25rem]">{platform.announcement}</div>}
       <TravelBanner />
       {/* Sidebar — escritorio */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-[16.25rem] flex-col border-r border-border/80 bg-card/97 px-3 py-3 shadow-[8px_0_28px_-28px_var(--foreground)] md:flex">
@@ -184,7 +177,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Button variant="ghost" size="icon" className="size-9 rounded-xl text-muted-foreground hover:bg-secondary hover:text-foreground" onClick={() => setBusquedaAbierta(true)} aria-label="Buscar en RITMO" title="Buscar · ⌘K">
               <Search className="size-[1.05rem]" />
             </Button>
-            <UserCount compact className="rounded-lg border border-border/80 bg-secondary/55 px-2 py-1" />
           </div>
         </div>
         <div className="mt-3">
@@ -202,21 +194,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="ml-auto rounded-md bg-primary-foreground/12 px-2 py-1 text-[0.62rem] font-bold tabular">{recomendada.corta}</span>
           </Button>
         </div>
-        <nav className="mt-3 overflow-y-auto rounded-2xl bg-secondary/35 p-2 [scrollbar-width:none]" aria-label="Secciones de RITMO">
-          <p className="px-2 pb-1.5 pt-1 text-[0.58rem] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">Principal</p>
+        <nav className="mt-3 overflow-y-auto rounded-2xl border border-border/65 bg-secondary/30 p-1.5 [scrollbar-width:none]" aria-label="Secciones de RITMO">
           <div className="flex flex-col gap-0.5">
             {primarios.map((item) => <SidebarNavLink key={item.href} item={item} active={activo(item.href)} />)}
           </div>
-          <div className="mx-2 my-2.5 h-px bg-border/80" aria-hidden="true" />
-          <p className="px-2 pb-1.5 text-[0.58rem] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">Herramientas</p>
+          <div className="mx-2 my-1.5 h-px bg-border/80" aria-hidden="true" />
           <div className="flex flex-col gap-0.5">
             {herramientas.map((item) => <SidebarNavLink key={item.href} item={item} active={activo(item.href)} />)}
+            {isAdmin && <SidebarNavLink item={{ href: "/admin", label: "Administración", icon: ShieldCheck, primary: false }} active={activo("/admin")} />}
           </div>
         </nav>
         <div className="min-h-3 flex-1" aria-hidden="true" />
         <div className="mt-3 rounded-2xl border border-border/80 bg-background/60 p-1 shadow-sm">
           <div className="flex min-w-0 items-center gap-0.5">
-            <UserMenu expanded />
+            <UserMenu expanded isAdmin={isAdmin} />
             <span className="h-7 w-px bg-border" aria-hidden="true" />
             <ThemeToggle />
           </div>
@@ -231,7 +222,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" className="size-9 rounded-xl" onClick={() => setBusquedaAbierta(true)} aria-label="Buscar"><Search className="size-5" /></Button>
           <ThemeToggle />
-          <UserMenu />
+          <UserMenu isAdmin={isAdmin} />
         </div>
       </header>
 

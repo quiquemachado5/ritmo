@@ -18,9 +18,8 @@ import { cn } from "@/lib/utils";
 import { MonthlyShare } from "@/components/app/monthly-share";
 import { RitmoDisclosure } from "@/components/ui/ritmo-disclosure";
 import { qualityForDay, RecordQuality } from "@/components/app/record-quality";
-import { evaluarCicloModelos } from "@/lib/model-audit/lifecycle";
 import { detectarSenales, diagnosticoRescate } from "@/lib/model/insights";
-import { useExperimentos } from "@/lib/experiments";
+import { useReleasedExperiments, useWeightModelCycle } from "@/components/app/platform-provider";
 import { RescueMode } from "@/components/app/rescue-mode";
 import { SignalDetector } from "@/components/app/signal-detector";
 
@@ -36,14 +35,11 @@ export default function HoyPage() {
   const { estado, userId, auditoriaModelo, cargando, dia, alternarHabito } = useRitmo();
   const { abrir } = useQuickLog();
   const hoyISO = hoy();
-  const experimentos = useExperimentos(userId);
+  const experimentos = useReleasedExperiments(userId);
   const [mostrarPanelCompleto, setMostrarPanelCompleto] = React.useState(false);
   const [mostrarLecturasSecundarias, setMostrarLecturasSecundarias] = React.useState(false);
 
-  const cicloModelo = React.useMemo(
-    () => evaluarCicloModelos(estado, auditoriaModelo.predicciones, hoyISO),
-    [estado, auditoriaModelo.predicciones, hoyISO],
-  );
+  const cicloModelo = useWeightModelCycle(estado, auditoriaModelo.predicciones, hoyISO);
   const r = React.useMemo(() => resumen(estado, cicloModelo.estrategia), [estado, cicloModelo.estrategia]);
   const habitosActivos = React.useMemo(() => habitosModelo(estado.perfil), [estado.perfil]);
   const diaHoy = dia(hoyISO);
@@ -129,7 +125,7 @@ export default function HoyPage() {
               {habitosHechos < habitosActivos.length ? <Button size="sm" onClick={() => abrir("habitos")} className="gap-1.5"><CheckCircle2 className="size-3.5" /> Revisar hábitos</Button>
                 : r.peso.actual == null ? <Button size="sm" onClick={() => abrir("peso")} className="gap-1.5"><Scale className="size-3.5" /> Añadir primer peso</Button>
                 : comidas.length === 0 ? <Button size="sm" variant="secondary" onClick={() => abrir("comida")} className="gap-1.5"><Plus className="size-3.5" /> Añadir comida, si quieres</Button>
-                : <Link href="/minimo" className="text-sm font-medium text-primary underline underline-offset-4">Quedarme con lo esencial</Link>}
+                : <Link href="/progreso" className="text-sm font-medium text-primary underline underline-offset-4">Ver evolución</Link>}
             </div>
           </div>
           <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] items-center gap-3 sm:flex sm:gap-7">

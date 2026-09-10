@@ -9,14 +9,14 @@ import { habitosModelo } from "@/lib/model/config";
 import { fmtFechaCorta, fmtNum, fmtPeso } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/app/primitives";
-import { evaluarCicloModelos } from "@/lib/model-audit/lifecycle";
+import { useWeightModelCycle } from "@/components/app/platform-provider";
 
 /** Detalle opcional dentro de la sección de confianza; no añade otra tarjeta. */
 export function ModelAudit() {
   const { estado, auditoriaModelo, errorAuditoria, reintentarAuditoria } = useRitmo();
   const [reintentando, setReintentando] = React.useState(false);
   const [visibles, setVisibles] = React.useState(5);
-  const ciclo = React.useMemo(() => evaluarCicloModelos(estado, auditoriaModelo.predicciones, hoy()), [estado, auditoriaModelo.predicciones]);
+  const ciclo = useWeightModelCycle(estado, auditoriaModelo.predicciones, hoy());
   const evaluacion = React.useMemo(() => evaluarPredicciones(estado, auditoriaModelo.predicciones, hoy(), ciclo.versionActiva), [estado, auditoriaModelo.predicciones, ciclo.versionActiva]);
   const configuraciones = [...auditoriaModelo.configuraciones].reverse();
   const primera = auditoriaModelo.configuraciones[0];

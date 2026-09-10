@@ -20,7 +20,7 @@ async function iniciarSesion(page: Page) {
   await expect(page.getByText(/Buenas|Buenos/).first()).toBeVisible();
 }
 
-const secciones = { "/": "Hoy", "/ajustes": "Ajustes", "/laboratorio": "Laboratorio", "/nutricion": "Nutrición", "/progreso": "Progreso", "/habitos": "Hábitos" } as const;
+const secciones = { "/": "Hoy", "/ajustes": "Ajustes", "/nutricion": "Nutrición", "/progreso": "Progreso", "/habitos": "Hábitos" } as const;
 
 async function irA(page: Page, ruta: keyof typeof secciones) {
   // Las pestañas se recorren como en la app, sin destruir el documento y
@@ -29,9 +29,7 @@ async function irA(page: Page, ruta: keyof typeof secciones) {
   const sidebar = page.locator("aside");
   if (await sidebar.isVisible()) {
     await sidebar.getByRole("link", { name: secciones[ruta], exact: true }).click();
-  } else if (ruta === "/laboratorio" && new URL(page.url()).pathname === "/ajustes") {
-    await page.getByRole("link", { name: "Abrir laboratorio", exact: true }).click();
-  } else if (ruta === "/ajustes" || ruta === "/laboratorio") {
+  } else if (ruta === "/ajustes") {
     await page.getByRole("button", { name: "Menú", exact: true }).click();
     await page.getByRole("menuitem", { name: "Ajustes", exact: true }).click();
   } else {
@@ -66,7 +64,7 @@ test("recorrido visual y guardado con datos sintéticos", async ({ page, request
   await expect(page.getByRole("dialog").getByRole("tab", { name: "Peso", exact: true })).toHaveAttribute("aria-selected", "true");
   await page.keyboard.press("Escape");
   await page.screenshot({ path: `test-results/${info.project.name}-hoy.png`, fullPage: true });
-  for (const route of ["ajustes", "laboratorio", "nutricion", "progreso", "habitos"] as const) {
+  for (const route of ["ajustes", "nutricion", "progreso", "habitos"] as const) {
     await irA(page, `/${route}`);
     await expect(page.locator("main h1").first()).toBeVisible();
     await expect(page.locator('main [data-slot="skeleton"]')).toHaveCount(0);
@@ -80,13 +78,6 @@ test("recorrido visual y guardado con datos sintéticos", async ({ page, request
       await expect(confianza.locator("..")).toHaveAttribute("open");
       await sinDesbordamiento(page);
       await page.screenshot({ path: `test-results/${info.project.name}-progreso-abierto.png`, fullPage: true });
-    } else if (route === "laboratorio") {
-      const interfazViva = page.getByRole("switch", { name: "Interfaz viva", exact: true });
-      await expect(interfazViva).toBeChecked();
-      await interfazViva.click();
-      await expect(interfazViva).not.toBeChecked();
-      await interfazViva.click();
-      await expect(interfazViva).toBeChecked();
     } else if (route === "habitos") {
       const selectorFecha = page.getByLabel("Día que quieres editar", { exact: true });
       const fechaHoy = await selectorFecha.inputValue();
@@ -162,6 +153,41 @@ test("recorrido visual y guardado con datos sintéticos", async ({ page, request
   await irA(page, "/nutricion");
   await expect(page.getByText("100 g de arroz cocido con 2 filetes de pollo y 30 g de tahini", { exact: false })).toHaveCount(0);
   expect(analisisRemotos).toEqual([]);
+});
+
+test("la navegación normal no expone administración ni herramientas internas", async ({ page, request }) => {
+  await request.post("http://127.0.0.1:3199/__reset");
+  await iniciarSesion(page);
+  await expect(page.locator("aside").getByText("Modo mínimo", { exact: true })).toHaveCount(0);
+  await expect(page.locator("aside").getByText("Laboratorio", { exact: true })).toHaveCount(0);
+  await expect(page.locator("aside").getByText(/usuarios/i)).toHaveCount(0);
+});
+
+test("administración separa usuarios, lanzamientos y modelos sin datos de salud", async ({ page, request }, info) => {
+  await request.post("http://127.0.0.1:3199/__reset");
+  await page.goto("/login");
+  await page.getByLabel("Email").fill("bea@ritmo.test");
+  await page.getByLabel("Contraseña", { exact: true }).fill("RitmoTest123");
+  await page.getByRole("button", { name: "Iniciar sesión", exact: true }).click();
+  await expect(page).toHaveURL(/\/$/);
+  const sidebar = page.locator("aside");
+  if (await sidebar.isVisible()) {
+    await sidebar.getByRole("link", { name: "Administración", exact: true }).click();
+  } else {
+    await page.getByRole("button", { name: "Menú", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Administración", exact: true }).click();
+  }
+  await expect(page).toHaveURL(/\/admin$/);
+  await expect(page.getByRole("heading", { name: "Administración", exact: true })).toBeVisible();
+  await expect(page.getByText("Datos de salud aislados", { exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "Usuarios", exact: true }).click();
+  await expect(page.getByText("q••••••••@gmail.com", { exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "Funciones", exact: true }).click();
+  await expect(page.getByText("Publicación progresiva", { exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "Modelos", exact: true }).click();
+  await expect(page.getByText("Canal de predicción de peso", { exact: true })).toBeVisible();
+  await sinDesbordamiento(page);
+  await page.screenshot({ path: `test-results/${info.project.name}-admin.png`, fullPage: true });
 });
 
 test("ajustes con un solo guardado, validación, descarte y aviso al salir", async ({ page, request }) => {

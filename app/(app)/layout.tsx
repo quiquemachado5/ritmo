@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { ClientProviders } from "@/components/app/client-providers";
 import { createClient } from "@/lib/supabase/server";
+import { isAdminUser } from "@/lib/admin/auth";
+import { normalizePlatformConfig } from "@/lib/platform/config";
 
 // La identidad puede cambiar sin que cambie la URL (cerrar sesión e iniciar con
 // otra cuenta). Forzamos la comprobación del servidor para no reutilizar el
@@ -22,5 +24,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   if (!perfil?.onboarding_completo) redirect("/onboarding");
 
-  return <ClientProviders>{children}</ClientProviders>;
+  const [{ data: publicConfig }, isAdmin] = await Promise.all([
+    supabase.rpc("ritmo_public_config"),
+    isAdminUser(supabase, user),
+  ]);
+
+  return <ClientProviders isAdmin={isAdmin} platformConfig={normalizePlatformConfig(publicConfig)}>{children}</ClientProviders>;
 }
