@@ -1,6 +1,6 @@
 # Catálogo nutricional de RITMO
 
-Versión `2026-09-10.2`. Revisión realizada el 10 de septiembre de 2026.
+Versión `2026-09-10.3`. Revisión realizada el 10 de septiembre de 2026.
 
 El análisis usa primero el catálogo local y determinista. Los proveedores externos
 solo pueden intervenir cuando la política de despliegue los habilita y queda algún
@@ -38,6 +38,8 @@ ID. `CATALOGO_NUTRICIONAL` expone todas las entradas, sus nutrientes y su estado
 
 - Gramos/kilos: peso indicado por la persona; no podemos comprobar que se pesó.
 - Unidades (filetes, lonchas, cucharadas): número indicado, masa aproximada.
+- Rangos de unidades (por ejemplo, «5-6 rodajas»): se usa el punto medio y se
+  conserva la etiqueta de cantidad aproximada.
 - Volumen: ml indicados, masa aproximada. La conversión actual 1 ml ≈ 1 g no es
   una densidad validada para cada líquido: para mayor precisión se piden gramos.
 - Sin cantidad: porción supuesta y señalada como tal.
@@ -48,7 +50,8 @@ ID. `CATALOGO_NUTRICIONAL` expone todas las entradas, sus nutrientes y su estado
 - Salvo indicación expresa de «peso cocinado», los gramos se interpretan en crudo,
   fresco y limpio. Arroz, pasta, quinoa y legumbres secas aplican su factor de
   absorción de agua cuando el peso sí se declara cocinado; carnes y pescados aplican
-  su merma de agua.
+  su merma de agua. Una unidad servida como «guisada» sí se interpreta como pieza
+  cocinada, porque su peso unitario corresponde al alimento ya preparado.
 - Aceite: cucharada/cda = 10 g = 90 kcal; cucharadita/cdta = 5 g = 45 kcal;
   chorrito o pulverización = 3 g = 27 kcal.
 - Cambiar gramos recalcula los nutrientes desde la referencia por 100 g.

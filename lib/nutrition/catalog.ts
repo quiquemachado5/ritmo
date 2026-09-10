@@ -1,6 +1,6 @@
 import type { ItemNutricional, ReferenciaNutricional } from "./types";
 
-export const VERSION_CATALOGO = "2026-09-10.2";
+export const VERSION_CATALOGO = "2026-09-10.3";
 
 // Transcripción contrastada con la ficha completa de FoodData Central, no con
 // resultados redondeados del buscador. Nutrientes USDA 1008/1003/1005/1004 por 100 g.

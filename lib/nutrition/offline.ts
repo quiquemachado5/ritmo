@@ -93,7 +93,7 @@ const DB: Alimento[] = [
   { claves: ["solomillo de ternera", "filete de ternera", "ternera", "carne"], kcal: 150, p: 20.5, c: 0, g: 7.5, porcion: 150, unidades: { filete: 140 }, mermaAgua: 0.2 },
   { claves: ["cinta de lomo adobada", "lomo adobado"], kcal: 125, p: 20, c: 0.5, g: 5, porcion: 150, unidades: { filete: 100 }, mermaAgua: 0.2 },
   { claves: ["solomillo de cerdo", "solomillo de cerdo iberico", "solomillo de cerdo ibérico"], kcal: 130, p: 22, c: 0, g: 4.5, porcion: 150, unidades: { filete: 130 }, mermaAgua: 0.2 },
-  { claves: ["lomo de cerdo magro", "lomo de cerdo", "lomo", "cerdo"], kcal: 145, p: 21, c: 0, g: 6.5, porcion: 150, unidades: { filete: 130 }, mermaAgua: 0.2 },
+  { claves: ["lomo de cerdo magro", "cinta de lomo", "lomo de cerdo", "lomo", "cerdo"], kcal: 145, p: 21, c: 0, g: 6.5, porcion: 150, unidades: { filete: 130, rodaja: 30, rodajas: 30 }, mermaAgua: 0.2 },
   { claves: ["paletilla de cordero", "pierna de cordero", "cordero"], kcal: 220, p: 18, c: 0, g: 16, porcion: 180, mermaAgua: 0.2 },
   { claves: ["chorizo", "salchichon", "salchichón", "fuet", "embutido"], kcal: 420, p: 21, c: 2, g: 36, porcion: 30, unidades: { loncha: 10 } },
   { claves: ["bacon", "panceta"], kcal: 541, p: 37, c: 1.4, g: 42, porcion: 30, unidades: { loncha: 15 } },
@@ -145,8 +145,9 @@ const DB: Alimento[] = [
   { claves: ["ensalada", "lechuga", "verdura", "verduras", "espinacas"], kcal: 20, p: 2.2, c: 1.4, g: 0.4, porcion: 150, unidades: { plato: 200 } },
   { claves: ["tomate", "tomate cherry"], kcal: 18, p: 0.9, c: 3.5, g: 0.2, porcion: 120 },
   { claves: ["cebolla", "pimiento rojo", "pimiento verde", "pimiento"], kcal: 32, p: 1, c: 6.5, g: 0.2, porcion: 100 },
-  { claves: ["diente de ajo", "dientes de ajo", "ajo"], kcal: 149, p: 6.4, c: 33.1, g: 0.5, porcion: 3, unidades: { diente: 3, dientes: 3 } },
+  { claves: ["diente de ajo", "dientes de ajo", "ajitos", "ajito", "ajos", "ajo"], kcal: 149, p: 6.4, c: 33.1, g: 0.5, porcion: 3, unidades: { diente: 3, dientes: 3 } },
   { claves: ["patata", "patatas", "papa"], kcal: 77, p: 2, c: 17, g: 0.1, porcion: 200 },
+  { claves: ["judias verdes", "judías verdes", "judia verde", "judía verde", "habichuelas verdes"], kcal: 31, p: 1.8, c: 4.3, g: 0.2, porcion: 200 },
   { claves: ["alubias cocidas", "judias cocidas", "judías cocidas", "legumbres cocidas"], kcal: 105, p: 7, c: 15, g: 1.5, porcion: 200, unidades: { plato: 250 } },
   { claves: ["platano", "plátano", "banana"], kcal: 89, p: 1.1, c: 20, g: 0.3, porcion: 120 },
   { claves: ["manzana", "pera"], kcal: 52, p: 0.3, c: 12, g: 0.2, porcion: 180 },
@@ -209,13 +210,22 @@ function sinTildes(s: string): string {
 }
 
 function aNumero(bruto: string): number | null {
-  const n = parseFloat(bruto.replace(",", "."));
+  const limpio = sinTildes(bruto);
+  const partes = limpio.split(/\s*(?:-|–|\ba\b)\s*/).filter(Boolean);
+  if (partes.length === 2) {
+    const extremos = partes.map(parte => aNumero(parte));
+    if (extremos.every((valor): valor is number => valor !== null)) {
+      return (extremos[0] + extremos[1]) / 2;
+    }
+  }
+  const n = parseFloat(limpio.replace(",", "."));
   if (Number.isFinite(n)) return n;
-  return NUMEROS[bruto] ?? null;
+  return NUMEROS[limpio] ?? null;
 }
 
 /** Patrón de cantidad: cifra o palabra ("2", "1,5", "media"). */
-const CANTIDAD = "\\b(\\d+(?:[.,]\\d+)?|un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|media|medio)\\b";
+const NUMERO = "(?:\\d+(?:[.,]\\d+)?|un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|media|medio)";
+const CANTIDAD = `\\b(${NUMERO}(?:\\s*(?:-|–|a)\\s*${NUMERO})?)\\b`;
 
 interface CantidadInterpretada { gramos: number; tipo: NonNullable<ItemNutricional["tipoCantidad"]>; original?: string }
 
@@ -319,7 +329,7 @@ function fragmentosNoInterpretados(texto: string, coincidencias: Coincidencia[])
   for (const c of coincidencias) for (let p = c.inicio; p < c.fin; p++) mascara[p] = " ";
   return [...new Set(mascara.join("").split(SEPARADOR).map(parte => parte
     .replace(new RegExp(`${CANTIDAD}\\s*(?:kg|kilos?|g|gr|grs|gramos?|ml|cl|litros?|l|cucharadas?|cda|cucharaditas?|cdta|filetes?|lonchas?|rebanadas?|latas?|vasos?|tazas?|unidades?|piezas?)?\\b`, "g"), " ")
-    .replace(/\b(?:de|del|la|el|los|las|a|al|en|un|una|unos|unas|y|con|sin|para|por|sobre|ensalada|bowl|bol|plato|bocadillo|tortilla|acompanad[oa]s?|aderezad[oa]s?|cocinad[oa]s?|saltead[oa]s?|cocid[oa]s?|guisad[oa]s?|cocinado|crudo|cruda|peso|plancha|horno|vapor|asado|asada|dados|tiras|rallad[oa]|pelad[oa]s?|escurrid[oa]s?|virgen|extra|fresco|fresca|caser[oa]|natural|entera|entero|piel|rodajas|laminas|templad[oa]|pure|hecho|blanco|eneldo|guindilla|sal)\b/g, " ")
+    .replace(/\b(?:de|del|la|el|los|las|a|al|en|un|una|unos|unas|y|con|sin|para|por|sobre|ensalada|bowl|bol|plato|bocadillo|tortilla|acompanad[oa]s?|aderezad[oa]s?|cocinad[oa]s?|saltead[oa]s?|rehogad[oa]s?|cocid[oa]s?|guisad[oa]s?|cocinado|crudo|cruda|peso|plancha|horno|vapor|asado|asada|dados|tiras|rallad[oa]|pelad[oa]s?|escurrid[oa]s?|virgen|extra|fresco|fresca|caser[oa]|natural|entera|entero|piel|rodajas|laminas|templad[oa]|pure|hecho|blanco|eneldo|guindilla|sal)\b/g, " ")
     .replace(/[().:·≈]/g, " ").replace(/\s+/g, " ").trim())
     .filter(parte => /[a-z]{2}/.test(parte)))];
 }

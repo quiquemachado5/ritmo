@@ -113,4 +113,21 @@ describe("estimador offline de comidas detalladas", () => {
     expect(estimarOffline("7 galletas").items[0].gramos).toBe(56);
     expect(estimarOffline("ensalada de lechuga con brocoli").items).toHaveLength(2);
   });
+
+  it("entiende un plato casero completo con diminutivos, rango de piezas y técnicas de cocina", () => {
+    const resultado = estimarOffline(
+      "judias verdes a la plancha rehogada con ajitos y una cucharada de aove y 5-6 rodajas de cinta de lomo guisada",
+    );
+
+    expect(resultado.items.map(item => item.nombre.split(" · ")[0])).toEqual([
+      "judias verdes",
+      "ajitos",
+      "aove",
+      "cinta de lomo",
+    ]);
+    expect(resultado.noReconocidos).toEqual([]);
+    expect(resultado.items.at(-1)).toMatchObject({ gramos: 165, cantidadEstimada: true });
+    expect(resultado.kcal).toBeGreaterThanOrEqual(440);
+    expect(resultado.kcal).toBeLessThanOrEqual(480);
+  });
 });
