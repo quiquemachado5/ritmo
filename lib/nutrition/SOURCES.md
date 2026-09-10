@@ -1,6 +1,6 @@
 # Catálogo nutricional de RITMO
 
-Versión `2026-09-10.1`. Revisión realizada el 10 de septiembre de 2026.
+Versión `2026-09-10.2`. Revisión realizada el 10 de septiembre de 2026.
 
 El análisis usa primero el catálogo local y determinista. Los proveedores externos
 solo pueden intervenir cuando la política de despliegue los habilita y queda algún
@@ -41,6 +41,10 @@ ID. `CATALOGO_NUTRICIONAL` expone todas las entradas, sus nutrientes y su estado
 - Volumen: ml indicados, masa aproximada. La conversión actual 1 ml ≈ 1 g no es
   una densidad validada para cada líquido: para mayor precisión se piden gramos.
 - Sin cantidad: porción supuesta y señalada como tal.
+- Los nombres compuestos se cuentan una sola vez: por ejemplo, «hamburguesa de
+  pollo» no suma además una hamburguesa genérica y otra ración de pollo. Cremas,
+  gazpacho, salmorejo y productos rebozados usan una receta media cuando no se
+  aporta etiqueta o desglose; por eso siempre aparecen como aproximados.
 - Salvo indicación expresa de «peso cocinado», los gramos se interpretan en crudo,
   fresco y limpio. Arroz, pasta, quinoa y legumbres secas aplican su factor de
   absorción de agua cuando el peso sí se declara cocinado; carnes y pescados aplican

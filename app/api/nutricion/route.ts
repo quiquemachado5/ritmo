@@ -91,7 +91,7 @@ export async function POST(request: Request) {
     // Los ingredientes conocidos nunca dependen de una respuesta variable de IA.
     // Solo consultamos proveedores cuando queda texto alimentario sin interpretar.
     if (!local.noReconocidos?.length || !EXTERNAL_NUTRITION_ENABLED) return json(local);
-    const hash = createHash("sha256").update("nutrition-v4").update(process.env.NEXT_PUBLIC_RITMO_BUILD_ID || "dev").update(process.env.GEMINI_NUTRITION_MODEL || "default").update(texto.toLowerCase().replace(/\s+/g, " ")).update(JSON.stringify(correcciones)).digest("hex");
+    const hash = createHash("sha256").update("nutrition-v5").update(process.env.NEXT_PUBLIC_RITMO_BUILD_ID || "dev").update(process.env.GEMINI_NUTRITION_MODEL || "default").update(texto.toLowerCase().replace(/\s+/g, " ")).update(JSON.stringify(correcciones)).digest("hex");
     const key = user.id + ":" + hash;
     let task = running.get(key);
     if (!task) {

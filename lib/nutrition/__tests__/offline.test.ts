@@ -2,6 +2,35 @@ import { describe, expect, it } from "vitest";
 import { estimarOffline } from "../offline";
 
 describe("estimador offline de comidas detalladas", () => {
+  it("no duplica los componentes nominales de platos compuestos", () => {
+    const resultado = estimarOffline("un bol de crema de calabacin casera con una hamburguesa de pollo a la plancha");
+    expect(resultado.kcal).toBe(315);
+    expect(resultado.items).toHaveLength(2);
+    expect(resultado.items.map(item => item.nombre.split(" · ")[0])).toEqual(["crema de calabacin", "hamburguesa de pollo"]);
+    expect(resultado.items.map(item => item.gramos)).toEqual([300, 120]);
+    expect(resultado.items.every(item => item.cantidadEstimada)).toBe(true);
+    expect(resultado.noReconocidos).toEqual([]);
+  });
+
+  it("separa una hamburguesa de pollo de sus acompañamientos reales", () => {
+    const resultado = estimarOffline("hamburguesa de pollo con 150 g de patata y 10 g de AOVE");
+    expect(resultado.items.map(item => item.nombre.split(" · ")[0])).toEqual(["hamburguesa de pollo", "patata", "aove"]);
+    expect(resultado.kcal).toBe(386);
+  });
+
+  it("cuenta el pan de bocadillos y sándwiches sin tragarse el relleno", () => {
+    const bocadillo = estimarOffline("un bocadillo de 2 filetes de pollo");
+    expect(bocadillo.items.map(item => item.nombre.split(" · ")[0])).toEqual(["bocadillo", "pollo"]);
+    expect(bocadillo.kcal).toBe(562);
+    const sandwich = estimarOffline("un sandwich con 2 lonchas de pavo");
+    expect(sandwich.items.map(item => item.gramos)).toEqual([60, 40]);
+    expect(sandwich.kcal).toBe(186);
+  });
+
+  it("reconoce platos preparados frecuentes sin tratarlos como su ingrediente crudo", () => {
+    expect(estimarOffline("un vaso de gazpacho").kcal).toBe(113);
+    expect(estimarOffline("dos barritas de merluza").kcal).toBe(114);
+  });
   it("conserva las comas decimales sin confundirlas con separadores", () => {
     const decimal = estimarOffline("1,5 kg de patata, 20 g de pan");
     const entero = estimarOffline("1500 g de patata con 20 g de pan");

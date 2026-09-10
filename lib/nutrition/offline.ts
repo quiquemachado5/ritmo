@@ -80,7 +80,7 @@ const DB: Alimento[] = [
   { claves: ["crema de almendra", "crema de cacahuete", "cacahuetes"], kcal: 600, p: 26, c: 10, g: 50, porcion: 30, unidades: { cucharada: 16 } },
 
   /* --- Carnes y fiambres --- */
-  { claves: ["pechuga de pavo en lonchas", "pavo en lonchas", "fiambre de pavo", "jamon de pavo", "jamón de pavo"], kcal: 90, p: 18, c: 1, g: 1.2, porcion: 40, unidades: { loncha: 20, lonchas: 20 } },
+  { claves: ["pechuga de pavo en lonchas", "pavo en lonchas", "lonchas de pavo", "fiambre de pavo", "jamon de pavo", "jamón de pavo"], kcal: 90, p: 18, c: 1, g: 1.2, porcion: 40, unidades: { loncha: 20, lonchas: 20 } },
   { claves: ["pechuga de pavo", "pavo fresco", "pavo"], kcal: 105, p: 24, c: 0, g: 1, porcion: 150, unidades: { filete: 130 }, mermaAgua: 0.2 },
   { claves: ["jamon york", "jamón york", "jamon cocido", "jamón cocido"], kcal: 120, p: 18, c: 1.5, g: 4.5, porcion: 50, unidades: { loncha: 20 } },
   { claves: ["jamon serrano", "jamón serrano", "jamon iberico", "jamón ibérico", "jamon", "jamón"], kcal: 200, p: 30, c: 0.5, g: 8.5, porcion: 40, unidades: { loncha: 15 } },
@@ -100,6 +100,7 @@ const DB: Alimento[] = [
 
   /* --- Pescados --- */
   { claves: ["lomo de salmon", "lomo de salmón", "salmon", "salmón"], kcal: 208, p: 20, c: 0, g: 13.5, porcion: 150, unidades: { filete: 140 }, mermaAgua: 0.18 },
+  { claves: ["barritas de merluza", "barrita de merluza", "varitas de merluza", "varita de merluza"], kcal: 190, p: 12, c: 18, g: 8, porcion: 90, unidades: { unidad: 30 } },
   { claves: ["atun al natural", "atún al natural"], kcal: 100, p: 23.5, c: 0, g: 1, porcion: 80, unidades: { lata: 56 } },
   { claves: ["atun en aceite de oliva", "atún en aceite de oliva", "atun en aceite", "atún en aceite"], kcal: 190, p: 24, c: 0, g: 10.5, porcion: 80, unidades: { lata: 56 } },
   { claves: ["atun fresco", "atún fresco", "atun", "atún"], kcal: 130, p: 23, c: 0, g: 4, porcion: 150, unidades: { filete: 140, lata: 56 }, mermaAgua: 0.18 },
@@ -155,9 +156,19 @@ const DB: Alimento[] = [
   { claves: ["fruta"], kcal: 55, p: 0.8, c: 13, g: 0.2, porcion: 150 },
 
   /* --- Platos y ultraprocesados --- */
-  { claves: ["bocadillo", "sandwich", "sándwich", "bocata"], kcal: 250, p: 11, c: 30, g: 9, porcion: 180 },
+  { claves: ["crema de calabacin", "crema de calabacín"], kcal: 45, p: 1.5, c: 5.5, g: 2, porcion: 300, unidades: { bol: 300, plato: 300, taza: 240 } },
+  { claves: ["crema de calabaza"], kcal: 48, p: 1.4, c: 7, g: 1.8, porcion: 300, unidades: { bol: 300, plato: 300, taza: 240 } },
+  { claves: ["crema de verduras", "sopa de verduras"], kcal: 43, p: 1.5, c: 6, g: 1.5, porcion: 300, unidades: { bol: 300, plato: 300, taza: 240 } },
+  { claves: ["gazpacho"], kcal: 45, p: 1, c: 4, g: 2.7, porcion: 250, unidades: { vaso: 250, taza: 240 } },
+  { claves: ["salmorejo"], kcal: 115, p: 2.5, c: 10, g: 7.5, porcion: 250, unidades: { bol: 250, plato: 250, vaso: 250 } },
+  { claves: ["hamburguesa completa", "hamburguesa con pan"], kcal: 260, p: 15, c: 22, g: 12, porcion: 220, unidades: { unidad: 220 } },
+  { claves: ["hamburguesa de pollo"], kcal: 150, p: 20, c: 3, g: 6.4, porcion: 120, unidades: { unidad: 120 } },
+  { claves: ["hamburguesa de pavo"], kcal: 140, p: 20, c: 3, g: 5.3, porcion: 120, unidades: { unidad: 120 } },
+  { claves: ["hamburguesa de ternera", "hamburguesa de vacuno"], kcal: 210, p: 18, c: 2, g: 15, porcion: 120, unidades: { unidad: 120 } },
+  { claves: ["bocadillo", "bocata"], kcal: 250, p: 8.5, c: 50, g: 1.5, porcion: 100, unidades: { unidad: 100 } },
+  { claves: ["sandwich", "sándwich"], kcal: 250, p: 8.5, c: 50, g: 1.5, porcion: 60, unidades: { unidad: 60 } },
   { claves: ["pizza"], kcal: 266, p: 11, c: 33, g: 10, porcion: 120, unidades: { porcion: 110, entera: 450 } },
-  { claves: ["hamburguesa"], kcal: 260, p: 15, c: 22, g: 12, porcion: 220 },
+  { claves: ["hamburguesa"], kcal: 210, p: 18, c: 2, g: 15, porcion: 120, unidades: { unidad: 120 } },
   { claves: ["patatas fritas", "fritas"], kcal: 312, p: 3.4, c: 41, g: 15, porcion: 130 },
   { claves: ["chocolate", "onza"], kcal: 546, p: 5, c: 61, g: 31, porcion: 25, unidades: { onza: 10, tableta: 100 } },
   { claves: ["galletas", "galleta"], kcal: 480, p: 7, c: 68, g: 20, porcion: 30, unidades: { unidad: 8 } },
@@ -290,7 +301,6 @@ function localizar(texto: string): Coincidencia[] {
   // "ensalada de lechuga" activa dos sinónimos del mismo alimento. Conservamos
   // el término específico y evitamos duplicar toda la guarnición.
   return ordenadas.filter((actual, indice) => {
-    if (actual.alimento.claves[0] === "bocadillo" && ordenadas.length > 1) return false;
     const siguiente = ordenadas[indice + 1];
     if (!siguiente || siguiente.alimento !== actual.alimento) return true;
     const puente = texto.slice(actual.fin, siguiente.inicio).trim();
@@ -309,7 +319,7 @@ function fragmentosNoInterpretados(texto: string, coincidencias: Coincidencia[])
   for (const c of coincidencias) for (let p = c.inicio; p < c.fin; p++) mascara[p] = " ";
   return [...new Set(mascara.join("").split(SEPARADOR).map(parte => parte
     .replace(new RegExp(`${CANTIDAD}\\s*(?:kg|kilos?|g|gr|grs|gramos?|ml|cl|litros?|l|cucharadas?|cda|cucharaditas?|cdta|filetes?|lonchas?|rebanadas?|latas?|vasos?|tazas?|unidades?|piezas?)?\\b`, "g"), " ")
-    .replace(/\b(?:de|del|la|el|los|las|a|al|en|un|una|unos|unas|y|con|sin|para|por|sobre|ensalada|bowl|bol|plato|bocadillo|tortilla|acompanad[oa]s?|aderezad[oa]s?|cocinad[oa]s?|saltead[oa]s?|cocid[oa]s?|guisad[oa]s?|cocinado|crudo|cruda|peso|plancha|horno|vapor|asado|asada|dados|tiras|rallad[oa]|pelad[oa]s?|escurrid[oa]s?|virgen|extra|fresco|fresca|natural|entera|entero|piel|rodajas|laminas|templad[oa]|pure|hecho|blanco|eneldo|guindilla|sal)\b/g, " ")
+    .replace(/\b(?:de|del|la|el|los|las|a|al|en|un|una|unos|unas|y|con|sin|para|por|sobre|ensalada|bowl|bol|plato|bocadillo|tortilla|acompanad[oa]s?|aderezad[oa]s?|cocinad[oa]s?|saltead[oa]s?|cocid[oa]s?|guisad[oa]s?|cocinado|crudo|cruda|peso|plancha|horno|vapor|asado|asada|dados|tiras|rallad[oa]|pelad[oa]s?|escurrid[oa]s?|virgen|extra|fresco|fresca|caser[oa]|natural|entera|entero|piel|rodajas|laminas|templad[oa]|pure|hecho|blanco|eneldo|guindilla|sal)\b/g, " ")
     .replace(/[().:·≈]/g, " ").replace(/\s+/g, " ").trim())
     .filter(parte => /[a-z]{2}/.test(parte)))];
 }

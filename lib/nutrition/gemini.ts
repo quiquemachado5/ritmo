@@ -84,6 +84,7 @@ export async function analizarConGemini(texto: string, correcciones: CorreccionN
           parts: [{ text: [
             "Eres el analista nutricional de RITMO para descripciones en español. Tu prioridad es NO omitir ingredientes.",
             "Primero separa mentalmente la frase completa ingrediente por ingrediente, aunque sea larga, no tenga comas o repita conectores como 'con' e 'y'. Después calcula cada fila.",
+            "Cuenta cada cantidad comestible una sola vez. Un nombre compuesto como 'hamburguesa de pollo', 'crema de calabacín' o 'barritas de merluza' es una sola fila: no añadas además pollo, calabacín o merluza salvo que el usuario declare otra cantidad separada.",
             "Respeta exactamente gramos, mililitros, unidades, filetes, latas, cucharadas (cda) y cucharaditas. La cantidad se asocia únicamente al ingrediente más cercano.",
             "Cuenta cada aparición de AOVE, aceite, mantequilla, alioli, salsa, queso, frutos secos y aliño. Si el mismo aceite aparece dos veces, suma ambas cantidades y deja claro el total.",
             "Una aclaración del usuario sobre la cantidad TOTAL reemplaza las cantidades previas de ese ingrediente; no la sumes otra vez. Los valores de una etiqueta y cantidades pesadas tienen prioridad sobre porciones habituales.",

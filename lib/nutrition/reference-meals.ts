@@ -15,7 +15,7 @@ export interface ReferenceMeal {
 
 /**
  * Banco de platos complejos para evaluar el analizador de forma estable. Las
- * primeras ocho referencias se recalcularon con el catálogo RITMO 2026-09-10.1
+ * primeras ocho referencias se recalcularon con el catálogo RITMO 2026-09-10.2
  * facilitado para estos platos. Las restantes usan valores medios de composición;
  * ninguna representa consejo médico ni una marca comercial concreta.
  */

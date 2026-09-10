@@ -32,5 +32,6 @@ describe("respaldo de modelos Gemini", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(String(fetchMock.mock.calls[0][0])).toContain("gemini-3.7-flash");
     expect(String(fetchMock.mock.calls[1][0])).toContain("gemini-3.5-flash");
+    expect(String(fetchMock.mock.calls[1][1]?.body)).toContain("hamburguesa de pollo");
   });
 });
