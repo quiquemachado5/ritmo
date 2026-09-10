@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronUp, LogOut, MoreHorizontal, Plus, Search, ShieldCheck } from "lucide-react";
+import { ChevronUp, LogOut, Maximize2, Minimize2, MoreHorizontal, Plus, Search, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +30,11 @@ import { useModoViaje } from "@/lib/travel-mode";
 import { usePlatformConfig, useReleasedExperiments } from "./platform-provider";
 
 type MomentoRitmo = "dia" | "manana" | "tarde" | "noche";
+const EVENTO_VISTA_MINIMA = "ritmo:vista-minima";
+
+function claveVistaMinima(userId?: string | null) {
+  return `ritmo:vista-minima:${userId || "local"}`;
+}
 
 function momentoActual(): MomentoRitmo {
   const hora = new Date().getHours();
@@ -107,6 +112,17 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
   const pulso = React.useMemo(() => estadoVisualRitmo(estado), [estado]);
   const viaje = useModoViaje(userId);
   const [momento, setMomento] = React.useState<MomentoRitmo>("dia");
+  const vistaMinima = React.useSyncExternalStore(
+    React.useCallback((actualizar) => {
+      const onStorage = (event: StorageEvent) => { if (event.key === claveVistaMinima(userId)) actualizar(); };
+      const onLocal = () => actualizar();
+      window.addEventListener("storage", onStorage);
+      window.addEventListener(EVENTO_VISTA_MINIMA, onLocal);
+      return () => { window.removeEventListener("storage", onStorage); window.removeEventListener(EVENTO_VISTA_MINIMA, onLocal); };
+    }, [userId]),
+    React.useCallback(() => window.localStorage.getItem(claveVistaMinima(userId)) === "true", [userId]),
+    () => false,
+  );
 
   const activo = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
   const primarios = NAV_ITEMS.filter((i) => i.primary);
@@ -129,6 +145,17 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
     const intervalo = window.setInterval(actualizarMomento, 5 * 60_000);
     return () => window.clearInterval(intervalo);
   }, []);
+
+  React.useEffect(() => {
+    document.documentElement.dataset.vistaMinima = String(vistaMinima);
+    return () => { delete document.documentElement.dataset.vistaMinima; };
+  }, [vistaMinima]);
+
+  function alternarVistaMinima() {
+    const siguiente = !vistaMinima;
+    window.localStorage.setItem(claveVistaMinima(userId), String(siguiente));
+    window.dispatchEvent(new Event(EVENTO_VISTA_MINIMA));
+  }
 
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -209,6 +236,7 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
           <div className="flex min-w-0 items-center gap-0.5">
             <UserMenu expanded isAdmin={isAdmin} />
             <span className="h-7 w-px bg-border" aria-hidden="true" />
+            <MinimalViewToggle active={vistaMinima} onToggle={alternarVistaMinima} />
             <ThemeToggle />
           </div>
         </div>
@@ -221,6 +249,7 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
         </Link>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" className="size-9 rounded-xl" onClick={() => setBusquedaAbierta(true)} aria-label="Buscar"><Search className="size-5" /></Button>
+          <MinimalViewToggle active={vistaMinima} onToggle={alternarVistaMinima} />
           <ThemeToggle />
           <UserMenu isAdmin={isAdmin} />
         </div>
@@ -265,6 +294,12 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
       <GlobalSearch open={busquedaAbierta} onOpenChange={setBusquedaAbierta} />
     </div>
   );
+}
+
+function MinimalViewToggle({ active, onToggle }: { active: boolean; onToggle: () => void }) {
+  const Icon = active ? Maximize2 : Minimize2;
+  const label = active ? "Salir del modo mínimo" : "Activar modo mínimo";
+  return <Button type="button" variant="ghost" size="icon" onClick={onToggle} aria-pressed={active} aria-label={label} title={label} className={cn("size-9 rounded-xl transition-colors", active ? "bg-primary/12 text-primary hover:bg-primary/18" : "text-muted-foreground hover:bg-secondary hover:text-foreground")}><Icon className="size-[1.05rem]" /></Button>;
 }
 
 function SidebarNavLink({ item, active }: { item: (typeof NAV_ITEMS)[number]; active: boolean }) {

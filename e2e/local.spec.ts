@@ -163,6 +163,21 @@ test("la navegación normal no expone administración ni herramientas internas",
   await expect(page.locator("aside").getByText(/usuarios/i)).toHaveCount(0);
 });
 
+test("el modo mínimo resume toda la app y conserva la preferencia", async ({ page, request }) => {
+  await request.post("http://127.0.0.1:3199/__reset");
+  await iniciarSesion(page);
+  await page.getByRole("button", { name: "Activar modo mínimo", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-vista-minima", "true");
+  await irA(page, "/nutricion");
+  await expect(page.getByText("Registra, revisa y ajusta cada estimación.", { exact: true })).toBeHidden();
+  await expect(page.getByRole("heading", { name: "Tu día de hoy", exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-vista-minima", "true");
+  await page.getByRole("button", { name: "Salir del modo mínimo", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-vista-minima", "false");
+  await expect(page.getByText("Registra, revisa y ajusta cada estimación.", { exact: true })).toBeVisible();
+});
+
 test("administración separa usuarios, lanzamientos y modelos sin datos de salud", async ({ page, request }, info) => {
   await request.post("http://127.0.0.1:3199/__reset");
   await page.goto("/login");
