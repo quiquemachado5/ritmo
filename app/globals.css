@@ -475,35 +475,6 @@ html[data-densidad="espaciosa"] .app-content > div > .flex.flex-col {
   html[data-densidad="espaciosa"] .app-content { padding-top: 2.75rem; padding-bottom: 4.5rem; }
 }
 
-/* Modo mínimo: conserva todas las acciones y datos, pero elimina explicación
-   repetida y comprime el ritmo de lectura en cualquier pestaña. */
-html[data-vista-minima="true"] .app-content {
-  max-width: 76rem;
-  padding-top: .75rem;
-  padding-bottom: calc(5.75rem + env(safe-area-inset-bottom));
-}
-html[data-vista-minima="true"] .app-content > div > .flex.flex-col { gap: 1rem; }
-html[data-vista-minima="true"] .app-content [data-slot="page-header"] {
-  gap: .5rem;
-  padding-bottom: .75rem;
-}
-html[data-vista-minima="true"] .app-content [data-slot="page-header"] > div > p,
-html[data-vista-minima="true"] .app-content [data-slot="flow-description"] { display: none; }
-html[data-vista-minima="true"] .app-content [data-slot="integrated-flow"] { gap: 1.25rem; }
-html[data-vista-minima="true"] .app-content [data-slot="flow-header"] { margin-bottom: .5rem; }
-html[data-vista-minima="true"] .app-content [data-slot="flow-header"] h2 { font-size: 1rem; }
-html[data-vista-minima="true"] .app-content [data-slot="flow-content"] { gap: .625rem; }
-html[data-vista-minima="true"] .app-content [data-slot="section-header"] { margin-bottom: .5rem; }
-html[data-vista-minima="true"] .app-content [data-slot="card"]:not(.p-0) {
-  gap: .75rem;
-  padding-block: .875rem;
-}
-html[data-vista-minima="true"] .app-content footer { margin-top: 1.25rem; padding-top: .75rem; }
-@media (min-width: 48rem) {
-  html[data-vista-minima="true"] .app-content { padding-top: 1rem; padding-bottom: 2rem; }
-  html[data-vista-minima="true"] .app-content [data-slot="integrated-flow"] { gap: 1.5rem; }
-}
-
 /* --- Micro-interacciones --------------------------------------------------- */
 /* Pop del check al cumplir un hábito: entra con un pequeño rebote. Coherente
    con la racha 🔥 — marcar debe sentirse gratificante, no burocrático. */

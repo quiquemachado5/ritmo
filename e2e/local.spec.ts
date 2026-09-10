@@ -164,18 +164,23 @@ test("la navegación normal no expone administración ni herramientas internas",
   await expect(page.locator("aside").getByText(/usuarios/i)).toHaveCount(0);
 });
 
-test("el modo mínimo resume toda la app y conserva la preferencia", async ({ page, request }) => {
+test("el modo mínimo sustituye la app por una única acción y recupera la pestaña", async ({ page, request }, info) => {
   await request.post("http://127.0.0.1:3199/__reset");
   await iniciarSesion(page);
+  await irA(page, "/nutricion");
   await page.getByRole("button", { name: "Activar modo mínimo", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-vista-minima", "true");
-  await irA(page, "/nutricion");
-  await expect(page.getByText("Registra, revisa y ajusta cada estimación.", { exact: true })).toBeHidden();
-  await expect(page.getByRole("heading", { name: "Tu día de hoy", exact: true })).toBeVisible();
+  await expect(page).toHaveURL(url => url.pathname === "/nutricion");
+  await expect(page.getByRole("heading", { name: /Hoy, a lo esencial/ })).toBeVisible();
+  await expect(page.getByRole("main").getByRole("button")).toHaveCount(1);
+  await expect(page.getByRole("navigation", { name: "Navegación principal móvil" })).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "Secciones de RITMO" })).toHaveCount(0);
+  await page.screenshot({ path: `test-results/${info.project.name}-modo-minimo.png`, fullPage: true });
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-vista-minima", "true");
   await page.getByRole("button", { name: "Salir del modo mínimo", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-vista-minima", "false");
+  await expect(page).toHaveURL(url => url.pathname === "/nutricion");
   await expect(page.getByText("Registra, revisa y ajusta cada estimación.", { exact: true })).toBeVisible();
 });
 

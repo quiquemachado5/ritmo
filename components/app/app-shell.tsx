@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronUp, LogOut, Maximize2, Minimize2, MoreHorizontal, Plus, Search, ShieldCheck } from "lucide-react";
+import { ChevronUp, Focus, LogOut, Maximize2, Minimize2, MoreHorizontal, Plus, Search, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,10 +24,12 @@ import { PageTransition } from "@/components/page-transition";
 import { TravelBanner } from "./travel-banner";
 import { GlobalSearch } from "./global-search";
 import { hoy } from "@/lib/model/dates";
-import { siguienteAccion } from "@/lib/model/next-action";
+import { siguienteAccion, type SiguienteAccion } from "@/lib/model/next-action";
 import { estadoVisualRitmo } from "@/lib/model/insights";
 import { useModoViaje } from "@/lib/travel-mode";
 import { usePlatformConfig, useReleasedExperiments } from "./platform-provider";
+import { habitosModelo } from "@/lib/model/config";
+import type { Estado } from "@/lib/model/types";
 
 type MomentoRitmo = "dia" | "manana" | "tarde" | "noche";
 const EVENTO_VISTA_MINIMA = "ritmo:vista-minima";
@@ -193,9 +195,20 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
     >
       {experimentos.interfazViva && <div className="biological-ambient" aria-hidden="true" />}
       {platform.announcement && <div className="border-b border-primary/20 bg-primary/8 px-4 py-2 text-center text-xs font-medium text-primary md:pl-[16.25rem]">{platform.announcement}</div>}
-      <TravelBanner />
+      {!vistaMinima && <TravelBanner />}
       {/* Sidebar — escritorio */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-[16.25rem] flex-col border-r border-border/80 bg-card/97 px-3 py-3 shadow-[8px_0_28px_-28px_var(--foreground)] md:flex">
+        {vistaMinima ? <>
+          <div className="flex h-12 items-center px-2">
+            <RitmoLogo wordmarkClassName="h-8" />
+          </div>
+          <div className="flex flex-1 flex-col items-center justify-center px-5 text-center">
+            <span className="grid size-11 place-items-center rounded-2xl bg-primary/10 text-primary"><Focus className="size-5" /></span>
+            <p className="mt-3 text-sm font-semibold">Modo mínimo</p>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Una sola cosa cada vez.</p>
+          </div>
+          <Button type="button" variant="secondary" onClick={alternarVistaMinima} className="min-h-11 w-full justify-start rounded-xl px-3" aria-label="Salir del modo mínimo"><Maximize2 className="size-4" /> Vista completa</Button>
+        </> : <>
         <div className="flex h-12 items-center justify-between gap-3 px-2">
           <Link href="/" aria-label="RITMO — inicio" className="inline-flex rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring">
             <RitmoLogo wordmarkClassName="h-8" />
@@ -240,6 +253,7 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
             <ThemeToggle />
           </div>
         </div>
+        </>}
       </aside>
 
       {/* Cabecera — móvil */}
@@ -247,29 +261,29 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
         <Link href="/" aria-label="RITMO — inicio">
           <RitmoLogo />
         </Link>
-        <div className="flex items-center gap-1">
+        {vistaMinima ? <Button type="button" variant="secondary" size="sm" onClick={alternarVistaMinima} className="min-h-9 rounded-xl" aria-label="Salir del modo mínimo"><Maximize2 className="size-4" /> Vista completa</Button> : <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" className="size-9 rounded-xl" onClick={() => setBusquedaAbierta(true)} aria-label="Buscar"><Search className="size-5" /></Button>
           <MinimalViewToggle active={vistaMinima} onToggle={alternarVistaMinima} />
           <ThemeToggle />
           <UserMenu isAdmin={isAdmin} />
-        </div>
+        </div>}
       </header>
 
       {/* Contenido */}
       <div className="md:pl-[16.25rem]">
         <main className="app-content mx-auto w-full max-w-[88rem] px-[clamp(1rem,3vw,3.5rem)] pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-5 md:pb-14 md:pt-9">
-          <PageTransition>{children}</PageTransition>
-          <footer className="mt-10 border-t border-border pt-4 text-center text-[0.68rem] text-muted-foreground/60 md:text-left">
+          <PageTransition>{vistaMinima ? <MinimalFocus estado={estado} recomendada={recomendada} onRegistrar={() => abrir(recomendada.tab)} /> : children}</PageTransition>
+          {!vistaMinima && <footer className="mt-10 border-t border-border pt-4 text-center text-[0.68rem] text-muted-foreground/60 md:text-left">
             hecho por{" "}
             <a href="https://github.com/quiquemachado5" target="_blank" rel="noopener noreferrer" className="font-medium text-muted-foreground transition-colors hover:text-foreground hover:underline">
               quiquemachado5
             </a>
-          </footer>
+          </footer>}
         </main>
       </div>
 
       {/* Barra inferior + FAB — móvil */}
-      <nav aria-label="Navegación principal móvil" className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur-md md:hidden">
+      {!vistaMinima && <nav aria-label="Navegación principal móvil" className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur-md md:hidden">
         <div className="mx-auto flex min-h-[4.2rem] max-w-lg items-stretch justify-around px-2 pb-[env(safe-area-inset-bottom)]">
           {primarios.slice(0, 2).map((item) => (
             <NavTab key={item.href} item={item} active={activo(item.href)} />
@@ -288,12 +302,49 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
             <NavTab key={item.href} item={item} active={activo(item.href)} />
           ))}
         </div>
-      </nav>
+      </nav>}
 
       <QuickLog />
       <GlobalSearch open={busquedaAbierta} onOpenChange={setBusquedaAbierta} />
     </div>
   );
+}
+
+function MinimalFocus({ estado, recomendada, onRegistrar }: { estado: Estado; recomendada: SiguienteAccion; onRegistrar: () => void }) {
+  const fecha = hoy();
+  const dia = estado.dias[fecha];
+  const habitos = habitosModelo(estado.perfil);
+  const hechos = habitos.filter(habito => dia?.habitos?.[habito.clave]).length;
+  const total = habitos.length;
+  const porcentaje = total ? Math.round((hechos / total) * 100) : 0;
+  const nombre = estado.perfil.nombre?.trim().split(/\s+/)[0];
+  const mensaje = hechos === total && total > 0
+    ? "Tu base de hoy está completa. No necesitas revisar nada más."
+    : hechos === 0
+      ? `Empieza por ${recomendada.etiqueta.toLocaleLowerCase("es-ES")}. Lo demás puede esperar.`
+      : `Llevas ${hechos} de ${total}. Haz el siguiente paso y vuelve a tu día.`;
+  const fechaHumana = new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long" }).format(new Date(`${fecha}T12:00:00`));
+
+  return <div className="mx-auto flex min-h-[calc(100dvh-8rem)] w-full max-w-xl items-center py-6 md:min-h-[calc(100dvh-4.5rem)]">
+    <section className="w-full rounded-3xl border border-border/80 bg-card p-5 shadow-sm sm:p-8" aria-labelledby="minimal-title">
+      <p className="text-sm text-muted-foreground">{fechaHumana[0].toUpperCase() + fechaHumana.slice(1)}</p>
+      <h1 id="minimal-title" className="mt-1 font-display text-3xl font-bold tracking-tight text-balance sm:text-4xl">Hoy, a lo esencial{nombre ? `, ${nombre}` : ""}.</h1>
+      <p className="mt-3 max-w-md text-base leading-relaxed text-muted-foreground">{mensaje}</p>
+
+      <div className="my-6 border-y border-border py-4">
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-sm font-medium">Hábitos de hoy</span>
+          <strong className="font-display text-lg tabular text-primary">{hechos}/{total}</strong>
+        </div>
+        <div className="mt-3 h-2 overflow-hidden rounded-full bg-secondary" aria-label={`${hechos} de ${total} hábitos completados`} role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={hechos}>
+          <div className="h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${porcentaje}%` }} />
+        </div>
+      </div>
+
+      <Button type="button" onClick={onRegistrar} className="min-h-12 w-full rounded-xl text-base"><Plus className="size-5" /> {recomendada.etiqueta}</Button>
+      <p className="mt-3 text-center text-xs leading-relaxed text-muted-foreground">El registro rápido incluye comida, peso y hábitos.</p>
+    </section>
+  </div>;
 }
 
 function MinimalViewToggle({ active, onToggle }: { active: boolean; onToggle: () => void }) {
