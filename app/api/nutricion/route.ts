@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
-import { estimarOffline } from "@/lib/nutrition/offline";
 import type { AnalisisNutricional, CorreccionNutricional } from "@/lib/nutrition/types";
 import { analizarConEdamam } from "@/lib/nutrition/edamam";
 import { analizarConGemini } from "@/lib/nutrition/gemini";
@@ -44,7 +43,7 @@ function correccionesValidas(valor: unknown): CorreccionNutricional[] {
 }
 
 
-async function resolver(texto: string, correcciones: CorreccionNutricional[], userId: string, hash: string): Promise<AnalisisNutricional> {
+async function resolver(texto: string, correcciones: CorreccionNutricional[], userId: string, hash: string, local: AnalisisNutricional): Promise<AnalisisNutricional> {
   const claim = await claimNutrition(userId, hash);
   if (claim.status === "cached") return claim.result;
   if (claim.status === "busy") throw new Error("busy");
@@ -59,7 +58,7 @@ async function resolver(texto: string, correcciones: CorreccionNutricional[], us
   }
   if (resultado && (!Number.isFinite(resultado.kcal) || resultado.kcal <= 0 || resultado.kcal > 6000)) resultado = null;
   if (!resultado) {
-    resultado = estimarOffline(texto);
+    resultado = local;
     resultado.aviso = claim.status === "limited"
       ? "Se ha alcanzado la cuota de análisis online. Estimación local: revisa las cantidades."
       : "Análisis online no disponible. Estimación local orientativa: revisa ingredientes y cantidades.";
@@ -88,12 +87,15 @@ export async function POST(request: Request) {
     if (!body || typeof body.texto !== "string" || !body.texto.trim() || body.texto.length > 2500) return json({ error: "Describe la comida en un máximo de 2.500 caracteres." }, 400);
     const texto = body.texto.trim();
     const correcciones = correccionesValidas(body.correcciones);
-    if (!EXTERNAL_NUTRITION_ENABLED) return json(analizarLocal(texto, correcciones));
-    const hash = createHash("sha256").update("nutrition-v3").update(process.env.NEXT_PUBLIC_RITMO_BUILD_ID || "dev").update(process.env.GEMINI_NUTRITION_MODEL || "default").update(texto.toLowerCase().replace(/\s+/g, " ")).update(JSON.stringify(correcciones)).digest("hex");
+    const local = analizarLocal(texto, correcciones);
+    // Los ingredientes conocidos nunca dependen de una respuesta variable de IA.
+    // Solo consultamos proveedores cuando queda texto alimentario sin interpretar.
+    if (!local.noReconocidos?.length || !EXTERNAL_NUTRITION_ENABLED) return json(local);
+    const hash = createHash("sha256").update("nutrition-v4").update(process.env.NEXT_PUBLIC_RITMO_BUILD_ID || "dev").update(process.env.GEMINI_NUTRITION_MODEL || "default").update(texto.toLowerCase().replace(/\s+/g, " ")).update(JSON.stringify(correcciones)).digest("hex");
     const key = user.id + ":" + hash;
     let task = running.get(key);
     if (!task) {
-      task = resolver(texto, correcciones, user.id, hash).finally(() => running.delete(key));
+      task = resolver(texto, correcciones, user.id, hash, local).finally(() => running.delete(key));
       running.set(key, task);
     }
     return json(await task);

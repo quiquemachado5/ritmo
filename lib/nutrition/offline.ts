@@ -23,12 +23,16 @@ interface Alimento {
   unidades?: Record<string, number>;
   /** Si es líquido, 1 ml ≈ 1 g. */
   liquido?: boolean;
+  /** Multiplicador de peso al cocinar un cereal o legumbre seca. */
+  absorcionAgua?: number;
+  /** Fracción de peso perdida al cocinar carne o pescado. */
+  mermaAgua?: number;
 }
 
 /* Gramos por unidad genérica, usados si el alimento no define la suya. */
 const UNIDADES_GENERICAS: Record<string, number> = {
-  cucharada: 15,
-  cda: 15,
+  cucharada: 10,
+  cda: 10,
   cucharadita: 5,
   cdta: 5,
   loncha: 25,
@@ -51,75 +55,102 @@ const UNIDADES_GENERICAS: Record<string, number> = {
 
 const DB: Alimento[] = [
   /* --- Panadería y cereales --- */
-  { claves: ["pan de molde", "pan molde"], kcal: 265, p: 9, c: 49, g: 3.2, porcion: 30, unidades: { rebanada: 30 } },
-  { claves: ["pan integral"], kcal: 247, p: 9, c: 41, g: 3.4, porcion: 50, unidades: { rebanada: 30 } },
-  { claves: ["pan", "barra de pan", "tostada", "tostadas", "rebanada de pan", "picos", "biscote"], kcal: 265, p: 9, c: 49, g: 3.2, porcion: 50, unidades: { rebanada: 30, tostada: 30 } },
-  { claves: ["avena", "copos de avena"], kcal: 379, p: 13, c: 68, g: 7, porcion: 40 },
+  { claves: ["pan de molde integral", "pan de molde", "pan molde"], kcal: 250, p: 10, c: 40, g: 3.3, porcion: 30, unidades: { rebanada: 30 } },
+  { claves: ["pan integral"], kcal: 250, p: 8.5, c: 50, g: 1.5, porcion: 50, unidades: { rebanada: 30 } },
+  { claves: ["pan", "barra de pan", "tostada", "tostadas", "rebanada de pan", "picos", "biscote"], kcal: 250, p: 8.5, c: 50, g: 1.5, porcion: 50, unidades: { rebanada: 30, tostada: 30 } },
+  { claves: ["avena", "copos de avena"], kcal: 370, p: 13.5, c: 58, g: 7, porcion: 40 },
   { claves: ["cereales"], kcal: 380, p: 7, c: 82, g: 3, porcion: 40 },
-  { claves: ["arroz", "arroz basmati"], kcal: 130, p: 2.7, c: 28, g: 0.3, porcion: 180, unidades: { plato: 200 } },
-  { claves: ["pasta penne rigate", "penne rigate", "pasta", "espagueti", "espaguetis", "macarrones", "fideos"], kcal: 158, p: 5.8, c: 31, g: 0.9, porcion: 180, unidades: { plato: 200 } },
-  { claves: ["quinoa"], kcal: 120, p: 4.4, c: 21, g: 1.9, porcion: 150 },
+  { claves: ["arroz integral"], kcal: 350, p: 7.5, c: 74, g: 2.5, porcion: 80, unidades: { plato: 200 }, absorcionAgua: 2.7 },
+  { claves: ["arroz", "arroz basmati", "arroz jazmin", "arroz jazmín"], kcal: 355, p: 7, c: 78, g: 0.8, porcion: 80, unidades: { plato: 200 }, absorcionAgua: 2.7 },
+  { claves: ["pasta penne rigate", "penne rigate", "pasta penne", "pasta", "espagueti", "espaguetis", "macarrones", "fideos"], kcal: 350, p: 12, c: 71, g: 1.5, porcion: 90, unidades: { plato: 220 }, absorcionAgua: 2.6 },
+  { claves: ["quinoa"], kcal: 368, p: 14, c: 64, g: 6, porcion: 70, absorcionAgua: 2.8 },
+  { claves: ["lentejas cocidas", "lentejas en conserva", "lentejas de bote"], kcal: 110, p: 7.5, c: 15, g: 1.5, porcion: 200, unidades: { plato: 250 } },
+  { claves: ["garbanzos cocidos", "garbanzos en conserva", "garbanzos de bote"], kcal: 120, p: 8, c: 16, g: 2, porcion: 180, unidades: { plato: 220 } },
+  { claves: ["lentejas"], kcal: 325, p: 24, c: 50, g: 1.5, porcion: 80, unidades: { plato: 250 }, absorcionAgua: 2.6 },
+  { claves: ["garbanzos"], kcal: 340, p: 19, c: 55, g: 5.5, porcion: 80, unidades: { plato: 250 }, absorcionAgua: 2.5 },
   { claves: ["tortilla de patatas", "tortilla de patata"], kcal: 170, p: 6, c: 14, g: 10, porcion: 150, unidades: { porcion: 150, pincho: 120 } },
 
   /* --- Grasas --- */
-  { claves: ["aceite de sesamo", "aceite de sésamo"], kcal: 884, p: 0, c: 0, g: 100, porcion: 13.5, unidades: { cucharada: 13.5, cda: 13.5, chorro: 8, chorrito: 5 }, liquido: true },
-  { claves: ["aceite de oliva", "aove", "aceite"], kcal: 884, p: 0, c: 0, g: 100, porcion: 13.5, unidades: { cucharada: 13.5, cda: 13.5, cucharadita: 4.5, cdta: 4.5, chorro: 8, chorrito: 5 }, liquido: true },
+  { claves: ["aceite de sesamo", "aceite de sésamo"], kcal: 900, p: 0, c: 0, g: 100, porcion: 10, unidades: { cucharada: 10, cda: 10, cucharadita: 5, cdta: 5, chorro: 3, chorrito: 3, pulverizacion: 3, pulverización: 3 }, liquido: true },
+  { claves: ["aceite de oliva", "aove", "aceite"], kcal: 900, p: 0, c: 0, g: 100, porcion: 10, unidades: { cucharada: 10, cda: 10, cucharadita: 5, cdta: 5, chorro: 3, chorrito: 3, pulverizacion: 3, pulverización: 3 }, liquido: true },
   { claves: ["mantequilla"], kcal: 717, p: 0.9, c: 0.1, g: 81, porcion: 10, unidades: { cucharada: 12 } },
-  { claves: ["aguacate"], kcal: 160, p: 2, c: 9, g: 15, porcion: 150 },
-  { claves: ["almendras"], kcal: 579, p: 21, c: 22, g: 50, porcion: 30, unidades: { punado: 25, puñado: 25 } },
-  { claves: ["nueces"], kcal: 654, p: 15, c: 14, g: 65, porcion: 30, unidades: { punado: 25, puñado: 25, unidad: 5 } },
-  { claves: ["frutos secos"], kcal: 600, p: 18, c: 18, g: 55, porcion: 30, unidades: { punado: 25, puñado: 25 } },
-  { claves: ["cacahuetes", "crema de cacahuete"], kcal: 588, p: 26, c: 16, g: 49, porcion: 30, unidades: { cucharada: 16 } },
+  { claves: ["aguacate"], kcal: 160, p: 2, c: 2, g: 15, porcion: 150 },
+  { claves: ["anacardos"], kcal: 553, p: 18, c: 30, g: 44, porcion: 30, unidades: { punado: 25, puñado: 25 } },
+  { claves: ["almendras", "nueces", "avellanas", "frutos secos"], kcal: 610, p: 20, c: 10, g: 54, porcion: 30, unidades: { punado: 25, puñado: 25, unidad: 5 } },
+  { claves: ["crema de almendra", "crema de cacahuete", "cacahuetes"], kcal: 600, p: 26, c: 10, g: 50, porcion: 30, unidades: { cucharada: 16 } },
 
   /* --- Carnes y fiambres --- */
-  { claves: ["pavo", "fiambre de pavo", "pechuga de pavo"], kcal: 104, p: 18, c: 2, g: 2.5, porcion: 50, unidades: { loncha: 20, lonchas: 20 } },
+  { claves: ["pechuga de pavo en lonchas", "pavo en lonchas", "fiambre de pavo", "jamon de pavo", "jamón de pavo"], kcal: 90, p: 18, c: 1, g: 1.2, porcion: 40, unidades: { loncha: 20, lonchas: 20 } },
+  { claves: ["pechuga de pavo", "pavo fresco", "pavo"], kcal: 105, p: 24, c: 0, g: 1, porcion: 150, unidades: { filete: 130 }, mermaAgua: 0.2 },
   { claves: ["jamon york", "jamón york", "jamon cocido", "jamón cocido"], kcal: 120, p: 18, c: 1.5, g: 4.5, porcion: 50, unidades: { loncha: 20 } },
-  { claves: ["jamon serrano", "jamón serrano", "jamon iberico", "jamón ibérico", "jamon", "jamón"], kcal: 241, p: 31, c: 0.3, g: 13, porcion: 40, unidades: { loncha: 15 } },
-  { claves: ["contramuslo de pollo", "contramuslo"], kcal: 177, p: 24, c: 0, g: 9, porcion: 150 },
-  { claves: ["pollo", "pechuga de pollo", "pechuga"], kcal: 165, p: 31, c: 0, g: 3.6, porcion: 150, unidades: { filete: 130 } },
-  { claves: ["ternera", "filete de ternera", "carne picada", "carne"], kcal: 217, p: 26, c: 0, g: 12, porcion: 150, unidades: { filete: 140 } },
-  { claves: ["cerdo", "lomo", "solomillo"], kcal: 242, p: 27, c: 0, g: 14, porcion: 150, unidades: { filete: 130 } },
-  { claves: ["chorizo", "salchichon", "salchichón", "embutido"], kcal: 455, p: 24, c: 2, g: 38, porcion: 30, unidades: { loncha: 10 } },
+  { claves: ["jamon serrano", "jamón serrano", "jamon iberico", "jamón ibérico", "jamon", "jamón"], kcal: 200, p: 30, c: 0.5, g: 8.5, porcion: 40, unidades: { loncha: 15 } },
+  { claves: ["cecina de vaca", "cecina"], kcal: 175, p: 32, c: 0.5, g: 5, porcion: 40, unidades: { loncha: 12 } },
+  { claves: ["lomo embuchado"], kcal: 210, p: 38, c: 0.8, g: 6, porcion: 40, unidades: { loncha: 12 } },
+  { claves: ["contramuslo de pollo", "contramuslo"], kcal: 145, p: 20, c: 0, g: 7.2, porcion: 150, mermaAgua: 0.2 },
+  { claves: ["pechuga de pollo", "pollo", "pechuga"], kcal: 120, p: 22.5, c: 0, g: 2.6, porcion: 150, unidades: { filete: 130 }, mermaAgua: 0.2 },
+  { claves: ["carne picada de ternera y cerdo", "carne picada ternera cerdo", "carne picada mixta"], kcal: 210, p: 18, c: 0, g: 15, porcion: 150, mermaAgua: 0.2 },
+  { claves: ["carne picada de ternera magra", "carne picada ternera magra", "carne picada de ternera"], kcal: 130, p: 21, c: 0, g: 5, porcion: 150, mermaAgua: 0.2 },
+  { claves: ["solomillo de ternera", "filete de ternera", "ternera", "carne"], kcal: 150, p: 20.5, c: 0, g: 7.5, porcion: 150, unidades: { filete: 140 }, mermaAgua: 0.2 },
+  { claves: ["cinta de lomo adobada", "lomo adobado"], kcal: 125, p: 20, c: 0.5, g: 5, porcion: 150, unidades: { filete: 100 }, mermaAgua: 0.2 },
+  { claves: ["solomillo de cerdo", "solomillo de cerdo iberico", "solomillo de cerdo ibérico"], kcal: 130, p: 22, c: 0, g: 4.5, porcion: 150, unidades: { filete: 130 }, mermaAgua: 0.2 },
+  { claves: ["lomo de cerdo magro", "lomo de cerdo", "lomo", "cerdo"], kcal: 145, p: 21, c: 0, g: 6.5, porcion: 150, unidades: { filete: 130 }, mermaAgua: 0.2 },
+  { claves: ["paletilla de cordero", "pierna de cordero", "cordero"], kcal: 220, p: 18, c: 0, g: 16, porcion: 180, mermaAgua: 0.2 },
+  { claves: ["chorizo", "salchichon", "salchichón", "fuet", "embutido"], kcal: 420, p: 21, c: 2, g: 36, porcion: 30, unidades: { loncha: 10 } },
   { claves: ["bacon", "panceta"], kcal: 541, p: 37, c: 1.4, g: 42, porcion: 30, unidades: { loncha: 15 } },
 
   /* --- Pescados --- */
-  { claves: ["salmon", "salmón"], kcal: 208, p: 20, c: 0, g: 13, porcion: 150, unidades: { filete: 140 } },
-  { claves: ["atun", "atún"], kcal: 130, p: 28, c: 0, g: 1, porcion: 100, unidades: { lata: 56 } },
-  { claves: ["merluza", "pescado blanco", "bacalao", "pescado"], kcal: 90, p: 18, c: 0, g: 2, porcion: 150, unidades: { filete: 140 } },
-  { claves: ["gambas", "langostinos", "marisco"], kcal: 99, p: 24, c: 0.2, g: 0.3, porcion: 120 },
-  { claves: ["boquerones", "sardinas", "anchoas"], kcal: 208, p: 25, c: 0, g: 11, porcion: 100 },
+  { claves: ["lomo de salmon", "lomo de salmón", "salmon", "salmón"], kcal: 208, p: 20, c: 0, g: 13.5, porcion: 150, unidades: { filete: 140 }, mermaAgua: 0.18 },
+  { claves: ["atun al natural", "atún al natural"], kcal: 100, p: 23.5, c: 0, g: 1, porcion: 80, unidades: { lata: 56 } },
+  { claves: ["atun en aceite de oliva", "atún en aceite de oliva", "atun en aceite", "atún en aceite"], kcal: 190, p: 24, c: 0, g: 10.5, porcion: 80, unidades: { lata: 56 } },
+  { claves: ["atun fresco", "atún fresco", "atun", "atún"], kcal: 130, p: 23, c: 0, g: 4, porcion: 150, unidades: { filete: 140, lata: 56 }, mermaAgua: 0.18 },
+  { claves: ["pez espada", "emperador"], kcal: 130, p: 20, c: 0, g: 5.5, porcion: 150, unidades: { filete: 140 }, mermaAgua: 0.18 },
+  { claves: ["merluza", "bacalao", "lenguado", "gallo", "pescado blanco", "pescado"], kcal: 75, p: 16.5, c: 0, g: 0.8, porcion: 150, unidades: { filete: 140 }, mermaAgua: 0.18 },
+  { claves: ["gambas", "langostinos", "camarones", "marisco"], kcal: 85, p: 18, c: 0.5, g: 1, porcion: 120, mermaAgua: 0.15 },
+  { claves: ["pulpo", "calamar", "sepia"], kcal: 80, p: 16, c: 0.7, g: 1.2, porcion: 150, mermaAgua: 0.15 },
+  { claves: ["mejillones", "berberechos"], kcal: 75, p: 12, c: 2.5, g: 1.8, porcion: 150 },
+  { claves: ["boquerones", "sardinas", "anchoas"], kcal: 150, p: 18, c: 0, g: 8.5, porcion: 100, mermaAgua: 0.15 },
 
   /* --- Huevos y lácteos --- */
-  { claves: ["huevo", "huevos"], kcal: 155, p: 13, c: 1.1, g: 11, porcion: 55, unidades: { unidad: 55 } },
-  { claves: ["clara de huevo", "claras"], kcal: 52, p: 11, c: 0.7, g: 0.2, porcion: 33 },
+  { claves: ["huevo l", "huevos l", "huevo", "huevos"], kcal: 141.7, p: 12, c: 0.7, g: 10.3, porcion: 60, unidades: { unidad: 60 } },
+  { claves: ["clara de huevo", "claras"], kcal: 50, p: 11, c: 0.7, g: 0.2, porcion: 33 },
   { claves: ["cafe con leche", "café con leche"], kcal: 45, p: 2.4, c: 3.6, g: 2.2, porcion: 150, unidades: { taza: 150, vaso: 200 }, liquido: true },
   { claves: ["cafe solo", "café solo", "cafe", "café", "expreso", "espresso"], kcal: 2, p: 0.2, c: 0, g: 0, porcion: 50, unidades: { taza: 50 }, liquido: true },
   { claves: ["leche desnatada"], kcal: 35, p: 3.4, c: 5, g: 0.1, porcion: 200, liquido: true },
-  { claves: ["leche"], kcal: 61, p: 3.2, c: 4.8, g: 3.2, porcion: 200, unidades: { vaso: 200, taza: 240 }, liquido: true },
+  { claves: ["leche semidesnatada", "leche semi"], kcal: 46, p: 3.2, c: 4.7, g: 1.6, porcion: 200, unidades: { vaso: 200, taza: 240 }, liquido: true },
+  { claves: ["leche entera", "leche"], kcal: 63, p: 3.2, c: 4.7, g: 3.6, porcion: 200, unidades: { vaso: 200, taza: 240 }, liquido: true },
+  { claves: ["queso fresco batido 0", "yogur griego 0", "yogurt griego 0"], kcal: 55, p: 9.5, c: 3.8, g: 0.1, porcion: 150 },
   { claves: ["yogur griego", "yogurt griego"], kcal: 97, p: 9, c: 4, g: 5, porcion: 125 },
   { claves: ["yogur", "yogurt"], kcal: 61, p: 3.5, c: 4.7, g: 3.3, porcion: 125, unidades: { unidad: 125 } },
+  { claves: ["queso cottage", "cottage"], kcal: 90, p: 11.5, c: 2.8, g: 3.3, porcion: 100 },
+  { claves: ["skyr natural", "skyr"], kcal: 60, p: 11, c: 3.5, g: 0.2, porcion: 150 },
   { claves: ["queso fresco", "requeson", "requesón", "burgos"], kcal: 98, p: 11, c: 3.4, g: 4.3, porcion: 80 },
   { claves: ["queso pecorino", "pecorino"], kcal: 387, p: 28, c: 1, g: 31, porcion: 20 },
   { claves: ["queso parmesano", "parmesano"], kcal: 431, p: 38, c: 4, g: 29, porcion: 15 },
   { claves: ["queso de cabra", "cabra en rulo"], kcal: 364, p: 19, c: 1, g: 31, porcion: 40 },
+  { claves: ["queso mozzarella light", "mozzarella light"], kcal: 165, p: 19, c: 1.5, g: 9.5, porcion: 50 },
   { claves: ["queso mozzarella", "mozzarella"], kcal: 280, p: 22, c: 2, g: 21, porcion: 50 },
-  { claves: ["queso curado", "queso manchego"], kcal: 390, p: 25, c: 1.5, g: 32, porcion: 30, unidades: { loncha: 20, cuna: 30 } },
+  { claves: ["queso feta", "feta"], kcal: 260, p: 14, c: 4, g: 21, porcion: 40 },
+  { claves: ["queso curado", "queso manchego"], kcal: 420, p: 25, c: 1, g: 35, porcion: 30, unidades: { loncha: 20, cuna: 30 } },
   { claves: ["queso"], kcal: 350, p: 23, c: 2, g: 28, porcion: 30, unidades: { loncha: 20 } },
 
   /* --- Verduras, legumbres y fruta --- */
-  { claves: ["canónigos", "canonigos"], kcal: 21, p: 2, c: 1.7, g: 0.4, porcion: 80 },
-  { claves: ["esparragos", "espárragos"], kcal: 20, p: 2.2, c: 3.9, g: 0.1, porcion: 100 },
+  { claves: ["canónigos", "canonigos"], kcal: 20, p: 2.2, c: 1.4, g: 0.4, porcion: 80 },
+  { claves: ["esparragos", "espárragos"], kcal: 30, p: 3, c: 4, g: 0.3, porcion: 100 },
   { claves: ["champinones", "champiñones"], kcal: 22, p: 3.1, c: 3.3, g: 0.3, porcion: 80 },
-  { claves: ["boniato", "batata"], kcal: 90, p: 2, c: 21, g: 0.1, porcion: 150 },
+  { claves: ["boniato", "batata"], kcal: 86, p: 1.6, c: 20, g: 0.1, porcion: 150 },
   { claves: ["pimientos del padron", "pimientos del padrón"], kcal: 25, p: 1, c: 5, g: 0.2, porcion: 100 },
-  { claves: ["ensalada", "lechuga", "verdura", "verduras", "espinacas", "brocoli", "brócoli"], kcal: 35, p: 2, c: 6, g: 0.4, porcion: 150, unidades: { plato: 200 } },
-  { claves: ["tomate"], kcal: 18, p: 0.9, c: 3.9, g: 0.2, porcion: 120 },
-  { claves: ["patata", "patatas", "papa"], kcal: 87, p: 2, c: 20, g: 0.1, porcion: 200 },
-  { claves: ["lentejas", "garbanzos", "alubias", "legumbres", "judias"], kcal: 116, p: 9, c: 20, g: 0.4, porcion: 200, unidades: { plato: 250 } },
-  { claves: ["platano", "plátano", "banana"], kcal: 89, p: 1.1, c: 23, g: 0.3, porcion: 120 },
-  { claves: ["manzana"], kcal: 52, p: 0.3, c: 14, g: 0.2, porcion: 180 },
-  { claves: ["naranja", "mandarina"], kcal: 47, p: 0.9, c: 12, g: 0.1, porcion: 150 },
-  { claves: ["fresas", "frutos rojos", "arandanos", "arándanos"], kcal: 33, p: 0.7, c: 8, g: 0.3, porcion: 150 },
+  { claves: ["brocoli", "brócoli", "coliflor"], kcal: 30, p: 3, c: 4, g: 0.3, porcion: 120 },
+  { claves: ["calabacin", "calabacín", "berenjena", "pepino"], kcal: 18, p: 1, c: 3, g: 0.2, porcion: 150 },
+  { claves: ["ensalada", "lechuga", "verdura", "verduras", "espinacas"], kcal: 20, p: 2.2, c: 1.4, g: 0.4, porcion: 150, unidades: { plato: 200 } },
+  { claves: ["tomate", "tomate cherry"], kcal: 18, p: 0.9, c: 3.5, g: 0.2, porcion: 120 },
+  { claves: ["cebolla", "pimiento rojo", "pimiento verde", "pimiento"], kcal: 32, p: 1, c: 6.5, g: 0.2, porcion: 100 },
+  { claves: ["diente de ajo", "dientes de ajo", "ajo"], kcal: 149, p: 6.4, c: 33.1, g: 0.5, porcion: 3, unidades: { diente: 3, dientes: 3 } },
+  { claves: ["patata", "patatas", "papa"], kcal: 77, p: 2, c: 17, g: 0.1, porcion: 200 },
+  { claves: ["alubias cocidas", "judias cocidas", "judías cocidas", "legumbres cocidas"], kcal: 105, p: 7, c: 15, g: 1.5, porcion: 200, unidades: { plato: 250 } },
+  { claves: ["platano", "plátano", "banana"], kcal: 89, p: 1.1, c: 20, g: 0.3, porcion: 120 },
+  { claves: ["manzana", "pera"], kcal: 52, p: 0.3, c: 12, g: 0.2, porcion: 180 },
+  { claves: ["naranja", "mandarina"], kcal: 45, p: 0.9, c: 9, g: 0.1, porcion: 150 },
+  { claves: ["fresas", "frutos rojos", "arandanos", "arándanos", "frambuesas"], kcal: 40, p: 0.7, c: 8, g: 0.3, porcion: 150 },
   { claves: ["sandia", "sandía", "melon", "melón"], kcal: 30, p: 0.6, c: 8, g: 0.2, porcion: 200 },
   { claves: ["fruta"], kcal: 55, p: 0.8, c: 13, g: 0.2, porcion: 150 },
 
@@ -139,13 +170,17 @@ const DB: Alimento[] = [
   { claves: ["mostaza antigua", "mostaza"], kcal: 66, p: 4, c: 5, g: 4, porcion: 10, unidades: { cucharada: 15 } },
   { claves: ["tomates secos", "tomate seco"], kcal: 258, p: 14, c: 55, g: 3, porcion: 50 },
   { claves: ["salsa de soja", "soja baja en sodio"], kcal: 53, p: 8, c: 5, g: 0.6, porcion: 15, liquido: true },
+  { claves: ["semillas de sesamo", "semillas de sésamo", "sesamo", "sésamo"], kcal: 573, p: 18, c: 12, g: 50, porcion: 10 },
+  { claves: ["mayonesa"], kcal: 680, p: 1, c: 1, g: 75, porcion: 15, unidades: { cucharada: 15 } },
+  { claves: ["tofu firme", "tofu"], kcal: 144, p: 17, c: 3, g: 9, porcion: 150 },
+  { claves: ["vinagre de jerez", "vinagre"], kcal: 18, p: 0, c: 0.4, g: 0, porcion: 5, liquido: true },
 
   /* --- Bebidas --- */
   { claves: ["cerveza", "caña", "cana", "tercio"], kcal: 43, p: 0.5, c: 3.6, g: 0, porcion: 330, unidades: { cana: 200, caña: 200, tercio: 330, jarra: 500 }, liquido: true },
   { claves: ["vino", "copa de vino", "tinto"], kcal: 83, p: 0.1, c: 2.6, g: 0, porcion: 150, unidades: { copa: 150 }, liquido: true },
   { claves: ["refresco", "coca cola", "cocacola"], kcal: 42, p: 0, c: 10.6, g: 0, porcion: 330, unidades: { lata: 330 }, liquido: true },
   { claves: ["zumo", "jugo"], kcal: 45, p: 0.5, c: 10, g: 0.1, porcion: 200, liquido: true },
-  { claves: ["batido de proteinas", "batido de proteínas", "proteina", "proteína", "whey"], kcal: 380, p: 78, c: 8, g: 5, porcion: 30, unidades: { cacito: 30, scoop: 30 } },
+  { claves: ["batido de proteinas", "batido de proteínas", "proteina en polvo", "proteína en polvo", "proteina", "proteína", "whey", "aislado"], kcal: 383.3, p: 80, c: 5, g: 3.3, porcion: 30, unidades: { cacito: 30, scoop: 30 } },
 ];
 
 /* Índice de claves ordenado por longitud descendente: "café con leche" gana a "café". */
@@ -255,6 +290,7 @@ function localizar(texto: string): Coincidencia[] {
   // "ensalada de lechuga" activa dos sinónimos del mismo alimento. Conservamos
   // el término específico y evitamos duplicar toda la guarnición.
   return ordenadas.filter((actual, indice) => {
+    if (actual.alimento.claves[0] === "bocadillo" && ordenadas.length > 1) return false;
     const siguiente = ordenadas[indice + 1];
     if (!siguiente || siguiente.alimento !== actual.alimento) return true;
     const puente = texto.slice(actual.fin, siguiente.inicio).trim();
@@ -273,31 +309,79 @@ function fragmentosNoInterpretados(texto: string, coincidencias: Coincidencia[])
   for (const c of coincidencias) for (let p = c.inicio; p < c.fin; p++) mascara[p] = " ";
   return [...new Set(mascara.join("").split(SEPARADOR).map(parte => parte
     .replace(new RegExp(`${CANTIDAD}\\s*(?:kg|kilos?|g|gr|grs|gramos?|ml|cl|litros?|l|cucharadas?|cda|cucharaditas?|cdta|filetes?|lonchas?|rebanadas?|latas?|vasos?|tazas?|unidades?|piezas?)?\\b`, "g"), " ")
-    .replace(/\b(?:de|del|la|el|los|las|a|al|en|un|una|unos|unas|y|con|sin|para|por|sobre|ensalada|bowl|plato|acompanad[oa]s?|aderezad[oa]s?|cocinad[oa]s?|saltead[oa]s?|cocid[oa]s?|cocinado|crudo|cruda|peso|plancha|horno|vapor|asado|asada|dados|tiras|rallad[oa]|pelad[oa]s?|escurrid[oa]s?|virgen|extra|fresco|fresca|natural|entera|entero|piel|rodajas|laminas)\b/g, " ")
+    .replace(/\b(?:de|del|la|el|los|las|a|al|en|un|una|unos|unas|y|con|sin|para|por|sobre|ensalada|bowl|bol|plato|bocadillo|tortilla|acompanad[oa]s?|aderezad[oa]s?|cocinad[oa]s?|saltead[oa]s?|cocid[oa]s?|guisad[oa]s?|cocinado|crudo|cruda|peso|plancha|horno|vapor|asado|asada|dados|tiras|rallad[oa]|pelad[oa]s?|escurrid[oa]s?|virgen|extra|fresco|fresca|natural|entera|entero|piel|rodajas|laminas|templad[oa]|pure|hecho|blanco|eneldo|guindilla|sal)\b/g, " ")
     .replace(/[().:·≈]/g, " ").replace(/\s+/g, " ").trim())
     .filter(parte => /[a-z]{2}/.test(parte)))];
 }
 
-function referenciaPara(alimento: Alimento, crudo: boolean) {
-  if (alimento.claves[0] === "arroz") return crudo ? REFERENCIAS_VERIFICADAS.arroz_crudo : REFERENCIAS_VERIFICADAS.arroz_cocido;
-  if (alimento.claves[0] === "pasta penne rigate") return crudo ? REFERENCIAS_VERIFICADAS.pasta_cruda : REFERENCIAS_VERIFICADAS.pasta_cocida;
-  if (alimento.claves[0] === "aceite de oliva") return REFERENCIAS_VERIFICADAS.aceite_oliva;
-  return referenciaLocal(alimento.claves[0], alimento);
+type EstadoPeso = "crudo" | "cocinado";
+
+function estadoPesoPara(contexto: string, alimento: Alimento, aclaracion?: string): EstadoPeso {
+  if (!alimento.absorcionAgua && !alimento.mermaAgua) return "crudo";
+  if (aclaracion === "ya cocinado" || /\b(?:peso\s+)?(?:ya\s+)?cocinad[oa]s?\b|\b(?:peso\s+)?cocid[oa]s?\b|\bhervid[oa]s?\b|\bguisad[oa]s?\b/.test(contexto)) return "cocinado";
+  // Regla de RITMO: si no se especifica lo contrario, el peso declarado es
+  // crudo/fresco/limpio. El método de preparación no cambia esa premisa.
+  return "crudo";
+}
+
+function referenciaPara(alimento: Alimento, estado: EstadoPeso = "crudo") {
+  const referencia = referenciaLocal(alimento.claves[0], alimento);
+  const factor = estado === "cocinado"
+    ? alimento.absorcionAgua ?? (alimento.mermaAgua ? 1 - alimento.mermaAgua : 1)
+    : 1;
+  if (factor === 1) return referencia;
+  const dividir = (valor: number) => Math.round(valor / factor * 100) / 100;
+  return {
+    ...referencia,
+    id: `${referencia.id}:${estado}`,
+    nombre: `${referencia.nombre} · peso cocinado`,
+    fuente: alimento.absorcionAgua
+      ? `Catálogo RITMO · cocción calculada con absorción de agua ×${factor}`
+      : `Catálogo RITMO · cocción calculada con merma de agua ${Math.round((alimento.mermaAgua ?? 0) * 100)}%`,
+    por100g: {
+      kcal: dividir(referencia.por100g.kcal),
+      proteinas: dividir(referencia.por100g.proteinas),
+      carbohidratos: dividir(referencia.por100g.carbohidratos),
+      grasas: dividir(referencia.por100g.grasas),
+    },
+  };
 }
 
 /** Catálogo auditable también sin analizar una comida. */
-export const CATALOGO_NUTRICIONAL = [...DB.map(alimento => referenciaPara(alimento, false)), REFERENCIAS_VERIFICADAS.arroz_crudo, REFERENCIAS_VERIFICADAS.pasta_cruda];
+export const CATALOGO_NUTRICIONAL = [
+  ...DB.flatMap(alimento => alimento.absorcionAgua || alimento.mermaAgua
+    ? [referenciaPara(alimento), referenciaPara(alimento, "cocinado")]
+    : [referenciaPara(alimento)]),
+  ...Object.values(REFERENCIAS_VERIFICADAS),
+];
+
+/** Recalcula una fila interpretada por IA con el mismo catálogo que el motor local. */
+export function recalcularItemConCatalogo(item: ItemNutricional, estado: EstadoPeso = "crudo"): ItemNutricional {
+  if (!item.gramos || item.gramos <= 0) return item;
+  const coincidencia = localizar(sinTildes(item.nombre))[0];
+  if (!coincidencia) return item;
+  const referencia = referenciaPara(coincidencia.alimento, estado);
+  const factor = item.gramos / 100;
+  return {
+    ...item,
+    referencia,
+    kcal: Math.round(referencia.por100g.kcal * factor),
+    proteinas: Math.round(referencia.por100g.proteinas * factor * 10) / 10,
+    carbohidratos: Math.round(referencia.por100g.carbohidratos * factor * 10) / 10,
+    grasas: Math.round(referencia.por100g.grasas * factor * 10) / 10,
+  };
+}
 
 /** Estima kcal y macros a partir de texto libre, sin IA externa. */
 export function estimarOffline(texto: string): AnalisisNutricional {
   const normalizado = sinTildes(texto);
-  const aceiteTotal = normalizado.match(/aclaracion: cantidad total de aceite del plato\s*:?\s*(5|10|15)\s*ml/);
+  const aceiteTotal = normalizado.match(/aclaracion: cantidad total de aceite del plato\s*:?\s*(\d+(?:[.,]\d+)?)\s*(g|ml)/);
   const estadoCoccion = normalizado.match(/aclaracion: el peso de arroz o pasta indicado es\s*:?\s*(en crudo|ya cocinado)/)?.[1];
   // Las aclaraciones son metadatos del plato, no ingredientes adicionales.
   let base = normalizado.replace(/\n?\s*aclaracion:[^\n]*/g, "");
   if (aceiteTotal) {
     base = base.replace(/\b(?:aceite(?: de oliva(?: virgen extra)?)?|aove)\b/g, " ");
-    base += `; ${aceiteTotal[1]} ml de aceite de oliva`;
+    base += `; ${aceiteTotal[1]} ${aceiteTotal[2]} de aceite de oliva`;
   }
   const limpio = base
     .replace(/^(desayuno|comida|cena|snack|merienda|almuerzo)\s*:?/, "")
@@ -328,15 +412,15 @@ export function estimarOffline(texto: string): AnalisisNutricional {
     const cantidad = gramosDe(contexto, c.alimento);
     if (cantidad.gramos > 10000) throw new Error("Hay una cantidad superior a 10.000 g. Revisa los gramos y las unidades de la descripción.");
     const gramos = Math.max(0, cantidad.gramos);
-    const esSecoEnCrudo = /\b(?:pasta|penne|arroz|basmati)\b/.test(surface) && (estadoCoccion === "en crudo" || (!estadoCoccion && /\bcrud[oa]s?\b/.test(contexto)));
-    const referencia = referenciaPara(c.alimento, esSecoEnCrudo);
+    const estadoPeso = estadoPesoPara(contexto, c.alimento, estadoCoccion);
+    const referencia = referenciaPara(c.alimento, estadoPeso);
     const alimento = referencia.por100g;
     const f = gramos / 100;
     const pesoTexto = `${Number(gramos.toFixed(2)).toLocaleString("es-ES", { useGrouping: false })} g`;
 
     items.push({
       nombre: `${limpio.slice(c.inicio, c.fin)} · ${Math.round(gramos)} g`,
-      cantidad: cantidad.tipo === "masa_declarada" ? pesoTexto : `${cantidad.original ? `${cantidad.original} · ` : ""}≈${pesoTexto}`,
+      cantidad: `${cantidad.tipo === "masa_declarada" ? pesoTexto : `${cantidad.original ? `${cantidad.original} · ` : ""}≈${pesoTexto}`}${(c.alimento.absorcionAgua || c.alimento.mermaAgua) && cantidad.tipo === "masa_declarada" ? ` · peso ${estadoPeso}` : ""}`,
       cantidadEstimada: cantidad.tipo !== "masa_declarada",
       tipoCantidad: cantidad.tipo,
       cantidadOriginal: cantidad.original,

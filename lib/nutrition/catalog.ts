@@ -1,6 +1,6 @@
 import type { ItemNutricional, ReferenciaNutricional } from "./types";
 
-export const VERSION_CATALOGO = "2026-09-04.1";
+export const VERSION_CATALOGO = "2026-09-10.1";
 
 // Transcripción contrastada con la ficha completa de FoodData Central, no con
 // resultados redondeados del buscador. Nutrientes USDA 1008/1003/1005/1004 por 100 g.
@@ -24,7 +24,7 @@ export function referenciaLocal(nombre: string, datos: { kcal: number; p: number
   // Identificador canónico, independiente del orden del catálogo.
   const id = nombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return { id: `ritmo-local:${id}`, version: VERSION_CATALOGO, nombre,
-    estado: "local_pendiente", fuente: "Referencia local pendiente de verificar",
+    estado: "local_pendiente", fuente: "Catálogo RITMO · referencia estándar por 100 g",
     por100g: { kcal: datos.kcal, proteinas: datos.p, carbohidratos: datos.c, grasas: datos.g } };
 }
 

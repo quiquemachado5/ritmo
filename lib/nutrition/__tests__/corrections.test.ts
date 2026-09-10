@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizarNombreIngrediente, recalcularAnalisis } from "../corrections";
+import { distribucionMacros, energiaDesdeMacros, normalizarNombreIngrediente, recalcularAnalisis } from "../corrections";
 import type { AnalisisNutricional } from "../types";
 
 describe("correcciones nutricionales", () => {
@@ -22,5 +22,13 @@ describe("correcciones nutricionales", () => {
       { nombre: "Arroz", cantidad: "100 g", kcal: 130, proteinas: 2.7, carbohidratos: 28, grasas: 0.3 },
     ]);
     expect(resultado).toMatchObject({ kcal: 378, proteinas: 49, carbohidratos: 28, grasas: 6 });
+  });
+
+  it("recomprueba energía con 4/4/9 y reparte los porcentajes al 100%", () => {
+    const datos = { proteinas: 30, carbohidratos: 40, grasas: 20 };
+    expect(energiaDesdeMacros(datos)).toBe(460);
+    const reparto = distribucionMacros(datos);
+    expect(reparto).toEqual({ proteinas: 26, carbohidratos: 35, grasas: 39 });
+    expect(Object.values(reparto).reduce((suma, valor) => suma + valor, 0)).toBe(100);
   });
 });

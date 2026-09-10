@@ -1,5 +1,18 @@
 import type { AnalisisNutricional, ItemNutricional } from "./types";
 
+export function energiaDesdeMacros(datos: Pick<AnalisisNutricional, "proteinas" | "carbohidratos" | "grasas">): number {
+  return Math.round(datos.proteinas * 4 + datos.carbohidratos * 4 + datos.grasas * 9);
+}
+
+export function distribucionMacros(datos: Pick<AnalisisNutricional, "proteinas" | "carbohidratos" | "grasas">) {
+  const energia = [datos.proteinas * 4, datos.carbohidratos * 4, datos.grasas * 9];
+  const total = energia.reduce((suma, valor) => suma + valor, 0);
+  if (total <= 0) return { proteinas: 0, carbohidratos: 0, grasas: 0 };
+  const valores = energia.map(valor => Math.round(valor / total * 100));
+  valores[1] += 100 - valores.reduce((suma, valor) => suma + valor, 0);
+  return { proteinas: valores[0], carbohidratos: valores[1], grasas: valores[2] };
+}
+
 export function normalizarNombreIngrediente(nombre: string): string {
   return nombre.trim().toLocaleLowerCase("es-ES").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ");
 }

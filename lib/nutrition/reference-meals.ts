@@ -15,57 +15,58 @@ export interface ReferenceMeal {
 
 /**
  * Banco de platos complejos para evaluar el analizador de forma estable. Las
- * referencias se calculan ingrediente a ingrediente con valores medios de
- * composición; no representan consejo médico ni una marca comercial concreta.
+ * primeras ocho referencias se recalcularon con el catálogo RITMO 2026-09-10.1
+ * facilitado para estos platos. Las restantes usan valores medios de composición;
+ * ninguna representa consejo médico ni una marca comercial concreta.
  */
 export const REFERENCE_MEALS: ReferenceMeal[] = [
   {
     id: "pavo-pecorino-ensalada",
     texto: "220 g de pechuga de pavo a la plancha con 1 diente de ajo y 10 ml de AOVE, 20 g de queso pecorino y 80 g de canónigos con 15 ml de AOVE, 5 ml de vinagre de Jerez y sal",
-    referencia: { kcal: 595, proteinas: 71, carbohidratos: 5, grasas: 32 },
-    toleranciaPct: 16,
+    referencia: { kcal: 554, proteinas: 60, carbohidratos: 2, grasas: 34 },
+    toleranciaPct: 5,
   },
   {
     id: "salmon-patata-alioli",
     texto: "180 g de lomo de salmón al horno con 10 g de mantequilla y eneldo, 150 g de patata cocida con piel, 100 g de espárragos con 5 ml de AOVE y 30 g de alioli casero",
-    referencia: { kcal: 845, proteinas: 45, carbohidratos: 35, grasas: 58 },
-    toleranciaPct: 18,
+    referencia: { kcal: 841, proteinas: 42, carbohidratos: 30, grasas: 60 },
+    toleranciaPct: 5,
   },
   {
     id: "bowl-arroz-pollo",
     texto: "Bowl con 150 g de arroz basmati cocido, 150 g de contramuslo de pollo, 10 ml de aceite de sésamo, 15 ml de salsa de soja, 80 g de brócoli, 50 g de aguacate y 5 g de sésamo",
-    referencia: { kcal: 725, proteinas: 48, carbohidratos: 54, grasas: 35 },
-    toleranciaPct: 16,
+    referencia: { kcal: 646, proteinas: 39, carbohidratos: 49, grasas: 32 },
+    toleranciaPct: 5,
   },
   {
     id: "cerdo-boniato-nueces",
     texto: "200 g de solomillo de cerdo ibérico con 10 ml de AOVE, 120 g de boniato asado, 80 g de champiñones con 5 ml de AOVE y ajo, más 15 g de nueces",
-    referencia: { kcal: 640, proteinas: 53, carbohidratos: 29, grasas: 34 },
-    toleranciaPct: 18,
+    referencia: { kcal: 612, proteinas: 52, carbohidratos: 29, grasas: 32 },
+    toleranciaPct: 5,
   },
   {
     id: "ensalada-garbanzos-pollo",
     texto: "Ensalada templada con 100 g de garbanzos cocidos, 120 g de pechuga de pollo, 60 g de espinacas, 40 g de queso de cabra, 50 g de tomate cherry y 15 ml de AOVE con 8 g de mostaza antigua",
-    referencia: { kcal: 625, proteinas: 53, carbohidratos: 29, grasas: 32 },
-    toleranciaPct: 16,
+    referencia: { kcal: 601, proteinas: 48, carbohidratos: 22, grasas: 34 },
+    toleranciaPct: 5,
   },
   {
     id: "ternera-pure-pimientos",
     texto: "180 g de filete de ternera a la plancha con 10 ml de AOVE, 150 g de puré hecho con 130 g de patata, 15 ml de leche entera y 5 g de mantequilla, más 100 g de pimientos del padrón con 5 ml de AOVE",
-    referencia: { kcal: 665, proteinas: 54, carbohidratos: 32, grasas: 35 },
-    toleranciaPct: 18,
+    referencia: { kcal: 575, proteinas: 41, carbohidratos: 28, grasas: 33 },
+    toleranciaPct: 5,
   },
   {
     id: "pasta-gambas-tomate",
     texto: "150 g de pasta penne en crudo con 120 g de gambas, 10 ml de AOVE, 2 dientes de ajo, guindilla, 50 g de tomates secos en aceite escurridos y 15 g de parmesano",
-    referencia: { kcal: 900, proteinas: 49, carbohidratos: 120, grasas: 22 },
-    toleranciaPct: 15,
+    referencia: { kcal: 1010, proteinas: 53, carbohidratos: 137, grasas: 29 },
+    toleranciaPct: 5,
   },
   {
     id: "tortilla-mozzarella-pavo",
     texto: "Tortilla de 3 huevos L con 8 ml de AOVE, 50 g de mozzarella rallada y 40 g de jamón de pavo, con 100 g de tomate y 5 ml de AOVE",
-    referencia: { kcal: 515, proteinas: 40, carbohidratos: 8, grasas: 34 },
-    toleranciaPct: 16,
+    referencia: { kcal: 566, proteinas: 41, carbohidratos: 6, grasas: 43 },
+    toleranciaPct: 5,
   },
   {
     id: "desayuno-avena-yogur",

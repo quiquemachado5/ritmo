@@ -13,8 +13,11 @@ describe("raciones y aclaraciones", () => {
     expect(aclaracionComida("Ensalada con pollo y aceite")).not.toBeNull();
     expect(aclaracionComida("220 g de pollo con aceite de oliva")).not.toBeNull();
     expect(aclaracionComida("Ensalada con 1 cda de AOVE y 2 filetes con 1 cda de aceite")).toBeNull();
-    expect(aclaracionComida("150 g de pasta con verduras")?.pregunta).toContain("cocinar");
+    expect(aclaracionComida("150 g de pasta con verduras")).toBeNull();
     expect(aclaracionComida("150 g de pasta cocida con verduras")).toBeNull();
+  });
+  it("ofrece las tres equivalencias estándar de aceite", () => {
+    expect(aclaracionComida("Ensalada con aceite")?.opciones).toEqual(["3 g", "5 g", "10 g"]);
   });
   it("una aclaración reemplaza el aceite total sin duplicar ingredientes", () => {
     const a = estimarOffline("Ensalada con pollo y aceite de oliva\nAclaración: cantidad total de aceite del plato: 10 ml.");

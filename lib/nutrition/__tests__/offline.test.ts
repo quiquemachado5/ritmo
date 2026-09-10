@@ -16,7 +16,7 @@ describe("estimador offline de comidas detalladas", () => {
 
   it("distingue pasta en crudo de una ración cocida", () => {
     const resultado = estimarOffline("150 g de pasta penne rigate peso en crudo con 120 g de gambas, 10 ml de AOVE y 15 g de parmesano");
-    expect(resultado.kcal).toBeGreaterThan(750);
+    expect(resultado.kcal).toBeGreaterThan(700);
   });
 
   it("reconoce salsa, queso y aliño de una ensalada completa", () => {
@@ -32,22 +32,22 @@ describe("estimador offline de comidas detalladas", () => {
     expect(resultado.items.filter((item) => item.nombre.startsWith("aove"))).toHaveLength(2);
     expect(resultado.items.filter((item) => /ensalada|lechuga/.test(item.nombre))).toHaveLength(1);
     expect(resultado.items.some((item) => item.nombre.startsWith("pollo") && item.nombre.includes("260 g"))).toBe(true);
-    expect(resultado.kcal).toBeGreaterThan(750);
+    expect(resultado.kcal).toBeGreaterThan(700);
     expect(resultado.kcal).toBeLessThan(950);
   });
 
   it("no presta la cantidad del siguiente ingrediente aunque no haya coma", () => {
     const res = estimarOffline("arroz 150 g de pollo");
-    expect(res.items[0]).toMatchObject({ gramos: 180, cantidadEstimada: true });
+    expect(res.items[0]).toMatchObject({ gramos: 80, cantidadEstimada: true });
     expect(res.items[1]).toMatchObject({ gramos: 150, cantidadEstimada: false });
   });
 
   it("separa cantidad declarada de peso inferido y no recorta medias cucharadas", () => {
     const res = estimarOffline("2 filetes de pollo con media cucharada de AOVE y 20 ml de leche");
     expect(res.items[0]).toMatchObject({ gramos: 260, tipoCantidad: "unidades_declaradas", cantidadEstimada: true });
-    expect(res.items[1]).toMatchObject({ gramos: 6.75, tipoCantidad: "unidades_declaradas", cantidadEstimada: true });
+    expect(res.items[1]).toMatchObject({ gramos: 5, tipoCantidad: "unidades_declaradas", cantidadEstimada: true });
     expect(res.items[2]).toMatchObject({ gramos: 20, tipoCantidad: "volumen_declarado", cantidadEstimada: true });
-    expect(res.items[1].cantidad).toContain("6,75 g");
+    expect(res.items[1].cantidad).toContain("5 g");
   });
 
   it("muestra lo no interpretado sin inventar calorías para completarlo", () => {
@@ -60,11 +60,24 @@ describe("estimador offline de comidas detalladas", () => {
 
   it("no confunde crudo y cocido en una comida con dos cereales", () => {
     const res = estimarOffline("100 g de arroz en crudo y 100 g de pasta cocida");
-    expect(res.items[0].referencia?.id).toBe("usda:169756");
-    expect(res.items[0].kcal).toBe(365);
-    expect(res.items[1].referencia?.id).toBe("usda:168928");
-    expect(res.items[1].kcal).toBe(158);
-    expect(estimarOffline("100 g de pasta cruda").kcal).toBe(371);
+    expect(res.items[0].referencia?.id).toBe("ritmo-local:arroz");
+    expect(res.items[0].kcal).toBe(355);
+    expect(res.items[1].referencia?.id).toBe("ritmo-local:pasta-penne-rigate:cocinado");
+    expect(res.items[1].kcal).toBe(135);
+    expect(estimarOffline("100 g de pasta cruda").kcal).toBe(350);
+  });
+
+  it("aplica las equivalencias de aceite definidas por RITMO", () => {
+    expect(estimarOffline("1 cucharada de AOVE").kcal).toBe(90);
+    expect(estimarOffline("1 cucharadita de AOVE").kcal).toBe(45);
+    expect(estimarOffline("1 chorrito de AOVE").kcal).toBe(27);
+  });
+
+  it("usa peso crudo por defecto y solo transforma un peso cocinado explícito", () => {
+    expect(estimarOffline("100 g de arroz").kcal).toBe(355);
+    expect(estimarOffline("100 g de arroz cocido").kcal).toBe(131);
+    expect(estimarOffline("100 g de pechuga de pollo a la plancha").kcal).toBe(120);
+    expect(estimarOffline("100 g de pechuga de pollo peso cocinado").kcal).toBe(150);
   });
 
   it("cuenta piezas pequeñas y dos verduras diferentes sin duplicar contenedores", () => {

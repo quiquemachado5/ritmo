@@ -17,7 +17,7 @@ describe("respaldo de modelos Gemini", () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ error: { status: "UNAVAILABLE" } }), { status: 503 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
         candidates: [{ content: { parts: [{ text: JSON.stringify({
-          items: [{ nombre: "Arroz", cantidad: "100 g", cantidadEstimada: false, kcal: 130, proteinas: 3, carbohidratos: 28, grasas: 0.3 }],
+          items: [{ nombre: "Arroz", cantidad: "100 g", cantidadEstimada: false, tipoCantidad: "masa_declarada", estadoPeso: "crudo", gramos: 100, kcal: 130, proteinas: 3, carbohidratos: 28, grasas: 0.3 }],
           confianza: "alta",
           observaciones: [],
         }) }] } }],
@@ -28,7 +28,7 @@ describe("respaldo de modelos Gemini", () => {
     const resultado = await analizarConGemini("100 g de arroz");
 
     expect(resultado?.fuente).toBe("gemini");
-    expect(resultado?.kcal).toBe(130);
+    expect(resultado?.kcal).toBe(355);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(String(fetchMock.mock.calls[0][0])).toContain("gemini-3.7-flash");
     expect(String(fetchMock.mock.calls[1][0])).toContain("gemini-3.5-flash");

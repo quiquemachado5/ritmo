@@ -35,7 +35,7 @@ import { comidasFrecuentes } from "@/lib/model/analytics";
 import { analizarComida } from "@/lib/nutrition/client";
 import { descripcionNecesitaAnalisis, normalizarDescripcionComida } from "@/lib/nutrition/prompt-state";
 import type { AnalisisNutricional, ItemNutricional } from "@/lib/nutrition/types";
-import { recalcularAnalisis } from "@/lib/nutrition/corrections";
+import { distribucionMacros, energiaDesdeMacros, recalcularAnalisis } from "@/lib/nutrition/corrections";
 import { guardarCorreccionesNutricion, agregarPlantilla, useMealPrefs } from "@/lib/meal-prefs";
 import type { Comida, TipoComida } from "@/lib/model/types";
 import { fmtFechaLarga, capitalizar } from "@/lib/format";
@@ -359,6 +359,8 @@ function PanelComida({
   const anomalias = valoresManuales ? detectarAnomaliasComida(valoresManuales) : [];
   const firmaAnomalias = anomalias.length > 0 ? JSON.stringify(valoresManuales) : "";
   const anomaliasConfirmadas = anomalias.length === 0 || firmaAnomaliaConfirmada === firmaAnomalias;
+  const reparto = analisis ? distribucionMacros(analisis) : null;
+  const kcalDesdeMacros = analisis ? energiaDesdeMacros(analisis) : 0;
 
   return (
     <div className="flex min-h-full flex-col gap-3">
@@ -453,21 +455,24 @@ function PanelComida({
       {analisis && !descripcionCambio && (
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
-            <span className="font-display text-2xl font-bold tabular text-energy">
-              {analisis.kcal}
-              <span className="ml-1 text-sm font-medium text-muted-foreground">kcal</span>
-            </span>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Total del plato</p>
+              <span className="font-display text-2xl font-bold tabular text-energy">
+                {analisis.kcal}<span className="ml-1 text-sm font-medium text-muted-foreground">kcal</span>
+              </span>
+            </div>
             <Chip tone={analisis.fuente === "offline" || analisis.confianza === "baja" ? "warning" : "weight"}>
               {analisis.fuente === "gemini"
                 ? `Gemini · ${analisis.confianza ?? "media"}`
-                : analisis.fuente === "edamam" ? "Edamam" : analisis.fuente === "claude" ? "IA" : "local"}
+                : analisis.fuente === "edamam" ? "Edamam" : analisis.fuente === "claude" ? "IA" : `RITMO · ${analisis.confianza ?? "media"}`}
             </Chip>
           </div>
           <div className="grid grid-cols-3 gap-3">
-            <MacroBar label="Proteínas" value={analisis.proteinas} colorVar="--weight" />
-            <MacroBar label="Carbos" value={analisis.carbohidratos} colorVar="--habit" />
-            <MacroBar label="Grasas" value={analisis.grasas} colorVar="--energy" />
+            <MacroBar label={`Proteínas · ${reparto?.proteinas ?? 0}%`} value={analisis.proteinas} colorVar="--weight" />
+            <MacroBar label={`HC · ${reparto?.carbohidratos ?? 0}%`} value={analisis.carbohidratos} colorVar="--habit" />
+            <MacroBar label={`Grasas · ${reparto?.grasas ?? 0}%`} value={analisis.grasas} colorVar="--energy" />
           </div>
+          <p className="mt-2 text-right text-[0.68rem] tabular text-muted-foreground">Comprobación 4·4·9: {kcalDesdeMacros} kcal</p>
           {!!analisis.noReconocidos?.length && <div className="mt-4 rounded-lg border border-warning-border bg-warning-wash p-3 text-sm text-warning-ink" role="status">
             <p className="font-semibold">Hay texto sin interpretar</p>
             <p className="mt-1 break-words">{analisis.noReconocidos.join(" · ")}</p>
@@ -635,8 +640,8 @@ function IngredientTable({ items, onChange }: { items: AnalisisNutricional["item
           {[...new Map(items.filter(i => i.referencia).map(i => [`${i.referencia!.id}:${i.referencia!.estado}`, i.referencia!])).values()].map(ref => <div key={`${ref.id}:${ref.estado}`} className="py-3">
             <p className="font-medium">{ref.nombre}</p>
             <p className="mt-1 tabular">{ref.por100g.kcal.toFixed(0)} kcal · P {ref.por100g.proteinas.toFixed(1)} g · C {ref.por100g.carbohidratos.toFixed(1)} g · G {ref.por100g.grasas.toFixed(1)} g</p>
-            {ref.url ? <a href={ref.url} target="_blank" rel="noopener noreferrer" className="mt-1 block break-words text-primary underline underline-offset-2">{ref.fuente}</a> : <p className="mt-1 text-warning-ink">{ref.fuente}</p>}
-            <p className="mt-1 break-words text-xs text-muted-foreground">{ref.id} · catálogo {ref.version}{ref.revisadaEn ? ` · revisado ${ref.revisadaEn}` : " · sin verificación externa"}</p>
+            {ref.url ? <a href={ref.url} target="_blank" rel="noopener noreferrer" className="mt-1 block break-words text-primary underline underline-offset-2">{ref.fuente}</a> : <p className="mt-1 text-muted-foreground">{ref.fuente}</p>}
+            <p className="mt-1 break-words text-xs text-muted-foreground">{ref.id} · catálogo {ref.version}{ref.revisadaEn ? ` · revisado ${ref.revisadaEn}` : " · referencia local"}</p>
           </div>)}
           {!items.some(i => i.referencia) && <p className="py-2 text-muted-foreground">Este análisis anterior no contiene trazabilidad por ingrediente.</p>}
         </div>

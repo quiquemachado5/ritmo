@@ -110,7 +110,7 @@ test("recorrido visual y guardado con datos sintéticos", async ({ page, request
   await prompt.fill("Ensalada con pollo y aceite de oliva");
   await page.getByRole("button", { name: "Analizar ingredientes", exact: true }).click();
   await expect(page.getByText("¿Cuánto aceite has usado en total?", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "10 ml", exact: true }).click();
+  await page.getByRole("button", { name: "10 g", exact: true }).click();
   await page.getByRole("button", { name: "Analizar ingredientes", exact: true }).click();
   await expect(page.getByRole("button", { name: "Añadir a comida", exact: true })).toBeVisible();
   // Al cambiar la descripción se exige un nuevo análisis, sin registrar cifras antiguas.
@@ -121,12 +121,12 @@ test("recorrido visual y guardado con datos sintéticos", async ({ page, request
   await expect(page.getByText("tahini", { exact: true })).toBeVisible();
   await expect(page.getByText("Unidades · peso aprox.", { exact: true })).toBeVisible();
   await page.getByText("Fuentes y valores por 100 g", { exact: true }).click();
-  await expect(page.locator('a[href="https://fdc.nal.usda.gov/food-details/169757/nutrients"]')).toBeVisible();
-  await expect(page.getByText("Referencia local pendiente de verificar", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Catálogo RITMO · cocción calculada con absorción de agua/).first()).toBeVisible();
+  await expect(page.getByText("Catálogo RITMO · referencia estándar por 100 g", { exact: true }).first()).toBeVisible();
   await page.getByRole("button", { name: /Corregir pollo/ }).click();
   await page.getByLabel("Peso en gramos · recalcula nutrientes").fill("100");
   await page.getByRole("button", { name: "Aplicar corrección", exact: true }).click();
-  await expect(page.getByRole("dialog").getByText(/295\s*kcal/).first()).toBeVisible();
+  await expect(page.getByRole("dialog").getByText(/251\s*kcal/).first()).toBeVisible();
   await sinDesbordamiento(page);
   // Capturamos el diálogo en su viewport real: Chromium fullPage puede emitir
   // un resize transitorio de 1×1 y alternar artificialmente Dialog/Drawer.

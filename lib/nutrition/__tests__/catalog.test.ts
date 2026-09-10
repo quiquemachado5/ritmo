@@ -18,13 +18,22 @@ describe("catálogo trazable y cantidades honestas", () => {
     }
     expect(REFERENCIAS_VERIFICADAS.pasta_cruda.por100g).toEqual({ kcal: 371, proteinas: 13.04, carbohidratos: 74.67, grasas: 1.51 });
   });
+  it("conserva referencias representativas de todas las familias facilitadas", () => {
+    const porId = new Map(CATALOGO_NUTRICIONAL.map(ref => [ref.id, ref.por100g]));
+    expect(porId.get("ritmo-local:pechuga-de-pollo")).toEqual({ kcal: 120, proteinas: 22.5, carbohidratos: 0, grasas: 2.6 });
+    expect(porId.get("ritmo-local:lomo-de-salmon")).toEqual({ kcal: 208, proteinas: 20, carbohidratos: 0, grasas: 13.5 });
+    expect(porId.get("ritmo-local:huevo-l")).toEqual({ kcal: 141.7, proteinas: 12, carbohidratos: 0.7, grasas: 10.3 });
+    expect(porId.get("ritmo-local:arroz")).toEqual({ kcal: 355, proteinas: 7, carbohidratos: 78, grasas: 0.8 });
+    expect(porId.get("ritmo-local:aguacate")).toEqual({ kcal: 160, proteinas: 2, carbohidratos: 2, grasas: 15 });
+    expect(porId.get("ritmo-local:aceite-de-oliva")).toEqual({ kcal: 900, proteinas: 0, carbohidratos: 0, grasas: 100 });
+  });
   it("cambiar a gramos explícitos recalcula desde la referencia y actualiza el total", () => {
     const base = estimarOffline("2 filetes de pollo con 100 g de arroz");
     const corregido = corregirGramos(base.items[0], 100);
-    expect(corregido).toMatchObject({ gramos: 100, kcal: 165, proteinas: 31, tipoCantidad: "masa_declarada", cantidadEstimada: false });
+    expect(corregido).toMatchObject({ gramos: 100, kcal: 120, proteinas: 22.5, tipoCantidad: "masa_declarada", cantidadEstimada: false });
     expect(etiquetaCantidad(base.items[0])).toBe("Unidades · peso aprox.");
     expect(etiquetaCantidad(corregido)).toBe("Peso indicado");
-    expect(recalcularAnalisis(base, [corregido, base.items[1]]).kcal).toBe(295);
+    expect(recalcularAnalisis(base, [corregido, base.items[1]]).kcal).toBe(475);
     expect(() => corregirGramos(corregido, NaN)).toThrow();
     expect(() => corregirGramos(corregido, -1)).toThrow();
     expect(() => corregirGramos(corregido, 10001)).toThrow();
@@ -35,7 +44,7 @@ describe("catálogo trazable y cantidades honestas", () => {
     expect(res.items[0].cantidadEstimada).toBe(true);
     expect(res.items[0].referencia?.estado).toBe("correccion_personal");
     expect(res.items[0].referencia?.url).toBeUndefined();
-    expect(corregirGramos(res.items[0], 27).kcal).toBe(220);
+    expect(corregirGramos(res.items[0], 27).kcal).toBe(297);
   });
   it("rechaza metadatos malformados y URLs importadas arbitrarias", () => {
     const item = estimarOffline("100 g de arroz").items[0];

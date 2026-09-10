@@ -1,6 +1,6 @@
 import { estimarOffline } from "./offline";
 import { normalizarNombreIngrediente, recalcularAnalisis } from "./corrections";
-import type { CorreccionNutricional } from "./types";
+import type { AnalisisNutricional, CorreccionNutricional } from "./types";
 
 /** Sin llamadas de red ni claves; reutiliza correcciones solo para igual cantidad. */
 export function analizarLocal(texto: string, correcciones: CorreccionNutricional[] = []) {
@@ -23,7 +23,14 @@ export function analizarLocal(texto: string, correcciones: CorreccionNutricional
         por100g: { kcal: correccion.kcal * factor, proteinas: correccion.proteinas * factor,
           carbohidratos: correccion.carbohidratos * factor, grasas: correccion.grasas * factor } } : undefined };
   });
-  return { ...recalcularAnalisis(base, items), confianza: "baja" as const,
-    aviso: items.length ? "Estimación local, sin IA externa. Revisa los ingredientes reconocidos y las cantidades; puede faltar algún alimento." : base.aviso,
+  const proporcionEstimada = items.length ? items.filter(item => item.cantidadEstimada).length / items.length : 1;
+  const completo = (base.noReconocidos?.length ?? 0) === 0;
+  const confianza: NonNullable<AnalisisNutricional["confianza"]> = completo && proporcionEstimada === 0 ? "alta" : completo && proporcionEstimada < 0.5 ? "media" : "baja";
+  return { ...recalcularAnalisis(base, items), confianza,
+    aviso: items.length
+      ? completo
+        ? "Calculado ingrediente a ingrediente con el catálogo RITMO. Revisa las cantidades marcadas como aproximadas."
+        : "Hay ingredientes sin calcular. Concreta su nombre y cantidad antes de guardar."
+      : base.aviso,
     observaciones: usadas ? [usadas === 1 ? "Se ha reutilizado una corrección tuya para la misma cantidad." : `Se han reutilizado ${usadas} correcciones tuyas para la misma cantidad.`] : undefined };
 }

@@ -1,8 +1,11 @@
 # Catálogo nutricional de RITMO
 
-Versión `2026-09-04.1`. Revisión realizada el 4 de septiembre de 2026.
+Versión `2026-09-10.1`. Revisión realizada el 10 de septiembre de 2026.
 
-El análisis sigue siendo local y aproximado; no contacta con proveedores externos.
+El análisis usa primero el catálogo local y determinista. Los proveedores externos
+solo pueden intervenir cuando la política de despliegue los habilita y queda algún
+ingrediente sin reconocer; sus filas se recalculan con el catálogo cuando existe
+una coincidencia. Actualmente esa política está desactivada.
 La trazabilidad de una referencia **no** valida el reconocimiento del plato, la
 porción, el método de preparación ni la composición de una marca concreta.
 
@@ -22,10 +25,10 @@ pueden aparecer redondeados; `catalog.ts` conserva los de la ficha completa.
 | [Pasta seca, sin enriquecer · 168927](https://fdc.nal.usda.gov/food-details/168927/nutrients) | 371 | 13,04 | 74,67 | 1,51 |
 | [Aceite de oliva para ensalada/cocina · 171413](https://fdc.nal.usda.gov/food-details/171413/nutrients) | 884 | 0 | 0 | 100 |
 
-## Datos anteriores
+## Catálogo estándar de RITMO
 
-El resto conserva los valores preexistentes de RITMO y se identifica como
-**Referencia local pendiente de verificar**. No se les asigna un enlace USDA,
+El resto incorpora la tabla de referencia facilitada para RITMO y se identifica
+como **referencia local**. No se le asigna un enlace USDA, BEDCA u Open Food Facts,
 una fecha de verificación ni una validación inexistentes. Su identificador
 `ritmo-local:…` se deriva del nombre canónico, no de la posición en el catálogo.
 El nombre canónico debe mantenerse estable; nuevas formulaciones requieren otro
@@ -38,6 +41,12 @@ ID. `CATALOGO_NUTRICIONAL` expone todas las entradas, sus nutrientes y su estado
 - Volumen: ml indicados, masa aproximada. La conversión actual 1 ml ≈ 1 g no es
   una densidad validada para cada líquido: para mayor precisión se piden gramos.
 - Sin cantidad: porción supuesta y señalada como tal.
+- Salvo indicación expresa de «peso cocinado», los gramos se interpretan en crudo,
+  fresco y limpio. Arroz, pasta, quinoa y legumbres secas aplican su factor de
+  absorción de agua cuando el peso sí se declara cocinado; carnes y pescados aplican
+  su merma de agua.
+- Aceite: cucharada/cda = 10 g = 90 kcal; cucharadita/cdta = 5 g = 45 kcal;
+  chorrito o pulverización = 3 g = 27 kcal.
 - Cambiar gramos recalcula los nutrientes desde la referencia por 100 g.
 - Cambiar nutrientes crea una corrección personal; no se atribuye a USDA.
 - El texto no interpretado se muestra y no añade calorías silenciosamente.
@@ -45,3 +54,14 @@ ID. `CATALOGO_NUTRICIONAL` expone todas las entradas, sus nutrientes y su estado
 Las pruebas son de regresión de cálculo y transparencia, no una certificación
 de precisión clínica o nutricional. Las ocho comidas de referencia existentes
 siguen siendo aproximaciones y no etiquetas de laboratorio.
+
+## Fuentes públicas previstas para ampliaciones
+
+- USDA FoodData Central, para ingredientes genéricos y fichas públicas trazables.
+- BEDCA, para alimentos y preparaciones habituales en España.
+- Open Food Facts, para productos envasados identificados por marca o código.
+
+RITMO no muestra una fuente como consultada hasta que la entrada concreta conserva
+su identificador o URL verificable. La fórmula 4/4/9 se enseña como comprobación de
+coherencia, no como sustituto automático de la energía declarada (fibra y redondeos
+pueden producir diferencias pequeñas).

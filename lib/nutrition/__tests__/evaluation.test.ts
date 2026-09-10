@@ -11,16 +11,16 @@ describe("evaluateNutrition", () => {
       items: [],
       fuente: "gemini",
       confianza: "alta",
-      kcal: meal.referencia.kcal + 50,
+      kcal: meal.referencia.kcal + 20,
       proteinas: meal.referencia.proteinas,
       carbohidratos: meal.referencia.carbohidratos,
       grasas: meal.referencia.grasas,
     };
     const metrics = evaluateNutrition([{ meal, result }]);
-    expect(metrics.mae.kcal).toBe(50);
-    expect(metrics.mape.kcal).toBeCloseTo(8.4, 1);
-    expect(metrics.p90.kcal).toBe(50);
-    expect(metrics.sesgo.kcal).toBe(50);
+    expect(metrics.mae.kcal).toBe(20);
+    expect(metrics.mape.kcal).toBeCloseTo(3.6, 1);
+    expect(metrics.p90.kcal).toBe(20);
+    expect(metrics.sesgo.kcal).toBe(20);
     expect(metrics.dentroToleranciaPct).toBe(100);
   });
 
