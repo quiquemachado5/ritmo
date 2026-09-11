@@ -366,7 +366,7 @@ export default function AjustesPage() {
 
       <div className="settings-workspace grid min-w-0 gap-5 lg:grid-cols-[15.5rem_minmax(0,1fr)] lg:items-start">
       <nav aria-label="Áreas de ajustes" className="settings-index grid grid-cols-2 gap-2 sm:grid-cols-4 lg:sticky lg:top-6 lg:flex lg:flex-col lg:rounded-2xl lg:border lg:border-border/80 lg:bg-card lg:p-2 lg:shadow-sm">
-        {PANELES_AJUSTES.map(({ id, etiqueta, detalle, icono: Icono }, indice) => (
+        {PANELES_AJUSTES.map(({ id, etiqueta, detalle, icono: Icono }) => (
           <button
             key={id}
             type="button"
@@ -376,14 +376,13 @@ export default function AjustesPage() {
           >
             <span className={cn("grid size-9 shrink-0 place-items-center rounded-xl transition-colors", panel === id ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground group-hover:text-primary")}><Icono className="size-[1.05rem]" /></span>
             <span className="min-w-0 flex-1"><span className="block text-sm font-semibold leading-tight">{etiqueta}</span><span className="mt-1 block text-[0.68rem] leading-tight text-muted-foreground max-[359px]:hidden">{detalle}</span></span>
-            <span className="hidden text-[0.65rem] font-semibold tabular text-muted-foreground/65 lg:block">0{indice + 1}</span>
           </button>
         ))}
       </nav>
       <div id={`panel-ajustes-${panel}`} className="flex min-w-0 flex-col gap-5">
         <div className="settings-panel-intro flex min-w-0 items-start gap-3 rounded-2xl border border-primary/15 p-3 shadow-sm min-[360px]:p-4 sm:items-center sm:p-5">
           <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm"><PanelIcono className="size-5" /></span>
-          <div className="min-w-0"><p className="text-[0.65rem] font-bold uppercase tracking-[0.11em] text-primary">Área {String(PANELES_AJUSTES.findIndex(opcion => opcion.id === panel) + 1).padStart(2, "0")} de 04</p><h2 className="mt-1 font-display text-xl font-bold tracking-tight">{panelActivo.etiqueta}</h2><p className="mt-1 text-sm leading-relaxed text-muted-foreground max-[359px]:hidden">{panelActivo.detalle}. Los cambios de perfil se guardan juntos; el resto se aplica al momento.</p></div>
+          <div className="min-w-0"><h2 className="font-display text-xl font-bold tracking-tight">{panelActivo.etiqueta}</h2><p className="mt-1 text-sm leading-relaxed text-muted-foreground max-[359px]:hidden">{panelActivo.detalle}. Los cambios de perfil se guardan juntos; el resto se aplica al momento.</p></div>
         </div>
 
       {/* Datos que alimentan el modelo, separados para una lectura más clara. */}

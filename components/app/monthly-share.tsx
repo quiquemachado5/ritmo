@@ -5,6 +5,7 @@ import { SharePreview, type ShareOptions } from "./share-preview";
 import { habitosModelo } from "@/lib/model/config";
 import type { ResumenMes } from "@/lib/model/analytics";
 import type { Estado } from "@/lib/model/types";
+import { dibujarWordmarkRitmo } from "@/lib/brand/canvas";
 
 function rounded(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   c.beginPath(); c.roundRect(x, y, w, h, r); c.closePath();
@@ -32,9 +33,9 @@ export function MonthlyShare({ meses, estado }: { meses: ResumenMes[]; estado: E
     if (opciones.formato === "poster") {
       const canvas = document.createElement("canvas"); canvas.width = 1080; canvas.height = 1350;
       const c = canvas.getContext("2d"); if (!c) return null;
-      c.fillStyle = "#165c47"; c.fillRect(0, 0, 1080, 1350);
-      c.fillStyle = "#f7f5ef"; c.font = "700 54px Bricolage Grotesque, Arial"; c.fillText("RITMO", 76, 104);
-      c.fillStyle = "#b9d8ca"; c.font = "500 23px Hanken Grotesk, Arial"; c.fillText("CONSTANCIA SOBRE PERFECCIÓN", 76, 145);
+      c.fillStyle = "#0B2E23"; c.fillRect(0, 0, 1080, 1350);
+      dibujarWordmarkRitmo(c, 76, 32, 240, "#F6F7F2");
+      c.fillStyle = "#8BCF82"; c.font = "500 23px Hanken Grotesk, Arial"; c.fillText("CONSTANCIA SOBRE PERFECCIÓN", 76, 145);
       c.fillStyle = "#f7f5ef"; c.font = "700 104px Bricolage Grotesque, Arial"; c.fillText(mes.etiqueta.toUpperCase(), 76, 285);
       c.fillStyle = "#b9d8ca"; c.font = "500 28px Hanken Grotesk, Arial"; c.fillText("Un mes no es una cifra. Es una secuencia.", 80, 332);
 
@@ -67,12 +68,12 @@ export function MonthlyShare({ meses, estado }: { meses: ResumenMes[]; estado: E
     canvas.height = Math.max(1350, 990 + porHabito.length * 52 + 100);
     const c = canvas.getContext("2d"); if (!c) return null;
     c.fillStyle = "#f7f5ef"; c.fillRect(0, 0, canvas.width, canvas.height);
-    c.fillStyle = "#1f6b53"; c.fillRect(0, 0, 1080, 24);
-    c.fillStyle = "#1f6b53"; c.font = "700 52px Bricolage Grotesque, Arial"; c.fillText("RITMO", 82, 110);
+    c.fillStyle = "#1C5B3A"; c.fillRect(0, 0, 1080, 24);
+    dibujarWordmarkRitmo(c, 82, 42, 240, "#1C5B3A");
     c.fillStyle = "#6b6453"; c.font = "500 30px Hanken Grotesk, Arial"; c.fillText("Mi mes en movimiento", 82, 156);
     c.fillStyle = "#201e18"; c.font = "700 80px Bricolage Grotesque, Arial"; c.fillText(mes.etiqueta.toUpperCase(), 82, 260);
     c.fillStyle = "#e7f1eb"; rounded(c, 82, 315, 916, 320, 28); c.fill();
-    c.fillStyle = "#1f6b53"; c.font = "700 190px Bricolage Grotesque, Arial"; c.fillText(opciones.habitos ? `${mes.adherenciaMedia}%` : `${mes.diasRegistrados}`, 130, 510);
+    c.fillStyle = "#1C5B3A"; c.font = "700 190px Bricolage Grotesque, Arial"; c.fillText(opciones.habitos ? `${mes.adherenciaMedia}%` : `${mes.diasRegistrados}`, 130, 510);
     c.font = "600 31px Hanken Grotesk, Arial"; c.fillText(opciones.habitos ? "de constancia" : "días con registro", 137, 560);
     c.fillStyle = "#1a5642"; c.font = "500 27px Hanken Grotesk, Arial";
     texto(c, "Mi recorrido, a mi ritmo.", 137, 605, 760);
@@ -91,7 +92,7 @@ export function MonthlyShare({ meses, estado }: { meses: ResumenMes[]; estado: E
     porHabito.forEach((h, i) => {
       const y = 990 + i * 52; c.fillStyle = "#6b6453"; c.font = "500 23px Hanken Grotesk, Arial"; c.fillText(h.etiqueta, 82, y);
       c.fillStyle = "#e5e0d4"; rounded(c, 420, y - 20, 470, 16, 8); c.fill();
-      c.fillStyle = h.pct >= 80 ? "#1f6b53" : h.pct >= 45 ? "#9a6b16" : "#b3452c"; rounded(c, 420, y - 20, 470 * (h.pct / 100), 16, 8); c.fill();
+      c.fillStyle = h.pct >= 80 ? "#1C5B3A" : h.pct >= 45 ? "#9a6b16" : "#b3452c"; rounded(c, 420, y - 20, 470 * (h.pct / 100), 16, 8); c.fill();
       c.fillStyle = "#201e18"; c.font = "700 22px Hanken Grotesk, Arial"; c.textAlign = "right"; c.fillText(`${h.pct}%`, 970, y); c.textAlign = "left";
     });
     c.fillStyle = "#6b6453"; c.font = "500 21px Hanken Grotesk, Arial"; c.fillText("Constancia sobre perfección · ritmo", 82, canvas.height - 48);

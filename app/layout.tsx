@@ -22,7 +22,7 @@ export const metadata: Metadata = {
         type: "image/png",
       },
     ],
-    apple: "/icon",
+    apple: "/apple-icon",
   },
   manifest: "/manifest.json",
   appleWebApp: {
@@ -35,14 +35,6 @@ export const metadata: Metadata = {
     title: "RITMO — constancia sobre perfección",
     description: "Seguimiento de nutrición, peso, hábitos y progreso.",
     siteName: "RITMO",
-    images: [
-      {
-        url: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 630'><rect fill='%231f6b53' width='1200' height='630'/><text x='600' y='315' font-size='120' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='central'>RITMO</text></svg>",
-        width: 1200,
-        height: 630,
-        alt: "RITMO",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",

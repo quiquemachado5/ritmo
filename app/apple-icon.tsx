@@ -1,9 +1,9 @@
 import { ImageResponse } from "next/og";
 
-export const size = { width: 512, height: 512 };
+export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
-export default function Icon() {
+export default function AppleIcon() {
   return new ImageResponse(
     <div
       style={{
@@ -12,11 +12,10 @@ export default function Icon() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "transparent",
+        background: "#1C5B3A",
       }}
     >
-      <svg viewBox="0 0 128 128" width="512" height="512">
-        <rect width="128" height="128" rx="30" fill="#1C5B3A" />
+      <svg viewBox="0 0 128 128" width="180" height="180">
         <path
           d="M18 76C31 76 38 42 52 42C66 42 72 76 84 76C97 76 103 42 112 42"
           fill="none"

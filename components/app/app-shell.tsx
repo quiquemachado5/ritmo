@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { RitmoLogo } from "@/components/ritmo-mark";
+import { RitmoBadge, RitmoLogo } from "@/components/ritmo-mark";
 import { ThemeToggle } from "./theme-toggle";
 import { NAV_ITEMS } from "./nav-items";
 import { useQuickLog } from "./quick-log-provider";
@@ -257,9 +257,10 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
       </aside>
 
       {/* Cabecera — móvil */}
-      <header className="sticky top-0 z-30 flex min-h-14 items-center justify-between border-b border-border bg-background/92 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-md md:hidden">
+      <header className="sticky top-0 z-30 flex min-h-14 items-center justify-between border-b border-border bg-background/92 px-3 pt-[env(safe-area-inset-top)] backdrop-blur-md min-[360px]:px-4 md:hidden">
         <Link href="/" aria-label="RITMO — inicio">
-          <RitmoLogo />
+          <RitmoBadge className="min-[360px]:hidden" />
+          <RitmoLogo className="hidden min-[360px]:inline-flex" wordmarkClassName="h-8" />
         </Link>
         {vistaMinima ? <Button type="button" variant="secondary" size="sm" onClick={alternarVistaMinima} className="min-h-9 rounded-xl" aria-label="Salir del modo mínimo"><Maximize2 className="size-4" /> Vista completa</Button> : <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" className="size-9 rounded-xl" onClick={() => setBusquedaAbierta(true)} aria-label="Buscar"><Search className="size-5" /></Button>
