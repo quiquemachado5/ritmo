@@ -1,6 +1,7 @@
 import type { Composicion } from "./model/types";
 import type { ItemNutricional } from "./nutrition/types";
 import { diasEntre } from "./model/dates";
+import { normalizarNombreIngrediente } from "./nutrition/corrections";
 
 export interface RecordAnomaly {
   code: string;
@@ -30,19 +31,33 @@ export function detectarAnomaliasComida(valores: MealValues): RecordAnomaly[] {
   if (valores.kcal > 3_500) {
     avisos.push({ code: "meal-kcal-high", message: `${Math.round(valores.kcal)} kcal en una sola comida es un valor poco habitual.` });
   }
-  if (kcalMacros > 150 && Math.abs(valores.kcal - kcalMacros) > Math.max(250, valores.kcal * 0.45)) {
+  if (kcalMacros > 100 && Math.abs(valores.kcal - kcalMacros) > Math.max(80, valores.kcal * 0.15)) {
     avisos.push({ code: "meal-macros-mismatch", message: "Las kcal no encajan con la energía aproximada de los macronutrientes." });
   }
 
+  const vistos = new Set<string>();
+  let grasaCocinado = 0;
   for (const item of valores.items ?? []) {
     const cantidad = cantidadBase(item.cantidad);
+    const nombre = normalizarNombreIngrediente(item.nombre);
+    const clave = `${nombre}|${normalizarNombreIngrediente(item.cantidad ?? "")}`;
+    if (vistos.has(clave) && clave !== "|") {
+      avisos.push({ code: `ingredient-duplicate-${nombre}`, message: `Parece que ${item.nombre} está contado dos veces con la misma cantidad.` });
+    }
+    vistos.add(clave);
     if (cantidad != null && cantidad > 2_500) {
       avisos.push({ code: `ingredient-quantity-${item.nombre}`, message: `Revisa la cantidad de ${item.nombre}: ${item.cantidad}.` });
     }
     if (item.kcal > 2_000) {
       avisos.push({ code: `ingredient-kcal-${item.nombre}`, message: `${item.nombre} aporta más de 2.000 kcal según el análisis.` });
     }
+    const energiaItem = item.proteinas * 4 + item.carbohidratos * 4 + item.grasas * 9;
+    if (energiaItem > 50 && Math.abs(item.kcal - energiaItem) > Math.max(35, item.kcal * 0.2)) {
+      avisos.push({ code: `ingredient-macros-${nombre}`, message: `Las kcal de ${item.nombre} no encajan con sus macronutrientes.` });
+    }
+    if (cantidad != null && /\b(aceite|aove|mantequilla)\b/.test(nombre)) grasaCocinado += cantidad;
   }
+  if (grasaCocinado > 30) avisos.push({ code: "cooking-fat-high", message: `El plato suma unos ${Math.round(grasaCocinado)} g de aceite o grasa de cocinado. Comprueba que no se haya duplicado.` });
 
   return avisos.slice(0, 3);
 }

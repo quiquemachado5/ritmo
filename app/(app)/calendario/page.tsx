@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { Check, ChevronDown, ChevronLeft, ChevronRight, Dumbbell, HeartPulse, MessageSquareText, Plane, UtensilsCrossed } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, Dumbbell, HeartPulse, MessageSquareText, MoonStar, Plane, Soup, UtensilsCrossed } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
 import { energiaDe } from "@/lib/model/analytics";
@@ -18,6 +18,7 @@ import type { EnergiaDia } from "@/lib/model/types";
 import { HabitScaleLegend } from "@/components/app/data-legend";
 import { habitScaleClass, habitScaleIndex } from "@/lib/visual-semantics";
 import { useActiveDay } from "@/components/app/active-day-provider";
+import { usePlatformConfig } from "@/components/app/platform-provider";
 
 export default function CalendarioPage() {
   const searchParams = useSearchParams();
@@ -161,12 +162,18 @@ function NotaContexto({ fecha, inicial, onGuardar }: { fecha: string; inicial?: 
 
   const limpio = texto.trim();
   const cambio = limpio !== (inicial ?? "").trim();
-  const etiquetas = [
+  const { features } = usePlatformConfig();
+  const etiquetasBase = [
     { etiqueta: "Viaje", icono: Plane },
     { etiqueta: "Comida libre", icono: UtensilsCrossed },
     { etiqueta: "Enfermedad", icono: HeartPulse },
     { etiqueta: "Entrenamiento especial", icono: Dumbbell },
   ];
+  const etiquetas = features.fluid_context ? [...etiquetasBase,
+    { etiqueta: "Comida salada", icono: Soup },
+    { etiqueta: "Cena tardía", icono: Clock3 },
+    { etiqueta: "Poco sueño", icono: MoonStar },
+  ] : etiquetasBase;
 
   function sumarEtiqueta(etiqueta: string) {
     setTexto((actual) => actual.includes(etiqueta) ? actual : `${actual.trim()}${actual.trim() ? " · " : ""}${etiqueta}`);
@@ -192,8 +199,8 @@ function NotaContexto({ fecha, inicial, onGuardar }: { fecha: string; inicial?: 
       <div className="flex flex-wrap gap-1.5">
         {etiquetas.map(({ etiqueta, icono: Icono }) => <button key={etiqueta} type="button" onClick={() => sumarEtiqueta(etiqueta)} className={cn("flex h-8 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors", texto.includes(etiqueta) ? "border-body-border bg-body-wash text-body-ink" : "border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground")}><Icono className="size-3.5 shrink-0" />{etiqueta}</button>)}
       </div>
-      <Textarea id={`nota-${fecha}`} aria-label="Nota de contexto del día" value={texto} onChange={(event) => setTexto(event.target.value)} placeholder="Ej.: cena fuera, viaje o entrenamiento especial…" className="mt-3 min-h-20 resize-y border-body-border/60 bg-body-wash/15 text-sm placeholder:text-muted-foreground" />
-      <div className="mt-2 flex items-center justify-between gap-3"><span className="text-xs text-muted-foreground">No altera tu balance ni la predicción.</span><Button size="sm" variant="secondary" disabled={!cambio || guardando} onClick={() => void guardar()} className="h-8 px-3 text-xs">{guardando ? "Guardando…" : "Guardar"}</Button></div>
+      <Textarea id={`nota-${fecha}`} aria-label="Nota de contexto del día" value={texto} onChange={(event) => setTexto(event.target.value)} placeholder="Ej.: cena fuera, comida salada o poco sueño…" className="mt-3 min-h-20 resize-y border-body-border/60 bg-body-wash/15 text-sm placeholder:text-muted-foreground" />
+      <div className="mt-2 flex items-center justify-between gap-3"><span className="text-xs text-muted-foreground">No cambia la grasa estimada; ayuda a interpretar líquidos en la báscula.</span><Button size="sm" variant="secondary" disabled={!cambio || guardando} onClick={() => void guardar()} className="h-8 px-3 text-xs">{guardando ? "Guardando…" : "Guardar"}</Button></div>
     </div>
   </details>;
 }

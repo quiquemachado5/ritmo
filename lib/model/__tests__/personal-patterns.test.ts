@@ -7,6 +7,7 @@ const perfil: Estado["perfil"] = { alturaCm: 180, edad: 30, sexo: "hombre", kcal
 describe("patrones personales", () => {
   it("reconoce contexto escrito con acentos y texto adicional", () => {
     expect(eventosDeNota("Viaje · Entrenamiento especial por la mañana")).toEqual(["viaje", "entrenamiento-especial"]);
+    expect(eventosDeNota("Cené tarde, dormí poco y fue una comida muy salada")).toEqual(["comida-salada", "cena-tardia", "poco-sueno"]);
   });
 
   it("ordena hábitos por su asociación observada con el pesaje siguiente", () => {

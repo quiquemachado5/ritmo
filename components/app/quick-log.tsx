@@ -38,7 +38,7 @@ import { analizarComida } from "@/lib/nutrition/client";
 import { descripcionNecesitaAnalisis, normalizarDescripcionComida } from "@/lib/nutrition/prompt-state";
 import type { AnalisisNutricional, ItemNutricional } from "@/lib/nutrition/types";
 import { distribucionMacros, energiaDesdeMacros, recalcularAnalisis } from "@/lib/nutrition/corrections";
-import { guardarCorreccionesNutricion, agregarPlantilla, useMealPrefs } from "@/lib/meal-prefs";
+import { buscarMemoriaNutricional, guardarCorreccionesNutricion, guardarMemoriaNutricional, agregarPlantilla, useMealPrefs } from "@/lib/meal-prefs";
 import type { Comida, TipoComida } from "@/lib/model/types";
 import { fmtFechaLarga, capitalizar } from "@/lib/format";
 import { detectarAnomaliasComida, detectarAnomaliasMedicion, type RecordAnomaly } from "@/lib/record-anomalies";
@@ -49,6 +49,7 @@ import { aclaracionComida, type AclaracionComida } from "@/lib/nutrition/clarifi
 import { calidadIngredientes } from "@/lib/nutrition/ingredient-quality";
 import { escalarNutrientes, escalarIngrediente, factorPorcion } from "@/lib/nutrition/portions";
 import { corregirGramos, etiquetaCantidad } from "@/lib/nutrition/catalog";
+import { usePlatformConfig } from "./platform-provider";
 
 const TABS: { id: QuickTab; label: string; icon: typeof Scale }[] = [
   { id: "comida", label: "Comida", icon: UtensilsCrossed },
@@ -231,6 +232,7 @@ function PanelComida({
   const [comoPlantilla, setComoPlantilla] = React.useState(false);
   const aclarado = React.useRef("");
   const preferencias = useMealPrefs();
+  const { features } = usePlatformConfig();
   const editando = comidaEdit != null;
   const frecuentes = React.useMemo(() => (editando ? [] : comidasFrecuentes(estado, 6)), [estado, editando]);
 
@@ -306,7 +308,19 @@ function PanelComida({
     setAnalizando(true);
     setAnalisis(null);
     try {
-      const res = await analizarComida(texto, Object.values(preferencias.nutritionCorrections));
+      const memoria = features.nutrition_memory ? buscarMemoriaNutricional(preferencias, texto) : null;
+      const res: AnalisisNutricional = memoria ? {
+        resumen: memoria.texto,
+        kcal: memoria.kcal,
+        proteinas: memoria.proteinas,
+        carbohidratos: memoria.carbohidratos,
+        grasas: memoria.grasas,
+        items: structuredClone(memoria.items),
+        fuente: "offline",
+        confianza: "alta",
+        observaciones: ["RITMO ha reutilizado este plato tal como lo corregiste la última vez."],
+        aviso: "Memoria personal confirmada. Puedes volver a corregir cualquier ingrediente.",
+      } : await analizarComida(texto, Object.values(preferencias.nutritionCorrections));
       setAnalisis(res);
       setItemsCorregidos(new Set());
       setTextoAnalizado(texto.trim());
@@ -380,6 +394,16 @@ function PanelComida({
     }
     if (analisisVigente && itemsCorregidos.size > 0) {
       guardarCorreccionesNutricion(analisisVigente.items.filter((_, index) => itemsCorregidos.has(index)));
+    }
+    if (features.nutrition_memory && analisisVigente && editadoManual) {
+      guardarMemoriaNutricional({
+        texto: texto.trim(),
+        kcal: n(manual.kcal),
+        proteinas: n(manual.p),
+        carbohidratos: n(manual.c),
+        grasas: n(manual.g),
+        items: analisisVigente.items,
+      });
     }
     onDone();
   }

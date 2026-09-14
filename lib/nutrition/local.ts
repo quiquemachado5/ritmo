@@ -2,7 +2,7 @@ import { estimarOffline } from "./offline";
 import { normalizarNombreIngrediente, recalcularAnalisis } from "./corrections";
 import type { AnalisisNutricional, CorreccionNutricional } from "./types";
 
-/** Sin llamadas de red ni claves; reutiliza correcciones solo para igual cantidad. */
+/** Sin llamadas de red ni claves; escala referencias personales cuando hay gramos comparables. */
 export function analizarLocal(texto: string, correcciones: CorreccionNutricional[] = []) {
   if (!texto.trim() || texto.length > 2500) throw new Error("Describe la comida en un máximo de 2.500 caracteres.");
   const base = estimarOffline(texto);
@@ -19,6 +19,36 @@ export function analizarLocal(texto: string, correcciones: CorreccionNutricional
       && normalizarNombreIngrediente(c.cantidad) === normalizarNombreIngrediente(item.cantidad)
       && [c.kcal, c.proteinas, c.carbohidratos, c.grasas].every(n => Number.isFinite(n) && n >= 0 && n <= 6000));
     if (!correccion) {
+      const pesada = correcciones.find(c => c.gramos != null && item.gramos != null
+        && coincideNombre(c, item) && c.gramos > 0 && item.gramos > 0
+        && !(c.unidades != null && item.unidades != null && c.unidad != null && c.unidad === item.unidad)
+        && [c.kcal, c.proteinas, c.carbohidratos, c.grasas].every(n => Number.isFinite(n) && n >= 0 && n <= 6000));
+      if (pesada) {
+        const factor = item.gramos! / pesada.gramos!;
+        if (factor >= 0.2 && factor <= 5) {
+          usadas++;
+          return {
+            ...item,
+            kcal: Math.round(pesada.kcal * factor),
+            proteinas: Math.round(pesada.proteinas * factor * 10) / 10,
+            carbohidratos: Math.round(pesada.carbohidratos * factor * 10) / 10,
+            grasas: Math.round(pesada.grasas * factor * 10) / 10,
+            referencia: item.referencia ? {
+              ...item.referencia,
+              estado: "correccion_personal" as const,
+              fuente: "Tus valores corregidos, ajustados al peso indicado",
+              url: undefined,
+              revisadaEn: undefined,
+              por100g: {
+                kcal: pesada.kcal * 100 / pesada.gramos!,
+                proteinas: pesada.proteinas * 100 / pesada.gramos!,
+                carbohidratos: pesada.carbohidratos * 100 / pesada.gramos!,
+                grasas: pesada.grasas * 100 / pesada.gramos!,
+              },
+            } : item.referencia,
+          };
+        }
+      }
       const aprendida = correcciones.find(c => c.gramos != null && c.unidades != null && item.unidades != null
         && c.unidad != null && c.unidad === item.unidad
         && coincideNombre(c, item)

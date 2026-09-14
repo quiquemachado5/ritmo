@@ -44,6 +44,20 @@ describe("Auditoría prospectiva", () => {
     expect(r.actual.maeKg).toBeCloseTo(0.2);
     expect(r.versiones).toHaveLength(2);
   });
+  it("detecta si el error prospectivo mejora sin reescribir predicciones", () => {
+    const dias = Object.fromEntries(Array.from({ length: 6 }, (_, indice) => {
+      const fecha = `2026-09-${String(indice + 1).padStart(2, "0")}`;
+      return [fecha, { fecha, peso: 90, habitos: {} }];
+    }));
+    const predicciones = Array.from({ length: 6 }, (_, indice) => ({
+      ...prediccion,
+      id: `t-${indice}`,
+      fechaEmision: `2026-08-${String(indice + 25).padStart(2, "0")}`,
+      fechaObjetivo: `2026-09-${String(indice + 1).padStart(2, "0")}`,
+      peso: indice < 3 ? 91 : 90.2,
+    }));
+    expect(evaluarPredicciones({ ...base, dias }, predicciones, "2026-09-06", "test").tendencia).toMatchObject({ estado: "mejorando", recientes: 3, anteriores: 3 });
+  });
 });
 
 describe("Vigencia del perfil", () => {

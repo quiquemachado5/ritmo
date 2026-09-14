@@ -29,6 +29,8 @@ import { ProfessionalReport } from "@/components/app/professional-report";
 import { AccountHealth, PrivacyMap } from "@/components/app/account-health";
 import { guardarExperimentos, useExperimentos } from "@/lib/experiments";
 import { SyncCenter } from "@/components/app/sync-center";
+import { DataHealthCenter } from "@/components/app/data-health-center";
+import { usePlatformConfig } from "@/components/app/platform-provider";
 
 type Densidad = "automatica" | "compacta" | "espaciosa";
 type PanelAjustes = "personal" | "rutina" | "experiencia" | "datos";
@@ -47,6 +49,7 @@ function numerosDelPerfil(perfil: Perfil): Record<CampoNumerico, string> {
 export default function AjustesPage() {
   const { estado, cargando, modo, userId, userEmail, actualizarPerfil, exportar, importar, cerrarSesion, borrarDatos } = useRitmo();
   const { theme, setTheme } = useTheme();
+  const { features } = usePlatformConfig();
   const viaje = useModoViaje(userId);
   const fileRef = React.useRef<HTMLInputElement>(null);
   const barraGuardarRef = React.useRef<HTMLDivElement>(null);
@@ -563,6 +566,7 @@ export default function AjustesPage() {
         <SectionLabel>Datos y respaldo</SectionLabel>
         <SettingsCard className="gap-3.5">
           <SyncCenter />
+          {features.data_health && <DataHealthCenter />}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div><p className="text-sm font-semibold">Tu historial, siempre contigo</p><p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">Exporta, importa o recupera una copia sin salir de tu espacio.</p></div>
             <div className="grid w-full grid-cols-2 gap-1.5 sm:w-auto sm:flex sm:shrink-0">

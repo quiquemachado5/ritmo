@@ -26,7 +26,11 @@ const secciones = { "/": "Hoy", "/ajustes": "Ajustes", "/nutricion": "Nutrición
 async function irA(page: Page, ruta: keyof typeof secciones) {
   // Las pestañas se recorren como en la app, sin destruir el documento y
   // abortar peticiones de autenticación en vuelo. La recarga se prueba aparte.
-  const documento = await page.evaluate(() => performance.timeOrigin);
+  const documento = await page.evaluate(() => {
+    const contexto = window as typeof window & { __ritmoDocumentId?: string };
+    contexto.__ritmoDocumentId ??= crypto.randomUUID();
+    return contexto.__ritmoDocumentId;
+  });
   const sidebar = page.locator("[data-app-sidebar]");
   if (await sidebar.isVisible()) {
     await sidebar.getByRole("link", { name: secciones[ruta], exact: true }).click();
@@ -38,7 +42,7 @@ async function irA(page: Page, ruta: keyof typeof secciones) {
       .getByRole("link", { name: secciones[ruta], exact: true }).click();
   }
   await expect(page).toHaveURL(url => url.pathname === ruta);
-  expect(await page.evaluate(() => performance.timeOrigin), "La navegación entre pestañas debe conservar el documento").toBe(documento);
+  expect(await page.evaluate(() => (window as typeof window & { __ritmoDocumentId?: string }).__ritmoDocumentId), "La navegación entre pestañas debe conservar el documento").toBe(documento);
 }
 
 async function sinDesbordamiento(page: Page) {
@@ -67,6 +71,36 @@ test("accesibilidad automática en acceso y lectura principal", async ({ page, r
   await iniciarSesion(page);
   resultado = await new AxeBuilder({ page }).analyze();
   expect(resultado.violations.filter((item) => item.impact === "critical" || item.impact === "serious"), JSON.stringify(resultado.violations, null, 2)).toEqual([]);
+});
+
+test("auditoría visual de despliegue cubre anchuras críticas", async ({ page, request }, info) => {
+  test.skip(info.project.name !== "desktop", "Una matriz interna evita repetirla por motor");
+  test.setTimeout(120000);
+  await request.post("http://127.0.0.1:3199/__reset");
+  await iniciarSesion(page);
+  const superficies = [
+    { width: 320, height: 568 },
+    { width: 390, height: 844 },
+    { width: 768, height: 1024 },
+    { width: 1440, height: 1000 },
+  ];
+  for (const viewport of superficies) {
+    await page.setViewportSize(viewport);
+    for (const ruta of Object.keys(secciones) as Array<keyof typeof secciones>) {
+      await page.goto(ruta);
+      await expect(page.locator("main h1").first()).toBeVisible();
+      await expect(page.getByText("Esta sección falló", { exact: true })).toHaveCount(0);
+      await sinDesbordamiento(page);
+      const idsDuplicados = await page.evaluate(() => {
+        const ids = [...document.querySelectorAll<HTMLElement>("[id]")].map((elemento) => elemento.id).filter(Boolean);
+        return [...new Set(ids.filter((id, indice) => ids.indexOf(id) !== indice))];
+      });
+      expect(idsDuplicados, `IDs duplicados en ${ruta} a ${viewport.width}px`).toEqual([]);
+    }
+    await page.goto("/");
+    const resultado = await new AxeBuilder({ page }).analyze();
+    expect(resultado.violations.filter((item) => item.impact === "critical" || item.impact === "serious"), `Accesibilidad a ${viewport.width}px`).toEqual([]);
+  }
 });
 
 test("recorrido visual y guardado con datos sintéticos", async ({ page, request }, info) => {

@@ -9,6 +9,9 @@ export const FEATURE_KEYS = [
   "memoria_corporal",
   "modo_invisible",
   "nutrition_engine",
+  "nutrition_memory",
+  "fluid_context",
+  "data_health",
 ] as const;
 
 export type FeatureKey = typeof FEATURE_KEYS[number];

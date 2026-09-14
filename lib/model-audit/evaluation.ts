@@ -7,6 +7,22 @@ import { sumarDias } from "../model/dates";
 
 export const VERSION_MODELO_AUDITADO = VERSION_MODELO_ESTABLE;
 
+function tendenciaPrecision(filas: ResultadoPrediccion[]) {
+  if (filas.length < 6) return { estado: "insuficiente" as const, cambioMaeKg: null, recientes: 0, anteriores: 0 };
+  const ordenadas = [...filas].sort((a, b) => a.fechaObjetivo.localeCompare(b.fechaObjetivo) || a.horizonteDias - b.horizonteDias);
+  const tamano = Math.min(5, Math.floor(ordenadas.length / 2));
+  const anteriores = ordenadas.slice(-(tamano * 2), -tamano);
+  const recientes = ordenadas.slice(-tamano);
+  const mae = (casos: ResultadoPrediccion[]) => casos.reduce((total, caso) => total + caso.errorKg, 0) / casos.length;
+  const cambioMaeKg = mae(recientes) - mae(anteriores);
+  return {
+    estado: cambioMaeKg <= -0.1 ? "mejorando" as const : cambioMaeKg >= 0.1 ? "degradando" as const : "estable" as const,
+    cambioMaeKg,
+    recientes: recientes.length,
+    anteriores: anteriores.length,
+  };
+}
+
 /** Solo fecha exacta y pronósticos sellados en un día anterior; no interpola. */
 export function evaluarPredicciones(estado: Estado, predicciones: PrediccionEmitida[], fechaHoy: string, versionActual = VERSION_MODELO_AUDITADO) {
   const reales = new Map(pesajes(estado).filter((p) => p.fecha <= fechaHoy).map((p) => [p.fecha, p.peso]));
@@ -38,6 +54,7 @@ export function evaluarPredicciones(estado: Estado, predicciones: PrediccionEmit
   return {
     ...resumen(evaluadas), pendientes: pendientes.size, sinPesaje: sinPesaje.size,
     actual: { version: versionActual, ...resumen(actuales) },
+    tendencia: tendenciaPrecision(actuales),
     versiones,
     evaluadas: actuales.sort((a, b) => b.fechaObjetivo.localeCompare(a.fechaObjetivo) || a.horizonteDias - b.horizonteDias),
     horizontes: ([1, 3, 7, 30] as const).map((dias) => ({ dias, ...resumen(actuales.filter((p) => p.horizonteDias === dias)) })),

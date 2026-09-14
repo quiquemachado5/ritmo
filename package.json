@@ -12,6 +12,7 @@
     "test:db": "node scripts/test-database.mjs",
     "test:e2e": "playwright test",
     "test:e2e:local": "playwright test --config=playwright.local.config.ts",
+    "test:visual": "playwright test --config=playwright.local.config.ts --project=desktop --grep=\"auditoría visual de despliegue\"",
     "test:nutrition:local": "vitest run lib/nutrition/__tests__/local.test.ts lib/nutrition/__tests__/offline.test.ts lib/nutrition/__tests__/portions.test.ts lib/nutrition/__tests__/ingredient-quality.test.ts lib/nutrition/__tests__/quality-gate.test.ts --reporter=verbose",
     "test:nutrition:eval": "RUN_GEMINI_EVAL=1 node --env-file-if-exists=.env.local ./node_modules/vitest/vitest.mjs run lib/nutrition/__tests__/reference.eval.test.ts --reporter=verbose",
     "check:versions": "node scripts/check-versions.mjs",

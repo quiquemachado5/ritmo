@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, RefreshCw } from "lucide-react";
+import { ChevronDown, Minus, RefreshCw, TrendingDown, TrendingUp } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { evaluarPredicciones } from "@/lib/model-audit/evaluation";
 import { hoy } from "@/lib/model/dates";
@@ -20,6 +20,7 @@ export function ModelAudit() {
   const evaluacion = React.useMemo(() => evaluarPredicciones(estado, auditoriaModelo.predicciones, hoy(), ciclo.versionActiva), [estado, auditoriaModelo.predicciones, ciclo.versionActiva]);
   const configuraciones = [...auditoriaModelo.configuraciones].reverse();
   const primera = auditoriaModelo.configuraciones[0];
+  const TendenciaIcono = evaluacion.tendencia.estado === "mejorando" ? TrendingDown : evaluacion.tendencia.estado === "degradando" ? TrendingUp : Minus;
   async function reintentar() {
     setReintentando(true);
     try { await reintentarAuditoria(); } finally { setReintentando(false); }
@@ -44,6 +45,13 @@ export function ModelAudit() {
         <p className="mt-3 text-xs text-muted-foreground">
           Modelo actual: <span className="font-semibold text-foreground">{evaluacion.actual.casos ? `${fmtPeso(evaluacion.actual.maeKg, 2)} kg MAE en ${evaluacion.actual.casos} comparaciones` : "aún sin pesajes evaluables"}</span>. Sesgo {evaluacion.actual.sesgoKg == null ? "—" : `${evaluacion.actual.sesgoKg >= 0 ? "+" : ""}${fmtPeso(evaluacion.actual.sesgoKg, 2)} kg`} · error P90 {evaluacion.actual.p90Kg == null ? "—" : `${fmtPeso(evaluacion.actual.p90Kg, 2)} kg`}.
         </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-y border-border py-2.5 text-xs">
+          <Chip tone={evaluacion.tendencia.estado === "mejorando" ? "weight" : evaluacion.tendencia.estado === "degradando" ? "warning" : "muted"}>
+            <TendenciaIcono className="size-3" />
+            {evaluacion.tendencia.estado === "mejorando" ? "Error bajando" : evaluacion.tendencia.estado === "degradando" ? "Error subiendo" : evaluacion.tendencia.estado === "estable" ? "Precisión estable" : "Aprendiendo"}
+          </Chip>
+          <span className="text-muted-foreground">{evaluacion.tendencia.cambioMaeKg == null ? "Necesita 6 comparaciones exactas para medir evolución." : `${evaluacion.tendencia.cambioMaeKg > 0 ? "+" : ""}${fmtPeso(evaluacion.tendencia.cambioMaeKg, 2)} kg de MAE frente al bloque anterior.`}</span>
+        </div>
         {(evaluacion.contextoAlcohol.conAlcohol.casos > 0 || evaluacion.contextoAlcohol.sinAlcohol.casos > 0) && <div className="mt-3 grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-2">
           <div className="bg-card px-3 py-2.5"><p className="text-xs font-semibold">Tras alcohol</p><p className="mt-0.5 text-xs text-muted-foreground">{evaluacion.contextoAlcohol.conAlcohol.casos ? `${fmtPeso(evaluacion.contextoAlcohol.conAlcohol.maeKg, 2)} kg de error · ${evaluacion.contextoAlcohol.conAlcohol.casos} casos` : "Aún sin comparación exacta"}</p></div>
           <div className="bg-card px-3 py-2.5"><p className="text-xs font-semibold">Sin alcohol</p><p className="mt-0.5 text-xs text-muted-foreground">{evaluacion.contextoAlcohol.sinAlcohol.casos ? `${fmtPeso(evaluacion.contextoAlcohol.sinAlcohol.maeKg, 2)} kg de error · ${evaluacion.contextoAlcohol.sinAlcohol.casos} casos` : "Aún sin comparación exacta"}</p></div>

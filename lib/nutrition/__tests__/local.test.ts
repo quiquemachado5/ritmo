@@ -23,10 +23,10 @@ describe("nutrición sin facturación", () => {
     expect(await claimNutrition("fixture", "a".repeat(64))).toEqual({ status: "disabled" });
     expect(fetch).not.toHaveBeenCalled();
   });
-  it("recuerda una corrección para igual ingrediente y cantidad, no para otra porción", () => {
+  it("recuerda una corrección y la escala cuando cambia un peso declarado", () => {
     const correccion = { clave: "pan", nombre: "pan", cantidad: "100 g", kcal: 240, proteinas: 8, carbohidratos: 43, grasas: 4, actualizada: 1 };
     expect(analizarLocal("100 g de pan", [correccion]).kcal).toBe(240);
-    expect(analizarLocal("50 g de pan", [correccion]).kcal).not.toBe(240);
+    expect(analizarLocal("50 g de pan", [{ ...correccion, gramos: 100 }]).kcal).toBe(120);
     expect(analizarLocal("100 g de pan", [correccion]).observaciones?.[0]).toContain("una corrección");
   });
   it("aprende el peso habitual de una unidad corregida y lo escala", () => {

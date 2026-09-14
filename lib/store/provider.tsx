@@ -25,6 +25,7 @@ import {
   exportarPreferencias,
   importarPreferencias,
 } from "@/lib/meal-prefs";
+import { repararSaludDatos } from "@/lib/data-health";
 
 function clonar<T>(v: T): T {
   return typeof structuredClone === "function" ? structuredClone(v) : JSON.parse(JSON.stringify(v));
@@ -66,6 +67,7 @@ export interface RitmoContextValue {
   actualizarPerfil: (campos: Partial<Perfil>) => Promise<boolean>;
   exportar: () => ArchivoRitmo & StoreData;
   importar: (datos: Partial<StoreData>) => Promise<void>;
+  repararDatos: () => Promise<number>;
   recargar: () => Promise<void>;
   cerrarSesion: () => Promise<void>;
   borrarDatos: () => Promise<void>;
@@ -552,6 +554,28 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     [aplicar, authUserId],
   );
 
+  const repararDatos = React.useCallback(async () => {
+    const reparacion = repararSaludDatos(dataRef.current);
+    if (reparacion.changes === 0) return 0;
+    const ok = await commit(
+      (draft) => {
+        draft.perfil = reparacion.data.perfil;
+        draft.dias = reparacion.data.dias;
+        draft.composicion = reparacion.data.composicion;
+      },
+      async (_draft, adapter) => {
+        if (!adapter.sembrar) throw new Error("La reparación segura no está disponible en esta cuenta.");
+        await adapter.sembrar(reparacion.data);
+      },
+      "No se pudieron reparar los datos. No se ha perdido ningún registro.",
+    );
+    if (ok) {
+      toast.success(`${reparacion.changes} ${reparacion.changes === 1 ? "ajuste reparado" : "ajustes reparados"}.`);
+      return reparacion.changes;
+    }
+    return 0;
+  }, [commit]);
+
   const cerrarSesion = React.useCallback(async () => {
     cargaValidaRef.current = false;
     setCargaValida(false);
@@ -624,11 +648,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       actualizarPerfil,
       exportar,
       importar,
+      repararDatos,
       recargar,
       cerrarSesion,
       borrarDatos,
     }),
-    [estado, auditoriaModelo, errorAuditoria, reintentarAuditoria, modo, cargando, cargaValida, errorCarga, sincronizando, authUserId, userEmail, dia, medicion, alternarHabito, actualizarDia, registrarComida, editarComida, borrarComida, guardarMedicion, borrarMedicion, actualizarPerfil, exportar, importar, recargar, cerrarSesion, borrarDatos],
+    [estado, auditoriaModelo, errorAuditoria, reintentarAuditoria, modo, cargando, cargaValida, errorCarga, sincronizando, authUserId, userEmail, dia, medicion, alternarHabito, actualizarDia, registrarComida, editarComida, borrarComida, guardarMedicion, borrarMedicion, actualizarPerfil, exportar, importar, repararDatos, recargar, cerrarSesion, borrarDatos],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

@@ -50,5 +50,6 @@ export function preferenciasValidas(v: unknown): boolean {
     && (v.plan === undefined || lista(v.plan, x => objeto(x) && texto(x.id, 200) && fechaValida(x.fecha) && comidaValida(x.comida) && (x.registrada === undefined || typeof x.registrada === "boolean")))
     && (v.overrides === undefined || (objeto(v.overrides) && Object.values(v.overrides).every(parcial)))
     && (v.nutritionCorrections === undefined || (objeto(v.nutritionCorrections) && Object.values(v.nutritionCorrections).every(x => objeto(x) && ingredienteValido(x) && texto(x.clave) && numero(x.actualizada, Number.MAX_SAFE_INTEGER))))
+    && (v.nutritionMemories === undefined || (objeto(v.nutritionMemories) && Object.values(v.nutritionMemories).every(x => objeto(x) && texto(x.clave) && texto(x.texto) && nutrientes(x) && lista(x.items, ingredienteValido) && numero(x.actualizada, Number.MAX_SAFE_INTEGER))))
     && (v.profile === undefined || preferenciasPerfilValidas(v.profile));
 }

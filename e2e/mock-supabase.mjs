@@ -6,6 +6,8 @@ let tick = 0;
 const ids = ['00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002'];
 const features = [
   ['nutrition_engine','Motor nutricional'],
+  ['nutrition_memory','Memoria nutricional'], ['fluid_context','Contexto de líquidos'],
+  ['data_health','Salud de datos'],
   ['interfaz_viva','Interfaz viva'], ['rescate_automatico','Rescate automático'],
   ['detector_avanzado','Detector de señales'], ['escenarios','Escenarios de peso'],
   ['memoria_corporal','Memoria corporal'], ['modo_invisible','Lecturas en segundo plano'],
@@ -64,7 +66,7 @@ const server = http.createServer(async (req, res) => {
       announcement: platformControl.announcementEnabled ? platformControl.announcementText : null,
       updatedAt: platformControl.updatedAt,
     });
-    if (rpc === 'ritmo_public_runtime_status') return send({ databaseVersion: '202609140002', nutritionEngine: true });
+    if (rpc === 'ritmo_public_runtime_status') return send({ databaseVersion: '202609140003', nutritionEngine: true });
     if (rpc === 'ritmo_admin_snapshot') {
       if (id !== ids[1]) return send({ message: 'Acceso no autorizado' }, 403);
       return send({ metrics: { users: 2, onboarded: 2, active30: 2, suspended: 0, admins: 1, pilots: 0 }, features, control: platformControl, audit: [] });

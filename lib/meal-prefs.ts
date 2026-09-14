@@ -43,6 +43,18 @@ export interface PlantillaComida extends ComidaCatalogo {
   nombre: string;
 }
 
+/** Resultado de un plato que la persona corrigió de forma explícita. */
+export interface MemoriaNutricional {
+  clave: string;
+  texto: string;
+  kcal: number;
+  proteinas: number;
+  carbohidratos: number;
+  grasas: number;
+  items: ItemNutricional[];
+  actualizada: number;
+}
+
 export type PreferenciasPerfil = Partial<
   Pick<
     Perfil,
@@ -60,13 +72,15 @@ export interface MealPrefs {
   templates: PlantillaComida[];
   /** Referencias confirmadas por el usuario para personalizar futuros análisis. */
   nutritionCorrections: Record<string, CorreccionNutricional>;
+  /** Platos completos corregidos; nunca se alimenta de una estimación sin revisar. */
+  nutritionMemories: Record<string, MemoriaNutricional>;
   /** Ajustes del modelo que no requieren columnas nuevas en Supabase. */
   profile: PreferenciasPerfil;
   updatedAt: number;
 }
 
 const KEY_PREFIX = "ritmo:mealprefs";
-const VACIO: MealPrefs = { plan: [], fav: [], hidden: [], overrides: {}, catalog: [], templates: [], nutritionCorrections: {}, profile: {}, updatedAt: 0 };
+const VACIO: MealPrefs = { plan: [], fav: [], hidden: [], overrides: {}, catalog: [], templates: [], nutritionCorrections: {}, nutritionMemories: {}, profile: {}, updatedAt: 0 };
 const CLAVES_PERFIL = [
   "imputarActiva",
   "imputarDesde",
@@ -84,6 +98,7 @@ function normalizar(p: Partial<MealPrefs> | null | undefined): MealPrefs {
     catalog: p?.catalog ?? [],
     templates: p?.templates ?? [],
     nutritionCorrections: p?.nutritionCorrections ?? {},
+    nutritionMemories: p?.nutritionMemories ?? {},
     profile: p?.profile ?? {},
     updatedAt: p?.updatedAt ?? 0,
   };
@@ -291,7 +306,33 @@ export function importarPreferencias(prefs: MealPrefs) {
   return escribir({ ...p, fav: [...new Set([...p.fav, ...prefs.fav])], hidden: [...new Set([...p.hidden, ...prefs.hidden])],
     catalog: unir(p.catalog, prefs.catalog, c => c.clave), templates: unir(p.templates, prefs.templates, t => t.id),
     plan: unir(p.plan, prefs.plan ?? [], t => t.id), overrides: { ...p.overrides, ...prefs.overrides },
-    nutritionCorrections: { ...p.nutritionCorrections, ...prefs.nutritionCorrections }, profile: { ...p.profile, ...prefs.profile } });
+    nutritionCorrections: { ...p.nutritionCorrections, ...(prefs.nutritionCorrections ?? {}) },
+    nutritionMemories: { ...p.nutritionMemories, ...(prefs.nutritionMemories ?? {}) }, profile: { ...p.profile, ...(prefs.profile ?? {}) } });
+}
+
+export function claveMemoriaNutricional(texto: string) {
+  return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
+}
+
+export function buscarMemoriaNutricional(prefs: MealPrefs, texto: string): MemoriaNutricional | null {
+  const clave = claveMemoriaNutricional(texto);
+  return clave ? prefs.nutritionMemories[clave] ?? null : null;
+}
+
+/** Guarda únicamente una decisión nutricional confirmada por la persona. */
+export function guardarMemoriaNutricional(memoria: Omit<MemoriaNutricional, "clave" | "actualizada">) {
+  const clave = claveMemoriaNutricional(memoria.texto);
+  if (!clave || memoria.items.length === 0) return false;
+  const p = snapshot();
+  const nutritionMemories = {
+    ...p.nutritionMemories,
+    [clave]: { ...structuredClone(memoria), clave, actualizada: Date.now() },
+  };
+  const limitadas = Object.fromEntries(
+    Object.entries(nutritionMemories).sort(([, a], [, b]) => b.actualizada - a.actualizada).slice(0, 40),
+  );
+  return escribir({ ...p, nutritionMemories: limitadas });
 }
 
 export function guardarCorreccionesNutricion(items: ItemNutricional[]) {

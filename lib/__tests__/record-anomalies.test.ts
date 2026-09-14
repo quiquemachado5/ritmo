@@ -18,6 +18,12 @@ describe("detección de registros atípicos", () => {
     expect(detectarAnomaliasComida({ kcal: 620, proteinas: 42, carbohidratos: 58, grasas: 24 })).toEqual([]);
   });
 
+  it("detecta ingredientes duplicados y grasas de cocinado improbables", () => {
+    const aceite = { nombre: "AOVE", cantidad: "20 g", kcal: 180, proteinas: 0, carbohidratos: 0, grasas: 20 };
+    const avisos = detectarAnomaliasComida({ kcal: 360, proteinas: 0, carbohidratos: 0, grasas: 40, items: [aceite, aceite] });
+    expect(avisos.map((aviso) => aviso.code)).toEqual(expect.arrayContaining(["ingredient-duplicate-aove", "cooking-fat-high"]));
+  });
+
   it("detecta un salto de peso improbable en pocos días", () => {
     const avisos = detectarAnomaliasMedicion({
       measurement: { fecha: "2026-09-02", peso: 101 },

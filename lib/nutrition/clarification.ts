@@ -16,5 +16,10 @@ export function aclaracionComida(texto: string): AclaracionComida | null {
   if (/\b(grande|pequeno|pequena|mediano|mediana)\b/.test(t) && /\b(bol|plato|racion)\b/.test(t)) {
     return { pregunta: "¿Qué tamaño aproximado tenía la ración?", opciones: ["250 g", "350 g", "500 g"], prefijo: "Aclaración: peso aproximado de la ración" };
   }
+  const secoConPeso = /\b\d+(?:[.,]\d+)?\s*(?:g|gramos)\s+(?:de\s+)?(?:arroz|pasta|macarrones|espaguetis|lentejas|garbanzos|alubias|judias)\b/.test(t);
+  const estadoIndicado = /\b(crud[oa]s?|sec[oa]s?|cocid[oa]s?|cocinad[oa]s?|de bote|en conserva|escurrid[oa]s?)\b/.test(t);
+  if (secoConPeso && !estadoIndicado) {
+    return { pregunta: "¿Ese peso era en crudo o ya cocinado?", opciones: ["Peso en crudo", "Peso cocinado"], prefijo: "Aclaración: estado del peso indicado" };
+  }
   return null;
 }

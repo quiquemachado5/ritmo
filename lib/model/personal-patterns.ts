@@ -2,13 +2,16 @@ import { habitosModelo } from "./config";
 import { diasEntre } from "./dates";
 import type { Estado } from "./types";
 
-export type EventoContextual = "viaje" | "comida-libre" | "enfermedad" | "entrenamiento-especial";
+export type EventoContextual = "viaje" | "comida-libre" | "enfermedad" | "entrenamiento-especial" | "comida-salada" | "cena-tardia" | "poco-sueno";
 
 export const EVENTOS_CONTEXTO: ReadonlyArray<{ id: EventoContextual; etiqueta: string; priorKg: number }> = [
   { id: "viaje", etiqueta: "Viaje", priorKg: 0.25 },
   { id: "comida-libre", etiqueta: "Comida libre", priorKg: 0.45 },
   { id: "enfermedad", etiqueta: "Enfermedad", priorKg: 0.3 },
   { id: "entrenamiento-especial", etiqueta: "Entrenamiento especial", priorKg: 0.2 },
+  { id: "comida-salada", etiqueta: "Comida salada", priorKg: 0.3 },
+  { id: "cena-tardia", etiqueta: "Cena tardía", priorKg: 0.22 },
+  { id: "poco-sueno", etiqueta: "Poco sueño", priorKg: 0.16 },
 ] as const;
 
 function normalizar(texto = "") {
@@ -21,6 +24,9 @@ export function eventosDeNota(notas?: string): EventoContextual[] {
   return EVENTOS_CONTEXTO.filter((evento) => {
     if (evento.id === "comida-libre") return texto.includes("comida libre");
     if (evento.id === "entrenamiento-especial") return texto.includes("entrenamiento especial");
+    if (evento.id === "comida-salada") return /\b(comida salada|mucha sal|muy salado|muy salada)\b/.test(texto);
+    if (evento.id === "cena-tardia") return /\b(cena tardia|cene tarde)\b/.test(texto);
+    if (evento.id === "poco-sueno") return /\b(poco sueno|dormi poco|dormi mal|mala noche)\b/.test(texto);
     return texto.includes(evento.id);
   }).map((evento) => evento.id);
 }
