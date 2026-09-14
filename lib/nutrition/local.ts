@@ -9,15 +9,19 @@ export function analizarLocal(texto: string, correcciones: CorreccionNutricional
   let usadas = 0;
   let porcionesAprendidas = 0;
   const nombre = (s: string) => normalizarNombreIngrediente(s.split(" · ")[0]);
+  const coincideNombre = (correccion: CorreccionNutricional, item: { nombre: string }) => {
+    const objetivo = nombre(item.nombre);
+    return nombre(correccion.nombre) === objetivo || correccion.aliases?.includes(objetivo) === true;
+  };
   const items = base.items.map(item => {
     const correccion = correcciones.find(c => c.cantidad && item.cantidad
-      && nombre(c.nombre) === nombre(item.nombre)
+      && coincideNombre(c, item)
       && normalizarNombreIngrediente(c.cantidad) === normalizarNombreIngrediente(item.cantidad)
       && [c.kcal, c.proteinas, c.carbohidratos, c.grasas].every(n => Number.isFinite(n) && n >= 0 && n <= 6000));
     if (!correccion) {
       const aprendida = correcciones.find(c => c.gramos != null && c.unidades != null && item.unidades != null
         && c.unidad != null && c.unidad === item.unidad
-        && nombre(c.nombre) === nombre(item.nombre)
+        && coincideNombre(c, item)
         && c.gramos > 0 && c.unidades > 0 && item.unidades > 0);
       if (!aprendida || !item.referencia) return item;
       const gramos = Math.round((aprendida.gramos! / aprendida.unidades!) * item.unidades! * 10) / 10;

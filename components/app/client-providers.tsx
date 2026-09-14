@@ -9,17 +9,20 @@ import { ServiceWorkerRegister } from "./sw-register";
 import { AutoBackup } from "./auto-backup";
 import { PlatformProvider } from "./platform-provider";
 import type { PlatformConfig } from "@/lib/platform/config";
+import { ActiveDayProvider } from "./active-day-provider";
 
 export function ClientProviders({ children, isAdmin, platformConfig }: { children: React.ReactNode; isAdmin: boolean; platformConfig: PlatformConfig }) {
   return (
     <PlatformProvider config={platformConfig}>
       <DataProvider>
-        <QuickLogProvider>
-          <ServiceWorkerRegister />
-          <AutoBackup />
-          <OfflineBanner />
-          <AppShell isAdmin={isAdmin}>{children}</AppShell>
-        </QuickLogProvider>
+        <ActiveDayProvider>
+          <QuickLogProvider>
+            <ServiceWorkerRegister />
+            <AutoBackup />
+            <OfflineBanner />
+            <AppShell isAdmin={isAdmin}>{children}</AppShell>
+          </QuickLogProvider>
+        </ActiveDayProvider>
       </DataProvider>
     </PlatformProvider>
   );

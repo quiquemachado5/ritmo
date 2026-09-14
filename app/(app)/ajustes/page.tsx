@@ -28,6 +28,7 @@ import { EXTERNAL_NUTRITION_ENABLED } from "@/lib/nutrition/policy";
 import { ProfessionalReport } from "@/components/app/professional-report";
 import { AccountHealth, PrivacyMap } from "@/components/app/account-health";
 import { guardarExperimentos, useExperimentos } from "@/lib/experiments";
+import { SyncCenter } from "@/components/app/sync-center";
 
 type Densidad = "automatica" | "compacta" | "espaciosa";
 type PanelAjustes = "personal" | "rutina" | "experiencia" | "datos";
@@ -151,6 +152,12 @@ export default function AjustesPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDensidad(proxima);
     document.documentElement.setAttribute("data-densidad", proxima);
+  }, []);
+  React.useEffect(() => {
+    const solicitado = new URLSearchParams(window.location.search).get("panel");
+    // El panel de un enlace profundo solo existe en el navegador.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (PANELES_AJUSTES.some((item) => item.id === solicitado)) setPanel(solicitado as PanelAjustes);
   }, []);
   // g/kg por defecto según objetivo, para el placeholder del campo de proteína.
   const proteinaSugerida = String(form.objetivo === "perder" ? 2.0 : form.objetivo === "ganar" ? 1.8 : 1.6);
@@ -388,7 +395,7 @@ export default function AjustesPage() {
       {/* Datos que alimentan el modelo, separados para una lectura más clara. */}
       <form id="perfil-ajustes" onSubmit={event => { event.preventDefault(); void guardarPerfil(); }}>
       <fieldset disabled={guardandoPerfil || importando || borrandoDatos} className="flex min-w-0 flex-col gap-5" aria-busy={guardandoPerfil || importando || borrandoDatos}>
-      <section id="ajuste-perfil" className={cn("scroll-mt-24", panel !== "personal" && "hidden")}>
+      <SettingsSection id="ajuste-perfil" active={panel === "personal"}>
         <SectionLabel>Datos personales</SectionLabel>
         <SettingsCard>
           <SettingsSubhead title="Tu perfil" description="Los datos que orientan las estimaciones de RITMO." />
@@ -409,9 +416,9 @@ export default function AjustesPage() {
             <Input id="altura" inputMode="numeric" value={numeros.alturaCm} aria-invalid={!!errores.alturaCm} aria-describedby={errores.alturaCm ? "altura-error" : undefined} onChange={(e) => setNumero("alturaCm", e.target.value)} className="h-11 w-full rounded-xl tabular sm:w-28" />
           </Row>
         </SettingsCard>
-      </section>
+      </SettingsSection>
 
-      <section id="ajuste-objetivo" className={cn("scroll-mt-24", panel !== "personal" && "hidden")}>
+      <SettingsSection id="ajuste-objetivo" active={panel === "personal"}>
         <SectionLabel>Objetivo y nutrición</SectionLabel>
         <SettingsCard>
           <SettingsSubhead title="Tu estrategia" description="Las referencias con las que RITMO interpreta tu evolución." />
@@ -466,10 +473,10 @@ export default function AjustesPage() {
             {errores.factorActividad && <p id="factorActividad-error" role="alert" className="mt-1.5 text-xs leading-relaxed text-destructive">{errores.factorActividad}</p>}
           </div>
         </SettingsCard>
-      </section>
+      </SettingsSection>
 
       {/* Reglas del modelo */}
-      <section id="ajuste-modelo" className={cn("scroll-mt-24", panel !== "rutina" && "hidden")}>
+      <SettingsSection id="ajuste-modelo" active={panel === "rutina"}>
         <SectionLabel>Modelo y adherencia</SectionLabel>
         <SettingsCard>
           <SettingsSubhead title="Días sin hábitos" description="Cómo interpreta RITMO una jornada sin adherencia registrada." />
@@ -487,9 +494,9 @@ export default function AjustesPage() {
             <Switch checked={preferenciasExperimentos.modoInvisible} onCheckedChange={(valor) => guardarExperimentos(userId, { ...preferenciasExperimentos, modoInvisible: valor })} aria-label="Predicción silenciosa" />
           </Row><p className="mt-1.5 text-xs text-muted-foreground">Oculta horizontes rutinarios y los vuelve a mostrar si detecta retención, un cambio relevante o falta un pesaje reciente.</p></div>
         </SettingsCard>
-      </section>
+      </SettingsSection>
 
-      <section id="ajuste-habitos" className={cn("scroll-mt-24", panel !== "rutina" && "hidden")}>
+      <SettingsSection id="ajuste-habitos" active={panel === "rutina"}>
         <SectionLabel>Hábitos personales</SectionLabel>
         <SettingsCard>
           <SettingsSubhead title="Qué cuenta en tu modelo" description={`Los ${habitosModelo(form).length} hábitos activos definen la constancia y recalibran el peso. Desactiva los que no quieras usar.`} />
@@ -497,11 +504,11 @@ export default function AjustesPage() {
           <div className="grid gap-2 sm:grid-cols-2">{habitosUsuario(form).map((h) => { const activo = !(form.habitosDesactivados || []).includes(h.clave); const esBase = HABITOS.some((base) => base.clave === h.clave); return <div key={h.clave} className={cn("flex min-h-12 items-center gap-2 rounded-xl border px-3", activo ? "border-primary/25 bg-primary/5" : "border-border bg-secondary/30 text-muted-foreground")}><button type="button" onClick={() => void alternarHabitoModelo(h.clave)} className="min-w-0 flex-1 text-left text-sm font-medium" aria-pressed={activo}>{h.etiqueta}<span className="mt-0.5 block text-[0.68rem] font-normal text-muted-foreground">{activo ? "Activo en el modelo" : "No cuenta en el modelo"}</span></button><Switch checked={activo} onCheckedChange={() => void alternarHabitoModelo(h.clave)} aria-label={`${activo ? "Desactivar" : "Activar"} ${h.etiqueta}`} />{!esBase && <button type="button" onClick={() => void quitarHabitoPersonal(h.clave)} className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-card hover:text-destructive" aria-label={`Eliminar ${h.etiqueta}`}>×</button>}</div>; })}</div>
           <div className="flex flex-col gap-2 sm:flex-row"><Input aria-label="Nombre del nuevo hábito" value={nuevoHabito} onChange={(e) => setNuevoHabito(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void anadirHabitoPersonal(); } }} placeholder="Ej. Caminar 8.000 pasos" maxLength={28} className="h-11 rounded-xl" /><Button type="button" onClick={() => void anadirHabitoPersonal()} variant="secondary" className="h-11 shrink-0 rounded-xl">Añadir hábito</Button></div>
         </SettingsCard>
-      </section>
+      </SettingsSection>
       </fieldset>
       </form>
 
-      <section id="ajuste-contexto" className={cn("scroll-mt-24", panel !== "rutina" && "hidden")}>
+      <SettingsSection id="ajuste-contexto" active={panel === "rutina"}>
         <SectionLabel>Contexto y viaje</SectionLabel>
         <SettingsCard>
           <SettingsSubhead title="Modo viaje / vacaciones" description="Un contexto visual para interpretar tus días sin alterar kcal, hábitos ni predicciones." />
@@ -510,9 +517,9 @@ export default function AjustesPage() {
           </Row>
           {!viaje.activo && <div className="grid gap-2 border-t border-border pt-4 sm:grid-cols-[minmax(0,1fr)_11rem_auto]"><Input value={nombreViaje} onChange={(e) => setNombreViaje(e.target.value)} placeholder="Viaje a Lisboa" className="h-11 rounded-xl" /><Input type="date" value={finViaje} onChange={(e) => setFinViaje(e.target.value)} className="h-11 rounded-xl" /><Button className="h-11 rounded-xl px-4" onClick={() => guardarModoViaje({ activo: true, etiqueta: nombreViaje.trim() || "Viaje", desde: new Date().toISOString().slice(0, 10), hasta: finViaje || undefined }, userId)}><Plane className="size-4" /> Activar</Button></div>}
         </SettingsCard>
-      </section>
+      </SettingsSection>
 
-      <section id="ajuste-experiencia" className={cn("scroll-mt-24", panel !== "experiencia" && "hidden")}>
+      <SettingsSection id="ajuste-experiencia" active={panel === "experiencia"}>
         <SectionLabel>Experiencia</SectionLabel>
         <SettingsCard>
           <SettingsSubhead title="Apariencia" description="Elige color y densidad para tu forma de usar RITMO." />
@@ -541,20 +548,21 @@ export default function AjustesPage() {
             <p className="mt-2 text-xs text-muted-foreground">Automática compacta la navegación en móvil y mantiene más aire en pantallas grandes.</p>
           </div>
         </SettingsCard>
-      </section>
+      </SettingsSection>
 
-      <section id="ajuste-estado" className={cn("scroll-mt-24", panel !== "experiencia" && "hidden")}>
+      <SettingsSection id="ajuste-estado" active={panel === "experiencia"}>
         <SectionLabel>Estado de la cuenta</SectionLabel>
         <SettingsCard>
           <SettingsSubhead title="Todo lo importante, en una mirada" description="Conexión, cambios pendientes y copias sin mensajes técnicos." />
           <AccountHealth cloud={modo === "nube"} backupAt={backupInfo?.at} />
         </SettingsCard>
-      </section>
+      </SettingsSection>
 
       {/* Respaldo y portabilidad */}
-      <section id="ajuste-datos" className={cn("scroll-mt-24", panel !== "datos" && "hidden")}>
+      <SettingsSection id="ajuste-datos" active={panel === "datos"}>
         <SectionLabel>Datos y respaldo</SectionLabel>
         <SettingsCard className="gap-3.5">
+          <SyncCenter />
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div><p className="text-sm font-semibold">Tu historial, siempre contigo</p><p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">Exporta, importa o recupera una copia sin salir de tu espacio.</p></div>
             <div className="grid w-full grid-cols-2 gap-1.5 sm:w-auto sm:flex sm:shrink-0">
@@ -597,7 +605,7 @@ export default function AjustesPage() {
             </Button>
           </div>
         </SettingsCard>
-      </section>
+      </SettingsSection>
 
       {/* Diálogo de confirmación de importación */}
       {previewDatos && (
@@ -636,7 +644,7 @@ export default function AjustesPage() {
         </div>
       )}
 
-      <section id="ajuste-privacidad" className={cn("scroll-mt-24", panel !== "datos" && "hidden")}>
+      <SettingsSection id="ajuste-privacidad" active={panel === "datos"}>
         <SectionLabel>Privacidad</SectionLabel>
         <SettingsCard className="gap-3.5">
           <PrivacyMap externalNutrition={EXTERNAL_NUTRITION_ENABLED} />
@@ -648,9 +656,9 @@ export default function AjustesPage() {
           </div>
           {confirmarBorrado ? <div className="flex flex-col gap-3 rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs leading-relaxed text-destructive">Borra perfil, días, comidas, mediciones y copias de seguridad de la nube. Tu acceso seguirá existiendo.</p><div className="flex shrink-0 gap-1.5"><Button variant="ghost" size="sm" className="h-8 rounded-lg" disabled={borrandoDatos} onClick={() => setConfirmarBorrado(false)}>Cancelar</Button><Button variant="destructive" size="sm" className="h-8 rounded-lg" disabled={borrandoDatos || guardandoPerfil || importando} onClick={() => void eliminarDatos()}>{borrandoDatos ? "Eliminando…" : "Eliminar"}</Button></div></div> : <button type="button" onClick={() => setConfirmarBorrado(true)} className="self-start text-xs font-medium text-destructive transition-opacity hover:opacity-75">Eliminar todos mis datos de RITMO…</button>}
         </SettingsCard>
-      </section>
+      </SettingsSection>
 
-      <section id="ajuste-cuenta" className={cn("scroll-mt-24", panel !== "datos" && "hidden")}>
+      <SettingsSection id="ajuste-cuenta" active={panel === "datos"}>
         <SectionLabel>Cuenta</SectionLabel>
         <SettingsCard className="gap-0">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -658,7 +666,7 @@ export default function AjustesPage() {
             <Button variant="ghost" onClick={() => { if (!perfilPendiente || window.confirm("Tienes cambios sin guardar. ¿Quieres cerrar sesión y descartarlos?")) { dirty.current = false; void cerrarSesion(); } }} className="h-10 w-full rounded-xl gap-2 text-muted-foreground hover:text-destructive sm:w-auto"><LogOut className="size-4" /> {modo === "nube" ? "Cerrar sesión" : "Salir"}</Button>
           </div>
         </SettingsCard>
-      </section>
+      </SettingsSection>
       <div ref={barraGuardarRef} role="region" aria-label="Guardar ajustes" className={cn("z-30 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 transition-[background-color,border-color,box-shadow]", perfilPendiente || guardandoPerfil || errorGuardado ? "border-border bg-card shadow-lg" : "border-border/60 bg-secondary/35 shadow-none", panel !== "personal" && panel !== "rutina" && !perfilPendiente && !guardandoPerfil && !errorGuardado && "hidden", barraGuardarFija && (perfilPendiente || guardandoPerfil || !!errorGuardado) ? "sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] md:bottom-4" : "relative")}>
         <div className="min-w-0"><p className={cn("text-sm font-semibold", errorGuardado && "text-destructive")} role={errorGuardado ? "alert" : "status"}>{errorGuardado ?? (guardandoPerfil ? "Guardando tus cambios…" : perfilPendiente ? "Cambios pendientes" : "Todo al día")}</p><p className="mt-0.5 text-xs text-muted-foreground">Perfil, objetivos y hábitos</p></div>
         <div className="flex w-full min-w-0 flex-wrap gap-2 sm:w-auto"><Button type="button" variant="secondary" className="h-auto min-h-11 min-w-0 flex-1 basis-32 px-3 py-2 whitespace-normal sm:flex-none" onClick={descartarPerfil} disabled={!perfilPendiente || guardandoPerfil || importando || borrandoDatos}>Descartar</Button><Button type="submit" form="perfil-ajustes" className="h-auto min-h-11 min-w-0 flex-1 basis-32 px-3 py-2 whitespace-normal sm:flex-none" disabled={!perfilPendiente || guardandoPerfil || importando || borrandoDatos}>{guardandoPerfil ? "Guardando…" : "Guardar cambios"}</Button></div>
@@ -671,6 +679,11 @@ export default function AjustesPage() {
 
 function ImportMetric({ label, value, detail }: { label: string; value: number; detail?: string }) {
   return <div className="bg-card px-3 py-2.5"><p className="font-display text-xl font-bold tabular">{value}</p><p className="mt-0.5 text-[0.65rem] text-muted-foreground">{label}{detail ? ` · ${detail}` : ""}</p></div>;
+}
+
+function SettingsSection({ active, id, children }: { active: boolean; id: string; children: React.ReactNode }) {
+  if (!active) return null;
+  return <section id={id} className="scroll-mt-24">{children}</section>;
 }
 
 function Row({ label, children, htmlFor, error }: { label: string; children: React.ReactNode; htmlFor?: string; error?: string }) {

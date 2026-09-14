@@ -18,6 +18,8 @@ describe("raciones y aclaraciones", () => {
   });
   it("ofrece las tres equivalencias estándar de aceite", () => {
     expect(aclaracionComida("Ensalada con aceite")?.opciones).toEqual(["3 g", "5 g", "10 g"]);
+    expect(aclaracionComida("Patatas con alioli")?.opciones).toEqual(["10 g", "20 g", "30 g"]);
+    expect(aclaracionComida("Un bol grande de crema de calabacín")?.opciones).toEqual(["250 g", "350 g", "500 g"]);
   });
   it("una aclaración reemplaza el aceite total sin duplicar ingredientes", () => {
     const a = estimarOffline("Ensalada con pollo y aceite de oliva\nAclaración: cantidad total de aceite del plato: 10 ml.");

@@ -10,6 +10,8 @@
 
 @custom-variant dark (&:is(.dark *));
 
+html { max-width: 100%; overflow-x: clip; }
+
 /* Una misma geometría de controles; los switches conservan su forma nativa. */
 .settings-card :is(input, select, [data-slot="button"], button[aria-pressed]) {
   border-radius: 0.625rem;
@@ -24,7 +26,8 @@
 }
 :where(button, a, summary, select):focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+  html { scroll-behavior: auto !important; }
+  .auth-atmosphere *, .auth-atmosphere *::before, .auth-atmosphere *::after { animation: none !important; opacity: 1 !important; transform: none !important; }
 }
 
 :root {
@@ -279,12 +282,8 @@
     border-radius: var(--radius-sm);
   }
   @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
-      animation: none !important;
-      scroll-behavior: auto !important;
-      transition-duration: 80ms !important;
-      transition-property: color, background-color, border-color, opacity !important;
-    }
+    :where(.page-enter, .animate-check-pop, .animate-check-ring, .auth-orb, .biological-ambient) { animation: none !important; transform: none !important; }
+    :where(button, a, [role="button"]) { transition-property: color, background-color, border-color, opacity !important; transition-duration: 80ms !important; }
   }
   @media (prefers-reduced-motion: no-preference) {
     /* Transiciones suaves para cambios visuales */

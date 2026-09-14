@@ -9,5 +9,12 @@ export function aclaracionComida(texto: string): AclaracionComida | null {
   if (/\b(aceite|aove)\b/.test(t.replace(aceiteConCantidad, ""))) {
     return { pregunta: "¿Cuánto aceite has usado en total?", opciones: ["3 g", "5 g", "10 g"], prefijo: "Aclaración: cantidad total de aceite del plato" };
   }
+  const salsaConCantidad = /(?:\d+[.,]?\d*|una?|dos|tres|media)\s*(?:ml|g|gramos|cdas?|cucharadas?|cucharaditas?|cdtas?)\s*(?:de\s+)?(?:mayonesa|alioli|salsa|crema)\b/g;
+  if (/\b(mayonesa|alioli|salsa cremosa)\b/.test(t.replace(salsaConCantidad, ""))) {
+    return { pregunta: "¿Cuánta salsa o alioli llevaba el plato?", opciones: ["10 g", "20 g", "30 g"], prefijo: "Aclaración: cantidad total de salsa del plato" };
+  }
+  if (/\b(grande|pequeno|pequena|mediano|mediana)\b/.test(t) && /\b(bol|plato|racion)\b/.test(t)) {
+    return { pregunta: "¿Qué tamaño aproximado tenía la ración?", opciones: ["250 g", "350 g", "500 g"], prefijo: "Aclaración: peso aproximado de la ración" };
+  }
   return null;
 }

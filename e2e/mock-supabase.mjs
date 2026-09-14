@@ -5,6 +5,7 @@ const stores = new Map();
 let tick = 0;
 const ids = ['00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002'];
 const features = [
+  ['nutrition_engine','Motor nutricional'],
   ['interfaz_viva','Interfaz viva'], ['rescate_automatico','Rescate automático'],
   ['detector_avanzado','Detector de señales'], ['escenarios','Escenarios de peso'],
   ['memoria_corporal','Memoria corporal'], ['modo_invisible','Lecturas en segundo plano'],
@@ -29,7 +30,11 @@ function state(id) {
 const server = http.createServer(async (req, res) => {
   // Solo el frontend QA en loopback. Authorization no queda cubierto por el
   // comodín de Allow-Headers; WebKit exige permitirlo explícitamente.
-  res.setHeader('Access-Control-Allow-Origin', 'http://127.0.0.1:3101');
+  const requestOrigin = req.headers.origin;
+  const allowedOrigin = requestOrigin === 'http://localhost:3101' || requestOrigin === 'http://127.0.0.1:3101'
+    ? requestOrigin
+    : 'http://127.0.0.1:3101';
+  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
   res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'authorization,apikey,content-type,x-client-info,prefer,range,range-unit,x-supabase-api-version,accept-profile,content-profile');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,POST,PATCH,DELETE,OPTIONS');
@@ -67,6 +72,11 @@ const server = http.createServer(async (req, res) => {
       if (id !== ids[1]) return send({ message: 'Acceso no autorizado' }, 403);
       return send(ids.map((userId,index) => ({ user_id: userId, email_masked: index ? 'q••••••••@gmail.com' : 'a•••@ritmo.test', provider: 'email', created_at: new Date().toISOString(), last_sign_in_at: new Date().toISOString(), status: 'active', role: index ? 'admin' : 'user', onboarding_complete: true, is_self: userId === id })));
     }
+    if (rpc === 'ritmo_admin_health') {
+      if (id !== ids[1]) return send(null);
+      return send({ windowHours: 24, total: 0, errors: 0, byEvent: {}, latestBuild: 'local-e2e' });
+    }
+    if (rpc === 'ritmo_record_health_event') return send(null);
     if (rpc === 'ritmo_admin_command') {
       if (id !== ids[1]) return send({ message: 'Acceso no autorizado' }, 403);
       const command = body.p_command || {};

@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import type { EnergiaDia } from "@/lib/model/types";
 import { HabitScaleLegend } from "@/components/app/data-legend";
 import { habitScaleClass, habitScaleIndex } from "@/lib/visual-semantics";
+import { useActiveDay } from "@/components/app/active-day-provider";
 
 export default function CalendarioPage() {
   const searchParams = useSearchParams();
@@ -32,9 +33,13 @@ function CalendarioContenido({ fechaInicial }: { fechaInicial: string }) {
   const { abrir } = useQuickLog();
   const hoyISO = hoy();
   const [mes, setMes] = React.useState(claveMes(fechaInicial));
-  const [sel, setSel] = React.useState(fechaInicial);
+  const { fecha: sel, seleccionarFecha: setSel } = useActiveDay();
   const habitosActivos = React.useMemo(() => habitosModelo(estado.perfil), [estado.perfil]);
   const totalHabitos = habitosActivos.length;
+
+  React.useEffect(() => {
+    setSel(fechaInicial);
+  }, [fechaInicial, setSel]);
 
   const { desde, dias } = limitesMes(mes);
   const offset = diaSemanaLunes(desde);

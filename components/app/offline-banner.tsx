@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 
 export function OfflineBanner() {
   const isOnline = useOnlineStatus();
-  const [cola, setCola] = useState<EstadoCola>({ pendientes: 0, requiereAtencion: false, sincronizando: false });
+  const [cola, setCola] = useState<EstadoCola>({ pendientes: 0, requiereAtencion: false, sincronizando: false, detalles: [] });
   const { pendientes, requiereAtencion } = cola;
 
   useEffect(() => onColaCambia(setCola), []);

@@ -25,5 +25,6 @@ export interface AuditoriaModelo {
 export interface ResultadoPrediccion extends PrediccionEmitida {
   pesoReal: number;
   errorKg: number;
+  errorFirmadoKg: number;
   dentroIntervalo: boolean;
 }

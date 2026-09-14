@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 
 const erroresDePagina = new WeakMap<Page, string[]>();
 test.beforeEach(async ({ page }) => {
@@ -26,7 +27,7 @@ async function irA(page: Page, ruta: keyof typeof secciones) {
   // Las pestañas se recorren como en la app, sin destruir el documento y
   // abortar peticiones de autenticación en vuelo. La recarga se prueba aparte.
   const documento = await page.evaluate(() => performance.timeOrigin);
-  const sidebar = page.locator("aside");
+  const sidebar = page.locator("[data-app-sidebar]");
   if (await sidebar.isVisible()) {
     await sidebar.getByRole("link", { name: secciones[ruta], exact: true }).click();
   } else if (ruta === "/ajustes") {
@@ -49,6 +50,17 @@ async function sinDesbordamiento(page: Page) {
   });
   expect(resultado.exceso, JSON.stringify(resultado.elementos)).toBeLessThanOrEqual(1);
 }
+
+test("accesibilidad automática en acceso y lectura principal", async ({ page, request }, info) => {
+  test.skip(info.project.name !== "desktop", "Una pasada semántica estable es suficiente; las geometrías móviles se cubren aparte");
+  await request.post("http://127.0.0.1:3199/__reset");
+  await page.goto("/login");
+  let resultado = await new AxeBuilder({ page }).analyze();
+  expect(resultado.violations.filter((item) => item.impact === "critical" || item.impact === "serious"), JSON.stringify(resultado.violations, null, 2)).toEqual([]);
+  await iniciarSesion(page);
+  resultado = await new AxeBuilder({ page }).analyze();
+  expect(resultado.violations.filter((item) => item.impact === "critical" || item.impact === "serious"), JSON.stringify(resultado.violations, null, 2)).toEqual([]);
+});
 
 test("recorrido visual y guardado con datos sintéticos", async ({ page, request }, info) => {
   test.setTimeout(120000);
@@ -96,7 +108,7 @@ test("recorrido visual y guardado con datos sintéticos", async ({ page, request
     }
   }
   await irA(page, "/nutricion");
-  await page.getByRole("button", { name: "Analizar otra comida" }).click();
+  await page.getByRole("button", { name: /Añadir comida|Analizar otra comida/ }).click();
   const prompt = page.getByRole("textbox", { name: "Descripción de la comida" });
   await prompt.fill("Ensalada con pollo y aceite de oliva");
   await page.getByRole("button", { name: "Analizar ingredientes", exact: true }).click();
@@ -159,9 +171,9 @@ test("recorrido visual y guardado con datos sintéticos", async ({ page, request
 test("la navegación normal no expone administración ni herramientas internas", async ({ page, request }) => {
   await request.post("http://127.0.0.1:3199/__reset");
   await iniciarSesion(page);
-  await expect(page.locator("aside").getByText("Modo mínimo", { exact: true })).toHaveCount(0);
-  await expect(page.locator("aside").getByText("Laboratorio", { exact: true })).toHaveCount(0);
-  await expect(page.locator("aside").getByText(/usuarios/i)).toHaveCount(0);
+  await expect(page.locator("[data-app-sidebar]").getByText("Modo mínimo", { exact: true })).toHaveCount(0);
+  await expect(page.locator("[data-app-sidebar]").getByText("Laboratorio", { exact: true })).toHaveCount(0);
+  await expect(page.locator("[data-app-sidebar]").getByText(/usuarios/i)).toHaveCount(0);
 });
 
 test("el modo mínimo sustituye la app por una única acción y recupera la pestaña", async ({ page, request }, info) => {
@@ -191,7 +203,7 @@ test("administración separa usuarios, lanzamientos y modelos sin datos de salud
   await page.getByLabel("Contraseña", { exact: true }).fill("RitmoTest123");
   await page.getByRole("button", { name: "Iniciar sesión", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
-  const sidebar = page.locator("aside");
+  const sidebar = page.locator("[data-app-sidebar]");
   if (await sidebar.isVisible()) {
     await sidebar.getByRole("link", { name: "Administración", exact: true }).click();
   } else {
@@ -201,6 +213,7 @@ test("administración separa usuarios, lanzamientos y modelos sin datos de salud
   await expect(page).toHaveURL(/\/admin$/);
   await expect(page.getByRole("heading", { name: "Administración", exact: true })).toBeVisible();
   await expect(page.getByText("Datos de salud aislados", { exact: true })).toBeVisible();
+  await expect(page.getByText("Señales técnicas · 24 h", { exact: true })).toBeVisible();
   await page.getByRole("tab", { name: "Usuarios", exact: true }).click();
   await expect(page.getByText("q••••••••@gmail.com", { exact: true })).toBeVisible();
   await page.getByRole("tab", { name: "Funciones", exact: true }).click();

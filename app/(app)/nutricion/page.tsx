@@ -3,16 +3,16 @@
 import * as React from "react";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
-import { AlertTriangle, Beef, BookOpen, ChartNoAxesColumnIncreasing, ChevronLeft, ChevronRight, Pencil, Plus, RotateCcw, Sparkles, Trash2, UtensilsCrossed } from "lucide-react";
+import { AlertTriangle, Beef, BookOpen, ChartNoAxesColumnIncreasing, Pencil, Plus, RotateCcw, Sparkles, Trash2, UtensilsCrossed } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
 import { macrosObjetivo } from "@/lib/model/metrics";
 import { resumen, serieBalance } from "@/lib/model/analytics";
-import { hoy, sumarDias, diasEntre } from "@/lib/model/dates";
+import { hoy } from "@/lib/model/dates";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Ring, MacroBar, Chip, EmptyState, PageHeader, IntegratedFlow, FlowChapter } from "@/components/app/primitives";
+import { Ring, MacroBar, EmptyState, PageHeader, IntegratedFlow, FlowChapter } from "@/components/app/primitives";
 import { fmtKcal, fmtFechaLarga, capitalizar } from "@/lib/format";
 import { uid } from "@/lib/utils";
 import type { TipoComida } from "@/lib/model/types";
@@ -20,6 +20,9 @@ import { DataLegend } from "@/components/app/data-legend";
 import { qualityForDay, RecordQuality } from "@/components/app/record-quality";
 import { habitosModelo } from "@/lib/model/config";
 import { useWeightModelCycle } from "@/components/app/platform-provider";
+import { useActiveDay } from "@/components/app/active-day-provider";
+import { ActiveDayNav } from "@/components/app/active-day-nav";
+import { DataSourceBadge } from "@/components/app/data-source";
 
 // La biblioteca es rica pero secundaria al registro del día; cargarla al final
 // evita bloquear la primera interacción en móvil.
@@ -52,7 +55,7 @@ function emojiComida(texto: string): string {
 export default function NutricionPage() {
   const { estado, auditoriaModelo, cargando, dia, borrarComida, registrarComida } = useRitmo();
   const { abrir, editarComidaEn } = useQuickLog();
-  const [fecha, setFecha] = React.useState(hoy());
+  const { fecha } = useActiveDay();
   const [confirmBorrar, setConfirmBorrar] = React.useState<string | null>(null);
 
   async function repetirHoy(c: import("@/lib/model/types").Comida) {
@@ -75,7 +78,6 @@ export default function NutricionPage() {
     { p: 0, c: 0, g: 0 },
   );
   const obj = macrosObjetivo({ kcal: objetivoKcal, pesoKg: r.peso.estimadoHoy, objetivo: estado.perfil.objetivo, proteinaGkg: estado.perfil.proteinaObjetivo });
-  const esFuturo = diasEntre(fecha, hoy()) < 0;
   const habitos = habitosModelo(estado.perfil);
   const habitosHechos = habitos.filter((habito) => d.habitos?.[habito.clave]).length;
   const calidadRegistro = qualityForDay(comidas, habitosHechos, habitos.length);
@@ -102,17 +104,7 @@ export default function NutricionPage() {
         title="Nutrición"
         description="Registra, revisa y ajusta cada estimación."
         action={(
-        <div className="flex w-full items-center justify-between rounded-xl border border-border bg-card p-1 shadow-sm sm:w-auto sm:min-w-48">
-          <Button variant="ghost" size="icon" onClick={() => setFecha((f) => sumarDias(f, -1))} aria-label="Día anterior">
-            <ChevronLeft className="size-5" />
-          </Button>
-          <button onClick={() => setFecha(hoy())} className="min-w-0 flex-1 px-2 text-center text-sm font-medium sm:min-w-28 sm:flex-none">
-            {fecha === hoy() ? "Hoy" : capitalizar(fmtFechaLarga(fecha))}
-          </button>
-          <Button variant="ghost" size="icon" onClick={() => setFecha((f) => sumarDias(f, 1))} disabled={esFuturo} aria-label="Día siguiente">
-            <ChevronRight className="size-5" />
-          </Button>
-        </div>
+        <ActiveDayNav />
         )}
       />
 
@@ -172,7 +164,11 @@ export default function NutricionPage() {
                           <span>P {c.proteinas}g</span>
                           <span>C {c.carbohidratos}g</span>
                           <span>G {c.grasas}g</span>
-                          {c.fuente === "manual" ? <Chip tone="weight">manual</Chip> : c.estimado && <Chip tone={c.fuente === "gemini" ? "weight" : "warning"}>{c.fuente === "gemini" ? "Gemini · estimado" : c.fuente === "edamam" ? "Edamam · estimado" : "aprox."}</Chip>}
+                          <DataSourceBadge
+                            source={c.fuente === "manual" ? "measured" : c.estimado ? "estimated" : "calculated"}
+                            detail={c.fuente === "manual" ? "Valores corregidos manualmente" : c.fuente === "gemini" ? "Estimación asistida por Gemini" : "Estimación del motor nutricional de RITMO"}
+                            compact
+                          />
                         </p>
                         </div>
                       </div>

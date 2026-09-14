@@ -11,6 +11,8 @@ export interface ReferenciaNutricional {
 
 export interface ItemNutricional {
   nombre: string;
+  /** Forma anterior escrita por el analizador; permite aprender un sinónimo al corregir el nombre. */
+  aliasOrigen?: string;
   /** Cantidad interpretada por el analizador (p. ej. "2 filetes · 260 g"). */
   cantidad?: string;
   cantidadEstimada?: boolean;
@@ -31,6 +33,7 @@ export interface ItemNutricional {
 
 export interface CorreccionNutricional extends ItemNutricional {
   clave: string;
+  aliases?: string[];
   actualizada: number;
 }
 

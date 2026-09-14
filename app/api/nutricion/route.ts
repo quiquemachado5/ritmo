@@ -31,6 +31,7 @@ function correccionesValidas(valor: unknown): CorreccionNutricional[] {
     return [{
       clave: typeof item.clave === "string" ? item.clave.slice(0, 100) : nombre.toLocaleLowerCase("es-ES"),
       nombre,
+      aliases: Array.isArray(item.aliases) ? item.aliases.filter((alias): alias is string => typeof alias === "string").map((alias) => alias.trim().slice(0, 80)).filter(Boolean).slice(0, 12) : undefined,
       cantidad: typeof item.cantidad === "string" ? item.cantidad.trim().slice(0, 80) : undefined,
       cantidadEstimada: false,
       kcal: numero(item.kcal, 4_000),
@@ -81,6 +82,11 @@ export async function POST(request: Request) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return json({ error: "Inicia sesión de nuevo para analizar." }, 401);
+    const { data: platformConfig } = await supabase.rpc("ritmo_public_config");
+    const features = platformConfig && typeof platformConfig === "object" && "features" in platformConfig
+      ? (platformConfig.features as Record<string, unknown>)
+      : null;
+    if (features?.nutrition_engine === false) return json({ error: "El análisis nutricional está pausado temporalmente. Tu descripción sigue guardada." }, 503);
     let body: { texto?: unknown; correcciones?: unknown };
     try { body = await readBoundedJson(request, 24000) as typeof body; }
     catch (error) { return json({ error: "La solicitud no es válida o supera el tamaño permitido." }, error instanceof Error && error.message === "payload_too_large" ? 413 : 400); }
@@ -91,7 +97,7 @@ export async function POST(request: Request) {
     // Los ingredientes conocidos nunca dependen de una respuesta variable de IA.
     // Solo consultamos proveedores cuando queda texto alimentario sin interpretar.
     if (!local.noReconocidos?.length || !EXTERNAL_NUTRITION_ENABLED) return json(local);
-    const hash = createHash("sha256").update("nutrition-v5").update(process.env.NEXT_PUBLIC_RITMO_BUILD_ID || "dev").update(process.env.GEMINI_NUTRITION_MODEL || "default").update(texto.toLowerCase().replace(/\s+/g, " ")).update(JSON.stringify(correcciones)).digest("hex");
+    const hash = createHash("sha256").update("nutrition-v6").update(process.env.NEXT_PUBLIC_RITMO_BUILD_ID || "dev").update(process.env.GEMINI_NUTRITION_MODEL || "default").update(texto.toLowerCase().replace(/\s+/g, " ")).update(JSON.stringify(correcciones)).digest("hex");
     const key = user.id + ":" + hash;
     let task = running.get(key);
     if (!task) {

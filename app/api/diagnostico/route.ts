@@ -7,7 +7,8 @@ const NAVEGADORES = new Set(["chrome", "safari", "firefox", "edge", "otro"]);
 
 export async function POST(request: Request) {
   if (!request.headers.get("origin") || !origenPermitido(request)) return new Response(null, { status: 403 });
-  const { data: { user } } = await (await createClient()).auth.getUser();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) return new Response(null, { status: 401 });
   if (!consumeRateLimit(`diagnostico:${user.id}`, 20, 60_000)) {
     return new Response(null, { status: 429, headers: { "Retry-After": "60", "Cache-Control": "no-store" } });
@@ -20,6 +21,7 @@ export async function POST(request: Request) {
     const navegador = NAVEGADORES.has(String(dato.navegador)) ? String(dato.navegador) : "otro";
     // Sin correo, identificador de cuenta, payload, URL ni descripción de comida.
     console.warn("[ritmo-client]", JSON.stringify({ evento: dato.evento, estado: dato.estado, build, ruta, navegador }));
+    await supabase.rpc("ritmo_record_health_event", { p_event: dato.evento, p_state: dato.estado, p_build: build, p_route: ruta, p_browser: navegador });
     return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
   } catch { return new Response(null, { status: 400 }); }
 }

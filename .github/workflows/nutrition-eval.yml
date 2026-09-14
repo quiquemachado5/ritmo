@@ -1,6 +1,16 @@
 name: Evaluación nutricional local (sin API)
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'lib/nutrition/**'
+      - 'config/nutrition.json'
+      - 'package-lock.json'
+  push:
+    branches: [main]
+    paths:
+      - 'lib/nutrition/**'
+      - 'config/nutrition.json'
 permissions:
   contents: read
 concurrency:

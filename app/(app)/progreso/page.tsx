@@ -33,6 +33,9 @@ import { FlowChapter, IntegratedFlow, Metric, SectionLabel, Chip, EmptyState, Pa
 import { capitalizar, fmtPeso, fmtSigno, fmtNum, fmtFechaCorta, relativo } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { DataLegend } from "@/components/app/data-legend";
+import { SnapRail } from "@/components/ui/snap-rail";
+import { DataSourceBadge } from "@/components/app/data-source";
+import { ActiveDayContext } from "@/components/app/active-day-context";
 import { ModelAudit } from "@/components/app/model-audit";
 import { habitosModelo } from "@/lib/model/config";
 import { escenariosRitmo, memoriaCorporal } from "@/lib/model/insights";
@@ -240,6 +243,7 @@ export default function ProgresoPage() {
         description="Tu historial confirmado y la orientación del modelo se leen por separado."
         action={<Button onClick={() => abrir("peso")} className="min-h-11 w-full gap-2 sm:w-auto"><Scale className="size-4" /> Registrar medición</Button>}
       />
+      <ActiveDayContext />
 
       {!hayPesajes ? (
         <EmptyState icon={<Scale className="size-8" />} title="Empieza con una medición real" unlocks={["1 pesaje: punto de partida", "2 pesajes: cambio real", "4+ pesajes: error personalizado"]} action={<Button onClick={() => abrir("peso")} className="mt-1 gap-2"><Scale className="size-4" /> Registrar peso</Button>}>
@@ -255,7 +259,7 @@ export default function ProgresoPage() {
               <div className="p-5 sm:p-6">
                 <div className="mb-5 flex items-start justify-between gap-4">
                   <div><p className="text-sm font-semibold">De la báscula a hoy</p><p className="mt-1 text-xs text-muted-foreground">El dato real manda; el modelo solo completa el tramo sin pesajes.</p></div>
-                  <Chip tone="weight">Anclado</Chip>
+                  <DataSourceBadge source="measured" detail="Último peso registrado en una báscula" />
                 </div>
                 <div className="grid items-stretch gap-3 md:grid-cols-[minmax(0,1fr)_2rem_minmax(0,1fr)]">
                   <div className="rounded-xl border border-weight-border bg-weight-wash/45 p-4 sm:p-5">
@@ -270,7 +274,7 @@ export default function ProgresoPage() {
                   <div className="hidden items-center justify-center text-muted-foreground md:flex"><ArrowRight className="size-4" /></div>
 
                   <div className="rounded-xl border border-body-border bg-body-wash/35 p-4 sm:p-5">
-                    <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.08em] text-body">Pronóstico corporal de hoy</p><p className="mt-1 text-xs text-muted-foreground">Tejido + líquidos · nunca sustituye a la báscula</p></div><Chip tone={retencionHoy > 0 ? "water" : "body"}>{retencionHoy > 0 ? "Retención probable" : ritmoModelo != null && ritmoModelo < -0.1 ? "Descenso gradual" : ritmoModelo != null && ritmoModelo > 0.1 ? "Subida gradual" : "Estable"}</Chip></div>
+                    <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.08em] text-body">Pronóstico corporal de hoy</p><p className="mt-1 text-xs text-muted-foreground">Tejido + líquidos · nunca sustituye a la báscula</p></div><DataSourceBadge source="estimated" detail={retencionHoy > 0 ? "Incluye una retención de líquidos probable" : "Estimación del modelo corporal"} /></div>
                     <div className="mt-5 flex items-end gap-1.5"><span className="font-display text-3xl font-bold leading-none tabular text-body sm:text-4xl">{fmtPeso(r.peso.estimadoHoy)}</span><span className="mb-1 text-sm font-medium text-muted-foreground">kg</span></div>
                     <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
                       {diasDesdeBascula === 0
@@ -288,13 +292,13 @@ export default function ProgresoPage() {
               {r.prediccion.disponible && pronosticoVisible && (
                 <div className="border-t border-border bg-body-wash/20 px-5 py-4 sm:px-6 sm:py-5">
                   <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"><p className="text-xs font-semibold">Si mantienes tu ritmo actual</p><p className={cn("text-[0.68rem]", retencionHoy > 0 || retencionManana > 0 ? "text-water-ink" : "text-body-ink")}>{explicacionModelo}</p></div>
-                  <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto [scrollbar-width:none] sm:grid sm:grid-cols-5 sm:overflow-visible">
+                  <SnapRail ariaLabel="Predicción de peso por horizonte" className="[&_ul]:gap-2 lg:[&_ul]:grid-cols-5" itemClassName="w-[8.8rem] lg:w-auto">
                     <PredCell etiqueta="Mañana" iv={r.prediccion.manana} base={r.peso.estimadoHoy} />
                     <PredCell etiqueta="3 días" iv={r.prediccion.tresDias} base={r.peso.estimadoHoy} />
                     <PredCell etiqueta="1 semana" iv={r.prediccion.semana} base={r.peso.estimadoHoy} />
                     <PredCell etiqueta="2 semanas" iv={r.prediccion.quincena} base={r.peso.estimadoHoy} />
                     <PredCell etiqueta="4 semanas" iv={r.prediccion.cuatroSemanas} base={r.peso.estimadoHoy} />
-                  </div>
+                  </SnapRail>
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[0.68rem] text-muted-foreground">
                     <p><span className="font-semibold text-foreground">Para afinarlo:</span> {siguienteDato}.</p>
                     {composicionModelo && <p>Composición orientativa disponible en la auditoría del modelo.</p>}

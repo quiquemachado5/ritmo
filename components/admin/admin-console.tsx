@@ -26,6 +26,7 @@ type Feature = { key: string; label: string; description: string; state: Feature
 type AuditEntry = { id: number; action: string; actor: string; target: string; metadata: Record<string, unknown>; createdAt: string };
 type Control = { weightModelMode: ModelMode; announcementEnabled: boolean; announcementText: string; updatedAt: string };
 type Snapshot = { metrics: Metrics; features: Feature[]; control: Control; audit: AuditEntry[] };
+type Health = { windowHours: number; total: number; errors: number; byEvent: Partial<Record<"auth" | "sync" | "nutrition" | "import" | "ui", number>>; latestBuild: string | null };
 type AdminUser = { user_id: string; email_masked: string; provider: string; created_at: string; last_sign_in_at: string | null; status: "active" | "suspended"; role: "admin" | "pilot" | "user"; onboarding_complete: boolean; is_self: boolean };
 
 const EMPTY: Snapshot = {
@@ -60,9 +61,12 @@ const actionLabels: Record<string, string> = {
   user_role: "Rol de cuenta",
 };
 
-export function AdminConsole({ initialSnapshot, initialUsers, initialError }: { initialSnapshot: unknown; initialUsers: AdminUser[]; initialError: string | null }) {
+export function AdminConsole({ initialSnapshot, initialUsers, initialHealth, initialError }: { initialSnapshot: unknown; initialUsers: AdminUser[]; initialHealth: unknown; initialError: string | null }) {
   const [snapshot, setSnapshot] = React.useState(() => normalizeSnapshot(initialSnapshot));
   const [users, setUsers] = React.useState<AdminUser[]>(initialUsers);
+  const [health, setHealth] = React.useState<Health>(() => initialHealth && typeof initialHealth === "object"
+    ? { windowHours: 24, total: 0, errors: 0, byEvent: {}, latestBuild: null, ...(initialHealth as Partial<Health>) }
+    : { windowHours: 24, total: 0, errors: 0, byEvent: {}, latestBuild: null });
   const [query, setQuery] = React.useState("");
   const [busy, setBusy] = React.useState<string | null>(null);
   const [setupError, setSetupError] = React.useState(initialError);
@@ -70,12 +74,12 @@ export function AdminConsole({ initialSnapshot, initialUsers, initialError }: { 
   const [announcementEnabled, setAnnouncementEnabled] = React.useState(snapshot.control.announcementEnabled);
   const [supabase] = React.useState(() => createClient());
   const router = useRouter();
-
   const refresh = React.useCallback(async (search = query) => {
     setBusy("refresh");
-    const [{ data: nextSnapshot, error: snapshotError }, { data: nextUsers, error: usersError }] = await Promise.all([
+    const [{ data: nextSnapshot, error: snapshotError }, { data: nextUsers, error: usersError }, { data: nextHealth }] = await Promise.all([
       supabase.rpc("ritmo_admin_snapshot"),
       supabase.rpc("ritmo_admin_users", { p_search: search.trim(), p_limit: 50, p_offset: 0 }),
+      supabase.rpc("ritmo_admin_health"),
     ]);
     const error = snapshotError ?? usersError;
     if (error) {
@@ -85,6 +89,9 @@ export function AdminConsole({ initialSnapshot, initialUsers, initialError }: { 
       const normalized = normalizeSnapshot(nextSnapshot);
       setSnapshot(normalized);
       setUsers(Array.isArray(nextUsers) ? nextUsers as AdminUser[] : []);
+      if (nextHealth && typeof nextHealth === "object") {
+        setHealth({ windowHours: 24, total: 0, errors: 0, byEvent: {}, latestBuild: null, ...(nextHealth as Partial<Health>) });
+      }
       setAnnouncementText(normalized.control.announcementText);
       setAnnouncementEnabled(normalized.control.announcementEnabled);
       setSetupError(null);
@@ -107,6 +114,7 @@ export function AdminConsole({ initialSnapshot, initialUsers, initialError }: { 
   if (setupError) return <SetupState detail={setupError} onRetry={() => void refresh()} busy={busy === "refresh"} />;
 
   const metrics = snapshot.metrics;
+  const nutritionEnabled = snapshot.features.find((feature) => feature.key === "nutrition_engine")?.state !== "hidden";
   return (
     <Tabs defaultValue="overview" className="min-w-0 gap-5">
       <div className="-mx-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
@@ -131,7 +139,7 @@ export function AdminConsole({ initialSnapshot, initialUsers, initialError }: { 
             <div className="flex items-center justify-between border-b border-border px-4 py-4 sm:px-5"><div><h2 className="text-sm font-semibold">Estado de plataforma</h2><p className="mt-0.5 text-xs text-muted-foreground">Las fronteras que protegen la operación diaria.</p></div><Badge className="bg-weight-wash text-weight-ink">Operativa</Badge></div>
             <StatusRow icon={LockKeyhole} title="Datos de salud aislados" detail="La administración no consulta comidas, peso, hábitos ni medidas." />
             <StatusRow icon={ShieldCheck} title={`${metrics.admins} ${metrics.admins === 1 ? "administrador" : "administradores"}`} detail="Todas las acciones sensibles quedan registradas." />
-            <StatusRow icon={Bot} title="Nutrición local" detail="Sin proveedores externos ni facturación activada." />
+            <StatusRow icon={Bot} title={nutritionEnabled ? "Nutrición operativa" : "Nutrición pausada"} detail={nutritionEnabled ? "Motor local activo, sin proveedores externos ni facturación." : "Parada de emergencia activa; los borradores se conservan."} warning={!nutritionEnabled} />
             <StatusRow icon={Sparkles} title={`${snapshot.features.filter((item) => item.state === "public").length} funciones públicas`} detail={`${snapshot.features.filter((item) => item.state === "pilot").length} en piloto · ${snapshot.features.filter((item) => item.state === "hidden").length} ocultas`} last />
           </Card>
           <Card className="gap-4 p-4 sm:p-5">
@@ -139,6 +147,14 @@ export function AdminConsole({ initialSnapshot, initialUsers, initialError }: { 
             <Button asChild className="w-full justify-between"><Link href="/laboratorio"><span className="flex items-center gap-2"><Beaker className="size-4" />Abrir laboratorio</span><ChevronRight className="size-4" /></Link></Button>
           </Card>
         </div>
+        <Card className="gap-0 overflow-hidden p-0">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3.5 sm:px-5"><div><h2 className="text-sm font-semibold">Señales técnicas · 24 h</h2><p className="mt-0.5 text-xs text-muted-foreground">Eventos anónimos con consentimiento; nunca incluyen comida, peso, correo ni identificador.</p></div><Badge variant="outline">{health.total} señales</Badge></div>
+          <div className="grid sm:grid-cols-3">
+            <HealthSignal label="Autenticación" count={health.byEvent.auth ?? 0} />
+            <HealthSignal label="Sincronización" count={health.byEvent.sync ?? 0} />
+            <HealthSignal label="Nutrición" count={health.byEvent.nutrition ?? 0} />
+          </div>
+        </Card>
         <AnnouncementEditor enabled={announcementEnabled} text={announcementText} setEnabled={setAnnouncementEnabled} setText={setAnnouncementText} busy={busy === "announcement"} save={() => void command({ type: "announcement", enabled: announcementEnabled, text: announcementText }, "announcement")} />
       </TabsContent>
 
@@ -189,8 +205,12 @@ function AdminMetric({ label, value, detail, icon: Icon, warning = false }: { la
   return <Card className="gap-3 p-4 sm:p-5"><div className="flex items-center justify-between"><p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">{label}</p><span className={cn("grid size-8 place-items-center rounded-lg", warning ? "bg-warning-wash text-warning" : "bg-primary/8 text-primary")}><Icon className="size-4" /></span></div><div><p className="font-display text-3xl font-bold leading-none tabular-nums">{value}</p><p className="mt-1.5 text-xs text-muted-foreground">{detail}</p></div></Card>;
 }
 
-function StatusRow({ icon: Icon, title, detail, last = false }: { icon: typeof Activity; title: string; detail: string; last?: boolean }) {
-  return <div className={cn("flex items-start gap-3 px-4 py-3.5 sm:px-5", !last && "border-b border-border")}><span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/8 text-primary"><Icon className="size-4" /></span><div><p className="text-sm font-semibold">{title}</p><p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{detail}</p></div><Check className="ml-auto mt-1 size-4 text-primary" /></div>;
+function HealthSignal({ label, count }: { label: string; count: number }) {
+  return <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3.5 last:border-0 sm:border-b-0 sm:border-r sm:last:border-r-0 sm:px-5"><div><p className="text-sm font-semibold">{label}</p><p className="mt-0.5 text-xs text-muted-foreground">{count ? "Requiere seguimiento" : "Sin incidencias recibidas"}</p></div><span className={cn("font-display text-2xl font-bold tabular-nums", count ? "text-warning" : "text-primary")}>{count}</span></div>;
+}
+
+function StatusRow({ icon: Icon, title, detail, last = false, warning = false }: { icon: typeof Activity; title: string; detail: string; last?: boolean; warning?: boolean }) {
+  return <div className={cn("flex items-start gap-3 px-4 py-3.5 sm:px-5", !last && "border-b border-border")}><span className={cn("grid size-8 shrink-0 place-items-center rounded-lg", warning ? "bg-warning-wash text-warning" : "bg-primary/8 text-primary")}><Icon className="size-4" /></span><div><p className="text-sm font-semibold">{title}</p><p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{detail}</p></div>{warning ? <CircleAlert className="ml-auto mt-1 size-4 text-warning" /> : <Check className="ml-auto mt-1 size-4 text-primary" />}</div>;
 }
 
 function AnnouncementEditor({ enabled, text, setEnabled, setText, save, busy }: { enabled: boolean; text: string; setEnabled: (value: boolean) => void; setText: (value: string) => void; save: () => void; busy: boolean }) {

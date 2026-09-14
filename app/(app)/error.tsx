@@ -5,6 +5,8 @@ import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { registrarDiagnostico } from "@/lib/observability";
+import Link from "next/link";
+import { errorCopy } from "@/lib/error-copy";
 
 /**
  * Error boundary del área privada. Un fallo al renderizar una página (p. ej.
@@ -19,6 +21,7 @@ export default function AppError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const copy = errorCopy(error);
   React.useEffect(() => {
     console.error("Error en sección:", error);
     registrarDiagnostico("ui", "error", "fallo contenido en una sección");
@@ -31,18 +34,13 @@ export default function AppError({
           <AlertTriangle className="size-7 text-warning" />
         </div>
         <div>
-          <h2 className="font-display text-xl font-bold tracking-tight">Esta sección falló</h2>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            No pudimos mostrar esta pantalla. Tus datos están a salvo. Reintenta o
-            cambia de sección desde el menú.
-          </p>
+          <h2 className="font-display text-xl font-bold tracking-tight">{copy.title}</h2>
+          <p className="mt-1.5 text-sm text-muted-foreground">{copy.detail}</p>
           {error.digest && (
             <p className="mt-2 font-mono text-[0.7rem] text-muted-foreground/60">ref: {error.digest}</p>
           )}
         </div>
-        <Button onClick={reset} className="gap-2">
-          <RefreshCw className="size-4" /> Reintentar
-        </Button>
+        {copy.kind === "session" ? <Button asChild><Link href="/login">{copy.action}</Link></Button> : copy.kind === "sync" ? <Button asChild><Link href="/ajustes?panel=datos#sincronizacion">{copy.action}</Link></Button> : <Button onClick={reset} className="gap-2"><RefreshCw className="size-4" /> {copy.action}</Button>}
       </Card>
     </div>
   );

@@ -8,6 +8,7 @@ export const FEATURE_KEYS = [
   "escenarios",
   "memoria_corporal",
   "modo_invisible",
+  "nutrition_engine",
 ] as const;
 
 export type FeatureKey = typeof FEATURE_KEYS[number];

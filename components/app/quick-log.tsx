@@ -627,8 +627,10 @@ function IngredientTable({ items, onChange }: { items: AnalisisNutricional["item
       ? { ...base.referencia, estado: "correccion_personal" as const, nombre: borrador.nombre.trim(), fuente: "Tus valores corregidos", url: undefined, revisadaEn: undefined,
         por100g: { kcal: numero(borrador.kcal) * 100 / base.gramos, proteinas: numero(borrador.p) * 100 / base.gramos, carbohidratos: numero(borrador.c) * 100 / base.gramos, grasas: numero(borrador.g) * 100 / base.gramos } }
       : base.referencia;
+    const nombreOriginal = base.nombre.split(" · ")[0].trim();
     onChange(editando, { ...base,
       nombre: borrador.nombre.trim(),
+      aliasOrigen: nombreCambiado ? nombreOriginal : base.aliasOrigen,
       cantidad: borrador.cantidad.trim() || undefined,
       referencia,
       kcal: numero(borrador.kcal),

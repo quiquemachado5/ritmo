@@ -18,7 +18,7 @@ function fechaBreve(iso?: string) {
 
 export function AccountHealth({ cloud, backupAt }: { cloud: boolean; backupAt?: string }) {
   const online = useOnlineStatus();
-  const [cola, setCola] = React.useState<EstadoCola>({ pendientes: 0, requiereAtencion: false, sincronizando: false });
+  const [cola, setCola] = React.useState<EstadoCola>({ pendientes: 0, requiereAtencion: false, sincronizando: false, detalles: [] });
   React.useEffect(() => onColaCambia(setCola), []);
   const necesitaAtencion = cola.requiereAtencion || !online;
 

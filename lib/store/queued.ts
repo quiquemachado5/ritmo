@@ -10,9 +10,15 @@ type Op =
   | { type: "borrarMedicion"; payload: string }
   | { type: "guardarPerfil"; payload: Perfil };
 type Entrada = Op & { id: string; bloqueada?: boolean; revision: number; revisionRemota?: string | null };
-export interface EstadoCola { pendientes: number; requiereAtencion: boolean; sincronizando: boolean; ultimaSincronizacion?: string }
+export interface DetalleCola {
+  id: string;
+  tipo: "día" | "medición" | "perfil";
+  fecha?: string;
+  bloqueada: boolean;
+}
+export interface EstadoCola { pendientes: number; requiereAtencion: boolean; sincronizando: boolean; ultimaSincronizacion?: string; detalles: DetalleCola[] }
 const listeners = new Set<(estado: EstadoCola) => void>();
-let estadoCola: EstadoCola = { pendientes: 0, requiereAtencion: false, sincronizando: false };
+let estadoCola: EstadoCola = { pendientes: 0, requiereAtencion: false, sincronizando: false, detalles: [] };
 let activo: QueuedAdapter | null = null;
 
 export function onColaCambia(cb: (estado: EstadoCola) => void): () => void {
@@ -20,7 +26,7 @@ export function onColaCambia(cb: (estado: EstadoCola) => void): () => void {
   cb(estadoCola);
   return () => { listeners.delete(cb); };
 }
-export async function reintentarCola(): Promise<void> { await activo?.reintentar(); }
+export async function reintentarCola(id?: string): Promise<void> { await activo?.reintentar(id); }
 function claveOp(op: Op): string {
   if (op.type === "guardarPerfil") return "perfil";
   return (op.type.includes("Dia") ? "dia:" : "med:") + (typeof op.payload === "string" ? op.payload : op.payload.fecha);
@@ -85,7 +91,18 @@ export class QueuedAdapter implements Adapter {
   }
   private notificar() {
     if (activo !== this) return;
-    estadoCola = { pendientes: this.cola.length, requiereAtencion: this.cola.some(o => o.bloqueada), sincronizando: Boolean(this.vuelo), ultimaSincronizacion: this.ultimaSincronizacion };
+    estadoCola = {
+      pendientes: this.cola.length,
+      requiereAtencion: this.cola.some(o => o.bloqueada),
+      sincronizando: Boolean(this.vuelo),
+      ultimaSincronizacion: this.ultimaSincronizacion,
+      detalles: this.cola.map((op) => ({
+        id: op.id,
+        tipo: op.type === "guardarPerfil" ? "perfil" : op.type.includes("Dia") ? "día" : "medición",
+        fecha: op.type === "guardarPerfil" ? undefined : typeof op.payload === "string" ? op.payload : op.payload.fecha,
+        bloqueada: Boolean(op.bloqueada),
+      })),
+    };
     listeners.forEach(l => l(estadoCola));
   }
   private revisionRemota(op: Op): string | null | undefined {
@@ -148,10 +165,10 @@ export class QueuedAdapter implements Adapter {
       }
     }
   }
-  async reintentar() {
+  async reintentar(id?: string) {
     // Actualiza las revisiones remotas antes de una resolución explícita.
     await this.inner.load();
-    this.escribir(this.cola.map(o => ({ ...o, bloqueada: false, revisionRemota: this.revisionRemota(o) })));
+    this.escribir(this.cola.map(o => !id || o.id === id ? ({ ...o, bloqueada: false, revisionRemota: this.revisionRemota(o) }) : o));
     await this.flush();
   }
   async load(): Promise<StoreData> {
@@ -197,7 +214,7 @@ export class QueuedAdapter implements Adapter {
     if (typeof window !== "undefined") window.removeEventListener("online", this.alVolverOnline);
     if (activo === this) {
       activo = null;
-      estadoCola = { pendientes: 0, requiereAtencion: false, sincronizando: false, ultimaSincronizacion: this.ultimaSincronizacion };
+      estadoCola = { pendientes: 0, requiereAtencion: false, sincronizando: false, ultimaSincronizacion: this.ultimaSincronizacion, detalles: [] };
       listeners.forEach(l => l(estadoCola));
     }
   }

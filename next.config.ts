@@ -40,7 +40,12 @@ const nextConfig: NextConfig = {
       "font-src 'self' data:",
       "style-src 'self' 'unsafe-inline'",
       `script-src 'self' 'unsafe-inline'${desarrollo ? " 'unsafe-eval'" : ''}`,
+      "script-src-attr 'none'",
       `connect-src 'self' ${supabaseOrigin} ${supabaseSocket}${desarrollo ? ' ws:' : ''}`,
+      "frame-src 'none'",
+      "worker-src 'self' blob:",
+      "manifest-src 'self'",
+      "media-src 'self' blob:",
       desarrollo ? '' : "upgrade-insecure-requests",
     ].filter(Boolean).join('; ');
     return [
@@ -78,6 +83,10 @@ const nextConfig: NextConfig = {
           {
             key: 'Cross-Origin-Resource-Policy',
             value: 'same-origin',
+          },
+          {
+            key: 'Origin-Agent-Cluster',
+            value: '?1',
           },
           ...(desarrollo ? [] : [{
             key: 'Strict-Transport-Security',

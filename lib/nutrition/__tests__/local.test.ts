@@ -38,6 +38,11 @@ describe("nutrición sin facturación", () => {
     expect(resultado.items[0].kcal).toBe(540);
     expect(resultado.observaciones?.join(" ")).toContain("porción aprendida");
   });
+  it("recuerda el nombre corregido como sinónimo personal", () => {
+    const base = analizarLocal("100 g de pavo").items[0];
+    const correccion = { ...base, clave: "pechuga-casa", nombre: "pechuga de casa", aliases: ["pavo"], actualizada: 1, kcal: 130 };
+    expect(analizarLocal("100 g de pavo", [correccion]).kcal).toBe(130);
+  });
   it("no inventa un resultado completo si no reconoce el alimento", () => {
     const resultado = analizarLocal("Un plato desconocido");
     expect(resultado.items).toHaveLength(0);

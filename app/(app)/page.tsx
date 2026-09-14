@@ -147,7 +147,7 @@ export default function HoyPage() {
             const tonos = pct >= 0.83
               ? { text: "text-primary", border: "border-primary/20", bg: "bg-primary/5", bar: "bg-primary" }
               : pct >= 0.5
-                ? { text: "text-habit", border: "border-habit/20", bg: "bg-habit/5", bar: "bg-habit" }
+                ? { text: "text-habit-ink", border: "border-habit/20", bg: "bg-habit/5", bar: "bg-habit" }
                 : pct > 0
                   ? { text: "text-warning", border: "border-warning/20", bg: "bg-warning/5", bar: "bg-warning" }
                   : { text: "text-energy", border: "border-energy/20", bg: "bg-energy/5", bar: "bg-energy" };

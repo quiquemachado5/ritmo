@@ -3,7 +3,7 @@ import { RitmoLogo } from "@/components/ritmo-mark";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="auth-atmosphere relative flex min-h-dvh flex-col items-center justify-start overflow-x-hidden bg-background px-4 py-5 sm:justify-center sm:py-8">
+    <main className="auth-atmosphere relative flex min-h-dvh flex-col items-center justify-start overflow-x-hidden bg-background px-4 py-5 sm:justify-center sm:py-8">
         <div aria-hidden="true" className="auth-orb auth-orb-one" />
         <div aria-hidden="true" className="auth-orb auth-orb-two" />
         <div aria-hidden="true" className="auth-grain" />
@@ -20,6 +20,6 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             quiquemachado5
           </a>
         </p>
-      </div>
+      </main>
   );
 }

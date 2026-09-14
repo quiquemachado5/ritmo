@@ -10,6 +10,7 @@ import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "./quick-log-provider";
 import { capitalizar, fmtFechaCorta, fmtFechaLarga } from "@/lib/format";
 import type { Comida } from "@/lib/model/types";
+import { useActiveDay } from "./active-day-provider";
 
 type Resultado =
   | { id: string; tipo: "accion"; accion: "comida" | "peso" | "habitos"; titulo: string; detalle: string; icono: typeof Search }
@@ -26,6 +27,7 @@ export function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChan
   const router = useRouter();
   const { estado } = useRitmo();
   const { abrir, editarComidaEn } = useQuickLog();
+  const { seleccionarFecha } = useActiveDay();
   const [consulta, setConsulta] = React.useState("");
   const [activo, setActivo] = React.useState(0);
 
@@ -60,7 +62,10 @@ export function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChan
     else if (resultado.tipo === "ruta") router.push(resultado.href);
     else if (resultado.tipo === "comida") editarComidaEn(resultado.fecha, resultado.comida);
     else if (resultado.tipo === "peso") abrir("peso", resultado.fecha);
-    else router.push(`/calendario?fecha=${resultado.fecha}`);
+    else {
+      seleccionarFecha(resultado.fecha);
+      router.push(`/calendario?fecha=${resultado.fecha}`);
+    }
   }
 
   return (

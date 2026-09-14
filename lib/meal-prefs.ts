@@ -301,7 +301,10 @@ export function guardarCorreccionesNutricion(items: ItemNutricional[]) {
   for (const item of items) {
     const clave = normalizarNombreIngrediente(item.nombre);
     if (!clave) continue;
-    nutritionCorrections[clave] = { ...item, clave, actualizada: Date.now() };
+    const alias = item.aliasOrigen ? normalizarNombreIngrediente(item.aliasOrigen) : "";
+    const anterior = nutritionCorrections[clave];
+    const aliases = [...new Set([...(anterior?.aliases ?? []), ...(alias && alias !== clave ? [alias] : [])])].slice(-12);
+    nutritionCorrections[clave] = { ...item, clave, aliases, actualizada: Date.now() };
   }
   const limitadas = Object.fromEntries(
     Object.entries(nutritionCorrections)

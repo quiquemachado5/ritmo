@@ -2,6 +2,8 @@ import { pesajes } from "../model/analytics";
 import type { Estado } from "../model/types";
 import type { PrediccionEmitida, ResultadoPrediccion } from "./types";
 import { VERSION_MODELO_ESTABLE } from "./lifecycle";
+import { estadoAlcoholDia } from "../model/fluid-retention";
+import { sumarDias } from "../model/dates";
 
 export const VERSION_MODELO_AUDITADO = VERSION_MODELO_ESTABLE;
 
@@ -17,13 +19,18 @@ export function evaluarPredicciones(estado: Estado, predicciones: PrediccionEmit
     if (p.fechaObjetivo > fechaHoy) { pendientes.add(caso); continue; }
     const real = reales.get(p.fechaObjetivo);
     if (real === undefined) { sinPesaje.add(caso); continue; }
-    evaluadas.push({ ...p, pesoReal: real, errorKg: Math.abs(real - p.peso), dentroIntervalo: real >= p.minimo && real <= p.maximo });
+    evaluadas.push({ ...p, pesoReal: real, errorKg: Math.abs(real - p.peso), errorFirmadoKg: p.peso - real, dentroIntervalo: real >= p.minimo && real <= p.maximo });
   }
-  const resumen = (filas: ResultadoPrediccion[]) => ({
-    casos: filas.length,
-    maeKg: filas.length ? filas.reduce((s, p) => s + p.errorKg, 0) / filas.length : null,
-    coberturaPct: filas.length ? 100 * filas.filter((p) => p.dentroIntervalo).length / filas.length : null,
-  });
+  const resumen = (filas: ResultadoPrediccion[]) => {
+    const errores = filas.map((p) => p.errorKg).sort((a, b) => a - b);
+    return {
+      casos: filas.length,
+      maeKg: filas.length ? filas.reduce((s, p) => s + p.errorKg, 0) / filas.length : null,
+      sesgoKg: filas.length ? filas.reduce((s, p) => s + p.errorFirmadoKg, 0) / filas.length : null,
+      p90Kg: filas.length ? errores[Math.max(0, Math.ceil(errores.length * 0.9) - 1)] : null,
+      coberturaPct: filas.length ? 100 * filas.filter((p) => p.dentroIntervalo).length / filas.length : null,
+    };
+  };
   const versiones = [...new Set(evaluadas.map((p) => p.versionModelo))]
     .map((version) => ({ version, ...resumen(evaluadas.filter((p) => p.versionModelo === version)) }))
     .sort((a, b) => b.version.localeCompare(a.version));
@@ -34,5 +41,9 @@ export function evaluarPredicciones(estado: Estado, predicciones: PrediccionEmit
     versiones,
     evaluadas: actuales.sort((a, b) => b.fechaObjetivo.localeCompare(a.fechaObjetivo) || a.horizonteDias - b.horizonteDias),
     horizontes: ([1, 3, 7, 30] as const).map((dias) => ({ dias, ...resumen(actuales.filter((p) => p.horizonteDias === dias)) })),
+    contextoAlcohol: {
+      conAlcohol: resumen(actuales.filter((p) => estadoAlcoholDia(estado, sumarDias(p.fechaObjetivo, -1)) === "alcohol")),
+      sinAlcohol: resumen(actuales.filter((p) => estadoAlcoholDia(estado, sumarDias(p.fechaObjetivo, -1)) === "sin-alcohol")),
+    },
   };
 }

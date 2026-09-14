@@ -16,6 +16,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FlowChapter, IntegratedFlow, PageHeader } from "@/components/app/primitives";
 import { cn } from "@/lib/utils";
 import { useWeightModelCycle } from "@/components/app/platform-provider";
+import { useActiveDay } from "@/components/app/active-day-provider";
+import { SnapRail } from "@/components/ui/snap-rail";
 
 const Heatmap = dynamic(() => import("@/components/app/heatmap").then((m) => m.Heatmap), {
   loading: () => <Skeleton className="h-36 w-full rounded-xl" />,
@@ -39,7 +41,7 @@ function tonoCumplimiento(valor: number, maximo: number) {
 export default function HabitosPage() {
   const { estado, auditoriaModelo, cargando, dia, alternarHabito } = useRitmo();
   const hoyISO = hoy();
-  const [fechaSeleccionada, setFechaSeleccionada] = React.useState(hoyISO);
+  const { fecha: fechaSeleccionada, seleccionarFecha: setFechaSeleccionada } = useActiveDay();
   const editorRef = React.useRef<HTMLElement>(null);
   const cicloModelo = useWeightModelCycle(estado, auditoriaModelo.predicciones, hoyISO);
   const r = React.useMemo(() => resumen(estado, cicloModelo.estrategia), [estado, cicloModelo.estrategia]);
@@ -82,8 +84,8 @@ export default function HabitosPage() {
             {r.habitos.rachaActual.longitud > 0 ? `Todos tus hábitos activos, sin fallar · desde el ${fmtFechaCorta(r.habitos.rachaActual.desde!)}` : `Completa tus ${activos.length} hábitos activos hoy para iniciar una nueva racha.`}
           </p>
         </Card>
-        <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1 pr-0 [scrollbar-width:none] lg:block lg:overflow-visible lg:pb-0">
-        <Card className="w-[calc(100%-2.5rem)] shrink-0 snap-start gap-4 p-4 sm:p-5 lg:w-auto">
+        <SnapRail ariaLabel="Resumen de constancia" className="min-w-0" itemClassName="lg:[&:nth-child(2)]:hidden">
+        <Card className="h-full gap-4 p-4 sm:p-5">
           <div className="flex items-start justify-between gap-4">
             <div><h2 className="font-display text-lg font-bold">Últimos 7 días</h2><p className="mt-0.5 text-xs text-muted-foreground">Tu ritmo reciente, de un vistazo.</p></div>
             <div className="shrink-0 text-right"><p className={cn("font-display text-3xl font-bold leading-none tabular", tonoSemana.tinta)}>{r.habitos.adherencia7}%</p><p className="mt-1 text-[0.65rem] font-medium uppercase tracking-[0.1em] text-muted-foreground">constancia</p></div>
@@ -102,12 +104,12 @@ export default function HabitosPage() {
             })}
           </div>
         </Card>
-        <Card className="w-[calc(100%-2.5rem)] shrink-0 snap-start gap-4 p-4 sm:p-5 lg:hidden">
+        <Card className="h-full gap-4 p-4 sm:p-5">
           <div className="flex items-start justify-between gap-3"><div><h2 className="font-display text-lg font-bold">Este mes</h2><p className="mt-0.5 text-xs text-muted-foreground">Tu constancia en 30 días.</p></div><p className={cn("font-display text-3xl font-bold leading-none tabular", tonoCumplimiento(r.habitos.adherencia30, 100).tinta)}>{r.habitos.adherencia30}%</p></div>
           <div className="grid gap-2">{porHabito.slice(0, 3).map((h) => <div key={h.clave} className="flex items-center justify-between gap-3 text-xs"><span className="truncate text-muted-foreground">{h.etiqueta}</span><span className="font-semibold tabular text-foreground">{h.pct}%</span></div>)}</div>
           <p className="text-[0.7rem] text-muted-foreground">Desliza para comparar semana y mes.</p>
         </Card>
-        </div>
+        </SnapRail>
       </div>
       </FlowChapter>
 

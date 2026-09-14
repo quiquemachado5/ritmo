@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronUp, Focus, LogOut, Maximize2, Minimize2, MoreHorizontal, Plus, Search, ShieldCheck } from "lucide-react";
@@ -19,7 +20,6 @@ import { ThemeToggle } from "./theme-toggle";
 import { NAV_ITEMS } from "./nav-items";
 import { useQuickLog } from "./quick-log-provider";
 import { useRitmo } from "@/lib/store/provider";
-import { QuickLog } from "./quick-log";
 import { PageTransition } from "@/components/page-transition";
 import { TravelBanner } from "./travel-banner";
 import { GlobalSearch } from "./global-search";
@@ -30,6 +30,11 @@ import { useModoViaje } from "@/lib/travel-mode";
 import { usePlatformConfig, useReleasedExperiments } from "./platform-provider";
 import { habitosModelo } from "@/lib/model/config";
 import type { Estado } from "@/lib/model/types";
+import { errorCopy } from "@/lib/error-copy";
+
+const QuickLog = dynamic(() => import("./quick-log").then((module) => module.QuickLog), {
+  loading: () => null,
+});
 
 type MomentoRitmo = "dia" | "manana" | "tarde" | "noche";
 const EVENTO_VISTA_MINIMA = "ritmo:vista-minima";
@@ -177,11 +182,12 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
   }, [abrir, abierto, busquedaAbierta]);
 
   if (errorCarga) {
+    const copy = errorCopy(errorCarga);
     return <main className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center gap-4 px-6">
       <RitmoLogo />
-      <h1 className="text-2xl font-semibold">No hemos podido cargar tus datos</h1>
-      <p className="text-muted-foreground">No se han sustituido tus registros ni tus copias de seguridad. Comprueba la conexión y vuelve a intentarlo.</p>
-      <Button onClick={() => void recargar()}>Volver a cargar</Button>
+      <h1 className="text-2xl font-semibold">{copy.title}</h1>
+      <p className="text-muted-foreground">{copy.detail}</p>
+      {copy.kind !== "session" && <Button onClick={() => void recargar()}>{copy.action}</Button>}
       <Link className="text-center text-sm underline underline-offset-4" href="/login">Volver a iniciar sesión</Link>
     </main>;
   }
@@ -197,7 +203,7 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
       {platform.announcement && <div className="border-b border-primary/20 bg-primary/8 px-4 py-2 text-center text-xs font-medium text-primary md:pl-[16.25rem]">{platform.announcement}</div>}
       {!vistaMinima && <TravelBanner />}
       {/* Sidebar — escritorio */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[16.25rem] flex-col border-r border-border/80 bg-card/97 px-3 py-3 shadow-[8px_0_28px_-28px_var(--foreground)] md:flex">
+      <aside data-app-sidebar className="fixed inset-y-0 left-0 z-40 hidden w-[16.25rem] flex-col border-r border-border/80 bg-card/97 px-3 py-3 shadow-[8px_0_28px_-28px_var(--foreground)] md:flex">
         {vistaMinima ? <>
           <div className="flex h-12 items-center px-2">
             <RitmoLogo wordmarkClassName="h-8" />
@@ -305,7 +311,7 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
         </div>
       </nav>}
 
-      <QuickLog />
+      {abierto && <QuickLog />}
       <GlobalSearch open={busquedaAbierta} onOpenChange={setBusquedaAbierta} />
     </div>
   );

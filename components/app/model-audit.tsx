@@ -42,8 +42,12 @@ export function ModelAudit() {
 
       {evaluacion.casos > 0 ? <>
         <p className="mt-3 text-xs text-muted-foreground">
-          Modelo actual: <span className="font-semibold text-foreground">{evaluacion.actual.casos ? `${fmtPeso(evaluacion.actual.maeKg, 2)} kg MAE en ${evaluacion.actual.casos} comparaciones` : "aún sin pesajes evaluables"}</span>. El resumen inferior conserva versiones anteriores sin mezclarlas con esta cifra.
+          Modelo actual: <span className="font-semibold text-foreground">{evaluacion.actual.casos ? `${fmtPeso(evaluacion.actual.maeKg, 2)} kg MAE en ${evaluacion.actual.casos} comparaciones` : "aún sin pesajes evaluables"}</span>. Sesgo {evaluacion.actual.sesgoKg == null ? "—" : `${evaluacion.actual.sesgoKg >= 0 ? "+" : ""}${fmtPeso(evaluacion.actual.sesgoKg, 2)} kg`} · error P90 {evaluacion.actual.p90Kg == null ? "—" : `${fmtPeso(evaluacion.actual.p90Kg, 2)} kg`}.
         </p>
+        {(evaluacion.contextoAlcohol.conAlcohol.casos > 0 || evaluacion.contextoAlcohol.sinAlcohol.casos > 0) && <div className="mt-3 grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-2">
+          <div className="bg-card px-3 py-2.5"><p className="text-xs font-semibold">Tras alcohol</p><p className="mt-0.5 text-xs text-muted-foreground">{evaluacion.contextoAlcohol.conAlcohol.casos ? `${fmtPeso(evaluacion.contextoAlcohol.conAlcohol.maeKg, 2)} kg de error · ${evaluacion.contextoAlcohol.conAlcohol.casos} casos` : "Aún sin comparación exacta"}</p></div>
+          <div className="bg-card px-3 py-2.5"><p className="text-xs font-semibold">Sin alcohol</p><p className="mt-0.5 text-xs text-muted-foreground">{evaluacion.contextoAlcohol.sinAlcohol.casos ? `${fmtPeso(evaluacion.contextoAlcohol.sinAlcohol.maeKg, 2)} kg de error · ${evaluacion.contextoAlcohol.sinAlcohol.casos} casos` : "Aún sin comparación exacta"}</p></div>
+        </div>}
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-left text-sm">
             <caption className="sr-only">Error real de pronósticos emitidos antes del pesaje, separado por horizonte</caption>
