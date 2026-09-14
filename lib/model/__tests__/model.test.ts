@@ -483,6 +483,7 @@ describe("Imputación y arrastre", () => {
       dias: { [fechaPeso]: { ...base.dias[fechaPeso], habitos: { deporte: true, noAlcohol: true } } },
     }));
     expect(conAlcohol.modelo!.retencionLiquidosHoyKg).toBeGreaterThan(0.4);
+    expect(conAlcohol.modelo!.retencionLiquidosMotivosHoy).toContain("alcohol reciente");
     expect(conAlcohol.hoy!.peso - sinAlcohol.hoy!.peso).toBeGreaterThan(0.35);
     casi(
       conAlcohol.composicion!.hoy.grasaKg + conAlcohol.composicion!.hoy.magraKg + conAlcohol.composicion!.hoy.liquidoTransitorioKg,
@@ -498,6 +499,7 @@ describe("Imputación y arrastre", () => {
     }));
     expect(bebidoHoy.modelo!.retencionLiquidosHoyKg).toBe(0);
     expect(bebidoHoy.modelo!.retencionLiquidosMananaKg).toBeGreaterThan(0.4);
+    expect(bebidoHoy.modelo!.retencionLiquidosMotivosManana).toContain("alcohol reciente");
     expect(bebidoHoy.modelo!.correccionSesgoHoyKg).toBe(0);
   });
 });

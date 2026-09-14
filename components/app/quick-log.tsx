@@ -46,6 +46,7 @@ import { Chip, MacroBar } from "./primitives";
 import { useQuickLog, type QuickTab } from "./quick-log-provider";
 import { claveBorrador, leerBorrador, guardarBorrador, quitarBorrador } from "@/lib/drafts";
 import { aclaracionComida, type AclaracionComida } from "@/lib/nutrition/clarification";
+import { calidadIngredientes } from "@/lib/nutrition/ingredient-quality";
 import { escalarNutrientes, escalarIngrediente, factorPorcion } from "@/lib/nutrition/portions";
 import { corregirGramos, etiquetaCantidad } from "@/lib/nutrition/catalog";
 
@@ -118,6 +119,7 @@ export function QuickLog() {
   );
 
   const titulo = comidaEdit ? "Editar comida" : "Registrar";
+  const tituloMovil = tecladoAbierto ? (comidaEdit ? "Editar comida" : `Registrar ${TABS.find((item) => item.id === tab)?.label.toLowerCase() ?? "dato"}`) : titulo;
   const sub = capitalizar(fmtFechaLarga(fecha));
 
   if (isDesktop) {
@@ -163,11 +165,11 @@ export function QuickLog() {
       >
         <DrawerHeader className={cn("shrink-0 border-b border-border text-left", tecladoAbierto ? "px-4 py-2" : "px-4 pt-3 pb-4")}>
           <div className="flex items-baseline justify-between gap-3">
-            <DrawerTitle className={cn("font-display", tecladoAbierto ? "text-base" : "text-xl")}>{titulo}</DrawerTitle>
+            <DrawerTitle className={cn("font-display", tecladoAbierto ? "text-base" : "text-xl")}>{tituloMovil}</DrawerTitle>
             <DrawerDescription className={cn("shrink-0 text-xs", !tecladoAbierto && "hidden")}>{sub}</DrawerDescription>
           </div>
           {!tecladoAbierto && <DrawerDescription>{sub}</DrawerDescription>}
-          <div className={tecladoAbierto ? "pt-2" : "pt-3"}>{pestanas}</div>
+          {!tecladoAbierto && <div className="pt-3">{pestanas}</div>}
         </DrawerHeader>
         <div
           className={cn(
@@ -410,6 +412,7 @@ function PanelComida({
   const anomaliasConfirmadas = anomalias.length === 0 || firmaAnomaliaConfirmada === firmaAnomalias;
   const reparto = analisis ? distribucionMacros(analisis) : null;
   const kcalDesdeMacros = analisis ? energiaDesdeMacros(analisis) : 0;
+  const calidadItems = analisis ? calidadIngredientes(analisis.items) : null;
 
   return (
     <div className="flex min-h-full flex-col gap-3">
@@ -528,6 +531,28 @@ function PanelComida({
             <MacroBar label={`Grasas · ${reparto?.grasas ?? 0}%`} value={analisis.grasas} colorVar="--energy" />
           </div>
           <p className="mt-2 text-right text-[0.68rem] tabular text-muted-foreground">Comprobación 4·4·9: {kcalDesdeMacros} kcal</p>
+          {calidadItems && analisis.items.length > 0 && (
+            <div className={cn(
+              "mt-4 flex items-start gap-2.5 border-y px-1 py-3 text-xs leading-relaxed",
+              calidadItems.nivel === "alta" ? "border-weight-border text-weight-ink" : "border-warning-border text-warning-ink",
+            )} role="status">
+              <span className={cn("mt-0.5 grid size-5 shrink-0 place-items-center rounded-full", calidadItems.nivel === "alta" ? "bg-weight text-white" : "bg-warning-wash")}>
+                {calidadItems.nivel === "alta" ? <Check className="size-3" /> : <CircleHelp className="size-3" />}
+              </span>
+              <div className="min-w-0">
+                <p className="font-semibold">
+                  {calidadItems.nivel === "alta"
+                    ? "Cantidades bien definidas"
+                    : `Revisa primero: ${calidadItems.prioridades.map((item) => item.nombre).join(" y ")}`}
+                </p>
+                <p className="mt-0.5 opacity-80">
+                  {calidadItems.nivel === "alta"
+                    ? "El cálculo usa pesos indicados por ti; los ingredientes siguen siendo editables."
+                    : `${calidadItems.porcentajeAproximado}% de la energía (${calidadItems.kcalAproximadas} kcal) depende de porciones aproximadas. Corrige esas cantidades para afinar el total.`}
+                </p>
+              </div>
+            </div>
+          )}
           {!!analisis.noReconocidos?.length && <div className="mt-4 rounded-lg border border-warning-border bg-warning-wash p-3 text-sm text-warning-ink" role="status">
             <p className="font-semibold">Hay texto sin interpretar</p>
             <p className="mt-1 break-words">{analisis.noReconocidos.join(" · ")}</p>

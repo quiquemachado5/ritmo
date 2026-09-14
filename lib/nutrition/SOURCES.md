@@ -59,7 +59,7 @@ ID. `CATALOGO_NUTRICIONAL` expone todas las entradas, sus nutrientes y su estado
 - El texto no interpretado se muestra y no añade calorías silenciosamente.
 
 Las pruebas son de regresión de cálculo y transparencia, no una certificación
-de precisión clínica o nutricional. Las ocho comidas de referencia existentes
+de precisión clínica o nutricional. Las doce comidas de referencia existentes
 siguen siendo aproximaciones y no etiquetas de laboratorio.
 
 ## Fuentes públicas previstas para ampliaciones

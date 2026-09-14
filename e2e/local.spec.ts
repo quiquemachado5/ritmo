@@ -51,6 +51,13 @@ async function sinDesbordamiento(page: Page) {
   expect(resultado.exceso, JSON.stringify(resultado.elementos)).toBeLessThanOrEqual(1);
 }
 
+test("el despliegue declara que código y datos están alineados", async ({ request }, info) => {
+  test.skip(info.project.name !== "desktop", "El contrato HTTP no depende del dispositivo");
+  const respuesta = await request.get("/api/health");
+  expect(respuesta.status()).toBe(200);
+  expect(await respuesta.json()).toMatchObject({ status: "ok", service: "ritmo", database: "ready" });
+});
+
 test("accesibilidad automática en acceso y lectura principal", async ({ page, request }, info) => {
   test.skip(info.project.name !== "desktop", "Una pasada semántica estable es suficiente; las geometrías móviles se cubren aparte");
   await request.post("http://127.0.0.1:3199/__reset");
@@ -122,6 +129,7 @@ test("recorrido visual y guardado con datos sintéticos", async ({ page, request
   await page.getByRole("button", { name: "Volver a analizar", exact: true }).click();
   await expect(page.getByText("Hay texto sin interpretar", { exact: true })).toBeVisible();
   await expect(page.getByText("tahini", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Revisa primero:/).first()).toBeVisible();
   await expect(page.getByText("Unidades · peso aprox.", { exact: true })).toBeVisible();
   await page.getByText("Fuentes y valores por 100 g", { exact: true }).click();
   await expect(page.getByText(/Catálogo RITMO · cocción calculada con absorción de agua/).first()).toBeVisible();
@@ -352,6 +360,8 @@ test("móvil: paisaje, texto ampliado y registro con viewport de teclado", async
     Object.defineProperty(window.visualViewport, "height", { configurable: true, get: () => 380 });
     window.visualViewport.dispatchEvent(new Event("resize"));
   });
+  await expect(page.getByRole("heading", { name: "Registrar comida", exact: true })).toBeVisible();
+  await expect(page.getByRole("tablist", { name: "Tipo de registro", exact: true })).toBeHidden();
   const principal = page.getByRole("button", { name: "Analizar ingredientes", exact: true });
   await expect(principal).toBeVisible();
   await expect.poll(async () => {

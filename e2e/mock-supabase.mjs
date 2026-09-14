@@ -64,6 +64,7 @@ const server = http.createServer(async (req, res) => {
       announcement: platformControl.announcementEnabled ? platformControl.announcementText : null,
       updatedAt: platformControl.updatedAt,
     });
+    if (rpc === 'ritmo_public_runtime_status') return send({ databaseVersion: '202609140002', nutritionEngine: true });
     if (rpc === 'ritmo_admin_snapshot') {
       if (id !== ids[1]) return send({ message: 'Acceso no autorizado' }, 403);
       return send({ metrics: { users: 2, onboarded: 2, active30: 2, suspended: 0, admins: 1, pilots: 0 }, features, control: platformControl, audit: [] });

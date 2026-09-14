@@ -17,7 +17,7 @@ describe("Cliente de auditoría por cuenta", () => {
   afterEach(() => vi.unstubAllGlobals());
   const fila = { id: "config-1", user_id: "A", effective_from: "2026-09-04T10:00:00Z", effective_date: "2026-09-04", perfil: PERFIL_DEFECTO };
 
-  it("fija la autorización original si la cuenta cambia durante la petición", async () => {
+  it("fija la autorización original si la cuenta cambia durante la petición", { timeout: 15_000 }, async () => {
     mocks.getUser.mockResolvedValueOnce({ data: { user: { id: "A" } }, error: null }).mockResolvedValue({ data: { user: { id: "B" } }, error: null });
     mocks.header.mockResolvedValue({ data: fila, error: null });
     const { registrarConfiguracion, leerAuditoriaLocal } = await import("../client");

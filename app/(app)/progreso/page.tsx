@@ -213,7 +213,14 @@ export default function ProgresoPage() {
   const ritmoModelo = r.prediccion.modelo?.kgSemana ?? null;
   const retencionHoy = r.prediccion.modelo?.retencionLiquidosHoyKg ?? 0;
   const retencionManana = r.prediccion.modelo?.retencionLiquidosMananaKg ?? 0;
+  const motivosLiquidosHoy = r.prediccion.modelo?.retencionLiquidosMotivosHoy ?? [];
+  const motivosLiquidosManana = r.prediccion.modelo?.retencionLiquidosMotivosManana ?? [];
   const correccionSesgo = r.prediccion.modelo?.correccionSesgoHoyKg ?? 0;
+  const pesoTisularHoy = composicionModelo?.hoy
+    ? Math.round((composicionModelo.hoy.grasaKg + composicionModelo.hoy.magraKg) * 10) / 10
+    : r.peso.estimadoHoy != null
+      ? Math.round((r.peso.estimadoHoy - retencionHoy) * 10) / 10
+      : null;
   const energiaHoyModelo = energiaDe(estado, hoyISO);
   const siguienteDato = diasDesdeBascula >= 7
     ? "un pesaje nuevo, preferiblemente al levantarte"
@@ -223,9 +230,9 @@ export default function ProgresoPage() {
         ? "revisar las cantidades de las comidas estimadas"
         : "mantener el próximo pesaje en condiciones parecidas";
   const explicacionModelo = retencionHoy > 0
-    ? `El alcohol reciente puede sumar unos ${fmtPeso(retencionHoy)} kg de líquido hoy; no es grasa.`
+    ? `${capitalizar(motivosLiquidosHoy.join(" y ") || "una señal reciente")} puede sumar unos ${fmtPeso(retencionHoy)} kg de líquido hoy; no es grasa.`
     : retencionManana > 0
-      ? `Al no marcar “Sin alcohol” hoy, mañana se contemplan unos ${fmtPeso(retencionManana)} kg de líquido.`
+      ? `${capitalizar(motivosLiquidosManana.join(" y ") || "una señal reciente")} puede sumar unos ${fmtPeso(retencionManana)} kg de líquido mañana.`
       : ritmoModelo == null
     ? "Una nueva medición recalibrará esta orientación."
     : Math.abs(ritmoModelo) < 0.1
@@ -284,6 +291,12 @@ export default function ProgresoPage() {
                           : "Se actualizará con tu próxima medición"}
                       {intervaloHoy && <> · rango <span className="tabular">{fmtPeso(intervaloHoy.minimo)}–{fmtPeso(intervaloHoy.maximo)}</span></>}
                     </p>
+                    {retencionHoy >= 0.05 && pesoTisularHoy != null && (
+                      <dl className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-body-border bg-body-border text-xs">
+                        <div className="bg-card/90 px-2.5 py-2"><dt className="text-muted-foreground">Tendencia corporal</dt><dd className="mt-0.5 font-semibold tabular text-body-ink">{fmtPeso(pesoTisularHoy)} kg</dd></div>
+                        <div className="bg-water-wash px-2.5 py-2"><dt className="text-water-ink">Líquido transitorio</dt><dd className="mt-0.5 font-semibold tabular text-water-ink">+{fmtPeso(retencionHoy)} kg</dd></div>
+                      </dl>
+                    )}
                     {Math.abs(correccionSesgo) >= 0.05 && <p className="mt-2 text-[0.68rem] leading-relaxed text-body-ink">Incluye una corrección de {fmtSigno(correccionSesgo, 1)} kg porque tus predicciones anteriores {correccionSesgo > 0 ? "se quedaban por debajo" : "se quedaban por encima"}.</p>}
                   </div>
                 </div>

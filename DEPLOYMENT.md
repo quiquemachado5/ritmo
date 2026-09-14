@@ -18,7 +18,7 @@ El origen reproducible es `supabase/migrations/`, en orden de nombre. `supabase/
 2. Probar con datos representativos y revisar la copia antes de aplicar a producción.
 3. Aplicar solo las pendientes en producción, una vez. No ejecutar a ciegas todo el directorio sobre una instalación ya migrada.
 
-Las migraciones `202609100001_admin_console.sql` y `202609140001_nutrition_kill_switch.sql` crean el control de acceso administrativo, las cohortes piloto, la publicación de funciones, el canal global del modelo, la parada segura del motor nutricional y la auditoría. Deben aplicarse antes de usar todos los controles de `/admin`; hasta entonces la aplicación mantiene valores seguros por defecto sin degradar los datos del usuario.
+Las migraciones `202609100001_admin_console.sql`, `202609140001_nutrition_kill_switch.sql` y `202609140002_runtime_health.sql` crean el control de acceso administrativo, las cohortes piloto, la publicación de funciones, el canal global del modelo, la parada segura del motor nutricional, la auditoría y la comprobación pública de versión. Deben aplicarse antes de usar todos los controles de `/admin`; `/api/health` devuelve `503` mientras código y base de datos no estén alineados.
 
 La nueva línea base crea el esquema desde cero y conserva tablas existentes. La migración de perfil admite proteína decimal y alinea límites con el formulario. Sus restricciones nuevas son `NOT VALID`: los datos históricos no se borran ni se corrigen automáticamente; las nuevas escrituras sí se validan.
 
@@ -28,7 +28,7 @@ La nueva línea base crea el esquema desde cero y conserva tablas existentes. La
 
 **Configuración elegida: sin Gemini, Edamam ni facturación nueva.** `config/nutrition.json` bloquea los proveedores externos incluso si quedan claves antiguas o `NUTRITION_AI_ENABLED=true` en Vercel. El navegador calcula con la tabla local y reutiliza correcciones confirmadas para el mismo ingrediente y cantidad. No llama al servidor de nutrición. Registrar la comida sí la sincroniza con Supabase.
 
-No se necesitan claves nuevas, `SUPABASE_SERVICE_ROLE_KEY` ni activar la cuota SQL para el análisis local. No es IA generativa ni sustituye etiquetas y cantidades pesadas. `npm run test:nutrition:local` evalúa los ocho platos sin API y comprueba que no hay llamadas externas. El flujo manual «Evaluación nutricional local (sin API)» tampoco necesita secretos. El benchmark de Gemini queda bloqueado mientras esta política esté desactivada.
+No se necesitan claves nuevas, `SUPABASE_SERVICE_ROLE_KEY` ni activar la cuota SQL para el análisis local. No es IA generativa ni sustituye etiquetas y cantidades pesadas. `npm run test:nutrition:local` evalúa doce platos complejos y 72 variantes de lenguaje sin API, y comprueba que no hay llamadas externas. El flujo manual «Evaluación nutricional local (sin API)» tampoco necesita secretos. El benchmark de Gemini queda bloqueado mientras esta política esté desactivada.
 
 ### Solo si en el futuro se autoriza explícitamente otra modalidad
 
@@ -48,7 +48,7 @@ Además, el operador debe activar `nutrition_policy.enabled` en Supabase. Los va
 
 La caché compartida aísla por usuario y huella de la petición. Evita análisis duplicados en varias instancias de Vercel. La respuesta deja de ser reutilizable a los 10 minutos; la purga física se realiza con posteriores peticiones, no mediante una tarea programada. No hay garantía de eliminación física en ese mismo minuto.
 
-Antes de una futura activación, ejecutar `npm run test:nutrition:eval` con una clave de pruebas autorizada y la política revisada. La prueba genera consumo externo y no se ejecuta dentro de `npm test` ni del flujo local. Exige respuesta para los ocho platos y controla error en kcal y los tres macros. Las referencias actuales son valores medios de evaluación, no mediciones de laboratorio; conviene ampliarlas con etiquetas y pesos documentados.
+Antes de una futura activación, ejecutar `npm run test:nutrition:eval` con una clave de pruebas autorizada y la política revisada. La prueba genera consumo externo y no se ejecuta dentro de `npm test` ni del flujo local. Exige respuesta para los platos de referencia y controla error en kcal y los tres macros. Las referencias actuales son valores medios de evaluación, no mediciones de laboratorio; conviene ampliarlas con etiquetas y pesos documentados.
 
 ## 4. Autenticación y correo
 

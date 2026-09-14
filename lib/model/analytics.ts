@@ -844,6 +844,8 @@ export interface ModeloProyeccion {
   retencionLiquidosHoyKg: number;
   retencionLiquidosMananaKg: number;
   retencionLiquidosFuente: "ninguna" | "generica" | "personalizada";
+  retencionLiquidosMotivosHoy: string[];
+  retencionLiquidosMotivosManana: string[];
   /** Sesgo mediano observado: positivo cuando históricamente predijo de menos. */
   sesgoHistoricoKg: number | null;
   /** Corrección gradual aplicada al peso estimado de hoy. */
@@ -1036,6 +1038,10 @@ export function proyeccionPesoConfiable(
   // Si hoy hay báscula, ese dato es el ancla exacta. Alpha se reserva para
   // combinar las trayectorias futuras, no para mover una lectura real.
   const liquidoHoy = impactoLiquidosEnFecha(estado, hoy());
+  const motivosLiquidos = (impacto: ReturnType<typeof impactoLiquidosEnFecha>) => [
+    ...(impacto.eventosAlcohol > 0 ? ["alcohol reciente"] : []),
+    ...impacto.eventosContexto.map((evento) => evento.etiqueta.toLocaleLowerCase("es-ES")),
+  ].filter((motivo, indice, lista) => lista.indexOf(motivo) === indice);
   const pesoHoyTisularBase = diasSinPesaje === 0
     ? Math.max(20, ultimo.peso - liquidoHoy.kg)
     : pesoTendencia === null
@@ -1155,6 +1161,8 @@ export function proyeccionPesoConfiable(
       retencionLiquidosHoyKg: liquidoHoy.kg,
       retencionLiquidosMananaKg: manana.liquido.kg,
       retencionLiquidosFuente: liquidoHoy.fuente !== "ninguna" ? liquidoHoy.fuente : manana.liquido.fuente,
+      retencionLiquidosMotivosHoy: motivosLiquidos(liquidoHoy),
+      retencionLiquidosMotivosManana: motivosLiquidos(manana.liquido),
       sesgoHistoricoKg: validacion.tramos >= 5 ? validacion.sesgoFirmadoKg : null,
       correccionSesgoHoyKg: redondearPeso(correccionSesgoHoyKg),
     },

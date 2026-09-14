@@ -1,0 +1,25 @@
+name: Despliegue real
+
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-${{ github.event.deployment.id }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    if: github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    env:
+      RITMO_DEPLOYMENT_URL: ${{ github.event.deployment_status.environment_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Comprobar aplicación y versión de datos
+        run: node scripts/smoke-deployment.mjs
