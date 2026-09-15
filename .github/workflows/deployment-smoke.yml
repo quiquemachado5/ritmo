@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   smoke:
-    if: github.event.deployment_status.state == 'success'
+    if: github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Production'
     runs-on: ubuntu-latest
     env:
       RITMO_DEPLOYMENT_URL: ${{ github.event.deployment_status.environment_url }}
