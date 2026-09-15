@@ -1,6 +1,7 @@
 import process from "node:process";
 
 const rawBase = process.env.RITMO_DEPLOYMENT_URL;
+const expectedBuild = process.env.RITMO_EXPECTED_BUILD?.trim();
 if (!rawBase) throw new Error("Falta RITMO_DEPLOYMENT_URL.");
 const base = new URL(rawBase);
 if (base.protocol !== "https:") throw new Error("El despliegue debe usar HTTPS.");
@@ -24,6 +25,9 @@ async function comprobar(ruta, validar) {
 await comprobar("/api/health", async respuesta => {
   const dato = await respuesta.json();
   if (dato?.status !== "ok" || dato?.database !== "ready") throw new Error("Código y base de datos no están alineados.");
+  if (expectedBuild && (typeof dato?.build !== "string" || (!expectedBuild.startsWith(dato.build) && !dato.build.startsWith(expectedBuild)))) {
+    throw new Error(`El dominio público todavía sirve ${dato?.build ?? "una versión desconocida"}; se esperaba ${expectedBuild.slice(0, 12)}.`);
+  }
 });
 await comprobar("/login");
 await comprobar("/privacidad");

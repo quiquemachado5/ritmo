@@ -15,7 +15,8 @@ jobs:
     if: github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Production'
     runs-on: ubuntu-latest
     env:
-      RITMO_DEPLOYMENT_URL: ${{ github.event.deployment_status.environment_url }}
+      RITMO_DEPLOYMENT_URL: ${{ vars.RITMO_PRODUCTION_URL || 'https://ritmo-nu-six.vercel.app' }}
+      RITMO_EXPECTED_BUILD: ${{ github.event.deployment.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
