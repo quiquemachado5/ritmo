@@ -37,10 +37,3 @@ jobs:
       - uses: github/codeql-action/analyze@v3
         with:
           upload: false
-          output: codeql-results
-      - name: Guardar informe CodeQL
-        uses: actions/upload-artifact@v4
-        with:
-          name: codeql-results
-          path: codeql-results
-          retention-days: 14
