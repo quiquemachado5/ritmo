@@ -87,7 +87,7 @@ export default function HoyPage() {
   if (experimentos.rescateAutomatico && rescate.activo && !mostrarPanelCompleto && rescate.habitoClave) {
     return (
       <div className="flex min-h-[calc(100dvh-10rem)] flex-col gap-4">
-        <header className="today-greeting"><p className="text-sm text-muted-foreground">{capitalizar(new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long" }).format(new Date()))}</p><h1 className="font-display text-2xl font-bold tracking-tight">{saludo()}{nombre ? `, ${nombre}` : ""}.</h1></header>
+        <header><p className="text-sm text-muted-foreground">{capitalizar(new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long" }).format(new Date()))}</p><h1 className="font-display text-2xl font-bold tracking-tight">{saludo()}{nombre ? `, ${nombre}` : ""}.</h1></header>
         <RescueMode rescate={rescate} onCompletar={() => { void alternarHabito(hoyISO, rescate.habitoClave!).then((guardado) => { if (guardado) setMostrarPanelCompleto(true); }); }} onVerTodo={() => setMostrarPanelCompleto(true)} />
       </div>
     );
@@ -96,7 +96,7 @@ export default function HoyPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Saludo */}
-      <header className="today-greeting flex flex-wrap items-start justify-between gap-3">
+      <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm text-muted-foreground">{capitalizar(new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long" }).format(new Date()))}</p>
           <h1 className="font-display text-2xl font-bold tracking-tight">
@@ -104,7 +104,7 @@ export default function HoyPage() {
           </h1>
         </div>
         {r.habitos.rachaActual.longitud > 0 && (
-          <div className="streak-chip flex items-center gap-1.5 rounded-full bg-streak/12 px-3 py-1.5">
+          <div className="flex items-center gap-1.5 rounded-full bg-streak/12 px-3 py-1.5">
             <Flame className="size-4 text-streak" />
             <span className="font-display font-bold tabular text-streak">{r.habitos.rachaActual.longitud}</span>
             <span className="text-xs font-medium text-streak/90">días</span>
@@ -118,8 +118,8 @@ export default function HoyPage() {
         <SectionLabel action={<Link href="/nutricion" className="text-xs font-medium text-primary hover:underline">Ver nutrición</Link>}>
           Energía de hoy
         </SectionLabel>
-        <Card className="energy-command-card h-full p-4 sm:p-5">
-          <div className="energy-command-header mb-4 flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
+        <Card className="h-full p-4 sm:p-5">
+          <div className="mb-4 flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
             <div><h2 className="font-display text-xl font-bold">{lecturaPrincipal}</h2><p className="mt-1 text-sm text-muted-foreground">{habitosHechos === habitosActivos.length ? "Por hoy, tu base está completa." : "Un paso cada vez. Lo demás puede esperar."}</p></div>
             <div className="flex flex-wrap gap-2">
               {habitosHechos < habitosActivos.length ? <Button size="sm" onClick={() => abrir("habitos")} className="gap-1.5"><CheckCircle2 className="size-3.5" /> Revisar hábitos</Button>
@@ -129,7 +129,7 @@ export default function HoyPage() {
             </div>
           </div>
           <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] items-center gap-3 sm:flex sm:gap-7">
-            <Ring value={consumidas} max={objetivoKcal} colorVar="--energy" segments={[{ value: macros.p, max: objMacros.proteinas, colorVar: "--weight" }, { value: macros.c, max: objMacros.carbohidratos, colorVar: "--habit" }, { value: macros.g, max: objMacros.grasas, colorVar: "--energy" }]} size={116} stroke={11} className="energy-command-ring sm:[width:140px] sm:[height:140px]" ariaLabel={`Energía de hoy: ${fmtKcal(consumidas)} de ${fmtKcal(objetivoKcal)} kcal`}>
+            <Ring value={consumidas} max={objetivoKcal} colorVar="--energy" segments={[{ value: macros.p, max: objMacros.proteinas, colorVar: "--weight" }, { value: macros.c, max: objMacros.carbohidratos, colorVar: "--habit" }, { value: macros.g, max: objMacros.grasas, colorVar: "--energy" }]} size={116} stroke={11} className="sm:[width:140px] sm:[height:140px]" ariaLabel={`Energía de hoy: ${fmtKcal(consumidas)} de ${fmtKcal(objetivoKcal)} kcal`}>
               <div><span className="block font-display text-3xl font-bold leading-none tabular">{fmtKcal(Math.abs(restanteKcal))}</span><span className="text-xs text-muted-foreground">{restanteKcal >= 0 ? "kcal restantes" : "kcal de más"}</span></div>
             </Ring>
             <div className="grid w-full flex-1 gap-2 sm:gap-3">
@@ -160,7 +160,7 @@ export default function HoyPage() {
                   : "Aún no has cumplido ningún hábito";
             const kcalWarning = restanteKcal < 0 && habitosHechos >= 4;
             return (
-              <div className={cn("daily-score mt-3 flex flex-col gap-2 rounded-xl border px-3 py-2.5 sm:mt-4 sm:px-4 sm:py-3", tonos.border, tonos.bg)}>
+              <div className={cn("mt-3 flex flex-col gap-2 rounded-xl border px-3 py-2.5 sm:mt-4 sm:px-4 sm:py-3", tonos.border, tonos.bg)}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <Target className={cn("size-5", tonos.text)} />
@@ -195,7 +195,7 @@ export default function HoyPage() {
       <div className="today-overview-side">
       {/* Último pesaje */}
       {pesoEnSegundoPlano ? (
-        <div className="invisible-reading quiet-reading" role="status">
+        <div className="invisible-reading" role="status">
           <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-weight-wash text-weight"><EyeOff className="size-4" /></span>
           <span className="min-w-0 flex-1"><span className="block text-xs font-semibold">Peso estable, en segundo plano</span><span className="block truncate text-[0.68rem] text-muted-foreground">Tu último pesaje es reciente y no requiere una acción.</span></span>
           <button type="button" onClick={() => setMostrarLecturasSecundarias(true)} className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-primary hover:bg-primary/8"><Eye className="size-3.5" /> Mostrar</button>
@@ -245,7 +245,7 @@ export default function HoyPage() {
         <SectionLabel action={<Link href="/habitos" className="text-xs font-medium text-primary hover:underline">Ver hábitos</Link>}>
           Hábitos de hoy · {habitosHechos}/{habitosActivos.length}
         </SectionLabel>
-        <Card className="habit-grid-card p-4">
+        <Card className="p-4">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-2">
             {habitosActivos.map((h) => {
               const hecho = diaHoy.habitos?.[h.clave] === true;
@@ -255,7 +255,7 @@ export default function HoyPage() {
                   onClick={() => alternarHabito(hoyISO, h.clave)}
                   aria-pressed={hecho}
                   className={cn(
-                    "habit-toggle min-h-11 min-w-0 flex items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm font-medium transition-colors",
+                    "min-h-11 min-w-0 flex items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm font-medium transition-colors",
                     hecho ? "border-primary/40 bg-primary/8 text-foreground" : "border-border text-muted-foreground hover:bg-secondary",
                   )}
                 >
@@ -282,7 +282,7 @@ export default function HoyPage() {
         <SectionLabel action={<button onClick={() => abrir("comida")} className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground"><Plus className="size-3.5" /> Añadir</button>}>
           Comidas de hoy
         </SectionLabel>
-        <Card className="meal-card overflow-hidden p-0">
+        <Card className="overflow-hidden p-0">
           {comidas.length === 0 ? (
             <button onClick={() => abrir("comida")} className="flex w-full items-center gap-4 px-5 py-6 text-left transition-colors hover:bg-energy-wash/35">
               <span className="grid size-11 shrink-0 place-items-center rounded-full bg-energy-wash text-energy"><Utensils className="size-5" /></span>
@@ -360,7 +360,7 @@ function WeeklyInsights({ r, estado, detectorAvanzado }: { r: ReturnType<typeof 
   return (
     <section>
       <SectionLabel action={<MonthlyShare meses={meses} estado={estado} />}>Esta semana</SectionLabel>
-      <Card className="weekly-card flex flex-col gap-0 overflow-hidden p-0">
+      <Card className="flex flex-col gap-0 overflow-hidden p-0">
         <div className="p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2.5">
