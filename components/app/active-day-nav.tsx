@@ -12,7 +12,7 @@ export function ActiveDayNav({ className }: { className?: string }) {
   const esHoy = fecha === hoy();
 
   return (
-    <div className={cn("flex w-full items-center justify-between rounded-xl border border-border bg-card p-1 shadow-sm sm:w-auto sm:min-w-48", className)}>
+    <div className={cn("active-day-nav flex w-full items-center justify-between rounded-xl border border-border bg-card p-1 shadow-sm sm:w-auto sm:min-w-48", className)}>
       <Button variant="ghost" size="icon" onClick={() => seleccionarFecha(sumarDias(fecha, -1))} aria-label="Día anterior">
         <ChevronLeft className="size-5" />
       </Button>
