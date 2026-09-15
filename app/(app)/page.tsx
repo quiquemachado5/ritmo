@@ -87,7 +87,7 @@ export default function HoyPage() {
   if (experimentos.rescateAutomatico && rescate.activo && !mostrarPanelCompleto && rescate.habitoClave) {
     return (
       <div className="flex min-h-[calc(100dvh-10rem)] flex-col gap-4">
-        <header><p className="text-sm text-muted-foreground">{capitalizar(new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long" }).format(new Date()))}</p><h1 className="font-display text-2xl font-bold tracking-tight">{saludo()}{nombre ? `, ${nombre}` : ""}.</h1></header>
+        <header className="today-greeting"><p className="text-sm text-muted-foreground">{capitalizar(new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long" }).format(new Date()))}</p><h1 className="font-display text-2xl font-bold tracking-tight">{saludo()}{nombre ? `, ${nombre}` : ""}.</h1></header>
         <RescueMode rescate={rescate} onCompletar={() => { void alternarHabito(hoyISO, rescate.habitoClave!).then((guardado) => { if (guardado) setMostrarPanelCompleto(true); }); }} onVerTodo={() => setMostrarPanelCompleto(true)} />
       </div>
     );
@@ -96,7 +96,7 @@ export default function HoyPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Saludo */}
-      <header className="flex flex-wrap items-start justify-between gap-3">
+      <header className="today-greeting flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm text-muted-foreground">{capitalizar(new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long" }).format(new Date()))}</p>
           <h1 className="font-display text-2xl font-bold tracking-tight">
@@ -104,7 +104,7 @@ export default function HoyPage() {
           </h1>
         </div>
         {r.habitos.rachaActual.longitud > 0 && (
-          <div className="flex items-center gap-1.5 rounded-full bg-streak/12 px-3 py-1.5">
+          <div className="today-streak flex items-center gap-1.5 rounded-full bg-streak/12 px-3 py-1.5">
             <Flame className="size-4 text-streak" />
             <span className="font-display font-bold tabular text-streak">{r.habitos.rachaActual.longitud}</span>
             <span className="text-xs font-medium text-streak/90">días</span>
@@ -118,7 +118,7 @@ export default function HoyPage() {
         <SectionLabel action={<Link href="/nutricion" className="text-xs font-medium text-primary hover:underline">Ver nutrición</Link>}>
           Energía de hoy
         </SectionLabel>
-        <Card className="h-full p-4 sm:p-5">
+        <Card className="today-energy-card h-full p-4 sm:p-5">
           <div className="mb-4 flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
             <div><h2 className="font-display text-xl font-bold">{lecturaPrincipal}</h2><p className="mt-1 text-sm text-muted-foreground">{habitosHechos === habitosActivos.length ? "Por hoy, tu base está completa." : "Un paso cada vez. Lo demás puede esperar."}</p></div>
             <div className="flex flex-wrap gap-2">
@@ -160,7 +160,7 @@ export default function HoyPage() {
                   : "Aún no has cumplido ningún hábito";
             const kcalWarning = restanteKcal < 0 && habitosHechos >= 4;
             return (
-              <div className={cn("mt-3 flex flex-col gap-2 rounded-xl border px-3 py-2.5 sm:mt-4 sm:px-4 sm:py-3", tonos.border, tonos.bg)}>
+              <div className={cn("today-score mt-3 flex flex-col gap-2 rounded-xl border px-3 py-2.5 sm:mt-4 sm:px-4 sm:py-3", tonos.border, tonos.bg)}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <Target className={cn("size-5", tonos.text)} />
@@ -245,7 +245,7 @@ export default function HoyPage() {
         <SectionLabel action={<Link href="/habitos" className="text-xs font-medium text-primary hover:underline">Ver hábitos</Link>}>
           Hábitos de hoy · {habitosHechos}/{habitosActivos.length}
         </SectionLabel>
-        <Card className="p-4">
+        <Card className="today-habits-card p-4">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-2">
             {habitosActivos.map((h) => {
               const hecho = diaHoy.habitos?.[h.clave] === true;
@@ -255,7 +255,7 @@ export default function HoyPage() {
                   onClick={() => alternarHabito(hoyISO, h.clave)}
                   aria-pressed={hecho}
                   className={cn(
-                    "min-h-11 min-w-0 flex items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm font-medium transition-colors",
+                    "today-habit-toggle min-h-11 min-w-0 flex items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm font-medium transition-colors",
                     hecho ? "border-primary/40 bg-primary/8 text-foreground" : "border-border text-muted-foreground hover:bg-secondary",
                   )}
                 >
