@@ -18,7 +18,7 @@ jobs:
       RITMO_DEPLOYMENT_URL: ${{ vars.RITMO_PRODUCTION_URL || 'https://ritmo-nu-six.vercel.app' }}
       RITMO_EXPECTED_BUILD: ${{ github.event.deployment.sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: 22
