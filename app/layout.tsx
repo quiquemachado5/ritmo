@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import { connection } from "next/server";
 import { bricolage, hanken } from "./fonts";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { WebVitals } from "@/components/app/web-vitals";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -53,9 +55,12 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // La CSP usa un nonce distinto por respuesta; Next necesita render dinámico
+  // para adjuntarlo también a sus scripts internos.
+  await connection();
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={`${hanken.variable} ${bricolage.variable} font-sans antialiased`}>
@@ -66,6 +71,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
+          <WebVitals />
           <Toaster position="top-center" richColors closeButton />
         </ThemeProvider>
       </body>

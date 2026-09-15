@@ -28,26 +28,10 @@ const nextConfig: NextConfig = {
   /* Security headers */
   async headers() {
     const desarrollo = process.env.NODE_ENV !== 'production';
-    const supabaseOrigin = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://example.supabase.co').origin;
-    const supabaseSocket = supabaseOrigin.replace(/^http/, 'ws');
-    const contentSecurityPolicy = [
-      "default-src 'self'",
-      "base-uri 'self'",
-      "object-src 'none'",
-      "frame-ancestors 'none'",
-      "form-action 'self'",
-      "img-src 'self' data: blob:",
-      "font-src 'self' data:",
-      "style-src 'self' 'unsafe-inline'",
-      `script-src 'self' 'unsafe-inline'${desarrollo ? " 'unsafe-eval'" : ''}`,
-      "script-src-attr 'none'",
-      `connect-src 'self' ${supabaseOrigin} ${supabaseSocket}${desarrollo ? ' ws:' : ''}`,
-      "frame-src 'none'",
-      "worker-src 'self' blob:",
-      "manifest-src 'self'",
-      "media-src 'self' blob:",
-      desarrollo ? '' : "upgrade-insecure-requests",
-    ].filter(Boolean).join('; ');
+    const appOrigin = new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://ritmo.app');
+    // Safari también actualiza los activos de loopback a HTTPS. Un servidor
+    // local HTTP de producción no ofrece TLS; los dominios publicados sí.
+    const localHttp = appOrigin.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(appOrigin.hostname);
     return [
       {
         source: '/(.*)',
@@ -73,10 +57,6 @@ const nextConfig: NextConfig = {
             value: 'geolocation=(), microphone=(), camera=()',
           },
           {
-            key: 'Content-Security-Policy',
-            value: contentSecurityPolicy,
-          },
-          {
             key: 'Cross-Origin-Opener-Policy',
             value: 'same-origin',
           },
@@ -88,7 +68,7 @@ const nextConfig: NextConfig = {
             key: 'Origin-Agent-Cluster',
             value: '?1',
           },
-          ...(desarrollo ? [] : [{
+          ...(desarrollo || localHttp ? [] : [{
             key: 'Strict-Transport-Security',
             value: 'max-age=31536000; includeSubDomains',
           }]),

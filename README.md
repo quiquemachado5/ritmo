@@ -94,6 +94,8 @@ El registro en lenguaje natural utiliza una tabla local de alimentos, sin llamad
 
 ## 5. Despliegue
 
+Antes de publicar, ejecuta `npm run check:release` y consulta la [revisión de lanzamiento y mejoras](docs/PRODUCCION-2026-09-15.md). Incluye pruebas de navegador sobre una compilación de producción con datos sintéticos; el comando vuelve a compilar después con las variables habituales del proyecto.
+
 **Vercel (recomendado para Next.js):**
 1. Importa el repositorio en [vercel.com](https://vercel.com).
 2. Añade las variables de entorno (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` y el dominio real en `NEXT_PUBLIC_APP_URL`). No hace falta una clave de nutrición.

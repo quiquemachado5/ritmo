@@ -13,7 +13,7 @@ import { transitionCSS, springBezier, stagger } from "@/lib/transitions";
 
 export default function ResetearPage() {
   return (
-    <React.Suspense fallback={null}>
+    <React.Suspense fallback={<div role="status" className="flex min-h-80 items-center justify-center gap-2 rounded-2xl border border-border bg-background p-6 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />Preparando tu acceso…</div>}>
       <ResetearForm />
     </React.Suspense>
   );
@@ -97,6 +97,7 @@ function ResetearForm() {
 
   async function resetear(e: React.FormEvent) {
     e.preventDefault();
+    if (cargando) return;
     setError(null);
 
     if (!sesionLista) { triggerShake("Abre un enlace de recuperación válido antes de continuar."); return; }
@@ -113,7 +114,11 @@ function ResetearForm() {
       setTimeout(() => router.replace("/login"), 2000);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      triggerShake(msg.includes("Failed to fetch") ? "Sin conexión." : (msg || "Error al actualizar."));
+      triggerShake(msg.includes("Failed to fetch")
+        ? "No hemos podido conectar. Revisa tu conexión y vuelve a intentarlo."
+        : msg.toLowerCase().includes("same password")
+          ? "Elige una contraseña diferente a la que usabas antes."
+          : "No hemos podido actualizar tu contraseña. Inténtalo de nuevo o solicita otro enlace.");
       setCargando(false);
     }
   }
@@ -126,7 +131,8 @@ function ResetearForm() {
           <div className="bg-background border border-border/50 rounded-2xl shadow-lg px-6 py-6 text-center space-y-3">
             <CheckCircle2 className="mx-auto size-10 text-weight" style={{ animation: `successPop 0.6s ${springBezier}` }} />
             <h1 className="font-display text-xl font-bold">¡Contraseña actualizada!</h1>
-            <p className="text-sm text-muted-foreground">Redirigiendo al login...</p>
+            <p className="text-sm text-muted-foreground">Ya puedes iniciar sesión con tu nueva contraseña.</p>
+            <Button asChild className="min-h-11"><Link href="/login" prefetch={false}>Iniciar sesión</Link></Button>
           </div>
         </div>
       </>
@@ -145,7 +151,7 @@ function ResetearForm() {
 
           <div className="space-y-5 px-5 py-6 sm:px-7">
             <div className="overflow-hidden">
-              <h1 className="font-display text-3xl font-bold" style={{ animation: `revealText 0.7s ${springBezier} forwards` }}>
+              <h1 className="font-display text-2xl font-bold sm:text-3xl" style={{ animation: `revealText 0.7s ${springBezier} forwards` }}>
                 Nueva contraseña
               </h1>
             </div>
@@ -159,33 +165,40 @@ function ResetearForm() {
 
             {verificandoSesion && <div role="status" className="flex min-h-24 items-center justify-center gap-2 rounded-xl bg-secondary/55 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />Validando tu enlace seguro…</div>}
 
-            {errorSesion && !verificandoSesion && <div role="alert" className="rounded-xl border border-warning-border bg-warning-wash p-4 text-sm text-warning-ink"><p className="font-semibold">Necesitas un enlace nuevo</p><p className="mt-1 text-xs leading-relaxed">{errorSesion}</p><Button asChild variant="outline" className="mt-3 w-full"><Link href="/recuperar">Solicitar otro enlace</Link></Button></div>}
+            {errorSesion && !verificandoSesion && <div role="alert" className="rounded-xl border border-warning-border bg-warning-wash p-4 text-sm text-warning-ink"><p className="font-semibold">Necesitas un enlace nuevo</p><p className="mt-1 text-xs leading-relaxed">{errorSesion}</p><Button asChild variant="outline" className="mt-3 w-full"><Link href="/recuperar" prefetch={false}>Solicitar otro enlace</Link></Button></div>}
 
-            {sesionLista && !verificandoSesion && <form onSubmit={resetear} className="space-y-2.5">
+            {sesionLista && !verificandoSesion && <form onSubmit={resetear} className="space-y-2.5" aria-busy={cargando}>
               <div style={stagger(1)}>
                 <Label htmlFor="password" className="text-sm font-semibold mb-1.5 block">Contraseña</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3.5 size-4 text-muted-foreground sm:top-2.5" />
-                  <Input id="password" type={showPassword ? "text" : "password"} autoComplete="new-password" required
+                  <Lock className="absolute left-3 top-3.5 size-4 text-muted-foreground sm:top-3" />
+                  <Input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete="new-password" required
+                    aria-invalid={passwordErrors.length > 0} aria-describedby="password-help"
                     value={nuevaContrasena} onChange={(e) => handlePasswordChange(e.target.value)}
                     placeholder="Mínimo 8 caracteres" disabled={cargando}
-                    className={`h-12 rounded-lg border-2 pl-10 pr-11 text-base transition-[border-color,box-shadow] focus:border-primary focus:ring-1 focus:ring-primary/20 sm:h-10 sm:pl-9 sm:pr-10 sm:text-sm ${passwordErrors.length > 0 ? "border-destructive" : ""}`}
+                    className={`h-12 rounded-lg border-2 pl-10 pr-11 text-base transition-[border-color,box-shadow] focus:border-primary focus:ring-1 focus:ring-primary/20 sm:h-11 sm:pl-9 sm:pr-10 md:text-sm ${passwordErrors.length > 0 ? "border-destructive" : ""}`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={cargando}
                     aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                    className="absolute right-0 top-0 grid size-12 place-items-center text-muted-foreground transition-colors hover:text-primary sm:size-10"
+                    aria-pressed={showPassword}
+                    className="absolute right-0 top-0 grid size-12 place-items-center text-muted-foreground transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:size-11"
                   >
                     {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
                 </div>
+                <p id="password-help" className={`mt-1 text-xs leading-relaxed ${passwordErrors.length ? "text-destructive" : "text-muted-foreground"}`}>
+                  {passwordErrors.length ? passwordErrors.join(" ") : "Usa al menos 8 caracteres, una mayúscula y un número."}
+                </p>
                 {nuevaContrasena && (
                   <div className="flex items-center gap-2 mt-1">
-                    <div className={`h-1 rounded-full transition-all duration-500 ${passwordStrength.color}`}
-                      style={{ width: `${Math.max(passwordStrength.percent, 10)}%` }} />
-                    <span className="text-[0.65rem] text-muted-foreground capitalize">{passwordStrength.level}</span>
+                    <div className="h-1 flex-1 overflow-hidden rounded-full bg-secondary" aria-hidden="true">
+                      <div className={`h-full rounded-full transition-[width] duration-500 ${passwordStrength.color}`}
+                        style={{ width: `${Math.max(passwordStrength.percent, 10)}%` }} />
+                    </div>
+                    <span className="shrink-0 text-xs text-muted-foreground capitalize">{passwordStrength.level}</span>
                     {passwordErrors.length === 0 && (
                       <Check className="size-3 text-weight" style={{ animation: `successPop 0.3s ${springBezier}` }} />
                     )}
@@ -194,32 +207,34 @@ function ResetearForm() {
               </div>
 
               <div style={stagger(2)}>
-                <Label htmlFor="confirm" className="text-sm font-semibold mb-1.5 block">Confirmar</Label>
+                <Label htmlFor="confirm" className="text-sm font-semibold mb-1.5 block">Confirmar contraseña</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3.5 size-4 text-muted-foreground sm:top-2.5" />
-                  <Input id="confirm" type={showConfirm ? "text" : "password"} autoComplete="new-password" required
+                  <Lock className="absolute left-3 top-3.5 size-4 text-muted-foreground sm:top-3" />
+                  <Input id="confirm" name="confirmPassword" type={showConfirm ? "text" : "password"} autoComplete="new-password" required
+                    aria-invalid={!!confirmar && nuevaContrasena !== confirmar} aria-describedby={confirmar && nuevaContrasena !== confirmar ? "confirm-error" : undefined}
                     value={confirmar} onChange={(e) => setConfirmar(e.target.value)}
-                    placeholder="Repite contraseña" disabled={cargando}
-                    className={`h-12 rounded-lg border-2 pl-10 pr-11 text-base transition-[border-color,box-shadow] focus:border-primary focus:ring-1 focus:ring-primary/20 sm:h-10 sm:pl-9 sm:pr-10 sm:text-sm ${confirmar && nuevaContrasena !== confirmar ? "border-destructive" : ""}`}
+                    placeholder="Repite tu contraseña" disabled={cargando}
+                    className={`h-12 rounded-lg border-2 pl-10 pr-11 text-base transition-[border-color,box-shadow] focus:border-primary focus:ring-1 focus:ring-primary/20 sm:h-11 sm:pl-9 sm:pr-10 md:text-sm ${confirmar && nuevaContrasena !== confirmar ? "border-destructive" : ""}`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirm(!showConfirm)}
                     disabled={cargando}
                     aria-label={showConfirm ? "Ocultar confirmación" : "Mostrar confirmación"}
-                    className="absolute right-0 top-0 grid size-12 place-items-center text-muted-foreground transition-colors hover:text-primary sm:size-10"
+                    aria-pressed={showConfirm}
+                    className="absolute right-0 top-0 grid size-12 place-items-center text-muted-foreground transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:size-11"
                   >
                     {showConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
                 </div>
                 {confirmar && nuevaContrasena !== confirmar && (
-                  <p className="text-[0.65rem] text-destructive mt-0.5">No coinciden.</p>
+                  <p id="confirm-error" className="text-xs text-destructive mt-1">Las contraseñas no coinciden.</p>
                 )}
               </div>
 
               <Button type="submit"
-                disabled={cargando || passwordErrors.length > 0 || !confirmar}
-                className="h-12 w-full rounded-lg text-base font-semibold transition-transform active:scale-[0.98] sm:h-10 sm:text-sm sm:active:scale-95"
+                disabled={cargando}
+                className="h-12 w-full rounded-lg text-base font-semibold transition-transform active:scale-[0.98] sm:h-11 md:text-sm sm:active:scale-95"
                 style={stagger(3)}>
                 {cargando ? <><Loader2 className="size-3.5 animate-spin mr-1.5" />Actualizando...</> : "Actualizar contraseña"}
               </Button>

@@ -33,6 +33,22 @@ describe("analizarImportacion", () => {
     expect(analizarImportacion({ dias: { "2026-08-01": { fecha: "2026-08-01", habitos: {}, comidas: [{ id: "a" }] } } }, actual).valido).toBe(false);
   });
 
+  it.each([
+    {}, { contenido: "archivo de otra aplicación" }, { perfil: { nombre: 12 } },
+    { perfil: { umbralRacha: 0 } }, { perfil: { onboardingCompleto: "sí" } },
+    { dias: { "2026-08-01": { fecha: "2026-08-01", habitos: {}, peso: 0 } } },
+    { dias: { "2026-08-01": { fecha: "2026-08-01", habitos: {}, grasaPct: 900 } } },
+    { dias: { "2026-08-01": { fecha: "2026-08-01", habitos: {}, kcalConsumidas: 400.5 } } },
+    { composicion: [{ fecha: "2026-08-01", peso: 80, aguaPct: 99 }] },
+    { composicion: [{ fecha: "2026-08-01", peso: 80, grasaVisceral: 3.5 }] },
+  ])("rechaza formatos que fallarían durante el guardado parcial", (archivo) => {
+    expect(analizarImportacion(archivo, actual).valido).toBe(false);
+  });
+
+  it("acepta una medición completa dentro de los límites del esquema", () => {
+    expect(analizarImportacion({ composicion: [{ fecha: "2026-08-01", peso: 80.5, grasaPct: 21.5, masaMuscularKg: 42.5, imc: 25, grasaVisceral: 8, metabBasalKcal: 1700, gastoDiarioKcal: 2200, masaOseaKg: 3.2, aguaPct: 55, cintura: 82, cadera: 96, pecho: 100, brazo: 34, muslo: 55, cuello: 38 }] }, actual).valido).toBe(true);
+  });
+
   it("rechaza una app o versión incompatibles antes de importar", () => {
     expect(analizarImportacion({ app: "otra", version: 1 }, actual).valido).toBe(false);
     expect(analizarImportacion({ app: "ritmo", version: 99 }, actual).valido).toBe(false);

@@ -12,6 +12,10 @@ describe("rutaInternaSegura", () => {
     expect(rutaInternaSegura("//example.com")).toBe("/");
     expect(rutaInternaSegura(null)).toBe("/");
   });
+
+  it.each(["/\\example.com", "/\n/example.com", "/\t/example.com", "/progreso\r", "/\u0000/example.com"])("bloquea separadores que el navegador normaliza: %j", (destination) => {
+    expect(rutaInternaSegura(destination)).toBe("/");
+  });
 });
 
 describe("recuperación de contraseña", () => {

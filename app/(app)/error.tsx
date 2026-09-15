@@ -23,7 +23,6 @@ export default function AppError({
 }) {
   const copy = errorCopy(error);
   React.useEffect(() => {
-    console.error("Error en sección:", error);
     registrarDiagnostico("ui", "error", "fallo contenido en una sección");
   }, [error]);
 

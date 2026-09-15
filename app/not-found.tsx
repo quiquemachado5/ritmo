@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-4">
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-background px-4 py-8">
       <div className="max-w-md text-center">
         <div className="mb-4">
           <span className="font-display text-7xl font-bold text-muted-foreground/40">404</span>
@@ -16,17 +16,17 @@ export default function NotFound() {
       </div>
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <Link href="/">
-          <Button className="gap-2">
+        <Button asChild className="gap-2">
+          <Link href="/">
             <Home className="size-4" /> Ir al inicio
-          </Button>
-        </Link>
-        <Link href="/login">
-          <Button variant="secondary" className="gap-2">
+          </Link>
+        </Button>
+        <Button asChild variant="secondary" className="gap-2">
+          <Link href="/login">
             <Search className="size-4" /> Iniciar sesión
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
-    </div>
+    </main>
   );
 }

@@ -7,16 +7,18 @@ import { analizarLocal } from "../local";
 describe("catálogo trazable y cantidades honestas", () => {
   it("tiene IDs únicos, versión y nutrientes por 100 g sin fuentes inventadas", () => {
     expect(new Set(CATALOGO_NUTRICIONAL.map(r => r.id)).size).toBe(CATALOGO_NUTRICIONAL.length);
-    expect(CATALOGO_NUTRICIONAL.filter(r => r.estado === "verificada")).toHaveLength(5);
+    expect(CATALOGO_NUTRICIONAL.filter(r => r.estado === "verificada")).toHaveLength(8);
     for (const referencia of CATALOGO_NUTRICIONAL) {
       expect(referencia.version).toBe(VERSION_CATALOGO);
       expect(Object.values(referencia.por100g).every(n => Number.isFinite(n) && n >= 0)).toBe(true);
       if (referencia.estado === "verificada") {
         expect(referencia.url).toMatch(/^https:\/\/fdc.nal.usda.gov\/food-details\/\d+\/nutrients$/);
-        expect(referencia.revisadaEn).toBe("2026-09-04");
+        expect(referencia.revisadaEn).toBe("2026-09-15");
       } else { expect(referencia.url).toBeUndefined(); expect(referencia.revisadaEn).toBeUndefined(); }
     }
     expect(REFERENCIAS_VERIFICADAS.pasta_cruda.por100g).toEqual({ kcal: 371, proteinas: 13.04, carbohidratos: 74.67, grasas: 1.51 });
+    expect(estimarOffline("100 g de plátano").items[0].referencia?.id).toBe("usda:173944");
+    expect(estimarOffline("1 huevo cocido").items[0].referencia?.id).toBe("usda:173424");
   });
   it("conserva referencias representativas de todas las familias facilitadas", () => {
     const porId = new Map(CATALOGO_NUTRICIONAL.map(ref => [ref.id, ref.por100g]));

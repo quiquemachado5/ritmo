@@ -10,13 +10,16 @@ import { FACTORES_ACTIVIDAD } from "@/lib/model/metrics";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import { PageHeader, SectionLabel } from "@/components/app/primitives";
 import { ejecutarSimulacroRestauracion, limpiarDatosLocales, marcarExportacion, diasDesdeExportacion, leerBackupLocal, leerSimulacroRestauracion, type RestoreDrillResult } from "@/lib/backup";
 import { limpiarPreferenciasComidas } from "@/lib/meal-prefs";
 import { fmtFechaCorta } from "@/lib/format";
+import { hoy } from "@/lib/model/dates";
 import { cn, uid } from "@/lib/utils";
 import type { Objetivo, Sexo, Perfil } from "@/lib/model/types";
 import { guardarModoViaje, useModoViaje } from "@/lib/travel-mode";
@@ -31,6 +34,7 @@ import { guardarExperimentos, useExperimentos } from "@/lib/experiments";
 import { SyncCenter } from "@/components/app/sync-center";
 import { DataHealthCenter } from "@/components/app/data-health-center";
 import { usePlatformConfig } from "@/components/app/platform-provider";
+import type { ProgresoImportacion } from "@/lib/store/types";
 
 type Densidad = "automatica" | "compacta" | "espaciosa";
 type PanelAjustes = "personal" | "rutina" | "experiencia" | "datos";
@@ -52,6 +56,7 @@ export default function AjustesPage() {
   const { features } = usePlatformConfig();
   const viaje = useModoViaje(userId);
   const fileRef = React.useRef<HTMLInputElement>(null);
+  const focoImportacionRef = React.useRef<HTMLButtonElement | null>(null);
   const barraGuardarRef = React.useRef<HTMLDivElement>(null);
   const [barraGuardarFija, setBarraGuardarFija] = React.useState(true);
   React.useEffect(() => {
@@ -106,6 +111,7 @@ export default function AjustesPage() {
   const [simulacroInfo, setSimulacroInfo] = React.useState<RestoreDrillResult | null>(null);
   const [probandoCopia, setProbandoCopia] = React.useState(false);
   const [importando, setImportando] = React.useState(false);
+  const [progresoImportacion, setProgresoImportacion] = React.useState<ProgresoImportacion | null>(null);
   const importacionEnCurso = React.useRef(false);
   const [previewDatos, setPreviewDatos] = React.useState<ArchivoRitmo | null>(null);
   const [resumenImportacion, setResumenImportacion] = React.useState<ResumenImportacion | null>(null);
@@ -122,7 +128,7 @@ export default function AjustesPage() {
   React.useEffect(() => {
     // Ningún borrador, confirmación ni archivo de la cuenta anterior cruza a la nueva.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPreviewDatos(null); setResumenImportacion(null); setImportando(false);
+    setPreviewDatos(null); setResumenImportacion(null); setImportando(false); setProgresoImportacion(null);
     importacionEnCurso.current = false; borradoEnCurso.current = false;
     setConfirmarBorrado(false); setBorrandoDatos(false); setNuevoHabito("");
   }, [userId]);
@@ -150,7 +156,8 @@ export default function AjustesPage() {
     return () => window.removeEventListener("ritmo:backup-drill", actualizar);
   }, [userId]);
   React.useEffect(() => {
-    const guardada = window.localStorage.getItem("ritmo:densidad");
+    let guardada: string | null = null;
+    try { guardada = window.localStorage.getItem("ritmo:densidad"); } catch { /* La preferencia es opcional si el navegador bloquea el almacenamiento. */ }
     const proxima: Densidad = guardada === "compacta" || guardada === "espaciosa" ? guardada : "automatica";
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDensidad(proxima);
@@ -197,8 +204,9 @@ export default function AjustesPage() {
 
   function cambiarDensidad(proxima: Densidad) {
     setDensidad(proxima);
-    window.localStorage.setItem("ritmo:densidad", proxima);
     document.documentElement.setAttribute("data-densidad", proxima);
+    try { window.localStorage.setItem("ritmo:densidad", proxima); }
+    catch { toast.error("La apariencia se ha aplicado, pero este navegador no permite guardar la preferencia."); }
   }
 
   function anadirHabitoPersonal() {
@@ -289,8 +297,7 @@ export default function AjustesPage() {
     a.download = `ritmo-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    marcarExportacion(userId);
-    setDiasSinExportar(0);
+    // El CSV es un resumen; solo el JSON permite restaurar la cuenta completa.
   }
 
   async function restaurarCopiaLocal() {
@@ -312,6 +319,8 @@ export default function AjustesPage() {
       setSimulacroInfo(resultado);
       if (resultado.ok) toast.success("Copia preparada para restaurarse");
       else toast.error(resultado.detail);
+    } catch {
+      toast.error("No se ha podido comprobar la copia. Vuelve a intentarlo.");
     } finally { setProbandoCopia(false); }
   }
 
@@ -338,15 +347,15 @@ export default function AjustesPage() {
     const generacion = generacionCuenta.current;
     importacionEnCurso.current = true;
     descartarPerfil();
-    setImportando(true);
+    setImportando(true); setProgresoImportacion({ porcentaje: 5, etapa: "preparando" });
     try {
-      await importar(previewDatos);
+      await importar(previewDatos, setProgresoImportacion);
       if (generacionCuenta.current !== generacion) return;
       toast.success("Datos importados");
       setPreviewDatos(null); setResumenImportacion(null);
     } catch {
       if (generacionCuenta.current === generacion) toast.error("Error al importar");
-    } finally { if (generacionCuenta.current === generacion) { importacionEnCurso.current = false; setImportando(false); } }
+    } finally { if (generacionCuenta.current === generacion) { importacionEnCurso.current = false; setImportando(false); setProgresoImportacion(null); } }
   }
 
   async function eliminarDatos() {
@@ -518,7 +527,12 @@ export default function AjustesPage() {
           <Row label="Estado actual">
             <div className="flex flex-wrap items-center gap-2"><span className={cn("inline-flex min-h-9 max-w-full items-center rounded-xl px-3 py-1 text-xs font-semibold break-words", viaje.activo ? "bg-habit-wash text-habit-ink" : "bg-secondary text-muted-foreground")}>{viaje.activo ? viaje.etiqueta : "Sin viaje activo"}</span>{viaje.activo && <Button variant="secondary" size="sm" className="h-9 rounded-xl" onClick={() => guardarModoViaje({ ...viaje, activo: false }, userId)}>Finalizar</Button>}</div>
           </Row>
-          {!viaje.activo && <div className="grid gap-2 border-t border-border pt-4 sm:grid-cols-[minmax(0,1fr)_11rem_auto]"><Input value={nombreViaje} onChange={(e) => setNombreViaje(e.target.value)} placeholder="Viaje a Lisboa" className="h-11 rounded-xl" /><Input type="date" value={finViaje} onChange={(e) => setFinViaje(e.target.value)} className="h-11 rounded-xl" /><Button className="h-11 rounded-xl px-4" onClick={() => guardarModoViaje({ activo: true, etiqueta: nombreViaje.trim() || "Viaje", desde: new Date().toISOString().slice(0, 10), hasta: finViaje || undefined }, userId)}><Plane className="size-4" /> Activar</Button></div>}
+          {!viaje.activo && <form className="grid items-end gap-3 border-t border-border pt-4 sm:grid-cols-[minmax(0,1fr)_11rem_auto]" onSubmit={event => {
+            event.preventDefault();
+            if (finViaje && finViaje < hoy()) { toast.error("La fecha de fin debe ser hoy o posterior."); return; }
+            try { guardarModoViaje({ activo: true, etiqueta: nombreViaje.trim() || "Viaje", desde: hoy(), hasta: finViaje || undefined }, userId); }
+            catch { toast.error("No se ha podido guardar el viaje en este dispositivo. Vuelve a intentarlo."); }
+          }}><div className="space-y-1.5"><Label htmlFor="nombre-viaje">Nombre del viaje</Label><Input id="nombre-viaje" value={nombreViaje} maxLength={80} onChange={(e) => setNombreViaje(e.target.value)} placeholder="Viaje a Lisboa" className="h-11 rounded-xl" /></div><div className="space-y-1.5"><Label htmlFor="fin-viaje">Fin (opcional)</Label><Input id="fin-viaje" type="date" min={hoy()} value={finViaje} onChange={(e) => setFinViaje(e.target.value)} className="h-11 rounded-xl" /></div><Button type="submit" className="h-11 rounded-xl px-4"><Plane className="size-4" /> Activar</Button></form>}
         </SettingsCard>
       </SettingsSection>
 
@@ -568,11 +582,11 @@ export default function AjustesPage() {
           <SyncCenter />
           {features.data_health && <DataHealthCenter />}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div><p className="text-sm font-semibold">Tu historial, siempre contigo</p><p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">Exporta, importa o recupera una copia sin salir de tu espacio.</p></div>
+            <div><p className="text-sm font-semibold">Tu historial, siempre contigo</p><p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">El JSON guarda una copia para restaurar. El CSV resume tus días para abrirlos en una hoja de cálculo.</p></div>
             <div className="grid w-full grid-cols-2 gap-1.5 sm:w-auto sm:flex sm:shrink-0">
-              <Button variant="secondary" onClick={descargar} className="h-10 rounded-xl gap-1.5 px-2.5 text-xs sm:px-3 sm:text-sm"><Download className="size-4" /> JSON</Button>
-              <Button variant="secondary" onClick={descargarCSV} className="h-10 rounded-xl gap-1.5 px-2.5 text-xs sm:px-3 sm:text-sm"><FileSpreadsheet className="size-4" /> CSV</Button>
-              <Button variant="secondary" onClick={() => fileRef.current?.click()} className="h-10 rounded-xl gap-1.5 px-2.5 text-xs sm:px-3 sm:text-sm"><Upload className="size-4" /> Importar</Button>
+              <Button variant="secondary" onClick={descargar} className="h-11 rounded-xl gap-1.5 px-2.5 text-xs sm:px-3 sm:text-sm"><Download className="size-4" /> JSON</Button>
+              <Button variant="secondary" onClick={descargarCSV} className="h-11 rounded-xl gap-1.5 px-2.5 text-xs sm:px-3 sm:text-sm"><FileSpreadsheet className="size-4" /> CSV</Button>
+              <Button variant="secondary" onClick={event => { focoImportacionRef.current = event.currentTarget; fileRef.current?.click(); }} className="h-11 rounded-xl gap-1.5 px-2.5 text-xs sm:px-3 sm:text-sm"><Upload className="size-4" /> Importar</Button>
               <ProfessionalReport estado={estado} />
             </div>
           </div>
@@ -592,7 +606,7 @@ export default function AjustesPage() {
               <span>{backupInfo ? <>Copia local guardada · {fmtFechaCorta(backupInfo.at.slice(0, 10))}</> : "Aún no hay copia local automática."}</span>
             </div>
             {backupInfo && (
-              <Button variant="ghost" size="sm" onClick={restaurarCopiaLocal} className="h-auto min-h-8 w-full rounded-lg gap-2 py-2 text-xs whitespace-normal sm:w-auto">
+              <Button variant="ghost" size="sm" onClick={event => { focoImportacionRef.current = event.currentTarget; void restaurarCopiaLocal(); }} className="h-auto min-h-11 w-full rounded-lg gap-2 py-2 text-xs whitespace-normal sm:w-auto">
                 <HistoryIcon className="size-3.5" /> Restaurar copia local
               </Button>
             )}
@@ -612,12 +626,12 @@ export default function AjustesPage() {
       </SettingsSection>
 
       {/* Diálogo de confirmación de importación */}
-      {previewDatos && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
-          <Card className="w-full max-w-sm rounded-t-2xl border-t p-5 sm:rounded-2xl">
+      <Dialog open={!!previewDatos} onOpenChange={open => { if (!open && !importando) { setPreviewDatos(null); setResumenImportacion(null); } }}>
+        {previewDatos && (
+          <DialogContent showCloseButton={false} className="max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl p-5 sm:max-w-sm" onEscapeKeyDown={event => { if (importando) event.preventDefault(); }} onInteractOutside={event => { if (importando) event.preventDefault(); }} onCloseAutoFocus={event => { event.preventDefault(); focoImportacionRef.current?.focus(); }} aria-busy={importando}>
             <div className="mb-4">
-              <h2 className="font-display text-lg font-bold">Confirmar importación</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Revisa lo que se añadirá antes de fusionarlo con tu cuenta.</p>
+              <DialogTitle className="font-display text-lg font-bold">Confirmar importación</DialogTitle>
+              <DialogDescription className="mt-1">Revisa lo que se añadirá antes de fusionarlo con tu cuenta.</DialogDescription>
             </div>
             <div className="mb-5 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border text-xs">
               <ImportMetric label="Días nuevos" value={resumenImportacion?.diasNuevos ?? 0} />
@@ -627,26 +641,31 @@ export default function AjustesPage() {
             </div>
             <p className="mb-5 text-xs leading-relaxed text-muted-foreground">{resumenImportacion?.comidas ?? 0} comidas · formato {resumenImportacion?.version ?? "anterior"}{resumenImportacion?.schemaVersion ? ` · datos ${resumenImportacion.schemaVersion}` : ""}{resumenImportacion?.exportado ? ` · copia del ${fmtFechaCorta(resumenImportacion.exportado.slice(0, 10))}` : ""}. Los duplicados se detectan por fecha: no se crean dos días ni dos mediciones iguales.</p>
             {(previewDatos.auditoriaModelo || previewDatos.auditoriaDocumental) && <p className="mb-4 rounded-lg bg-secondary/60 px-3 py-2 text-xs leading-relaxed text-muted-foreground">El historial del modelo se conservará como copia documental; no contará como predicciones verificadas.</p>}
+            {importando && progresoImportacion && <div className="mb-5 space-y-2" role="status" aria-live="polite">
+              <div className="flex items-center justify-between gap-3 text-xs"><span className="font-medium">{progresoImportacion.etapa === "preparando" ? "Preparando datos" : progresoImportacion.etapa === "enviando" ? "Enviando de forma segura" : progresoImportacion.etapa === "confirmando" ? "Confirmando la transacción" : "Verificando el resultado"}</span><span className="tabular-nums text-muted-foreground">{progresoImportacion.porcentaje}%</span></div>
+              <Progress value={progresoImportacion.porcentaje} aria-label="Progreso de la importación" />
+              <p className="text-xs leading-relaxed text-muted-foreground">La base de datos confirmará todo el archivo a la vez. Si algo falla, no quedará una importación a medias.</p>
+            </div>}
             <div className="flex gap-2">
               <Button
                 variant="secondary"
                 onClick={() => { setPreviewDatos(null); setResumenImportacion(null); }}
                 disabled={importando}
-                className="flex-1"
+                className="min-h-11 flex-1"
               >
                 Cancelar
               </Button>
               <Button
                 onClick={confirmarImportacion}
-                disabled={importando}
-                className="flex-1"
+                disabled={importando || guardandoPerfil || borrandoDatos}
+                className="min-h-11 flex-1"
               >
                 {importando ? "Importando..." : "Importar"}
               </Button>
             </div>
-          </Card>
-        </div>
-      )}
+          </DialogContent>
+        )}
+      </Dialog>
 
       <SettingsSection id="ajuste-privacidad" active={panel === "datos"}>
         <SectionLabel>Privacidad</SectionLabel>

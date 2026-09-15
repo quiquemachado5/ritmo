@@ -8,7 +8,7 @@ import type { Comida, Composicion, Dia, Estado, Perfil } from "@/lib/model/types
 import { createClient } from "@/lib/supabase/client";
 import { CloudAdapter } from "./cloud";
 import { QueuedAdapter } from "./queued";
-import type { Adapter, Modo, StoreData } from "./types";
+import type { Adapter, Modo, ProgresoImportacion, StoreData } from "./types";
 import { fusionarImport } from "./merge";
 import { analizarImportacion, type ArchivoRitmo } from "./import";
 import { registrarDiagnostico, configurarDiagnosticoUsuario } from "@/lib/observability";
@@ -66,7 +66,7 @@ export interface RitmoContextValue {
   borrarMedicion: (fecha: string) => Promise<boolean>;
   actualizarPerfil: (campos: Partial<Perfil>) => Promise<boolean>;
   exportar: () => ArchivoRitmo & StoreData;
-  importar: (datos: Partial<StoreData>) => Promise<void>;
+  importar: (datos: Partial<StoreData>, progreso?: (estado: ProgresoImportacion) => void) => Promise<void>;
   repararDatos: () => Promise<number>;
   recargar: () => Promise<void>;
   cerrarSesion: () => Promise<void>;
@@ -107,6 +107,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const dataRef = React.useRef<StoreData>(data);
   const revisionRef = React.useRef(0);
   const escriturasRef = React.useRef(0);
+  const operacionMasivaRef = React.useRef(false);
 
   const aplicar = React.useCallback((next: StoreData) => {
     const normalizado = {
@@ -139,6 +140,25 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       console.error("Fallo al recargar", e);
       registrarDiagnostico("sync", "error", "recarga fallida");
+    }
+  }, [aplicar]);
+
+  const reconciliarInterrupcion = React.useCallback(async (adapter: Adapter, anterior: StoreData) => {
+    if (adapterRef.current !== adapter) return;
+    // Un lote puede confirmar algunos registros antes de fallar. La copia
+    // automática espera hasta comprobar lo que realmente quedó en la nube.
+    cargaValidaRef.current = false;
+    setCargaValida(false);
+    try {
+      const confirmado = await adapter.load();
+      if (adapter.hydrationSource === "backup") throw new Error("Falta confirmar los datos remotos.");
+      if (adapterRef.current !== adapter) return;
+      aplicar({ ...confirmado, perfil: { ...confirmado.perfil, ...leerPreferenciasPerfil() } });
+      cargaValidaRef.current = true;
+      setCargaValida(true);
+      setErrorCarga(false);
+    } catch {
+      if (adapterRef.current === adapter) { aplicar(anterior); setErrorCarga(true); }
     }
   }, [aplicar]);
 
@@ -318,7 +338,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       mutar: (draft: StoreData) => void,
       persistir: (draft: StoreData, adapter: Adapter) => Promise<void>,
       errMsg: string,
+      exclusiva = false,
     ): Promise<boolean> => {
+      if (operacionMasivaRef.current || (exclusiva && escriturasRef.current > 0)) {
+        toast.error("Espera a que termine el guardado antes de continuar.");
+        return false;
+      }
       const adapter = adapterRef.current;
       if (!adapter || !cargaValidaRef.current) {
         toast.error("Espera a que carguen tus datos antes de guardar.");
@@ -327,6 +352,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       const prev = dataRef.current;
       const draft = clonar(prev);
       const revision = ++revisionRef.current;
+      if (exclusiva) operacionMasivaRef.current = true;
       mutar(draft);
       aplicar(draft);
       escriturasRef.current += 1;
@@ -340,15 +366,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         registrarDiagnostico("sync", "error", "cambio no sincronizado");
         // Si ya hubo otra escritura posterior, su borrador contiene este
         // cambio y no debemos destruirla restaurando un snapshot antiguo.
-        if (adapterRef.current === adapter && revisionRef.current === revision) aplicar(prev);
+        if (exclusiva) await reconciliarInterrupcion(adapter, prev);
+        else if (adapterRef.current === adapter && revisionRef.current === revision) aplicar(prev);
         toast.error(errMsg);
         return false;
       } finally {
+        if (exclusiva) operacionMasivaRef.current = false;
         escriturasRef.current = Math.max(0, escriturasRef.current - 1);
         setSincronizando(escriturasRef.current > 0);
       }
     },
-    [aplicar],
+    [aplicar, reconciliarInterrupcion],
   );
 
   const dia = React.useCallback(
@@ -514,10 +542,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   );
 
   const importar = React.useCallback(
-    async (datos: Partial<StoreData>) => {
+    async (datos: Partial<StoreData>, progreso?: (estado: ProgresoImportacion) => void) => {
       const prev = dataRef.current;
       const adapter = adapterRef.current;
       if (!adapter || !cargaValidaRef.current) throw new Error("Carga tus datos antes de importar.");
+      if (operacionMasivaRef.current || escriturasRef.current > 0) throw new Error("Espera a que terminen los cambios pendientes antes de importar.");
       const analisis = analizarImportacion(datos, prev);
       if (!analisis.valido) {
         registrarDiagnostico("import", "warning", analisis.error);
@@ -525,10 +554,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       const next = fusionarImport(prev, datos);
       const { dias } = next;
+      operacionMasivaRef.current = true;
+      revisionRef.current += 1;
+      escriturasRef.current += 1;
       aplicar(next);
       setSincronizando(true);
       try {
-        if (adapter.sembrar) await adapter.sembrar(next);
+        if (adapter.sembrar) await adapter.sembrar(next, progreso);
         else {
           for (const d of Object.values(dias)) {
             if (adapterRef.current !== adapter) throw new Error("La cuenta cambió durante la importación.");
@@ -539,19 +571,25 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         if (!guardarPreferenciasPerfil(next.perfil)) throw new Error("No se pudieron conservar los ajustes del perfil.");
         if ((datos as ArchivoRitmo).preferencias && !importarPreferencias((datos as ArchivoRitmo).preferencias!)) throw new Error("No se pudo conservar la biblioteca importada.");
         if (authUserId) conservarAuditoriaDocumental(authUserId, (datos as ArchivoRitmo).auditoriaModelo, (datos as ArchivoRitmo).auditoriaDocumental);
+        const confirmado = await adapter.load();
+        if (adapterRef.current !== adapter) throw new Error("La cuenta cambió durante la importación.");
+        if (adapter.hydrationSource === "backup") throw new Error("Falta confirmar los datos importados.");
+        aplicar({ ...confirmado, perfil: { ...confirmado.perfil, ...leerPreferenciasPerfil() } });
         registrarDiagnostico("import", "ok", "respaldo fusionado");
         toast.success("Datos importados.");
       } catch (e) {
         console.error("Fallo al importar", e);
         registrarDiagnostico("import", "error", "falló la importación");
-        if (adapterRef.current === adapter) aplicar(prev);
-        toast.error("No se pudieron importar los datos.");
+        await reconciliarInterrupcion(adapter, prev);
+        toast.error("La importación se interrumpió. Revisa los datos antes de volver a intentarlo.");
         throw e;
       } finally {
-        setSincronizando(false);
+        operacionMasivaRef.current = false;
+        escriturasRef.current = Math.max(0, escriturasRef.current - 1);
+        setSincronizando(escriturasRef.current > 0);
       }
     },
-    [aplicar, authUserId],
+    [aplicar, authUserId, reconciliarInterrupcion],
   );
 
   const repararDatos = React.useCallback(async () => {
@@ -568,6 +606,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         await adapter.sembrar(reparacion.data);
       },
       "No se pudieron reparar los datos. No se ha perdido ningún registro.",
+      true,
     );
     if (ok) {
       toast.success(`${reparacion.changes} ${reparacion.changes === 1 ? "ajuste reparado" : "ajustes reparados"}.`);
@@ -618,13 +657,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   }, [aplicar, authUserId]);
 
-  const estado = React.useMemo<Estado>(
-    () => ({ perfil: data.perfil, dias: data.dias, composicion: data.composicion, perfilHistorial: auditoriaModelo.configuraciones, version }),
-    [data, version, auditoriaModelo.configuraciones],
-  );
+  const estado: Estado = {
+    perfil: data.perfil,
+    dias: data.dias,
+    composicion: data.composicion,
+    perfilHistorial: auditoriaModelo.configuraciones,
+    version,
+  };
 
-  const value = React.useMemo<RitmoContextValue>(
-    () => ({
+  const value: RitmoContextValue = {
       estado,
       auditoriaModelo,
       errorAuditoria,
@@ -652,9 +693,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       recargar,
       cerrarSesion,
       borrarDatos,
-    }),
-    [estado, auditoriaModelo, errorAuditoria, reintentarAuditoria, modo, cargando, cargaValida, errorCarga, sincronizando, authUserId, userEmail, dia, medicion, alternarHabito, actualizarDia, registrarComida, editarComida, borrarComida, guardarMedicion, borrarMedicion, actualizarPerfil, exportar, importar, repararDatos, recargar, cerrarSesion, borrarDatos],
-  );
+    };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

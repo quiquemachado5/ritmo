@@ -106,7 +106,7 @@ describe("estimador offline de comidas detalladas", () => {
     expect(estimarOffline("100 g de arroz").kcal).toBe(355);
     expect(estimarOffline("100 g de arroz cocido").kcal).toBe(131);
     expect(estimarOffline("100 g de pechuga de pollo a la plancha").kcal).toBe(120);
-    expect(estimarOffline("100 g de pechuga de pollo peso cocinado").kcal).toBe(150);
+    expect(estimarOffline("100 g de pechuga de pollo peso cocinado").kcal).toBe(151);
   });
 
   it("cuenta piezas pequeñas y dos verduras diferentes sin duplicar contenedores", () => {

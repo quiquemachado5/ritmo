@@ -1,0 +1,27 @@
+name: Estado de producción
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ritmo-production-health
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      RITMO_DEPLOYMENT_URL: https://ritmo-nu-six.vercel.app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Estado, acceso y privacidad
+        run: node scripts/smoke-deployment.mjs

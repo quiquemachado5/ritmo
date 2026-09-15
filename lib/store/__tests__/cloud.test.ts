@@ -16,8 +16,8 @@ function deferred() {
   const promise = new Promise<void>(r => { resolve = r; });
   return { promise, resolve };
 }
-function database(days: Row[] = []) {
-  const db: Record<string, Row[]> = { dias: structuredClone(days), composicion: [], perfiles: [], user_prefs: [] };
+function database(days: Row[] = [], backupNames: string[] = []) {
+  const db: Record<string, Row[]> = { dias: structuredClone(days), composicion: [], perfiles: [], user_prefs: [], privacy_consents: [] };
   const calls: Call[] = [];
   const rpcOwners: string[] = [];
   let tick = 0;
@@ -81,6 +81,8 @@ function database(days: Row[] = []) {
     ) { return this.run().then(resolve, reject); }
   }
   const callbacks: Array<() => void> = [];
+  const backups = [...backupNames];
+  const backupLists: number[] = [];
   const channel = { on: vi.fn((_event, _filter, cb: () => void) => { callbacks.push(cb); return channel; }), subscribe: vi.fn(() => channel) };
   const client = {
     from: (table: string) => new Query(table),
@@ -88,16 +90,50 @@ function database(days: Row[] = []) {
       getUser: vi.fn(async () => ({ data: { user: { id: controls.authUser ?? "a" } }, error: null })),
       getSession: vi.fn(async () => ({ data: { session: { user: { id: controls.authUser ?? "a" }, access_token: `synthetic-${controls.authUser ?? "a"}` } }, error: null })),
     },
-    rpc: vi.fn((name: string) => ({ setHeader: async (_header: string, authorization: string) => {
+    rpc: vi.fn((name: string, args?: Record<string, unknown>) => ({ setHeader: async (_header: string, authorization: string) => {
       rpcOwners.push(authorization.replace("Bearer synthetic-", ""));
       controls.afterRpc?.(name);
       await controls.holdRpc?.(name);
-      return { data: null, error: controls.rpcError ?? null };
+      if (controls.rpcError) return { data: null, error: controls.rpcError };
+      if (name === "ritmo_import_data") {
+        const owner = authorization.replace("Bearer synthetic-", "");
+        const expected = (args?.p_expected ?? {}) as Record<string, string | null>;
+        const next = structuredClone(db);
+        const writes = [
+          ...((args?.p_profile ? [["perfiles", args.p_profile]] : []) as Array<[string, Row]>),
+          ...((args?.p_days ?? []) as Row[]).map(row => ["dias", row] as [string, Row]),
+          ...((args?.p_measurements ?? []) as Row[]).map(row => ["composicion", row] as [string, Row]),
+        ];
+        for (const [table, payload] of writes) {
+          const date = payload.fecha as string | undefined;
+          const key = `${table}:${date ?? "perfil"}`;
+          const index = next[table].findIndex(row => row.user_id === owner && (table === "perfiles" || row.fecha === date));
+          const current = index >= 0 ? next[table][index] : null;
+          if ((expected[key] === null && current) || (expected[key] !== null && current?.actualizado_en !== expected[key])) {
+            return { data: null, error: { code: "40001", message: `ritmo_conflict:${key}` } };
+          }
+          const row = { ...structuredClone(payload), user_id: owner, actualizado_en: `2026-09-04T10:03:${String(++tick).padStart(2, "0")}.000Z` };
+          if (index >= 0) next[table][index] = row; else next[table].push(row);
+        }
+        Object.assign(db, next);
+        return { data: { profile: 1, days: 1, measurements: 1 }, error: null };
+      }
+      return { data: null, error: null };
     } })),
-    storage: { from: () => ({ list: async () => ({ data: [], error: null }) }) },
+    storage: { from: () => ({
+      list: async () => { backupLists.push(1); return { data: backups.slice(0, 1000).map(name => ({ name })), error: null }; },
+      remove: async (paths: string[]) => {
+        for (const path of paths) {
+          const name = path.split("/").at(-1);
+          const index = backups.indexOf(name ?? "");
+          if (index >= 0) backups.splice(index, 1);
+        }
+        return { error: null };
+      },
+    }) },
     channel: vi.fn(() => channel), removeChannel: vi.fn(),
   };
-  return { db, calls, rpcOwners, controls, callbacks, client, adapter: (user = "a") => new CloudAdapter(client as unknown as SupabaseClient, user) };
+  return { db, calls, rpcOwners, controls, callbacks, backups, backupLists, client, adapter: (user = "a") => new CloudAdapter(client as unknown as SupabaseClient, user) };
 }
 
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
@@ -232,15 +268,58 @@ describe("sincronización incremental por cuenta", () => {
     await adapter.borrarTodo();
     expect((await adapter.load()).dias).toEqual({});
     expect(env.client.rpc).toHaveBeenCalledWith("clear_my_model_audit");
+    expect(env.client.rpc).toHaveBeenCalledWith("ritmo_revoke_health_consent");
+  });
+
+  it("importar otra fecha conserva un cambio remoto en un día ajeno al archivo", async () => {
+    const env = database([day(0)]); const adapter = env.adapter(); const local = await adapter.load();
+    env.db.dias[0].notas = "Cambio del otro dispositivo";
+    env.db.dias[0].actualizado_en = "remote-change";
+    local.dias[fecha(1)] = { fecha: fecha(1), habitos: { deporte: true } };
+    await adapter.sembrar(local);
+    expect(env.db.dias.find(row => row.fecha === fecha(0))?.notas).toBe("Cambio del otro dispositivo");
+    expect(env.db.dias.find(row => row.fecha === fecha(1))?.habitos).toEqual({ deporte: true });
+    expect(env.calls.some(call => call.mode === "upsert")).toBe(false);
+  });
+
+  it("importar detecta conflictos y conserva la edición del otro dispositivo", async () => {
+    const env = database([day(0)]); const adapter = env.adapter(); const local = await adapter.load();
+    env.db.dias[0].notas = "Cambio remoto";
+    env.db.dias[0].actualizado_en = "remote-change";
+    local.dias[fecha(0)].notas = "Cambio importado";
+    await expect(adapter.sembrar(local)).rejects.toThrow("Conflicto");
+    expect(env.db.dias[0].notas).toBe("Cambio remoto");
+  });
+
+  it("una importación ya enviada queda en la cuenta original aunque cambie la sesión local", async () => {
+    const env = database([day(0)]); const adapter = env.adapter(); const local = await adapter.load();
+    local.dias[fecha(1)] = { fecha: fecha(1), habitos: {} };
+    const iniciado = deferred(); const terminar = deferred();
+    env.controls.holdRpc = name => {
+      if (name === "ritmo_import_data") { iniciado.resolve(); return terminar.promise; }
+    };
+    const importacion = adapter.sembrar(local);
+    const esperado = expect(importacion).rejects.toThrow("cuenta ha cambiado");
+    await iniciado.promise; adapter.dispose(); terminar.resolve(); await esperado;
+    expect(env.db.dias).toHaveLength(2);
+    expect(env.db.dias.find(row => row.fecha === fecha(1))?.user_id).toBe("a");
+    expect(env.rpcOwners.at(-1)).toBe("a");
   });
 
   it("fija la cuenta del borrado aunque el singleton cambie entre los RPC", async () => {
     const env = database([day(0), day(0, "b")]);
     env.controls.afterRpc = () => { env.controls.authUser = "b"; };
     await env.adapter().borrarTodo();
-    expect(env.rpcOwners).toEqual(["a", "a"]);
+    expect(env.rpcOwners).toEqual(["a", "a", "a"]);
     expect(env.db.dias).toEqual([day(0, "b")]);
     expect(env.calls.filter(c => c.mode === "delete").every(c => c.authorization === "Bearer synthetic-a")).toBe(true);
+  });
+
+  it("borra todos los respaldos aunque superen el límite de una página", async () => {
+    const env = database([], Array.from({ length: 2105 }, (_, index) => `ritmo-${index}.json`));
+    await env.adapter().borrarTodo();
+    expect(env.backups).toEqual([]);
+    expect(env.backupLists).toHaveLength(4); // tres lotes y la página vacía final
   });
 
   it("dispose durante un RPC detiene los siguientes RPC y borrados", async () => {

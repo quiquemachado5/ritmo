@@ -2,29 +2,19 @@ import type { User } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-const OWNER_EMAIL = "quiquemachadodguez@gmail.com";
-
-function configuredAdmins(): Set<string> {
-  return new Set(
-    [OWNER_EMAIL, ...(process.env.RITMO_ADMIN_EMAILS ?? "").split(",")]
-      .map((email) => email.trim().toLowerCase())
-      .filter(Boolean),
-  );
-}
-
-export function isBootstrapAdmin(user: User | null): boolean {
-  if (!user) return false;
-  if (user.app_metadata?.role === "admin") return true;
-  return configuredAdmins().has((user.email ?? "").toLowerCase());
-}
-
 export async function isAdminUser(
   supabase: Awaited<ReturnType<typeof createClient>>,
   user: User | null,
 ): Promise<boolean> {
-  if (isBootstrapAdmin(user)) return true;
-  const { data, error } = await supabase.rpc("is_ritmo_admin");
-  return !error && data === true;
+  if (!user) return false;
+  try {
+    // La misma autoridad que protege los RPC decide el acceso a páginas.
+    // Una revocación en BD debe surtir efecto aunque el JWT conserve un rol.
+    const { data, error } = await supabase.rpc("is_ritmo_admin").abortSignal(AbortSignal.timeout(5_000));
+    return !error && data === true;
+  } catch {
+    return false;
+  }
 }
 
 export async function requireAdmin() {

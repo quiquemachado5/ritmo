@@ -18,7 +18,8 @@ const KEY = "ritmo:diagnostico";
 const LIMITE = 40;
 let usuario: string | null = null;
 const enviados = new Map<string, number>();
-export function configurarDiagnosticoUsuario(userId: string | null) { usuario = userId; enviados.clear(); }
+const metricasEnviadas = new Set<string>();
+export function configurarDiagnosticoUsuario(userId: string | null) { usuario = userId; enviados.clear(); metricasEnviadas.clear(); }
 export function diagnosticoCompartido(userId: string | null): boolean {
   try { return Boolean(userId && localStorage.getItem(`ritmo:diagnostico-consent:${userId}`) === "true"); } catch { return false; }
 }
@@ -75,6 +76,40 @@ export function registrarDiagnostico(evento: EventoDiagnostico, estado: EstadoDi
       keepalive: true,
     }).catch(() => {});
   }
+}
+
+type MetricaWeb = {
+  id?: string;
+  name: string;
+  value: number;
+  rating?: "good" | "needs-improvement" | "poor";
+  navigationType?: string;
+};
+
+/** Métricas reales de carga sin URL completa, identidad, texto ni contenido de
+ * salud. Solo salen del dispositivo cuando la persona activó el diagnóstico. */
+export function registrarRendimiento(metric: MetricaWeb): void {
+  if (typeof window === "undefined" || !usuario || !diagnosticoCompartido(usuario)) return;
+  if (!["CLS", "FCP", "INP", "LCP", "TTFB"].includes(metric.name) || !Number.isFinite(metric.value) || metric.value < 0) return;
+  const key = `${metric.id || metric.name}:${rutaDiagnostica(window.location.pathname)}`;
+  if (metricasEnviadas.has(key)) return;
+  metricasEnviadas.add(key);
+  const width = window.innerWidth;
+  void fetch("/api/diagnostico", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      evento: "performance",
+      metrica: metric.name,
+      valor: Math.round(metric.value * 1000) / 1000,
+      valoracion: metric.rating || "needs-improvement",
+      navegacion: (metric.navigationType || "other").slice(0, 24),
+      ruta: rutaDiagnostica(window.location.pathname),
+      dispositivo: width < 640 ? "mobile" : width < 1024 ? "tablet" : "desktop",
+      build: process.env.NEXT_PUBLIC_RITMO_BUILD_ID || "dev",
+    }),
+    keepalive: true,
+  }).catch(() => {});
 }
 
 export function leerDiagnostico(): Diagnostico[] {

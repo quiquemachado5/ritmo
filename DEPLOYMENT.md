@@ -1,12 +1,18 @@
 # Publicación segura de RITMO
 
-Esta guía distingue código preparado de servicios realmente activados. Los cambios del 4 de septiembre de 2026 no activan facturación ni publican automáticamente en Vercel. En producción solo se ha aplicado la compatibilidad decimal y los límites del perfil documentados en [el registro de operación](docs/operations/2026-09-04-free-setup.md); no el conjunto completo de migraciones.
+## Revisión de lanzamiento · 15 de septiembre de 2026
+
+El [listado de mejoras y comprobaciones](docs/PRODUCCION-2026-09-15.md) documenta los cambios de esta revisión. La base de datos de producción está alineada con `202609150001`; la publicación se valida en `https://ritmo-nu-six.vercel.app/api/health` después de cada promoción.
+
+`npm run check:release` ejecuta la verificación local completa. La interfaz se prueba ahora también con una compilación de producción (`npm run test:e2e:production`), incluido el service worker, usando cuentas y transporte sintéticos. El comando completo termina recompilando con las variables habituales; no publicar el build intermedio de E2E.
+
+Esta guía distingue código preparado de servicios realmente activados. La revisión no activa facturación ni proveedores nutricionales externos. En producción están aplicadas las migraciones del repositorio hasta `202609150001`.
 
 ## 1. Antes de desplegar
 
 - Exportar una copia JSON y comprobar su restauración en un proyecto de pruebas.
 - Ejecutar `npm ci`, `npm run check:versions`, `npm test`, `npm run test:db`, `npm run lint` y `npm run build`.
-- Ejecutar `npm run test:e2e:local`: usa exclusivamente dos identidades sintéticas y un transporte local. No verifica Google OAuth, SMTP ni el servicio real de Supabase.
+- Ejecutar `npm run test:e2e:production`: usa exclusivamente identidades sintéticas y un transporte local. No verifica Google OAuth, SMTP ni el servicio real de Supabase. `test:e2e:local` conserva la modalidad de desarrollo para iteraciones.
 - Para verificar los proveedores reales, ejecutar opcionalmente las pruebas autenticadas con dos cuentas **exclusivas de staging**. Nunca usar las cuentas personales como fixtures; CI normal no necesita estas cuentas.
 - Revisar secretos con un escáner que oculte sus valores; rotar cualquier credencial anteriormente compartida o expuesta. No pegar claves en incidencias ni logs.
 
@@ -18,7 +24,7 @@ El origen reproducible es `supabase/migrations/`, en orden de nombre. `supabase/
 2. Probar con datos representativos y revisar la copia antes de aplicar a producción.
 3. Aplicar solo las pendientes en producción, una vez. No ejecutar a ciegas todo el directorio sobre una instalación ya migrada.
 
-Las migraciones `202609100001_admin_console.sql`, `202609140001_nutrition_kill_switch.sql` y `202609140002_runtime_health.sql` crean el control de acceso administrativo, las cohortes piloto, la publicación de funciones, el canal global del modelo, la parada segura del motor nutricional, la auditoría y la comprobación pública de versión. Deben aplicarse antes de usar todos los controles de `/admin`; `/api/health` devuelve `503` mientras código y base de datos no estén alineados.
+Las migraciones `202609100001_admin_console.sql` a `202609150001_transactional_import_observability.sql` crean el control administrativo, la parada segura del motor nutricional, la comprobación pública de versión, la importación atómica, el consentimiento versionado, los límites distribuidos, las métricas de rendimiento y la comparación agregada del modelo. `/api/health` devuelve `503` mientras código y base de datos no estén alineados.
 
 La nueva línea base crea el esquema desde cero y conserva tablas existentes. La migración de perfil admite proteína decimal y alinea límites con el formulario. Sus restricciones nuevas son `NOT VALID`: los datos históricos no se borran ni se corrigen automáticamente; las nuevas escrituras sí se validan.
 
@@ -68,11 +74,11 @@ Configurar protección de `main` y bloquear/promover despliegues según los chec
 
 ## 5. Privacidad y observabilidad
 
-- `/privacidad` explica flujos técnicos reales. Completar responsable/contacto, base jurídica y demás información aplicable antes de tratarla como política legal definitiva.
+- `/privacidad` identifica al responsable público y explica fines, bases, proveedores, retención, consentimiento y derechos. Completar los datos formales de contacto que correspondan tras una revisión jurídica.
 - Los eventos remotos del cliente son opt-in y solo incluyen categoría, gravedad y versión; nunca descripción de comida, peso, correo o identificador de cuenta en el evento.
 - La autenticación y la infraestructura pueden producir sus propios logs: revisar accesos y retención en Supabase/Vercel.
-- Configurar alertas de errores y fallos repetidos de nutrición/sync/auth en el servicio de observabilidad elegido. El código emite eventos estructurados; **no crea alertas ni notificaciones externas**.
-- Añadir límites en el WAF a rutas costosas y de diagnóstico, acordes al tráfico medido. La cuota SQL protege análisis externos; no es un cortafuegos general.
+- GitHub comprueba el estado público cada 15 minutos. El panel privado agrega fallos de nutrición, sincronización y acceso; falta elegir un canal externo si se desean avisos inmediatos de esas señales.
+- Los diagnósticos aplican un límite distribuido en PostgreSQL. La cuota SQL protege análisis externos; un WAF adicional puede ajustarse más adelante al tráfico real.
 
 ## 6. Qué verificar tras la publicación
 
@@ -89,5 +95,5 @@ Configurar protección de `main` y bloquear/promover despliegues según los chec
 - Las escrituras de registros detectan conflictos por versión; la biblioteca/preferencias todavía usa un documento con resolución por fecha, no una fusión por campo.
 - La paginación elimina el corte a 1.000 filas y las notificaciones agrupan recargas. Aún no es sincronización incremental completa por fila.
 - La validación del modelo es condicional a los hábitos observados del tramo y al perfil actual: no demuestra precisión futura absoluta. Muestra comparación contra último peso y cobertura empírica; no asegura un intervalo clínico.
-- Falta evaluar con referencias nutricionales trazables, varias personas y cohortes independientes.
+- Las referencias nutricionales trazables ya cubren alimentos base adicionales. La cohorte del modelo requiere cinco participantes reales antes de mostrar resultados.
 - Los tests locales no reemplazan los E2E de cuentas reales de staging, SMTP, OAuth, redes móviles ni revisión legal.

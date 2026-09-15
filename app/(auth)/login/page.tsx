@@ -19,7 +19,7 @@ const servidorPreparado = () => false;
 
 export default function LoginPage() {
   return (
-    <React.Suspense fallback={null}>
+    <React.Suspense fallback={<div role="status" className="flex min-h-80 items-center justify-center gap-2 rounded-2xl border border-border bg-background p-6 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />Preparando tu acceso…</div>}>
       <LoginForm />
     </React.Suspense>
   );
@@ -33,7 +33,6 @@ function LoginForm() {
   const params = useSearchParams();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
-  const [recordarme, setRecordarme] = React.useState(false);
   const [cargando, setCargando] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [focusedField, setFocusedField] = React.useState<string | null>(null);
@@ -44,7 +43,7 @@ function LoginForm() {
   const handleEmailChange = (value: string) => {
     setEmail(value);
     if (value) {
-      const validation = validateEmail(value);
+      const validation = validateEmail(value.trim());
       setValidatedEmail(!validation.error);
     } else {
       setValidatedEmail(false);
@@ -57,7 +56,8 @@ function LoginForm() {
     setError(null);
     setShaking(false);
 
-    const emailValidation = validateEmail(email);
+    const correo = email.trim();
+    const emailValidation = validateEmail(correo);
     if (!emailValidation.valid) {
       triggerShake("Correo inválido.");
       return;
@@ -67,21 +67,18 @@ function LoginForm() {
       return;
     }
 
-    const rateLimitCheck = loginRateLimiter.check(email);
+    const rateLimitCheck = loginRateLimiter.check(correo.toLowerCase());
     if (!rateLimitCheck.allowed) {
       const minutes = Math.ceil(rateLimitCheck.resetIn / 1000 / 60);
-      triggerShake(`Demasiados intentos. Intenta en ${minutes}m.`);
+      triggerShake(`Demasiados intentos. Vuelve a intentarlo en ${minutes} ${minutes === 1 ? "minuto" : "minutos"}.`);
       return;
     }
 
     setCargando(true);
     try {
       const supabase = createClient();
-      const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+      const { error: loginError } = await supabase.auth.signInWithPassword({ email: correo, password });
       if (loginError) throw loginError;
-
-      if (recordarme) localStorage.setItem("ritmo_recordarme", "true");
-      else localStorage.removeItem("ritmo_recordarme");
 
       // El proveedor escucha el cambio de identidad y el layout se resuelve de
       // nuevo en servidor, evitando reutilizar el onboarding de otra cuenta.
@@ -92,13 +89,13 @@ function LoginForm() {
       if (msg.includes("Invalid login") || msg.includes("Invalid credentials"))
         triggerShake("Correo o contraseña incorrectos.");
       else if (msg.includes("Email not confirmed"))
-        triggerShake("Confirma tu correo primero.");
+        triggerShake("Confirma tu correo con el enlace que recibiste. Revisa también la carpeta de spam.");
       else if (msg.includes("User not found"))
-        triggerShake("No existe esa cuenta.");
+        triggerShake("Correo o contraseña incorrectos.");
       else if (msg.includes("Failed to fetch"))
-        triggerShake("Sin conexión.");
+        triggerShake("No hemos podido conectar. Revisa tu conexión y vuelve a intentarlo.");
       else
-        triggerShake("Error al iniciar sesión.");
+        triggerShake("No hemos podido iniciar sesión. Vuelve a intentarlo en unos momentos.");
       setCargando(false);
     }
   }
@@ -143,21 +140,21 @@ function LoginForm() {
             <form onSubmit={entrar} aria-busy={!preparado || cargando}>
               <fieldset disabled={!preparado || cargando} className="space-y-3">
               <div style={stagger(1)}>
-                <Label htmlFor="email" className="text-sm font-semibold mb-1.5 block">Email</Label>
+                <Label htmlFor="email" className="text-sm font-semibold mb-1.5 block">Correo electrónico</Label>
                 <div className="relative">
-                  <Mail className={`absolute left-3 top-3.5 size-4 transition-colors duration-200 sm:top-2.5 ${
+                  <Mail className={`absolute left-3 top-3.5 size-4 transition-colors duration-200 sm:top-3 ${
                     focusedField === "email" ? "text-primary" : "text-muted-foreground"
                   } ${validatedEmail && focusedField !== "email" ? "text-weight" : ""}`} />
                   <Input
-                    id="email" type="email" autoComplete="email" required
+                    id="email" name="email" type="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required
                     value={email} onChange={(e) => handleEmailChange(e.target.value)}
                     onFocus={() => setFocusedField("email")}
                     onBlur={() => setFocusedField(null)}
                     placeholder="tu@correo.com" disabled={cargando}
-                    className="h-12 rounded-lg border-2 pl-10 text-base transition-[border-color,box-shadow] focus:border-primary focus:ring-1 focus:ring-primary/20 sm:h-10 sm:pl-9 sm:text-sm"
+                    className="h-12 rounded-lg border-2 pl-10 text-base transition-[border-color,box-shadow] focus:border-primary focus:ring-1 focus:ring-primary/20 sm:h-11 sm:pl-9 md:text-sm"
                   />
                   {validatedEmail && focusedField !== "email" && (
-                    <Check className="absolute right-3 top-3.5 size-4 text-weight sm:top-2.5"
+                    <Check className="absolute right-3 top-3.5 size-4 text-weight sm:top-3"
                       style={{ animation: `successPop 0.3s ${springBezier}` }} />
                   )}
                 </div>
@@ -166,47 +163,39 @@ function LoginForm() {
               <div style={stagger(2)}>
                 <Label htmlFor="password" className="text-sm font-semibold mb-1.5 block">Contraseña</Label>
                 <div className="relative">
-                  <Lock className={`absolute left-3 top-3.5 size-4 transition-colors duration-200 sm:top-2.5 ${
+                  <Lock className={`absolute left-3 top-3.5 size-4 transition-colors duration-200 sm:top-3 ${
                     focusedField === "password" ? "text-primary" : "text-muted-foreground"
                   }`} />
                   <Input
-                    id="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required
+                    id="password" name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required
                     value={password} onChange={(e) => setPassword(e.target.value)}
                     onFocus={() => setFocusedField("password")}
                     onBlur={() => setFocusedField(null)}
                     placeholder="••••••••" disabled={cargando}
-                    className="h-12 rounded-lg border-2 pl-10 pr-11 text-base transition-[border-color,box-shadow] focus:border-primary focus:ring-1 focus:ring-primary/20 sm:h-10 sm:pl-9 sm:pr-10 sm:text-sm"
+                    className="h-12 rounded-lg border-2 pl-10 pr-11 text-base transition-[border-color,box-shadow] focus:border-primary focus:ring-1 focus:ring-primary/20 sm:h-11 sm:pl-9 sm:pr-10 md:text-sm"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={cargando}
                     aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                    className="absolute right-0 top-0 grid size-12 place-items-center text-muted-foreground transition-colors hover:text-primary sm:size-10"
+                    aria-pressed={showPassword}
+                    className="absolute right-0 top-0 grid size-12 place-items-center text-muted-foreground transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:size-11"
                   >
                     {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:flex-nowrap sm:gap-0" style={stagger(3)}>
-                <label className="flex items-center gap-2 cursor-pointer group hover:bg-primary/5 px-2 py-1 rounded-lg transition-colors">
-                  <input
-                    type="checkbox" checked={recordarme}
-                    onChange={(e) => setRecordarme(e.target.checked)}
-                    disabled={cargando}
-                    className="size-4 cursor-pointer rounded border-2 border-primary/30 accent-primary transition-colors group-hover:border-primary disabled:opacity-60"
-                  />
-                  <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">Recuérdame</span>
-                </label>
-                <Link href="/recuperar" className="text-[0.7rem] font-medium text-primary hover:text-primary/80 transition-colors">
-                  ¿Olvidaste contraseña?
+              <div className="flex justify-end" style={stagger(3)}>
+                <Link href="/recuperar" prefetch={false} className="inline-flex min-h-11 items-center text-xs font-medium text-primary hover:text-primary/80 transition-colors">
+                  ¿Olvidaste tu contraseña?
                 </Link>
               </div>
 
               <ButtonRipple
                 type="submit" disabled={cargando}
-                className="h-12 w-full rounded-lg text-base font-semibold transition-[background-color,color,box-shadow,transform] active:scale-[0.98] sm:h-10 sm:text-sm sm:active:scale-95"
+                className="h-12 w-full rounded-lg text-base font-semibold transition-[background-color,color,box-shadow,transform] active:scale-[0.98] sm:h-11 md:text-sm sm:active:scale-95"
                 style={stagger(4)}
               >
                 {cargando ? (
@@ -219,12 +208,12 @@ function LoginForm() {
             </form>
 
             <div style={stagger(5)}>
-              <SocialLogin />
+              <SocialLogin disabled={!preparado || cargando} />
             </div>
 
             <p className="text-center text-xs text-muted-foreground pt-2 border-t border-border/30" style={stagger(6)}>
               ¿Sin cuenta?{" "}
-              <Link href="/registro" className="font-semibold text-primary hover:text-primary/80 transition-colors">
+              <Link href="/registro" prefetch={false} className="font-semibold text-primary hover:text-primary/80 transition-colors">
                 Crear una
               </Link>
             </p>

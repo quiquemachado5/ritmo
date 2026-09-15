@@ -30,8 +30,11 @@ export function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChan
   const { seleccionarFecha } = useActiveDay();
   const [consulta, setConsulta] = React.useState("");
   const [activo, setActivo] = React.useState(0);
+  const listaId = React.useId();
+  const listaRef = React.useRef<HTMLDivElement>(null);
 
   const indice = React.useMemo<Resultado[]>(() => {
+    if (!open) return [];
     const resultados: Resultado[] = [
       { id: "accion:comida", tipo: "accion", accion: "comida", titulo: "Registrar una comida", detalle: "Añadirla a hoy · atajo R", icono: UtensilsCrossed },
       { id: "accion:peso", tipo: "accion", accion: "peso", titulo: "Registrar peso", detalle: "Recalibrar el modelo · atajo P", icono: Scale },
@@ -46,13 +49,19 @@ export function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChan
       if (dia.notas?.trim() || Object.values(dia.habitos || {}).some(Boolean)) resultados.push({ id: `dia:${dia.fecha}`, tipo: "dia", titulo: capitalizar(fmtFechaLarga(dia.fecha)), detalle: dia.notas?.trim() ? `Nota · ${dia.notas.trim()}` : "Abrir día en el calendario", fecha: dia.fecha, icono: CalendarDays });
     }
     return resultados;
-  }, [estado]);
+  }, [estado, open]);
 
   const resultados = React.useMemo(() => {
     const q = normalizar(consulta);
     if (!q) return indice.filter((item) => item.tipo === "accion" || item.tipo === "ruta");
     return indice.filter((item) => normalizar(`${item.titulo} ${item.detalle}`).includes(q)).slice(0, 24);
   }, [consulta, indice]);
+
+  const indiceActivo = Math.min(activo, resultados.length - 1);
+  React.useEffect(() => {
+    if (!open) return;
+    listaRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: "nearest" });
+  }, [open, indiceActivo, consulta]);
 
   function elegir(resultado: Resultado) {
     setConsulta("");
@@ -85,15 +94,20 @@ export function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChan
               else if (event.key === "Enter") { event.preventDefault(); elegir(resultados[Math.min(activo, resultados.length - 1)]); }
             }}
             placeholder="Buscar o ejecutar una acción…"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={open}
+            aria-controls={listaId}
+            aria-activedescendant={indiceActivo >= 0 ? `${listaId}-${indiceActivo}` : undefined}
             aria-label="Buscar o ejecutar una acción"
             className="h-11 border-0 bg-transparent px-0 text-base shadow-none focus-visible:ring-0"
           />
           <kbd className="hidden rounded-md border border-border bg-secondary px-1.5 py-1 text-[0.62rem] text-muted-foreground sm:block">ESC</kbd>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-2 sm:p-3" role="listbox" aria-label="Resultados">
+        <div ref={listaRef} id={listaId} className="min-h-0 flex-1 overflow-y-auto p-2 sm:p-3" role="listbox" aria-label="Resultados">
           {!consulta && resultados.length > 0 && <p className="px-3 pb-1 pt-2 text-[0.68rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">Acciones y destinos</p>}
           {resultados.length > 0 ? resultados.map((resultado, indiceResultado) => (
-            <button key={resultado.id} type="button" role="option" aria-selected={indiceResultado === activo} onMouseMove={() => setActivo(indiceResultado)} onClick={() => elegir(resultado)} className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors hover:bg-secondary focus-visible:bg-secondary focus-visible:outline-none ${indiceResultado === activo ? "bg-secondary" : ""}`}>
+            <button key={resultado.id} id={`${listaId}-${indiceResultado}`} type="button" role="option" tabIndex={-1} aria-selected={indiceResultado === indiceActivo} onMouseMove={() => setActivo(indiceResultado)} onClick={() => elegir(resultado)} className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors hover:bg-secondary focus-visible:bg-secondary focus-visible:outline-none ${indiceResultado === indiceActivo ? "bg-secondary" : ""}`}>
               <span className={`grid size-9 shrink-0 place-items-center rounded-lg ${resultado.tipo === "accion" ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground"}`}><resultado.icono className="size-4" /></span>
               <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{resultado.titulo}</span><span className="mt-0.5 block truncate text-xs text-muted-foreground">{resultado.detalle}</span></span>
             </button>

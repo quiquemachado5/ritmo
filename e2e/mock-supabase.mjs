@@ -25,7 +25,7 @@ function state(id) {
       const d = new Date(); d.setDate(d.getDate() - i); const fecha = d.toLocaleDateString('en-CA');
       return { user_id: id, fecha, habitos: { comida: true, cena: i % 3 !== 0, noAlcohol: true, deporte: i % 2 === 0, beberAgua: true, dormirBien: i % 4 !== 0 }, peso: i % 7 === 0 ? 80 + i / 60 : null, kcal_consumidas: i === 0 ? 480 : null, kcal_quemadas: null, grasa_pct: null, notas: null, actualizado_en: '2026-09-01T00:00:00Z', comidas: i === 0 ? [{ id: 'fixture-meal', tipo: 'comida', texto: 'Arroz con verduras y pollo', kcal: 480, proteinas: 30, carbohidratos: 55, grasas: 15, estimado: true, ingredientes: [{ nombre: 'Arroz cocido', cantidad: '150 g', cantidadEstimada: false, kcal: 195, proteinas: 4, carbohidratos: 42, grasas: 1 }] }] : [] };
     });
-    stores.set(id, { perfiles: [{ user_id: id, nombre: id === ids[0] ? 'Alex' : 'Bea', edad: 30, altura_cm: 175, sexo: 'hombre', objetivo: 'mantener', kcal_objetivo: 2100, proteina_objetivo: 1.6, factor_actividad: 1.375, umbral_racha: 6, onboarding_completo: true, actualizado_en: '2026-09-01T00:00:00Z' }], dias: days, composicion: days.filter(d => d.peso).map(d => ({ user_id: id, fecha: d.fecha, peso: d.peso, actualizado_en: d.actualizado_en })), user_prefs: [], historial_modelo: [], predicciones_modelo: [] });
+    stores.set(id, { perfiles: [{ user_id: id, nombre: id === ids[0] ? 'Alex' : 'Bea', edad: 30, altura_cm: 175, sexo: 'hombre', objetivo: 'mantener', kcal_objetivo: 2100, proteina_objetivo: 1.6, factor_actividad: 1.375, umbral_racha: 6, onboarding_completo: true, actualizado_en: '2026-09-01T00:00:00Z' }], dias: days, composicion: days.filter(d => d.peso).map(d => ({ user_id: id, fecha: d.fecha, peso: d.peso, actualizado_en: d.actualizado_en })), user_prefs: [], privacy_consents: [], historial_modelo: [], predicciones_modelo: [] });
   }
   return stores.get(id);
 }
@@ -66,7 +66,7 @@ const server = http.createServer(async (req, res) => {
       announcement: platformControl.announcementEnabled ? platformControl.announcementText : null,
       updatedAt: platformControl.updatedAt,
     });
-    if (rpc === 'ritmo_public_runtime_status') return send({ databaseVersion: '202609140003', nutritionEngine: true });
+    if (rpc === 'ritmo_public_runtime_status') return send({ databaseVersion: '202609150001', nutritionEngine: true });
     if (rpc === 'ritmo_admin_snapshot') {
       if (id !== ids[1]) return send({ message: 'Acceso no autorizado' }, 403);
       return send({ metrics: { users: 2, onboarded: 2, active30: 2, suspended: 0, admins: 1, pilots: 0 }, features, control: platformControl, audit: [] });
@@ -79,6 +79,16 @@ const server = http.createServer(async (req, res) => {
       if (id !== ids[1]) return send(null);
       return send({ windowHours: 24, total: 0, errors: 0, byEvent: {}, latestBuild: 'local-e2e' });
     }
+    if (rpc === 'ritmo_admin_model_cohort') {
+      if (id !== ids[1]) return send(null);
+      return send({ minimumParticipants: 5, observedParticipants: 2, horizons: [] });
+    }
+    if (rpc === 'ritmo_grant_health_consent') {
+      db.privacy_consents = [{ user_id: id, notice_version: body.p_version, health_tracking: true, granted_at: new Date().toISOString() }];
+      return send(null);
+    }
+    if (rpc === 'ritmo_health_consent_status') return send(db.privacy_consents.length > 0);
+    if (rpc === 'ritmo_revoke_health_consent') { db.privacy_consents = []; return send(null); }
     if (rpc === 'ritmo_record_health_event') return send(null);
     if (rpc === 'ritmo_admin_command') {
       if (id !== ids[1]) return send({ message: 'Acceso no autorizado' }, 403);

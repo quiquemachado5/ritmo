@@ -13,9 +13,9 @@ test.afterEach(async ({ page }) => {
 
 async function iniciarSesion(page: Page) {
   await page.goto("/login");
-  await page.getByLabel("Email").fill("alex@ritmo.test");
+  await page.getByLabel("Correo electrónico").fill("alex@ritmo.test");
   await page.getByLabel("Contraseña", { exact: true }).fill("RitmoTest123");
-  await expect(page.getByLabel("Email")).toHaveValue("alex@ritmo.test");
+  await expect(page.getByLabel("Correo electrónico")).toHaveValue("alex@ritmo.test");
   await page.getByRole("button", { name: "Iniciar sesión", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByText(/Buenas|Buenos/).first()).toBeVisible();
@@ -201,7 +201,7 @@ test("recorrido visual y guardado con datos sintéticos", async ({ page, request
   await page.getByRole("button", { name: "Close", exact: true }).click();
   await page.getByRole("button", { name: "Cerrar sesión", exact: true }).click();
   await expect(page).toHaveURL(/login/);
-  await page.getByLabel("Email").fill("bea@ritmo.test");
+  await page.getByLabel("Correo electrónico").fill("bea@ritmo.test");
   await page.getByLabel("Contraseña", { exact: true }).fill("RitmoTest123");
   await page.getByRole("button", { name: "Iniciar sesión", exact: true }).click();
   await expect(page.getByText(/Buenas tardes, Bea|Buenos días, Bea|Buenas noches, Bea/)).toBeVisible();
@@ -241,7 +241,7 @@ test("el modo mínimo sustituye la app por una única acción y recupera la pest
 test("administración separa usuarios, lanzamientos y modelos sin datos de salud", async ({ page, request }, info) => {
   await request.post("http://127.0.0.1:3199/__reset");
   await page.goto("/login");
-  await page.getByLabel("Email").fill("bea@ritmo.test");
+  await page.getByLabel("Correo electrónico").fill("bea@ritmo.test");
   await page.getByLabel("Contraseña", { exact: true }).fill("RitmoTest123");
   await page.getByRole("button", { name: "Iniciar sesión", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
@@ -427,4 +427,178 @@ test("tema oscuro y anchuras extremas mantienen la interfaz utilizable", async (
     await sinDesbordamiento(page);
   }
   await page.screenshot({ path: `test-results/${info.project.name}-${movil ? "320" : "2560"}-oscuro.png`, fullPage: true });
+});
+
+test("registro permite corregir el correo tras solicitar confirmación", async ({ page }) => {
+  await page.route("**/auth/v1/signup**", route => route.fulfill({ json: {
+    user: { id: "00000000-0000-4000-8000-000000000003", email: "alta@ritmo.test", aud: "authenticated", created_at: new Date().toISOString() },
+    session: null,
+  }, headers: { "access-control-allow-origin": "http://127.0.0.1:3101", "access-control-allow-credentials": "true" } }));
+  await page.goto("/registro");
+  await page.waitForLoadState("networkidle");
+  await page.getByLabel("Correo electrónico", { exact: true }).fill("alta@ritmo.test");
+  await page.getByLabel("Contraseña", { exact: true }).fill("RitmoTest123");
+  await page.getByLabel("Confirmar contraseña", { exact: true }).fill("RitmoTest123");
+  await page.getByRole("button", { name: "Crear cuenta", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Revisa tu correo" })).toBeVisible();
+  await page.getByRole("button", { name: "Cambiar correo", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Crear cuenta", exact: true })).toBeEnabled();
+  await page.getByLabel("Correo electrónico", { exact: true }).fill("corregido@ritmo.test");
+  await page.getByRole("button", { name: "Crear cuenta", exact: true }).click();
+  await expect(page.getByText("corregido@ritmo.test", { exact: true })).toBeVisible();
+});
+
+test("onboarding valida cifras completas y conserva el alta si falla el primer pesaje", async ({ page, request }) => {
+  await request.post("http://127.0.0.1:3199/__reset");
+  await request.patch("http://127.0.0.1:3199/rest/v1/perfiles", { data: { onboarding_completo: false } });
+  await page.goto("/login");
+  await page.getByLabel("Correo electrónico").fill("alex@ritmo.test");
+  await page.getByLabel("Contraseña", { exact: true }).fill("RitmoTest123");
+  await page.getByRole("button", { name: "Iniciar sesión", exact: true }).click();
+  await expect(page).toHaveURL(/onboarding/);
+  const continuar = page.getByRole("button", { name: "Continuar", exact: true });
+  await page.getByLabel("Edad", { exact: true }).fill("18abc");
+  await continuar.click();
+  await expect(page.getByLabel("Edad", { exact: true })).toBeFocused();
+  await expect(page.getByRole("alert").filter({ hasText: "Introduce una edad" })).toBeVisible();
+  await page.getByLabel("Edad", { exact: true }).fill("30");
+  await continuar.click();
+  await page.getByLabel("Altura (cm)", { exact: true }).fill("175");
+  await page.getByLabel("Peso de hoy (kg, opcional)", { exact: true }).fill("80,5");
+  await continuar.click();
+  await page.getByLabel(/Consiento expresamente que RITMO trate los datos de salud/i).check();
+  await page.route("**/rest/v1/dias*", route => ["PATCH", "POST"].includes(route.request().method())
+    ? route.fulfill({ status: 403, json: { message: "permission denied" } }) : route.continue());
+  await page.getByRole("button", { name: "Empezar", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: /peso|pesaje/i })).toBeVisible();
+  await expect(page).toHaveURL(/onboarding/);
+  await expect(page.getByRole("button", { name: "Reintentar", exact: true })).toBeEnabled();
+  const perfiles = await (await request.get("http://127.0.0.1:3199/rest/v1/perfiles")).json();
+  expect(perfiles[0].onboarding_completo).toBe(false);
+});
+
+test("búsqueda y navegación exponen el foco y respetan los diálogos", async ({ page, request }, info) => {
+  await request.post("http://127.0.0.1:3199/__reset");
+  await iniciarSesion(page);
+  const salto = page.getByRole("link", { name: "Saltar al contenido", exact: true });
+  await salto.focus();
+  await salto.press("Enter");
+  await expect(page.getByRole("main")).toBeFocused();
+  if (info.project.name.includes("mobile")) {
+    await expect(page.getByRole("navigation", { name: "Navegación principal móvil" }).getByRole("link", { name: "Hoy", exact: true })).toHaveAttribute("aria-current", "page");
+  }
+  await page.getByRole("button", { name: /Buscar/ }).click();
+  const buscador = page.getByRole("combobox", { name: "Buscar o ejecutar una acción" });
+  await expect(buscador).toHaveAttribute("aria-expanded", "true");
+  await buscador.press("ArrowUp");
+  const opcion = page.getByRole("option", { selected: true });
+  await expect(opcion).toBeInViewport();
+  await expect(buscador).toHaveAttribute("aria-activedescendant", await opcion.getAttribute("id") as string);
+  await buscador.fill("Registrar peso");
+  await buscador.press("Enter");
+  const dialogo = page.getByRole("dialog");
+  await expect(dialogo).toBeVisible();
+  await page.keyboard.press("Control+k");
+  await expect(page.getByRole("dialog")).toHaveCount(1);
+  await expect(page.getByRole("combobox", { name: "Buscar o ejecutar una acción" })).toHaveCount(0);
+});
+
+test("una preferencia bloqueada no impide abrir la cuenta", async ({ page, request }) => {
+  await request.post("http://127.0.0.1:3199/__reset");
+  await page.addInitScript(() => {
+    const getItem = Storage.prototype.getItem;
+    const setItem = Storage.prototype.setItem;
+    Storage.prototype.getItem = function (key) {
+      if (key.startsWith("ritmo:vista-minima:")) throw new DOMException("Storage blocked", "SecurityError");
+      return getItem.call(this, key);
+    };
+    Storage.prototype.setItem = function (key, value) {
+      if (key.startsWith("ritmo:vista-minima:")) throw new DOMException("Storage blocked", "SecurityError");
+      return setItem.call(this, key, value);
+    };
+  });
+  await iniciarSesion(page);
+  await page.getByRole("button", { name: "Activar modo mínimo", exact: true }).click();
+  await expect(page.getByText("No pudimos guardar esta preferencia", { exact: true })).toBeVisible();
+  await expect(page.getByRole("main").getByRole("heading").first()).toBeVisible();
+});
+
+test("la importación mantiene el foco y permite cancelar sin escribir datos", async ({ page, request }) => {
+  await request.post("http://127.0.0.1:3199/__reset");
+  await iniciarSesion(page);
+  await irA(page, "/ajustes");
+  await page.getByRole("navigation", { name: "Áreas de ajustes" }).getByRole("button", { name: /Datos y cuenta/ }).click();
+  const importar = page.getByRole("button", { name: "Importar", exact: true });
+  const selectorArchivo = page.waitForEvent("filechooser");
+  await importar.click();
+  await (await selectorArchivo).setFiles({ name: "copia-sintetica.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ app: "ritmo", version: 5, dias: { "2025-01-01": { fecha: "2025-01-01", habitos: {}, peso: 79 } } })) });
+  const dialogo = page.getByRole("dialog", { name: "Confirmar importación" });
+  await expect(dialogo).toBeVisible();
+  await page.keyboard.press("Shift+Tab");
+  expect(await dialogo.evaluate(node => node.contains(document.activeElement))).toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(dialogo).toHaveCount(0);
+  await expect(importar).toBeFocused();
+  const dias = await (await request.get("http://127.0.0.1:3199/rest/v1/dias?fecha=eq.2025-01-01")).json();
+  expect(dias).toEqual([]);
+});
+
+test("la PWA recupera sin conexión y no guarda páginas privadas", async ({ page, request, context }, info) => {
+  test.skip(process.env.RITMO_E2E_PRODUCTION !== "1" || info.project.name !== "desktop", "El service worker se activa en producción; basta un contrato de caché");
+  await request.post("http://127.0.0.1:3199/__reset");
+  await iniciarSesion(page);
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+  await page.goto("/nutricion");
+  await expect(page.locator("main h1")).toBeVisible();
+  const rutasCache = await page.evaluate(async () => {
+    const cacheNames = (await caches.keys()).filter(name => name.startsWith("ritmo-"));
+    return (await Promise.all(cacheNames.map(async name => (await (await caches.open(name)).keys()).map(request => new URL(request.url).pathname)))).flat();
+  });
+  expect(rutasCache).toContain("/offline");
+  expect(rutasCache.every(path => path === "/offline" || path === "/manifest.json" || path === "/icon" || path.startsWith("/_next/static/") || path.startsWith("/brand/"))).toBe(true);
+  await context.setOffline(true);
+  await page.goto("/nutricion");
+  await expect(page.getByRole("heading", { name: "Sin conexión", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Volver a intentar" })).toBeVisible();
+});
+
+test("dos pestañas conservan sus cambios sin conexión y los sincronizan al volver", async ({ page, request, context }, info) => {
+  test.skip(info.project.name === "mobile", "La coordinación se verifica en Chromium y WebKit");
+  await request.post("http://127.0.0.1:3199/__reset");
+  await iniciarSesion(page);
+  const otra = await context.newPage();
+  const erroresOtra: string[] = [];
+  otra.on("pageerror", error => erroresOtra.push(error.message));
+  try {
+    await otra.goto("/habitos");
+    await otra.getByRole("button", { name: "Día anterior", exact: true }).click();
+    const fechaAnterior = await otra.getByLabel("Día que quieres editar", { exact: true }).inputValue();
+    const aguaHoy = page.getByRole("main").getByRole("button", { name: /Beber agua$/ });
+    const aguaAyer = otra.getByRole("button", { name: "Beber agua", exact: true });
+    await expect(aguaHoy).toHaveAttribute("aria-pressed", "true");
+    await expect(aguaAyer).toHaveAttribute("aria-pressed", "true");
+    await context.setOffline(true);
+    await Promise.all([aguaHoy.click(), aguaAyer.click()]);
+    await expect(aguaHoy).toHaveAttribute("aria-pressed", "false");
+    await expect(aguaAyer).toHaveAttribute("aria-pressed", "false");
+    const pendientes = () => page.evaluate(() => {
+      const key = Object.keys(localStorage).find(key => /^ritmo:writequeue:[^:]+$/.test(key));
+      return key ? JSON.parse(localStorage.getItem(key) || "[]") as Array<{ payload: { fecha: string }; bloqueada?: boolean }> : [];
+    });
+    await expect.poll(async () => (await pendientes()).length).toBe(2);
+    const fechas = (await pendientes()).map(op => op.payload.fecha);
+    expect(fechas).toContain(fechaAnterior);
+    expect(new Set(fechas).size).toBe(2);
+    await context.setOffline(false);
+    await expect.poll(async () => (await pendientes()).length).toBe(0);
+    for (const fecha of fechas) {
+      const filas = await (await request.get(`http://127.0.0.1:3199/rest/v1/dias?fecha=eq.${fecha}`)).json();
+      expect(filas[0].habitos).not.toHaveProperty("beberAgua");
+      expect(filas[0].habitos).toMatchObject({ comida: true, noAlcohol: true });
+    }
+    expect(erroresOtra).toEqual([]);
+  } finally {
+    await context.setOffline(false);
+    await otra.close();
+  }
 });
