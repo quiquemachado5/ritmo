@@ -78,7 +78,7 @@ export default function HabitosPage() {
       {/* Rachas */}
       <div className="grid gap-3 lg:grid-cols-[minmax(15rem,.72fr)_minmax(0,1.28fr)]">
         <Card className={cn("gap-0 overflow-hidden p-4 sm:p-5", sinRacha ? tonoRacha!.superficie : "border-streak/20 bg-streak/5")}>
-          <div className={cn("flex items-center gap-2", sinRacha ? tonoRacha!.tinta : "text-streak")}><span className="grid size-8 place-items-center rounded-xl bg-card shadow-sm"><Flame className="size-4" /></span><p className="text-sm font-semibold">Racha actual</p></div>
+          <div className={cn("flex items-center gap-2", sinRacha ? tonoRacha!.tinta : "text-streak")}><span className="grid size-8 place-items-center rounded-xl bg-card ring-1 ring-border/70"><Flame className="size-4" /></span><p className="text-sm font-semibold">Racha actual</p></div>
           <div className="mt-5 flex items-end gap-2"><span className={cn("font-display text-5xl font-bold leading-none tabular", sinRacha ? tonoRacha!.tinta : "text-streak")}>{r.habitos.rachaActual.longitud}</span><span className={cn("mb-1 text-sm font-medium", sinRacha ? tonoRacha!.tinta : "text-streak/80")}>días</span></div>
           <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
             {r.habitos.rachaActual.longitud > 0 ? `Todos tus hábitos activos, sin fallar · desde el ${fmtFechaCorta(r.habitos.rachaActual.desde!)}` : `Completa tus ${activos.length} hábitos activos hoy para iniciar una nueva racha.`}
@@ -120,7 +120,7 @@ export default function HabitosPage() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-secondary/35 px-4 py-3 sm:px-5">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-card text-primary shadow-sm"><CalendarDays className="size-4" /></span>
+                <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-card text-primary ring-1 ring-border/70"><CalendarDays className="size-4" /></span>
                 <div className="min-w-0">
                   <h2 className="truncate font-display text-base font-bold sm:text-lg">{esHoy ? "Hoy" : capitalizar(fmtFechaLarga(fechaSeleccionada))}</h2>
                   <p className="text-xs text-muted-foreground">{habitosSeleccionados}/{activos.length} hábitos marcados</p>

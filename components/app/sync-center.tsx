@@ -48,7 +48,7 @@ export function SyncCenter() {
   return (
     <div id="sincronizacion" className="overflow-hidden rounded-xl border border-border/80 bg-secondary/25">
       <div className="flex items-start gap-3 p-3.5">
-        <span className={`grid size-9 shrink-0 place-items-center rounded-xl bg-card shadow-sm ${cola.requiereAtencion ? "text-warning" : online ? "text-primary" : "text-muted-foreground"}`}>
+        <span className={`grid size-9 shrink-0 place-items-center rounded-xl bg-card ring-1 ring-border/70 ${cola.requiereAtencion ? "text-warning" : online ? "text-primary" : "text-muted-foreground"}`}>
           <Icon className={cola.sincronizando ? "size-4 motion-safe:animate-spin" : "size-4"} />
         </span>
         <div className="min-w-0 flex-1">

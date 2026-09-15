@@ -22,7 +22,7 @@ export function FlowChapter({ title, description, icon: Icon, tone = "primary", 
     weight: "border-weight-border bg-weight text-weight-foreground",
   } as const;
   return <section data-slot="flow-chapter" className={cn("ui-flow-chapter relative sm:pl-12", className)}>
-    <span className={cn("absolute left-0 top-0 z-10 grid size-9 place-items-center rounded-xl border-4 border-background shadow-sm", tonos[tone])} aria-hidden="true"><Icon className="size-4" /></span>
+    <span className={cn("absolute left-0 top-0 z-10 grid size-9 place-items-center rounded-xl border-4 border-background", tonos[tone])} aria-hidden="true"><Icon className="size-4" /></span>
     <header data-slot="flow-header" className="mb-4 min-w-0 pl-12 pt-0.5 sm:pl-0"><h2 className="font-display text-xl font-bold tracking-tight">{title}</h2><p data-slot="flow-description" className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</p></header>
     <div data-slot="flow-content" className="flex min-w-0 flex-col gap-4">{children}</div>
   </section>;
