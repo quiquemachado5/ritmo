@@ -54,8 +54,10 @@ export function leerSimulacroRestauracion(userId: string | null): RestoreDrillRe
 }
 
 function guardarSimulacro(userId: string, resultado: RestoreDrillResult) {
-  localStorage.setItem(clave(RESTORE_DRILL_KEY, userId), JSON.stringify(resultado));
-  window.dispatchEvent(new CustomEvent("ritmo:backup-drill", { detail: userId }));
+  try {
+    localStorage.setItem(clave(RESTORE_DRILL_KEY, userId), JSON.stringify(resultado));
+    window.dispatchEvent(new CustomEvent("ritmo:backup-drill", { detail: userId }));
+  } catch { registrarDiagnostico("sync", "warning", "resultado del simulacro no disponible en el dispositivo"); }
 }
 
 /**
@@ -101,20 +103,34 @@ export function guardarBackupLocal(data: unknown, userId: string | null): void {
   if (!userId) return;
   try {
     localStorage.removeItem(BACKUP_KEY);
+    const siguiente = JSON.stringify({ at: new Date().toISOString(), data });
     const anterior = localStorage.getItem(clave(BACKUP_KEY, userId));
-    if (anterior) localStorage.setItem(clave(BACKUP_KEY + ":previous", userId), anterior);
-    localStorage.setItem(clave(BACKUP_KEY, userId), JSON.stringify({ at: new Date().toISOString(), data }));
+    if (anterior && deserializarBackup(anterior)) {
+      try { localStorage.setItem(clave(BACKUP_KEY + ":previous", userId), anterior); }
+      catch { /* Si no cabe otra copia, todavía puede caber la actualización. */ }
+    }
+    localStorage.setItem(clave(BACKUP_KEY, userId), siguiente);
   } catch {
     registrarDiagnostico("sync", "warning", "copia local no disponible");
   }
+}
+
+function deserializarBackup(raw: string | null): BackupSnapshot | null {
+  if (!raw) return null;
+  try {
+    const valor: unknown = JSON.parse(raw);
+    if (!valor || typeof valor !== "object" || !("at" in valor) || !("data" in valor)) return null;
+    if (typeof valor.at !== "string" || !Number.isFinite(Date.parse(valor.at)) || !valor.data || typeof valor.data !== "object" || Array.isArray(valor.data)) return null;
+    return valor as BackupSnapshot;
+  } catch { return null; }
 }
 
 export function leerBackupLocal(userId: string | null): BackupSnapshot | null {
   if (!userId) return null;
   try {
     localStorage.removeItem(BACKUP_KEY);
-    const raw = localStorage.getItem(clave(BACKUP_KEY, userId));
-    return raw ? (JSON.parse(raw) as BackupSnapshot) : null;
+    return deserializarBackup(localStorage.getItem(clave(BACKUP_KEY, userId)))
+      ?? deserializarBackup(localStorage.getItem(clave(BACKUP_KEY + ":previous", userId)));
   } catch {
     return null;
   }

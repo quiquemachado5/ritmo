@@ -31,6 +31,7 @@ import { usePlatformConfig, useReleasedExperiments } from "./platform-provider";
 import { habitosModelo } from "@/lib/model/config";
 import type { Estado } from "@/lib/model/types";
 import { errorCopy } from "@/lib/error-copy";
+import { toast } from "sonner";
 
 const QuickLog = dynamic(() => import("./quick-log").then((module) => module.QuickLog), {
   loading: () => null,
@@ -127,7 +128,10 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
       window.addEventListener(EVENTO_VISTA_MINIMA, onLocal);
       return () => { window.removeEventListener("storage", onStorage); window.removeEventListener(EVENTO_VISTA_MINIMA, onLocal); };
     }, [userId]),
-    React.useCallback(() => window.localStorage.getItem(claveVistaMinima(userId)) === "true", [userId]),
+    React.useCallback(() => {
+      try { return window.localStorage.getItem(claveVistaMinima(userId)) === "true"; }
+      catch { return false; }
+    }, [userId]),
     () => false,
   );
 
@@ -160,17 +164,25 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
 
   function alternarVistaMinima() {
     const siguiente = !vistaMinima;
-    window.localStorage.setItem(claveVistaMinima(userId), String(siguiente));
-    window.dispatchEvent(new Event(EVENTO_VISTA_MINIMA));
+    try {
+      window.localStorage.setItem(claveVistaMinima(userId), String(siguiente));
+      window.dispatchEvent(new Event(EVENTO_VISTA_MINIMA));
+    } catch {
+      toast.error("No pudimos guardar esta preferencia", { description: "Comprueba que el navegador permite guardar datos de RITMO." });
+    }
   }
 
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      if (e.defaultPrevented || e.isComposing) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest('[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]')) return;
+      const dialogoAbierto = document.querySelector('[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]');
+      if (abierto || busquedaAbierta || dialogoAbierto) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setBusquedaAbierta(true); return; }
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const t = e.target as HTMLElement | null;
-      const enCampo = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
-      if (enCampo || abierto || busquedaAbierta) return;
+      const enCampo = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
+      if (enCampo) return;
       const k = e.key.toLowerCase();
       if (k === "/") { e.preventDefault(); setBusquedaAbierta(true); }
       else if (k === "r" || k === "n") { e.preventDefault(); abrir("comida"); }
@@ -199,6 +211,7 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
       data-contexto={experimentos.interfazViva && viaje.activo ? "viaje" : pulso.estado}
       className="app-canvas min-h-dvh bg-background"
     >
+      <a href="#contenido-principal" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-xl focus:bg-primary focus:px-5 focus:py-3 focus:text-sm focus:font-semibold focus:text-primary-foreground">Saltar al contenido</a>
       {experimentos.interfazViva && <div className="biological-ambient" aria-hidden="true" />}
       {platform.announcement && <div className="border-b border-primary/20 bg-primary/8 px-4 py-2 text-center text-xs font-medium text-primary md:pl-[16.25rem]">{platform.announcement}</div>}
       {!vistaMinima && <TravelBanner />}
@@ -278,7 +291,7 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
 
       {/* Contenido */}
       <div className="md:pl-[16.25rem]">
-        <main className="app-content mx-auto w-full max-w-[88rem] px-[clamp(1rem,3vw,3.5rem)] pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-5 md:pb-14 md:pt-9">
+        <main id="contenido-principal" tabIndex={-1} className="app-content mx-auto w-full max-w-[88rem] px-[clamp(1rem,3vw,3.5rem)] pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-5 focus:outline-none md:pb-14 md:pt-9">
           <PageTransition>{vistaMinima ? <MinimalFocus estado={estado} recomendada={recomendada} onRegistrar={() => abrir(recomendada.tab)} /> : children}</PageTransition>
           {!vistaMinima && <footer className="mt-10 border-t border-border pt-4 text-center text-[0.68rem] text-muted-foreground/60 md:text-left">
             hecho por{" "}
@@ -385,6 +398,7 @@ function NavTab({ item, active }: { item: (typeof NAV_ITEMS)[number]; active: bo
   return (
     <Link
       href={item.href}
+      aria-current={active ? "page" : undefined}
       className={cn(
         "flex min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-1 px-1 py-2 text-center text-[0.62rem] font-medium transition-colors",
         active ? "text-primary" : "text-muted-foreground",

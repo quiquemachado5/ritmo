@@ -8,12 +8,12 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div aria-hidden="true" className="auth-orb auth-orb-two" />
         <div aria-hidden="true" className="auth-grain" />
         <div className="relative z-10 mb-5 shrink-0 sm:mb-4">
-          <Link href="/" aria-label="RITMO">
+          <Link href="/" prefetch={false} aria-label="RITMO">
             <RitmoLogo />
           </Link>
         </div>
         <div className="relative z-10 w-full max-w-md">{children}</div>
-        <p className="relative z-10 mt-4 text-center text-xs text-muted-foreground">Para mayores de 18 años · <Link href="/privacidad" className="underline underline-offset-4">Tus datos y privacidad</Link></p>
+        <p className="relative z-10 mt-4 text-center text-xs text-muted-foreground">Para mayores de 18 años · <Link href="/privacidad" prefetch={false} className="underline underline-offset-4">Tus datos y privacidad</Link></p>
         <p className="relative z-10 mt-5 shrink-0 text-center text-[0.65rem] text-muted-foreground/55">
           hecho por{" "}
           <a href="https://github.com/quiquemachado5" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground hover:underline">

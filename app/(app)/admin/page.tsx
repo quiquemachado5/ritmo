@@ -7,10 +7,11 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   const { supabase } = await requireAdmin();
-  const [{ data: snapshot, error: snapshotError }, { data: users, error: usersError }, { data: health }] = await Promise.all([
+  const [{ data: snapshot, error: snapshotError }, { data: users, error: usersError }, { data: health }, { data: cohort }] = await Promise.all([
     supabase.rpc("ritmo_admin_snapshot"),
     supabase.rpc("ritmo_admin_users", { p_search: "", p_limit: 50, p_offset: 0 }),
     supabase.rpc("ritmo_admin_health"),
+    supabase.rpc("ritmo_admin_model_cohort"),
   ]);
 
   return (
@@ -24,6 +25,7 @@ export default async function AdminPage() {
         initialSnapshot={snapshot}
         initialUsers={Array.isArray(users) ? users : []}
         initialHealth={health}
+        initialCohort={cohort}
         initialError={snapshotError?.message ?? usersError?.message ?? null}
       />
     </div>

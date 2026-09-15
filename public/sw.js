@@ -18,14 +18,21 @@ self.addEventListener("fetch", event => {
   const url = new URL(request.url);
   if (request.method !== "GET" || url.origin !== self.location.origin) return;
   if (request.mode === "navigate") {
-    event.respondWith(fetch(request).catch(async () => (await caches.match(OFFLINE_URL)) || Response.error()));
+    event.respondWith(fetch(request).catch(async () => (await caches.match(OFFLINE_URL, { cacheName: STATIC_CACHE })) || Response.error()));
     return;
   }
   if (request.headers.has("rsc") || url.searchParams.has("_rsc")) return;
   const publicAsset = url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/brand/") || url.pathname === "/icon";
   if (!publicAsset) return;
-  event.respondWith(caches.match(request).then(cached => cached || fetch(request).then(response => {
-    if (response.ok) { const copy = response.clone(); event.waitUntil(caches.open(STATIC_CACHE).then(cache => cache.put(request, copy))); }
+  event.respondWith(caches.match(request, { cacheName: STATIC_CACHE }).then(cached => cached || fetch(request).then(response => {
+    // Cache Storage no aplica Cache-Control por sí solo. Una redirección de
+    // sesión o un HTML de error nunca deben quedarse bajo la URL de un activo.
+    const politica = response.headers.get("cache-control") || "";
+    const tipo = response.headers.get("content-type") || "";
+    if (response.status === 200 && !response.redirected && !/text\/html/i.test(tipo) && !/(?:^|,)\s*(?:private|no-store|no-cache)\b/i.test(politica)) {
+      const copy = response.clone();
+      event.waitUntil(caches.open(STATIC_CACHE).then(cache => cache.put(request, copy)).catch(() => {}));
+    }
     return response;
   })));
 });

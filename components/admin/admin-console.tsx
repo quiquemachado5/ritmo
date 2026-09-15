@@ -26,7 +26,9 @@ type Feature = { key: string; label: string; description: string; state: Feature
 type AuditEntry = { id: number; action: string; actor: string; target: string; metadata: Record<string, unknown>; createdAt: string };
 type Control = { weightModelMode: ModelMode; announcementEnabled: boolean; announcementText: string; updatedAt: string };
 type Snapshot = { metrics: Metrics; features: Feature[]; control: Control; audit: AuditEntry[] };
-type Health = { windowHours: number; total: number; errors: number; byEvent: Partial<Record<"auth" | "sync" | "nutrition" | "import" | "ui", number>>; latestBuild: string | null };
+type Health = { windowHours: number; total: number; errors: number; byEvent: Partial<Record<"auth" | "sync" | "nutrition" | "import" | "ui" | "performance", number>>; latestBuild: string | null };
+type CohortHorizon = { horizon: number; pairs: number; participants: number; stableMaeKg: number; candidateMaeKg: number; stableCoveragePct: number; candidateCoveragePct: number };
+type Cohort = { minimumParticipants: number; observedParticipants: number; horizons: CohortHorizon[] };
 type AdminUser = { user_id: string; email_masked: string; provider: string; created_at: string; last_sign_in_at: string | null; status: "active" | "suspended"; role: "admin" | "pilot" | "user"; onboarding_complete: boolean; is_self: boolean };
 
 const EMPTY: Snapshot = {
@@ -61,12 +63,15 @@ const actionLabels: Record<string, string> = {
   user_role: "Rol de cuenta",
 };
 
-export function AdminConsole({ initialSnapshot, initialUsers, initialHealth, initialError }: { initialSnapshot: unknown; initialUsers: AdminUser[]; initialHealth: unknown; initialError: string | null }) {
+export function AdminConsole({ initialSnapshot, initialUsers, initialHealth, initialCohort, initialError }: { initialSnapshot: unknown; initialUsers: AdminUser[]; initialHealth: unknown; initialCohort: unknown; initialError: string | null }) {
   const [snapshot, setSnapshot] = React.useState(() => normalizeSnapshot(initialSnapshot));
   const [users, setUsers] = React.useState<AdminUser[]>(initialUsers);
   const [health, setHealth] = React.useState<Health>(() => initialHealth && typeof initialHealth === "object"
     ? { windowHours: 24, total: 0, errors: 0, byEvent: {}, latestBuild: null, ...(initialHealth as Partial<Health>) }
     : { windowHours: 24, total: 0, errors: 0, byEvent: {}, latestBuild: null });
+  const [cohort, setCohort] = React.useState<Cohort>(() => initialCohort && typeof initialCohort === "object"
+    ? { minimumParticipants: 5, observedParticipants: 0, horizons: [], ...(initialCohort as Partial<Cohort>) }
+    : { minimumParticipants: 5, observedParticipants: 0, horizons: [] });
   const [query, setQuery] = React.useState("");
   const [busy, setBusy] = React.useState<string | null>(null);
   const [setupError, setSetupError] = React.useState(initialError);
@@ -76,10 +81,11 @@ export function AdminConsole({ initialSnapshot, initialUsers, initialHealth, ini
   const router = useRouter();
   const refresh = React.useCallback(async (search = query) => {
     setBusy("refresh");
-    const [{ data: nextSnapshot, error: snapshotError }, { data: nextUsers, error: usersError }, { data: nextHealth }] = await Promise.all([
+    const [{ data: nextSnapshot, error: snapshotError }, { data: nextUsers, error: usersError }, { data: nextHealth }, { data: nextCohort }] = await Promise.all([
       supabase.rpc("ritmo_admin_snapshot"),
       supabase.rpc("ritmo_admin_users", { p_search: search.trim(), p_limit: 50, p_offset: 0 }),
       supabase.rpc("ritmo_admin_health"),
+      supabase.rpc("ritmo_admin_model_cohort"),
     ]);
     const error = snapshotError ?? usersError;
     if (error) {
@@ -92,6 +98,7 @@ export function AdminConsole({ initialSnapshot, initialUsers, initialHealth, ini
       if (nextHealth && typeof nextHealth === "object") {
         setHealth({ windowHours: 24, total: 0, errors: 0, byEvent: {}, latestBuild: null, ...(nextHealth as Partial<Health>) });
       }
+      if (nextCohort && typeof nextCohort === "object") setCohort({ minimumParticipants: 5, observedParticipants: 0, horizons: [], ...(nextCohort as Partial<Cohort>) });
       setAnnouncementText(normalized.control.announcementText);
       setAnnouncementEnabled(normalized.control.announcementEnabled);
       setSetupError(null);
@@ -149,10 +156,11 @@ export function AdminConsole({ initialSnapshot, initialUsers, initialHealth, ini
         </div>
         <Card className="gap-0 overflow-hidden p-0">
           <div className="flex items-center justify-between border-b border-border px-4 py-3.5 sm:px-5"><div><h2 className="text-sm font-semibold">Señales técnicas · 24 h</h2><p className="mt-0.5 text-xs text-muted-foreground">Eventos anónimos con consentimiento; nunca incluyen comida, peso, correo ni identificador.</p></div><Badge variant="outline">{health.total} señales</Badge></div>
-          <div className="grid sm:grid-cols-3">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4">
             <HealthSignal label="Autenticación" count={health.byEvent.auth ?? 0} />
             <HealthSignal label="Sincronización" count={health.byEvent.sync ?? 0} />
             <HealthSignal label="Nutrición" count={health.byEvent.nutrition ?? 0} />
+            <HealthSignal label="Rendimiento" count={health.byEvent.performance ?? 0} />
           </div>
         </Card>
         <AnnouncementEditor enabled={announcementEnabled} text={announcementText} setEnabled={setAnnouncementEnabled} setText={setAnnouncementText} busy={busy === "announcement"} save={() => void command({ type: "announcement", enabled: announcementEnabled, text: announcementText }, "announcement")} />
@@ -189,6 +197,10 @@ export function AdminConsole({ initialSnapshot, initialUsers, initialHealth, ini
           <GovernanceCard icon={Bot} title="Peso" status="Auditado" detail="Dos versiones emiten predicciones selladas. El modo automático solo promociona con mejora suficiente y puede revertir." />
           <GovernanceCard icon={FlaskConical} title="Nutrición" status="Local" detail="Catálogo trazable, correcciones confirmadas y recomprobación por macros. Los proveedores externos permanecen bloqueados." />
         </div>
+        <Card className="gap-0 overflow-hidden p-0">
+          <div className="border-b border-border px-4 py-4 sm:px-5"><h2 className="text-sm font-semibold">Validación con cohortes independientes</h2><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Compara predicciones selladas con pesajes posteriores y solo muestra agregados cuando hay al menos {cohort.minimumParticipants} personas.</p></div>
+          {cohort.horizons.length ? <div className="grid divide-y divide-border sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">{cohort.horizons.map(item => <div key={item.horizon} className="p-4"><p className="text-xs font-semibold text-muted-foreground">{item.horizon} días · {item.participants} personas</p><p className="mt-2 font-display text-xl font-bold tabular-nums">{item.candidateMaeKg.toFixed(2)} kg</p><p className="mt-1 text-xs text-muted-foreground">MAE candidato · estable {item.stableMaeKg.toFixed(2)} kg</p><p className="mt-1 text-xs text-muted-foreground">Cobertura {item.candidateCoveragePct.toFixed(0)}% · {item.pairs} pares</p></div>)}</div> : <div className="p-5 text-sm text-muted-foreground">Aún hay {cohort.observedParticipants} participantes evaluables. RITMO no mostrará resultados de grupos pequeños ni promoverá el modelo por esta señal.</div>}
+        </Card>
       </TabsContent>
 
       <TabsContent value="audit">

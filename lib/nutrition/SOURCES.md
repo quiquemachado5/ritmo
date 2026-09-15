@@ -1,6 +1,6 @@
 # Catálogo nutricional de RITMO
 
-Versión `2026-09-10.3`. Revisión realizada el 10 de septiembre de 2026.
+Versión `2026-09-15.1`. Revisión realizada el 15 de septiembre de 2026.
 
 El análisis usa primero el catálogo local y determinista. Los proveedores externos
 solo pueden intervenir cuando la política de despliegue los habilita y queda algún
@@ -24,6 +24,9 @@ pueden aparecer redondeados; `catalog.ts` conserva los de la ficha completa.
 | [Pasta cocida sin sal, sin enriquecer · 168928](https://fdc.nal.usda.gov/food-details/168928/nutrients) | 158 | 5,8 | 30,86 | 0,93 |
 | [Pasta seca, sin enriquecer · 168927](https://fdc.nal.usda.gov/food-details/168927/nutrients) | 371 | 13,04 | 74,67 | 1,51 |
 | [Aceite de oliva para ensalada/cocina · 171413](https://fdc.nal.usda.gov/food-details/171413/nutrients) | 884 | 0 | 0 | 100 |
+| [Pechuga de pollo sin piel, cocinada a la parrilla · 171534](https://fdc.nal.usda.gov/food-details/171534/nutrients) | 151 | 30,54 | 0 | 3,17 |
+| [Huevo entero cocido · 173424](https://fdc.nal.usda.gov/food-details/173424/nutrients) | 155 | 12,58 | 1,12 | 10,61 |
+| [Plátano crudo · 173944](https://fdc.nal.usda.gov/food-details/173944/nutrients) | 89 | 1,09 | 22,84 | 0,33 |
 
 ## Catálogo estándar de RITMO
 

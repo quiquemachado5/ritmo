@@ -23,7 +23,7 @@ export function errorCopy(error: unknown): ErrorCopy {
   if (/failed to fetch|fetch failed|network|offline|timeout|load failed|conexión/.test(message)) return {
     kind: "network",
     title: "RITMO está sin conexión",
-    detail: "Puedes seguir registrando. Conservaremos los cambios en este dispositivo y los sincronizaremos después.",
+    detail: "No hemos podido conectar. Revisa tu conexión y vuelve a intentarlo. Cuando cargue tu cuenta, puedes comprobar los cambios pendientes en Ajustes.",
     action: "Probar de nuevo",
   };
   if (/revision|conflict|sincron|pending|cola/.test(message)) return {
@@ -47,13 +47,13 @@ export function errorCopy(error: unknown): ErrorCopy {
   if (/parse|corrupt|invalid data|schema|migraci|formato/.test(message)) return {
     kind: "data",
     title: "Un dato necesita reparación",
-    detail: "RITMO ha detenido la carga para no sustituir tu historial. Tu copia local y los datos de la nube siguen intactos.",
+    detail: "RITMO ha detenido la carga para no sustituir tu historial. Reintenta la carga antes de importar una copia o limpiar este dispositivo.",
     action: "Recargar con seguridad",
   };
   return {
     kind: "unknown",
     title: "Esta sección no pudo terminar de cargar",
-    detail: "El fallo quedó aislado en esta pantalla. Tus registros siguen a salvo y puedes reintentar o cambiar de sección.",
+    detail: "Puedes reintentar o cambiar de sección. Cuando vuelva a cargar, comprueba el estado de tu último registro.",
     action: "Reintentar",
   };
 }

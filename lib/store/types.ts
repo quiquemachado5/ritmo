@@ -10,6 +10,10 @@ export type Modo = "nube" | "local";
 export type TipoRegistro = "dia" | "medicion" | "perfil";
 /** null exige ausencia del registro; undefined usa la revisión del adaptador. */
 export interface CondicionEscritura { revisionEsperada?: string | null }
+export interface ProgresoImportacion {
+  porcentaje: number;
+  etapa: "preparando" | "enviando" | "confirmando" | "verificando";
+}
 
 /** Contrato común de persistencia. Idéntico para local y para la nube. */
 export interface Adapter {
@@ -24,7 +28,7 @@ export interface Adapter {
   guardarPerfil(perfil: Perfil, condicion?: CondicionEscritura): Promise<void>;
   borrarTodo?(): Promise<void>;
   /** Sube en bloque (migración / importación). */
-  sembrar?(data: StoreData): Promise<void>;
+  sembrar?(data: StoreData, progreso?: (estado: ProgresoImportacion) => void): Promise<void>;
   /** Cambios llegados de otra pestaña o dispositivo. */
   subscribe?(cb: () => void): () => void;
   /** Libera listeners locales al cerrar sesión o cambiar de cuenta. */

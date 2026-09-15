@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+const production = process.env.RITMO_E2E_PRODUCTION === "1";
 export default defineConfig({
   testDir: "./e2e", testMatch: "local.spec.ts", fullyParallel: false, workers: 1,
   expect: { timeout: 10000 },
@@ -11,7 +12,7 @@ export default defineConfig({
   ],
   webServer: [
     { command: "node e2e/mock-supabase.mjs", url: "http://127.0.0.1:3199/health", reuseExistingServer: false },
-    { command: "npm run dev -- --hostname 127.0.0.1 --port 3101", url: "http://127.0.0.1:3101/login", timeout: 120000,
+    { command: production ? "npm run build && npm run start -- --hostname 127.0.0.1 --port 3101" : "npm run dev -- --hostname 127.0.0.1 --port 3101", url: "http://127.0.0.1:3101/login", timeout: 180000,
       env: { RITMO_E2E: "1", NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:3199", NEXT_PUBLIC_SUPABASE_ANON_KEY: "local-test-public-key", NUTRITION_AI_ENABLED: "false", NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3101" }, reuseExistingServer: false },
   ],
 });

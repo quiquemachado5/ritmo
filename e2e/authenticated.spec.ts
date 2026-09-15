@@ -7,7 +7,7 @@ if (process.env.CI && !hasAccounts) throw new Error("Faltan las dos cuentas de p
 
 async function login(page: Page, account: typeof accountA) {
   await page.goto("/login");
-  await page.getByLabel("Email").fill(account.email);
+  await page.getByLabel("Correo electrónico").fill(account.email);
   await page.getByLabel("Contraseña").fill(account.password);
   await page.getByRole("button", { name: "Iniciar sesión" }).click();
   await expect(page).toHaveURL(/\/(onboarding)?$/);
@@ -16,7 +16,7 @@ async function login(page: Page, account: typeof accountA) {
 test("registro móvil mantiene el formulario utilizable y valida la confirmación", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.includes("mobile"), "Caso específico de móvil");
   await page.goto("/registro");
-  await page.getByLabel("Email").fill("e2e-mobile@example.com");
+  await page.getByLabel("Correo electrónico").fill("e2e-mobile@example.com");
   await page.getByLabel("Contraseña", { exact: true }).fill("RitmoE2E!2026");
   await page.getByLabel("Confirmar").fill("RitmoE2E!2027");
   await page.getByRole("button", { name: "Crear cuenta" }).click();

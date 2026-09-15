@@ -31,12 +31,13 @@ const providers = [
   },
 ];
 
-export function SocialLogin() {
+export function SocialLogin({ disabled = false }: { disabled?: boolean }) {
   const params = useSearchParams();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function handleOAuth(provider: "google" | "github") {
+    if (disabled || loading) return;
     setLoading(provider);
     setError(null);
 
@@ -53,13 +54,15 @@ export function SocialLogin() {
       if (oauthError) throw oauthError;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      setError(msg || "Error al conectar. Intenta de nuevo.");
+      setError(msg.includes("Failed to fetch")
+        ? "No hemos podido conectar. Revisa tu conexión y vuelve a intentarlo."
+        : "No se ha podido continuar con este proveedor. Inténtalo de nuevo o usa tu correo y contraseña.");
       setLoading(null);
     }
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" aria-busy={loading !== null}>
       {error && (
         <div role="alert" className="text-xs text-destructive bg-destructive/5 border border-destructive/30 p-2 rounded">
           {error}
@@ -77,18 +80,19 @@ export function SocialLogin() {
         {providers.map((provider) => (
           <Button
             key={provider.id}
+            type="button"
             variant="outline"
             onClick={() => handleOAuth(provider.id as "google" | "github")}
-            disabled={loading !== null}
-            aria-label={`Continuar con ${provider.name}`}
-            className="h-12 gap-2 text-sm font-medium sm:h-10"
+            disabled={disabled || loading !== null}
+            aria-label={loading === provider.id ? `Conectando con ${provider.name}` : `Continuar con ${provider.name}`}
+            className="h-12 gap-2 text-sm font-medium sm:h-11"
           >
             {loading === provider.id ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
               <span className="text-muted-foreground">{provider.icon}</span>
             )}
-            <span className="hidden sm:inline">{provider.name}</span>
+            <span>{provider.name}</span>
           </Button>
         ))}
       </div>

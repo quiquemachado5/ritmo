@@ -1,6 +1,6 @@
 import type { ItemNutricional, ReferenciaNutricional } from "./types";
 
-export const VERSION_CATALOGO = "2026-09-10.3";
+export const VERSION_CATALOGO = "2026-09-15.1";
 
 // Transcripción contrastada con la ficha completa de FoodData Central, no con
 // resultados redondeados del buscador. Nutrientes USDA 1008/1003/1005/1004 por 100 g.
@@ -8,7 +8,7 @@ export const VERSION_CATALOGO = "2026-09-10.3";
 function usda(id: number, nombre: string, kcal: number, proteinas: number, carbohidratos: number, grasas: number): ReferenciaNutricional {
   return { id: `usda:${id}`, version: VERSION_CATALOGO, nombre, estado: "verificada",
     fuente: `USDA FoodData Central · SR Legacy · ${id} · publicado 01/04/2019`,
-    url: `https://fdc.nal.usda.gov/food-details/${id}/nutrients`, revisadaEn: "2026-09-04",
+    url: `https://fdc.nal.usda.gov/food-details/${id}/nutrients`, revisadaEn: "2026-09-15",
     por100g: { kcal, proteinas, carbohidratos, grasas } };
 }
 
@@ -18,6 +18,9 @@ export const REFERENCIAS_VERIFICADAS = {
   pasta_cocida: usda(168928, "Pasta cocida, sin enriquecer y sin sal añadida", 158, 5.8, 30.86, 0.93),
   pasta_cruda: usda(168927, "Pasta seca, sin enriquecer", 371, 13.04, 74.67, 1.51),
   aceite_oliva: usda(171413, "Aceite de oliva para ensalada o cocina", 884, 0, 0, 100),
+  pollo_pechuga_plancha: usda(171534, "Pechuga de pollo sin piel, cocinada a la parrilla", 151, 30.54, 0, 3.17),
+  huevo_cocido: usda(173424, "Huevo entero cocido", 155, 12.58, 1.12, 10.61),
+  platano_crudo: usda(173944, "Plátano crudo", 89, 1.09, 22.84, 0.33),
 };
 
 export function referenciaLocal(nombre: string, datos: { kcal: number; p: number; c: number; g: number }): ReferenciaNutricional {

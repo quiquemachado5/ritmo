@@ -34,6 +34,9 @@ do $$ begin
     perform public.ritmo_admin_snapshot();
     raise exception 'Administración accesible desde una cuenta normal';
   exception when insufficient_privilege then null; end;
+  if public.ritmo_admin_model_cohort() is not null then
+    raise exception 'Cohorte del modelo accesible desde una cuenta normal';
+  end if;
 end $$;
 reset role;
 update public.nutrition_policy set enabled=true,user_daily=1;
@@ -70,3 +73,46 @@ reset role;
 do $$ begin
   if exists(select 1 from public.nutrition_requests where user_id='00000000-0000-4000-8000-000000000001') then raise exception 'Queda caché nutricional tras el borrado'; end if;
 end $$;
+
+set role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',false);
+do $$
+declare
+  revision timestamptz;
+  accepted boolean;
+  i integer;
+begin
+  -- Un conflicto en la segunda fila revierte también la primera inserción.
+  begin
+    perform public.ritmo_import_data(
+      null,
+      '[{"fecha":"2026-09-06","habitos":{},"comidas":[]},{"fecha":"2026-09-04","habitos":{"agua":false},"comidas":[]}]'::jsonb,
+      '[]'::jsonb,
+      '{"dias:2026-09-06":null,"dias:2026-09-04":null}'::jsonb
+    );
+    raise exception 'La importación ignoró un conflicto';
+  exception when serialization_failure then null;
+  end;
+  if exists(select 1 from public.dias where fecha='2026-09-06') then raise exception 'La importación conflictiva dejó una fila parcial'; end if;
+
+  select actualizado_en into revision from public.dias where fecha='2026-09-04';
+  perform public.ritmo_import_data(
+    null,
+    '[{"fecha":"2026-09-04","habitos":{"agua":false},"notas":"importación atómica","comidas":[]}]'::jsonb,
+    '[]'::jsonb,
+    jsonb_build_object('dias:2026-09-04',revision::text)
+  );
+  if (select notas from public.dias where fecha='2026-09-04') <> 'importación atómica' then raise exception 'No confirmó la importación válida'; end if;
+
+  perform public.ritmo_grant_health_consent('ci-2026-09-15');
+  if not public.ritmo_health_consent_status() then raise exception 'No conserva el consentimiento explícito'; end if;
+  perform public.ritmo_revoke_health_consent();
+  if public.ritmo_health_consent_status() then raise exception 'No retira el consentimiento al borrar la cuenta'; end if;
+
+  for i in 1..20 loop
+    accepted := public.ritmo_record_health_event('sync','warning','ci','hoy','otro');
+    if not accepted then raise exception 'Límite distribuido adelantado'; end if;
+  end loop;
+  if public.ritmo_record_health_event('sync','warning','ci','hoy','otro') then raise exception 'Límite distribuido no aplicado'; end if;
+end $$;
+reset role;

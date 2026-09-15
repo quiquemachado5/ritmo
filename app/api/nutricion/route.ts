@@ -9,6 +9,7 @@ import { claimNutrition, finishNutrition } from "@/lib/nutrition/budget";
 import { readBoundedJson, origenPermitido } from "@/lib/http";
 import { EXTERNAL_NUTRITION_ENABLED } from "@/lib/nutrition/policy";
 import { analizarLocal } from "@/lib/nutrition/local";
+import { consumeRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -78,14 +79,16 @@ async function resolver(texto: string, correcciones: CorreccionNutricional[], us
 export async function POST(request: Request) {
   try {
     if (!origenPermitido(request)) return json({ error: "Origen no permitido." }, 403);
-    if (!request.headers.get("content-type")?.toLowerCase().includes("application/json")) return json({ error: "Envía el contenido como JSON." }, 415);
+    if (request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !== "application/json") return json({ error: "Envía el contenido como JSON." }, 415);
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return json({ error: "Inicia sesión de nuevo para analizar." }, 401);
-    const { data: platformConfig } = await supabase.rpc("ritmo_public_config");
+    if (!consumeRateLimit(`nutricion:${user.id}`, 30, 60_000)) return json({ error: "Has enviado varios análisis seguidos. Espera un minuto y vuelve a intentarlo." }, 429);
+    const { data: platformConfig, error: configError } = await supabase.rpc("ritmo_public_config");
     const features = platformConfig && typeof platformConfig === "object" && "features" in platformConfig
       ? (platformConfig.features as Record<string, unknown>)
       : null;
+    if (configError || !features || typeof features.nutrition_engine !== "boolean") return json({ error: "No se pudo comprobar la disponibilidad del análisis. Inténtalo de nuevo en unos segundos." }, 503);
     if (features?.nutrition_engine === false) return json({ error: "El análisis nutricional está pausado temporalmente. Tu descripción sigue guardada." }, 503);
     let body: { texto?: unknown; correcciones?: unknown };
     try { body = await readBoundedJson(request, 24000) as typeof body; }

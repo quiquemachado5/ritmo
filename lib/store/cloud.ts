@@ -3,7 +3,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { PERFIL_DEFECTO } from "../model/config";
 import type { Comida, Composicion, Dia, Perfil } from "@/lib/model/types";
-import type { Adapter, CondicionEscritura, StoreData, TipoRegistro } from "./types";
+import type { Adapter, CondicionEscritura, ProgresoImportacion, StoreData, TipoRegistro } from "./types";
 
 /* --------------------------------------------------- conversión de columnas */
 
@@ -194,24 +194,26 @@ export class CloudAdapter implements Adapter {
     });
   }
 
+  private async cargarActual(): Promise<StoreData> {
+    const [perfilRes, dias, composicion] = await Promise.all([
+      this.client.from("perfiles").select("*").eq("user_id", this.userId).maybeSingle(),
+      this.cambios("dias"),
+      this.cambios("composicion"),
+    ]);
+    if (perfilRes.error) throw perfilRes.error;
+    // Publicación atómica: un error a mitad de página no avanza revisiones.
+    this.perfil = perfilRes.data;
+    this.filas = { dias, composicion };
+    this.revisiones.clear();
+    for (const [tabla, filas] of [["dias", dias.values()], ["composicion", composicion.values()], ["perfiles", this.perfil ? [this.perfil] : []]] as const) {
+      for (const fila of filas) if (typeof fila.actualizado_en === "string") this.revisiones.set(`${tabla}:${fila.fecha ?? "perfil"}`, fila.actualizado_en);
+    }
+    this.cargado = true;
+    return this.snapshot();
+  }
+
   load(): Promise<StoreData> {
-    return this.ejecutar(async () => {
-      const [perfilRes, dias, composicion] = await Promise.all([
-        this.client.from("perfiles").select("*").eq("user_id", this.userId).maybeSingle(),
-        this.cambios("dias"),
-        this.cambios("composicion"),
-      ]);
-      if (perfilRes.error) throw perfilRes.error;
-      // Publicación atómica: un error a mitad de página no avanza revisiones.
-      this.perfil = perfilRes.data;
-      this.filas = { dias, composicion };
-      this.revisiones.clear();
-      for (const [tabla, filas] of [["dias", dias.values()], ["composicion", composicion.values()], ["perfiles", this.perfil ? [this.perfil] : []]] as const) {
-        for (const fila of filas) if (typeof fila.actualizado_en === "string") this.revisiones.set(`${tabla}:${fila.fecha ?? "perfil"}`, fila.actualizado_en);
-      }
-      this.cargado = true;
-      return this.snapshot();
-    });
+    return this.ejecutar(() => this.cargarActual());
   }
 
   private recordar(tabla: Tabla, fila: Fila) {
@@ -228,6 +230,7 @@ export class CloudAdapter implements Adapter {
   }
 
   private async guardarFila(tabla: Tabla, fila: Fila, condicion?: CondicionEscritura) {
+    this.exigirCuentaAbierta();
     const clave = `${tabla}:${fila.fecha ?? "perfil"}`;
     const revision = condicion?.revisionEsperada !== undefined ? condicion.revisionEsperada : this.revisiones.get(clave);
     let query;
@@ -237,6 +240,7 @@ export class CloudAdapter implements Adapter {
       query = update.select("*").maybeSingle();
     } else query = this.client.from(tabla).insert(fila).select("*").single();
     const { data, error } = await query;
+    this.exigirCuentaAbierta();
     if (error?.code === "23505" || (!error && !data)) throw new Error(ERROR_CONFLICTO);
     if (error) throw error;
     if (!data) throw new Error("No se confirmó el guardado. Recarga antes de reintentar.");
@@ -294,24 +298,29 @@ export class CloudAdapter implements Adapter {
     return this.ejecutar(() => this.guardarFila("perfiles", fila, condicion));
   }
   private exigirCuentaAbierta() {
-    if (this.cerrado) throw new Error("La cuenta ha cambiado. Se ha detenido el borrado.");
+    if (this.cerrado) throw new Error("La cuenta ha cambiado. Se ha detenido la operación.");
   }
   private async borrarBackups() {
     this.exigirCuentaAbierta();
     const bucket = this.client.storage.from("backups");
-    const { data, error } = await bucket.list(this.userId, { limit: 1000 });
-    this.exigirCuentaAbierta();
-    if (error) {
-      // Instalaciones antiguas pueden no tener aún el bucket: en ese caso no
-      // existe ninguna copia que eliminar.
-      if (/bucket.*not found/i.test(error.message)) return;
-      throw error;
+    // Se vuelve a leer siempre la primera página después de borrarla. Usar un
+    // offset mientras la colección encoge saltaría exactamente los siguientes
+    // 1.000 objetos.
+    for (;;) {
+      const { data, error } = await bucket.list(this.userId, { limit: 1000, offset: 0, sortBy: { column: "name", order: "asc" } });
+      this.exigirCuentaAbierta();
+      if (error) {
+        // Instalaciones antiguas pueden no tener aún el bucket: en ese caso no
+        // existe ninguna copia que eliminar.
+        if (/bucket.*not found/i.test(error.message)) return;
+        throw error;
+      }
+      const rutas = (data || []).map((archivo) => `${this.userId}/${archivo.name}`);
+      if (!rutas.length) return;
+      const { error: removeError } = await bucket.remove(rutas);
+      this.exigirCuentaAbierta();
+      if (removeError) throw removeError;
     }
-    const rutas = (data || []).map((archivo) => `${this.userId}/${archivo.name}`);
-    if (!rutas.length) return;
-    const { error: removeError } = await bucket.remove(rutas);
-    this.exigirCuentaAbierta();
-    if (removeError) throw removeError;
   }
   borrarTodo() {
     return this.ejecutar(async () => {
@@ -329,7 +338,7 @@ export class CloudAdapter implements Adapter {
       // Incluso si una eliminación falla, la siguiente lectura reconciliará
       // todo; nunca conserva una caché que afirme que el borrado fue atómico.
       this.cargado = false;
-      for (const rpc of ["clear_my_nutrition_data", "clear_my_model_audit"]) {
+      for (const rpc of ["clear_my_nutrition_data", "clear_my_model_audit", "ritmo_revoke_health_consent"]) {
         this.exigirCuentaAbierta();
         const { error } = await this.client.rpc(rpc).setHeader("Authorization", authorization);
         this.exigirCuentaAbierta();
@@ -350,21 +359,49 @@ export class CloudAdapter implements Adapter {
     });
   }
 
-  sembrar(data: StoreData) {
+  sembrar(data: StoreData, progreso?: (estado: ProgresoImportacion) => void) {
     const copia = structuredClone(data);
     return this.ejecutar(async () => {
-      await this.guardarFila("perfiles", this.perfilAFila(copia.perfil));
-      for (const [tabla, filas] of [
-        ["dias", Object.values(copia.dias).map(d => diaAFila(d, this.userId))],
-        ["composicion", copia.composicion.map(m => compAFila(m, this.userId))],
-      ] as const) {
-        for (let i = 0; i < filas.length; i += 200) {
-          const { data: guardadas, error } = await this.client.from(tabla)
-            .upsert(filas.slice(i, i + 200), { onConflict: "user_id,fecha" }).select("*");
-          if (error) throw error;
-          for (const fila of guardadas ?? []) this.recordar(tabla, fila);
-        }
+      progreso?.({ porcentaje: 10, etapa: "preparando" });
+      const iguales = (fila: Fila, anterior: Fila | null | undefined) => Boolean(anterior)
+        && Object.entries(fila).every(([columna, valor]) => JSON.stringify(valor) === JSON.stringify(anterior?.[columna] ?? null));
+      const perfil = this.perfilAFila(copia.perfil);
+      const dias = Object.values(copia.dias).map(d => diaAFila(d, this.userId))
+        .filter(fila => !iguales(fila, this.filas.dias.get(String(fila.fecha))));
+      const mediciones = copia.composicion.map(m => compAFila(m, this.userId))
+        .filter(fila => !iguales(fila, this.filas.composicion.get(String(fila.fecha))));
+      const perfilCambiado = !iguales(perfil, this.perfil);
+      const esperadas: Record<string, string | null> = {};
+      if (perfilCambiado) esperadas["perfiles:perfil"] = this.revisiones.get("perfiles:perfil") ?? null;
+      for (const fila of dias) esperadas[`dias:${fila.fecha}`] = this.revisiones.get(`dias:${fila.fecha}`) ?? null;
+      for (const fila of mediciones) esperadas[`composicion:${fila.fecha}`] = this.revisiones.get(`composicion:${fila.fecha}`) ?? null;
+      if (!perfilCambiado && !dias.length && !mediciones.length) {
+        progreso?.({ porcentaje: 100, etapa: "verificando" });
+        return;
       }
+
+      const { data: sesion, error: errorSesion } = await this.client.auth.getSession();
+      this.exigirCuentaAbierta();
+      if (errorSesion) throw errorSesion;
+      if (sesion.session?.user.id !== this.userId) throw new Error("La cuenta ha cambiado. Se ha detenido la importación.");
+      progreso?.({ porcentaje: 35, etapa: "enviando" });
+      const { error } = await this.client.rpc("ritmo_import_data", {
+        p_profile: perfilCambiado ? perfil : null,
+        p_days: dias,
+        p_measurements: mediciones,
+        p_expected: esperadas,
+      }).setHeader("Authorization", `Bearer ${sesion.session.access_token}`);
+      this.exigirCuentaAbierta();
+      if (error) {
+        if (error.code === "40001" || /ritmo_conflict/i.test(error.message)) throw new Error(ERROR_CONFLICTO);
+        throw error;
+      }
+      progreso?.({ porcentaje: 75, etapa: "confirmando" });
+      // La transacción cambia varias revisiones a la vez. Una relectura completa
+      // hace que el siguiente guardado parta de las marcas confirmadas.
+      this.cargado = false;
+      await this.cargarActual();
+      progreso?.({ porcentaje: 100, etapa: "verificando" });
     });
   }
 

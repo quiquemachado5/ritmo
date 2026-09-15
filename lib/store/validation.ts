@@ -35,6 +35,9 @@ export function comidaValida(v: unknown, requiereId = true): boolean {
 }
 export function preferenciasPerfilValidas(v: unknown): boolean {
   return objeto(v)
+    && (v.nombre === undefined || texto(v.nombre, 80))
+    && (v.onboardingCompleto === undefined || typeof v.onboardingCompleto === "boolean")
+    && (v.umbralRacha === undefined || (Number.isInteger(v.umbralRacha) && Number(v.umbralRacha) >= 1 && Number(v.umbralRacha) <= 10))
     && (v.imputarActiva === undefined || typeof v.imputarActiva === "boolean")
     && (v.imputarDesde === undefined || fechaValida(v.imputarDesde))
     && (v.imputarSuperavitKcal === undefined || numero(v.imputarSuperavitKcal, 6000))

@@ -14,12 +14,11 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error('Error:', error);
     registrarDiagnostico('ui', 'error', 'fallo global de interfaz');
   }, [error]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-4">
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-background px-4 py-8">
       <div className="max-w-md text-center">
         <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
           <AlertTriangle className="size-8 text-destructive" />
@@ -39,12 +38,12 @@ export default function Error({
         <Button onClick={reset} variant="secondary" className="gap-2">
           <RefreshCw className="size-4" /> Reintentar
         </Button>
-        <Link href="/">
-          <Button className="gap-2">
+        <Button asChild className="gap-2">
+          <Link href="/">
             <Home className="size-4" /> Ir al inicio
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
-    </div>
+    </main>
   );
 }

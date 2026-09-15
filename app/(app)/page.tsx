@@ -246,7 +246,7 @@ export default function HoyPage() {
           Hábitos de hoy · {habitosHechos}/{habitosActivos.length}
         </SectionLabel>
         <Card className="p-4">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-2">
             {habitosActivos.map((h) => {
               const hecho = diaHoy.habitos?.[h.clave] === true;
               return (
@@ -255,7 +255,7 @@ export default function HoyPage() {
                   onClick={() => alternarHabito(hoyISO, h.clave)}
                   aria-pressed={hecho}
                   className={cn(
-                    "h-11 flex items-center gap-2 rounded-xl border px-3 text-sm font-medium transition-colors",
+                    "min-h-11 min-w-0 flex items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm font-medium transition-colors",
                     hecho ? "border-primary/40 bg-primary/8 text-foreground" : "border-border text-muted-foreground hover:bg-secondary",
                   )}
                 >
@@ -267,7 +267,7 @@ export default function HoyPage() {
                   >
                     {hecho && <span className="text-[0.6rem] animate-check-pop">✓</span>}
                   </span>
-                  <span className="truncate">{h.etiqueta}</span>
+                  <span className="min-w-0 break-words leading-snug">{h.etiqueta}</span>
                 </button>
               );
             })}
@@ -372,7 +372,7 @@ function WeeklyInsights({ r, estado, detectorAvanzado }: { r: ReturnType<typeof 
               <span className="text-xs text-muted-foreground">constancia</span>
             </div>
           </div>
-          <p className="mt-1.5 text-xs text-muted-foreground">{estaSemana.diasConDatos}/7 días registrados · {estaSemana.comidas} comidas</p>
+          <p className="mt-1.5 text-xs text-muted-foreground">{estaSemana.diasConDatos}/7 días registrados · {estaSemana.comidas} {estaSemana.comidas === 1 ? "comida" : "comidas"}</p>
           {foco ? (
             <div className="mt-4 flex items-center gap-2.5 border-t border-border pt-3">
               <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-secondary">{foco.icon}</span>
@@ -407,7 +407,7 @@ function WeeklyInsights({ r, estado, detectorAvanzado }: { r: ReturnType<typeof 
           </div>
         </RitmoDisclosure>
 
-        {detectorAvanzado && <RitmoDisclosure title="Detector de señales" openLabel={senales.length ? `${senales.length} señales` : "Aún aprendiendo"}><div className="border-t border-border"><SignalDetector senales={senales} /></div></RitmoDisclosure>}
+        {detectorAvanzado && <RitmoDisclosure title="Detector de señales" openLabel={senales.length ? `${senales.length} ${senales.length === 1 ? "señal" : "señales"}` : "Aún aprendiendo"}><div className="border-t border-border"><SignalDetector senales={senales} /></div></RitmoDisclosure>}
       </Card>
     </section>
   );

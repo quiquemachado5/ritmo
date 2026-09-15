@@ -112,6 +112,7 @@ const DB: Alimento[] = [
   { claves: ["boquerones", "sardinas", "anchoas"], kcal: 150, p: 18, c: 0, g: 8.5, porcion: 100, mermaAgua: 0.15 },
 
   /* --- Huevos y lácteos --- */
+  { claves: ["huevo cocido", "huevos cocidos", "huevo duro", "huevos duros"], kcal: 155, p: 12.58, c: 1.12, g: 10.61, porcion: 50, unidades: { unidad: 50 } },
   { claves: ["huevo l", "huevos l", "huevo", "huevos"], kcal: 141.7, p: 12, c: 0.7, g: 10.3, porcion: 60, unidades: { unidad: 60 } },
   { claves: ["clara de huevo", "claras"], kcal: 50, p: 11, c: 0.7, g: 0.2, porcion: 33 },
   { claves: ["cafe con leche", "café con leche"], kcal: 45, p: 2.4, c: 3.6, g: 2.2, porcion: 150, unidades: { taza: 150, vaso: 200 }, liquido: true },
@@ -351,6 +352,10 @@ function estadoPesoPara(contexto: string, alimento: Alimento, aclaracion?: strin
 }
 
 function referenciaPara(alimento: Alimento, estado: EstadoPeso = "crudo") {
+  const clave = alimento.claves[0];
+  if (clave === "huevo cocido") return REFERENCIAS_VERIFICADAS.huevo_cocido;
+  if (clave === "platano") return REFERENCIAS_VERIFICADAS.platano_crudo;
+  if (clave === "pechuga de pollo" && estado === "cocinado") return REFERENCIAS_VERIFICADAS.pollo_pechuga_plancha;
   const referencia = referenciaLocal(alimento.claves[0], alimento);
   const factor = estado === "cocinado"
     ? alimento.absorcionAgua ?? (alimento.mermaAgua ? 1 - alimento.mermaAgua : 1)
@@ -374,12 +379,13 @@ function referenciaPara(alimento: Alimento, estado: EstadoPeso = "crudo") {
 }
 
 /** Catálogo auditable también sin analizar una comida. */
-export const CATALOGO_NUTRICIONAL = [
+const referenciasCatalogo = [
   ...DB.flatMap(alimento => alimento.absorcionAgua || alimento.mermaAgua
     ? [referenciaPara(alimento), referenciaPara(alimento, "cocinado")]
     : [referenciaPara(alimento)]),
   ...Object.values(REFERENCIAS_VERIFICADAS),
 ];
+export const CATALOGO_NUTRICIONAL = [...new Map(referenciasCatalogo.map(referencia => [referencia.id, referencia])).values()];
 
 /** Recalcula una fila interpretada por IA con el mismo catálogo que el motor local. */
 export function recalcularItemConCatalogo(item: ItemNutricional, estado: EstadoPeso = "crudo"): ItemNutricional {

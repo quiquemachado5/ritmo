@@ -1,14 +1,25 @@
-import type { NextRequest } from "next/server";
+import { NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
+import { contentSecurityPolicy } from "@/lib/security-policy";
 
 /** Refresca la sesión de Supabase y protege las rutas privadas (Next 16 "proxy"). */
 export async function proxy(request: NextRequest) {
-  const response = await updateSession(request);
+  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+  const policy = contentSecurityPolicy(nonce);
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("Content-Security-Policy", policy);
+  const securedRequest = new NextRequest(request, { headers: requestHeaders });
+  const response = await updateSession(securedRequest);
 
   /* Security headers */
+  response.headers.set("Content-Security-Policy", policy);
   response.headers.set('X-DNS-Prefetch-Control', 'on');
   response.headers.set('X-UA-Compatible', 'IE=edge');
-  if (process.env.NODE_ENV === 'production') {
+  const localHostname = ["localhost", "127.0.0.1", "::1"].includes(request.nextUrl.hostname);
+  const forwardedProtocol = request.headers.get("x-forwarded-proto")?.split(",", 1)[0]?.trim();
+  const secureRequest = forwardedProtocol ? forwardedProtocol === "https" : request.nextUrl.protocol === "https:";
+  if (process.env.NODE_ENV === 'production' && secureRequest && !localHostname) {
     response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
   }
 

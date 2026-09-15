@@ -16,11 +16,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: perfil } = await supabase
+  const { data: perfil, error: errorPerfil } = await supabase
     .from("perfiles")
     .select("onboarding_completo")
     .eq("user_id", user.id)
     .maybeSingle();
+
+  if (errorPerfil) throw new Error("No pudimos cargar el perfil. Vuelve a intentarlo.");
 
   if (!perfil?.onboarding_completo) redirect("/onboarding");
 
