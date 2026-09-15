@@ -26,7 +26,7 @@ export interface Comida {
   carbohidratos: number;
   grasas: number;
   /** Procedencia del cálculo; los valores siguen siendo estimaciones editables. */
-  fuente?: "gemini" | "edamam" | "offline" | "claude" | "manual";
+  fuente?: "gemini" | "edamam" | "offline" | "claude" | "openfoodfacts" | "manual";
   estimado?: boolean;
   creado?: string; // ISO datetime
   ingredientes?: import("../nutrition/types").ItemNutricional[];

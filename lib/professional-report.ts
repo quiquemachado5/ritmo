@@ -10,6 +10,7 @@ export interface ProfessionalReportOptions {
   weight: boolean;
   body: boolean;
   habits: boolean;
+  health: boolean;
   nutrition: boolean;
   notes: boolean;
   meals: boolean;
@@ -20,6 +21,11 @@ const escapeHtml = (value: unknown) => String(value ?? "")
   .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
 const n = (value: number, digits = 1) => new Intl.NumberFormat("es-ES", { maximumFractionDigits: digits }).format(value);
 const fecha = (value: string) => new Intl.DateTimeFormat("es-ES", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(`${value}T12:00:00`));
+const duracion = (minutes: number) => {
+  const value = Math.max(0, Math.round(minutes));
+  const hours = Math.floor(value / 60); const rest = value % 60;
+  return hours ? `${hours} h${rest ? ` ${rest} min` : ""}` : `${rest} min`;
+};
 
 function inicio(period: ReportPeriod, fin: string) {
   return period === "all" ? "0000-01-01" : sumarDias(fin, period === "3m" ? -90 : period === "6m" ? -180 : -365);
@@ -50,6 +56,10 @@ export function generarInformeProfesional(estado: Estado, opciones: Professional
   const habitos = adherenciaPorHabito(estado, activos, ventana);
   const composicion = estado.composicion.filter((c) => c.fecha >= desde && c.fecha <= generado).sort((a, b) => a.fecha.localeCompare(b.fecha));
   const ultimaComposicion = composicion.at(-1);
+  const salud = dias.filter((d) => d.pasos != null || d.suenoMinutos != null || d.entrenamientoMinutos != null);
+  const pasos = salud.flatMap((d) => d.pasos == null ? [] : [d.pasos]);
+  const sueno = salud.flatMap((d) => d.suenoMinutos == null ? [] : [d.suenoMinutos]);
+  const entreno = salud.flatMap((d) => d.entrenamientoMinutos == null ? [] : [d.entrenamientoMinutos]);
   const bloques: string[] = [];
 
   if (opciones.weight) bloques.push(seccion("Evolución de peso", `
@@ -66,6 +76,11 @@ export function generarInformeProfesional(estado: Estado, opciones: Professional
   if (opciones.habits) bloques.push(seccion("Constancia de hábitos", `
     <p class="lead">Cumplimiento por hábito durante el periodo seleccionado. Los días sin marcar cuentan como no cumplidos.</p>
     ${tabla(["Hábito", "Días", "Constancia"], habitos.map((h) => [escapeHtml(h.etiqueta), `${h.hechos} de ${h.total}`, `<strong>${n(h.pct, 0)}%</strong>`]))}`));
+
+  if (opciones.health) bloques.push(seccion("Actividad y descanso importados", `
+    <div class="metrics"><div><strong>${pasos.length ? n(pasos.reduce((sum, value) => sum + value, 0) / pasos.length, 0) : "—"}</strong><span>Pasos medios · ${pasos.length} ${pasos.length === 1 ? "día" : "días"}</span></div><div><strong>${sueno.length ? duracion(sueno.reduce((sum, value) => sum + value, 0) / sueno.length) : "—"}</strong><span>Sueño medio · ${sueno.length} ${sueno.length === 1 ? "noche" : "noches"}</span></div><div><strong>${entreno.length ? duracion(entreno.reduce((sum, value) => sum + value, 0)) : "—"}</strong><span>Entrenamiento acumulado</span></div></div>
+    <p class="note">Métricas importadas desde una exportación de salud. Los días sin valor se mantienen como ausentes.</p>
+    ${tabla(["Fecha", "Pasos", "Sueño", "Entrenamiento"], salud.slice(-60).reverse().map((d) => [escapeHtml(fecha(d.fecha)), d.pasos == null ? "—" : n(d.pasos, 0), d.suenoMinutos == null ? "—" : duracion(d.suenoMinutos), d.entrenamientoMinutos == null ? "—" : duracion(d.entrenamientoMinutos)]))}`));
 
   if (opciones.nutrition) bloques.push(seccion("Registro nutricional", `
     <div class="metrics"><div><strong>${comidas.length}</strong><span>Comidas registradas</span></div><div><strong>${comidas.length ? `${n(kcal / comidas.length, 0)} kcal` : "—"}</strong><span>Media por comida</span></div><div><strong>${n(macros.p, 0)} g</strong><span>Proteína acumulada</span></div></div>

@@ -44,7 +44,7 @@ export interface AnalisisNutricional {
   carbohidratos: number;
   grasas: number;
   items: ItemNutricional[];
-  fuente: "gemini" | "claude" | "offline" | "edamam";
+  fuente: "gemini" | "claude" | "offline" | "edamam" | "openfoodfacts";
   confianza?: "alta" | "media" | "baja";
   observaciones?: string[];
   aviso?: string;

@@ -50,6 +50,8 @@ import { calidadIngredientes } from "@/lib/nutrition/ingredient-quality";
 import { escalarNutrientes, escalarIngrediente, factorPorcion } from "@/lib/nutrition/portions";
 import { corregirGramos, etiquetaCantidad } from "@/lib/nutrition/catalog";
 import { usePlatformConfig } from "./platform-provider";
+import { BarcodeLookup } from "./barcode-lookup";
+import { scaleBarcodeProduct, type BarcodeProduct } from "@/lib/nutrition/barcode";
 
 const TABS: { id: QuickTab; label: string; icon: typeof Scale }[] = [
   { id: "comida", label: "Comida", icon: UtensilsCrossed },
@@ -230,6 +232,7 @@ function PanelComida({
   const [raciones, setRaciones] = React.useState(1);
   const [porcion, setPorcion] = React.useState(1);
   const [comoPlantilla, setComoPlantilla] = React.useState(false);
+  const [barcodeOpen, setBarcodeOpen] = React.useState(false);
   const aclarado = React.useRef("");
   const preferencias = useMealPrefs();
   const { features } = usePlatformConfig();
@@ -417,6 +420,58 @@ function PanelComida({
     setItemsCorregidos((actuales) => new Set(actuales).add(index));
   }
 
+  function aplicarProducto(product: BarcodeProduct, gramos: number) {
+    const porcion = scaleBarcodeProduct(product, gramos);
+    const nombre = [product.name, product.brand].filter(Boolean).join(" · ");
+    const descripcion = `${nombre}, ${porcion.grams.toLocaleString("es-ES", { maximumFractionDigits: 1 })} g`;
+    const siguiente: AnalisisNutricional = {
+      resumen: nombre,
+      kcal: porcion.kcal,
+      proteinas: porcion.proteins,
+      carbohidratos: porcion.carbohydrates,
+      grasas: porcion.fat,
+      fuente: "openfoodfacts",
+      confianza: "media",
+      observaciones: ["Cantidad calculada con los gramos indicados y los valores por 100 g del producto."],
+      aviso: "Comprueba estos valores con la etiqueta del envase; Open Food Facts es una base colaborativa.",
+      items: [{
+        nombre,
+        cantidad: `${porcion.grams.toLocaleString("es-ES", { maximumFractionDigits: 1 })} g`,
+        cantidadOriginal: `${porcion.grams} g`,
+        cantidadEstimada: false,
+        tipoCantidad: "masa_declarada",
+        gramos: porcion.grams,
+        kcal: porcion.kcal,
+        proteinas: porcion.proteins,
+        carbohidratos: porcion.carbohydrates,
+        grasas: porcion.fat,
+        referencia: {
+          id: `openfoodfacts:${product.code}`,
+          version: "API v3.2",
+          nombre,
+          estado: "local_pendiente",
+          fuente: "Open Food Facts · datos colaborativos del etiquetado",
+          url: product.sourceUrl,
+          por100g: {
+            kcal: product.per100g.kcal,
+            proteinas: product.per100g.proteins,
+            carbohidratos: product.per100g.carbohydrates,
+            grasas: product.per100g.fat,
+          },
+        },
+      }],
+    };
+    setTexto(descripcion);
+    setTextoAnalizado(descripcion);
+    setAnalisis(siguiente);
+    setManual({ kcal: String(siguiente.kcal), p: String(siguiente.proteinas), c: String(siguiente.carbohidratos), g: String(siguiente.grasas) });
+    setItemsCorregidos(new Set());
+    setFirmaAnomaliaConfirmada(null);
+    setAclaracion(null);
+    setRaciones(1);
+    setPorcion(1);
+  }
+
   const setM = (k: "kcal" | "p" | "c" | "g", v: string) => setManual((m) => ({ ...(m ?? { kcal: "0", p: "0", c: "0", g: "0" }), [k]: v }));
   const etiquetaTipo = TIPOS.find((t) => t.id === tipo)?.label.toLowerCase() ?? "comida";
   const descripcionCambio = normalizarDescripcionComida(texto) !== normalizarDescripcionComida(textoAnalizado);
@@ -476,6 +531,7 @@ function PanelComida({
         </div>
         <span className="shrink-0 pt-1 tabular">{texto.length}/2.500</span>
       </div>
+      {!editando && <BarcodeLookup onUse={aplicarProducto} onOpenChange={setBarcodeOpen} />}
       {aclaracion && <div className="rounded-xl border border-warning-border bg-warning-wash p-3 text-warning-ink">
         <p className="text-sm font-medium">{aclaracion.pregunta}</p>
         <div className="mt-2 flex flex-wrap gap-2">
@@ -546,7 +602,7 @@ function PanelComida({
             <Chip tone={analisis.fuente === "offline" || analisis.confianza === "baja" ? "warning" : "weight"}>
               {analisis.fuente === "gemini"
                 ? `Gemini · ${analisis.confianza ?? "media"}`
-                : analisis.fuente === "edamam" ? "Edamam" : analisis.fuente === "claude" ? "IA" : `RITMO · ${analisis.confianza ?? "media"}`}
+                : analisis.fuente === "edamam" ? "Edamam" : analisis.fuente === "claude" ? "IA" : analisis.fuente === "openfoodfacts" ? "Etiqueta · revisable" : `RITMO · ${analisis.confianza ?? "media"}`}
             </Chip>
           </div>
           <div className="grid grid-cols-3 gap-3">
@@ -601,17 +657,17 @@ function PanelComida({
         />
       )}
       {listoParaGuardar && !editando && <details className="rounded-xl border border-border p-3">
-        <summary className="cursor-pointer text-sm font-medium">¿Has preparado varias raciones?</summary>
-        <p className="mt-2 text-xs text-muted-foreground">El análisis corresponde al plato completo. Solo se registra la parte que has comido.</p>
+        <summary className="cursor-pointer text-sm font-medium">Raciones y receta reutilizable</summary>
+        <p className="mt-2 text-xs text-muted-foreground">Indica cuánto preparaste y qué parte comiste. Puedes guardar esa porción revisada para repetirla en un toque.</p>
         <div className="mt-3 grid grid-cols-2 gap-3">
           <label className="text-xs text-muted-foreground">Raciones preparadas<Input type="number" min={1} max={24} value={raciones} onChange={e => setRaciones(Number(e.target.value))} /></label>
           <label className="text-xs text-muted-foreground">Raciones consumidas<Input type="number" min={0.25} max={raciones} step={0.25} value={porcion} onChange={e => setPorcion(Number(e.target.value))} /></label>
         </div>
         {raciones >= 1 && porcion > 0 && porcion <= raciones && manual && <p className="mt-3 text-sm font-semibold text-primary">Tu porción: {Math.round(Number(manual.kcal) * porcion / raciones)} kcal</p>}
-        <label className="mt-3 flex min-h-10 items-center gap-2 text-sm"><input type="checkbox" checked={comoPlantilla} onChange={e => setComoPlantilla(e.target.checked)} />Guardar esta porción en mis plantillas</label>
+        <label className="mt-3 flex min-h-10 items-center gap-2 text-sm"><input type="checkbox" checked={comoPlantilla} onChange={e => setComoPlantilla(e.target.checked)} />Guardar esta porción como receta rápida</label>
       </details>}
 
-      <div
+      {!barcodeOpen && <div
         className={cn(
           "mt-auto",
           movil && "absolute inset-x-0 bottom-0 z-20 border-t border-border bg-background/96 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_30px_-22px_hsl(var(--foreground)/0.45)] backdrop-blur-md",
@@ -629,7 +685,7 @@ function PanelComida({
               ? editando ? "Guardar cambios" : `Añadir a ${etiquetaTipo}`
               : requiereReanalisis ? "Volver a analizar" : "Analizar ingredientes"}
         </Button>
-      </div>
+      </div>}
     </div>
   );
 }

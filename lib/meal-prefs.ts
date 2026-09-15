@@ -37,10 +37,14 @@ export interface ComidaCatalogo {
   creado: string;
 }
 
-/** Una plantilla es una comida reutilizable con nombre propio y macros fijadas. */
+/** Una receta rápida es una comida reutilizable con ingredientes y macros fijados. */
 export interface PlantillaComida extends ComidaCatalogo {
   id: string;
   nombre: string;
+  fuente?: import("./model/types").Comida["fuente"];
+  estimado?: boolean;
+  racionesReceta?: number;
+  porcionConsumida?: number;
 }
 
 /** Resultado de un plato que la persona corrigió de forma explícita. */

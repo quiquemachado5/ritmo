@@ -109,7 +109,7 @@ test("recorrido visual y guardado con datos sintéticos", async ({ page, request
   // individual y no debe agotarse solo por la velocidad de la máquina.
   test.setTimeout(240000);
   const analisisRemotos: string[] = [];
-  page.on("request", request => { if (request.url().includes("/api/nutricion") || /generativelanguage|api\.edamam/.test(request.url())) analisisRemotos.push(request.url()); });
+  page.on("request", request => { if (/\/api\/nutricion(?:\?|$)/.test(request.url()) || /generativelanguage|api\.edamam/.test(request.url())) analisisRemotos.push(request.url()); });
   await request.post("http://127.0.0.1:3199/__reset");
   await iniciarSesion(page);
   await page.getByRole("button", { name: /Buscar/ }).click();
@@ -153,12 +153,23 @@ test("recorrido visual y guardado con datos sintéticos", async ({ page, request
   }
   await irA(page, "/nutricion");
   await page.getByRole("button", { name: /Añadir comida|Analizar otra comida/ }).click();
+  await page.route("**/api/nutricion/codigo", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ product: { code: "3017620422003", name: "Crema de cacao", brand: "Marca de prueba", servingSize: "15 g", servingGrams: 15, per100g: { kcal: 539, proteins: 6.3, carbohydrates: 57.5, fat: 30.9 }, sourceUrl: "https://world.openfoodfacts.org/product/3017620422003" } }) }));
+  await page.getByRole("button", { name: "Código de barras", exact: true }).click();
+  await page.getByLabel("Código EAN, UPC o GTIN", { exact: true }).fill("3017620422003");
+  await page.getByRole("button", { name: "Buscar", exact: true }).click();
+  await expect(page.getByLabel("Cantidad consumida en gramos", { exact: true })).toBeVisible();
+  await page.getByLabel("Cantidad consumida en gramos", { exact: true }).fill("30");
+  await expect(page.getByText("162 kcal", { exact: true })).toBeVisible();
+  await sinDesbordamiento(page);
+  await page.screenshot({ path: `test-results/${info.project.name}-codigo-barras.png` });
+  await page.getByRole("button", { name: "Revisar y añadir", exact: true }).click();
+  await expect(page.getByText("Etiqueta · revisable", { exact: true })).toBeVisible();
   const prompt = page.getByRole("textbox", { name: "Descripción de la comida" });
   await prompt.fill("Ensalada con pollo y aceite de oliva");
-  await page.getByRole("button", { name: "Analizar ingredientes", exact: true }).click();
+  await page.getByRole("button", { name: /Analizar ingredientes|Volver a analizar/ }).click();
   await expect(page.getByText("¿Cuánto aceite has usado en total?", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "10 g", exact: true }).click();
-  await page.getByRole("button", { name: "Analizar ingredientes", exact: true }).click();
+  await page.getByRole("button", { name: /Analizar ingredientes|Volver a analizar/ }).click();
   await expect(page.getByRole("button", { name: "Añadir a comida", exact: true })).toBeVisible();
   // Al cambiar la descripción se exige un nuevo análisis, sin registrar cifras antiguas.
   await prompt.fill("100 g de arroz cocido con 2 filetes de pollo y 30 g de tahini");
@@ -198,6 +209,7 @@ test("recorrido visual y guardado con datos sintéticos", async ({ page, request
   await expect(page.getByRole("dialog").getByText("Informe para nutricionista", { exact: true })).toBeVisible();
   await expect(page.getByRole("checkbox", { name: "Notas contextuales", exact: true })).not.toBeChecked();
   await expect(page.getByRole("checkbox", { name: "Texto de las comidas", exact: true })).not.toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "Actividad y descanso", exact: true })).toBeChecked();
   await expect(page.getByRole("button", { name: "Imprimir / guardar PDF", exact: true })).toBeEnabled();
   await sinDesbordamiento(page);
   await page.screenshot({ path: `test-results/${info.project.name}-informe-profesional.png` });
