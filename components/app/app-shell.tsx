@@ -177,10 +177,12 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
       if (e.defaultPrevented || e.isComposing) return;
       const t = e.target as HTMLElement | null;
       if (t?.closest('[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]')) return;
+      const dialogoAbierto = document.querySelector('[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]');
+      if (abierto || busquedaAbierta || dialogoAbierto) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setBusquedaAbierta(true); return; }
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const enCampo = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
-      if (enCampo || abierto || busquedaAbierta) return;
+      if (enCampo) return;
       const k = e.key.toLowerCase();
       if (k === "/") { e.preventDefault(); setBusquedaAbierta(true); }
       else if (k === "r" || k === "n") { e.preventDefault(); abrir("comida"); }

@@ -412,7 +412,7 @@ export default function AjustesPage() {
         <SettingsCard>
           <SettingsSubhead title="Tu perfil" description="Los datos que orientan las estimaciones de RITMO." />
           <Row label="Nombre" htmlFor="nombre" error={errores.nombre}>
-            <Input id="nombre" autoComplete="given-name" maxLength={80} aria-invalid={!!errores.nombre} aria-describedby={errores.nombre ? "nombre-error" : undefined} value={form.nombre ?? ""} onChange={(e) => set("nombre", e.target.value)} className="h-11 w-full rounded-xl sm:w-56" />
+            <Input id="nombre" autoComplete="given-name" maxLength={80} aria-invalid={!!errores.nombre} aria-describedby={errores.nombre ? "nombre-error" : undefined} value={form.nombre ?? ""} onChange={(e) => set("nombre", e.target.value)} className="h-11 w-full scroll-mt-28 rounded-xl sm:w-56" />
           </Row>
           <Row label="Sexo biológico" htmlFor="sexo" error={errores.sexo}>
             <div id="sexo" role="group" aria-label="Sexo biológico" tabIndex={-1} aria-describedby={errores.sexo ? "sexo-error" : undefined} className="grid w-full grid-cols-2 gap-1.5 sm:max-w-64">
