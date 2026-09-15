@@ -1,5 +1,5 @@
 {
-  "backupFormat": 5,
+  "backupFormat": 6,
   "cacheSchema": 7,
-  "databaseMigration": "202609150001"
+  "databaseMigration": "202609150002"
 }

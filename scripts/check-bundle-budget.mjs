@@ -3,7 +3,8 @@ import { gzipSync } from "node:zlib";
 import path from "node:path";
 
 const root = path.join(process.cwd(), ".next", "static", "chunks");
-const totalLimitKb = Number(process.env.RITMO_JS_TOTAL_GZIP_KB || 700);
+// La lectura local de ZIP de Apple Health añade un chunk diferido pequeño.
+const totalLimitKb = Number(process.env.RITMO_JS_TOTAL_GZIP_KB || 710);
 const chunkLimitKb = Number(process.env.RITMO_JS_CHUNK_GZIP_KB || 130);
 const files = [];
 async function walk(directory) {

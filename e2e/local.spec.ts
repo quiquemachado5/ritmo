@@ -546,6 +546,37 @@ test("la importación mantiene el foco y permite cancelar sin escribir datos", a
   expect(dias).toEqual([]);
 });
 
+test("importa métricas de salud sin reemplazar el historial del día", async ({ page, request }, info) => {
+  test.skip(info.project.name !== "desktop", "El flujo y la persistencia son iguales en todos los motores");
+  await request.post("http://127.0.0.1:3199/__reset");
+  await iniciarSesion(page);
+  await irA(page, "/ajustes");
+  await page.getByRole("navigation", { name: "Áreas de ajustes" }).getByRole("button", { name: /Datos y cuenta/ }).click();
+  const hoy = await page.evaluate(() => new Date().toLocaleDateString("en-CA"));
+  const selectorArchivo = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Seleccionar archivo" }).nth(1).click();
+  await (await selectorArchivo).setFiles({
+    name: "health-connect.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify({ records: [
+      { recordType: "StepsRecord", startTime: `${hoy}T08:00:00+02:00`, count: 9342 },
+      { recordType: "SleepSessionRecord", startTime: `${hoy}T00:00:00+02:00`, endTime: `${hoy}T07:30:00+02:00` },
+      { recordType: "ExerciseSessionRecord", startTime: `${hoy}T18:00:00+02:00`, endTime: `${hoy}T18:40:00+02:00` },
+    ] })),
+  });
+  const dialogo = page.getByRole("dialog", { name: "Tu salud, lista para importar" });
+  await expect(dialogo).toBeVisible();
+  await expect(dialogo.getByText("3 valores existentes se conservarán.")).toHaveCount(0);
+  await dialogo.getByRole("button", { name: /Guardar 1 días/ }).click();
+  await expect(dialogo).toHaveCount(0);
+  await irA(page, "/");
+  const salud = page.locator("section").filter({ has: page.getByText("Actividad y descanso", { exact: true }) });
+  await expect(salud.getByText("9342", { exact: true })).toBeVisible();
+  await expect(salud.getByText("7 h 30 min", { exact: true })).toBeVisible();
+  await expect(salud.getByText("40 min", { exact: true })).toBeVisible();
+  await expect(page.getByText("Arroz con verduras y pollo", { exact: true })).toBeVisible();
+});
+
 test("la PWA recupera sin conexión y no guarda páginas privadas", async ({ page, request, context }, info) => {
   test.skip(process.env.RITMO_E2E_PRODUCTION !== "1" || info.project.name !== "desktop", "El service worker se activa en producción; basta un contrato de caché");
   await request.post("http://127.0.0.1:3199/__reset");

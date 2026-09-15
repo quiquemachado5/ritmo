@@ -35,6 +35,7 @@ import { SyncCenter } from "@/components/app/sync-center";
 import { DataHealthCenter } from "@/components/app/data-health-center";
 import { usePlatformConfig } from "@/components/app/platform-provider";
 import type { ProgresoImportacion } from "@/lib/store/types";
+import { HealthImport } from "@/components/app/health-import";
 
 type Densidad = "automatica" | "compacta" | "espaciosa";
 type PanelAjustes = "personal" | "rutina" | "experiencia" | "datos";
@@ -283,11 +284,11 @@ export default function AjustesPage() {
 
   function descargarCSV() {
     const dias = Object.values(estado.dias).sort((a, b) => (a.fecha < b.fecha ? -1 : 1));
-    const cabecera = "fecha,peso,kcal_consumidas,kcal_quemadas,habitos_cumplidos,comidas";
+    const cabecera = "fecha,peso,kcal_consumidas,kcal_quemadas,pasos,sueno_minutos,entrenamiento_minutos,habitos_cumplidos,comidas";
     const filas = dias.map((d) => {
       const habs = Object.values(d.habitos || {}).filter(Boolean).length;
       const nComidas = d.comidas?.length ?? 0;
-      return [d.fecha, d.peso ?? "", d.kcalConsumidas ?? "", d.kcalQuemadas ?? "", habs, nComidas].join(",");
+      return [d.fecha, d.peso ?? "", d.kcalConsumidas ?? "", d.kcalQuemadas ?? "", d.pasos ?? "", d.suenoMinutos ?? "", d.entrenamientoMinutos ?? "", habs, nComidas].join(",");
     });
     const csv = [cabecera, ...filas].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -573,6 +574,11 @@ export default function AjustesPage() {
           <SettingsSubhead title="Todo lo importante, en una mirada" description="Conexión, cambios pendientes y copias sin mensajes técnicos." />
           <AccountHealth cloud={modo === "nube"} backupAt={backupInfo?.at} />
         </SettingsCard>
+      </SettingsSection>
+
+      <SettingsSection id="ajuste-salud" active={panel === "datos"}>
+        <SectionLabel>Salud y dispositivos</SectionLabel>
+        <HealthImport estado={estado} userId={userId} importar={importar} disabled={importando || guardandoPerfil || borrandoDatos} />
       </SettingsSection>
 
       {/* Respaldo y portabilidad */}

@@ -41,6 +41,10 @@ export interface Dia {
   kcalConsumidas?: number;
   kcalQuemadas?: number;
   grasaPct?: number;
+  /** Métricas diarias importadas desde Apple Health o Health Connect. */
+  pasos?: number;
+  suenoMinutos?: number;
+  entrenamientoMinutos?: number;
   notas?: string;
   /* Extensiones RITMO */
   comidas?: Comida[];

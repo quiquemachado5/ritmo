@@ -4,7 +4,7 @@
 
 ## Decisión de lanzamiento
 
-**RITMO queda preparado para producción y la base de datos está alineada.** Se aplicaron en Supabase las migraciones pendientes hasta `202609150001` dentro de transacciones y se verificaron las funciones críticas. La publicación se promueve desde `main` después de superar CI y se comprueba de nuevo en `https://ritmo-nu-six.vercel.app/api/health`.
+**RITMO queda preparado para producción y la base de datos está alineada.** Se aplicaron en Supabase las migraciones pendientes hasta `202609150002` dentro de transacciones y se verificaron las funciones críticas. La publicación se promueve desde `main` después de superar CI y se comprueba de nuevo en `https://ritmo-nu-six.vercel.app/api/health`.
 
 No se han activado servicios de pago. Las pruebas automáticas usan datos sintéticos; SMTP, enlaces recibidos y la autenticación completa con cuentas externas siguen necesitando cuentas dedicadas del operador.
 
@@ -123,18 +123,18 @@ Consulta [DEPLOYMENT.md](../DEPLOYMENT.md) para migraciones, staging, correo y p
 
 | Comprobación | Resultado |
 | --- | --- |
-| Pruebas de código | **296 aprobadas**, 1 omitida por evaluación externa no activada; 44 archivos aprobados |
+| Pruebas de código | **300 aprobadas**, 1 omitida por evaluación externa no activada; 45 archivos aprobados |
 | Revisión de código y tipos | ESLint y TypeScript correctos; revisión independiente de autenticación, importación y sincronización completada |
-| Base de datos local | **11 migraciones** aplicadas en PostgreSQL embebido; aislamiento, importación atómica, consentimiento y límites distribuidos aprobados |
-| Recorridos de interfaz en producción | **45 aprobados** en la suma de escritorio, móvil Chromium y móvil WebKit; los casos no aplicables se omiten por dispositivo |
+| Base de datos local | **12 migraciones** aplicadas en PostgreSQL embebido; aislamiento, importación atómica, consentimiento y límites distribuidos aprobados |
+| Recorridos de interfaz en producción | **46 aprobados** y 14 omitidos por dispositivo en la suma de escritorio, móvil Chromium y móvil WebKit |
 | Regresión posterior de la cola | Registro completo, cambio de cuenta, alta con fallo y PWA comprobados de nuevo en las superficies pertinentes |
 | Dos pestañas reales | **2 casos aprobados**, Chromium y WebKit: cambios offline en días distintos, reconexión, cola vacía y conservación de los demás hábitos |
 | Compilación final | `npm run build` aprobado con las variables habituales del proyecto, después de terminar el servidor sintético |
-| Presupuesto de JavaScript | **682,7 kB gzip** entre todos los fragmentos; el mayor ocupa **110,1 kB**. Límites del proyecto: 700/130 kB; no representa la descarga inicial de cada página |
+| Presupuesto de JavaScript | **701,5 kB gzip** entre todos los fragmentos; el mayor ocupa **110,1 kB**. Límites del proyecto: 710/130 kB; el lector ZIP se carga solo al elegir una exportación |
 | Accesibilidad y presentación | Sin incidencias graves/críticas detectadas por axe en las superficies evaluadas; matriz de 320, 390, 768 y 1440 px, oscuro, 2560 px, paisaje y texto al 200 % |
 | Inspección visual | Escritorio y registro móvil revisados; detector de los archivos UI modificados sin hallazgos |
-| Dependencias | `npm audit`: **0 vulnerabilidades reportadas**; no se han añadido dependencias |
-| Base de datos publicada | **202609150001**, con importación, métricas, cohorte y consentimiento verificados en el proyecto de producción |
+| Dependencias | `npm audit`: **0 vulnerabilidades reportadas**; `fflate` se usa de forma diferida para leer ZIP de Apple Health en el dispositivo |
+| Base de datos publicada | **202609150002**, con las columnas de salud y la importación atómica verificadas en el proyecto de producción |
 
 Las pruebas con Safari usan WebKit con geometría móvil. El teclado virtual se simula: quedan fuera la instalación y el teclado físico de un teléfono real, el correo/OAuth reales y las condiciones de red del usuario. Una auditoría de dependencias sin avisos no certifica la ausencia de vulnerabilidades en toda la aplicación.
 
