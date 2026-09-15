@@ -10,7 +10,7 @@ export function RescueMode({ rescate, onCompletar, onVerTodo }: { rescate: Resca
     <section aria-labelledby="rescate-titulo" className="mx-auto flex w-full max-w-3xl flex-1 items-start py-4 sm:items-center sm:py-[clamp(1rem,8vh,6rem)]">
       <Card className="rescue-surface relative w-full overflow-hidden border-primary/18 p-5 sm:p-8">
         <div className="relative z-10 max-w-xl">
-          <span className="grid size-11 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-md"><LifeBuoy className="size-5" /></span>
+          <span className="grid size-11 place-items-center rounded-2xl bg-primary text-primary-foreground ring-1 ring-primary-foreground/10"><LifeBuoy className="size-5" /></span>
           <h2 id="rescate-titulo" className="mt-6 max-w-lg font-display text-3xl font-bold leading-tight text-balance sm:text-5xl">Hoy no toca remontarlo todo.</h2>
           <p className="mt-3 max-w-lg text-sm leading-relaxed text-muted-foreground sm:text-base">Tus últimos {rescate.dias} días estuvieron al {rescate.constancia}% de constancia. RITMO aparta el ruido y propone una sola acción.</p>
           <div className="mt-7 border-y border-primary/15 py-5">

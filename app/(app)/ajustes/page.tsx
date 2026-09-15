@@ -400,7 +400,7 @@ export default function AjustesPage() {
       </nav>
       <div id={`panel-ajustes-${panel}`} className="flex min-w-0 flex-col gap-5">
         <div className="settings-panel-intro flex min-w-0 items-start gap-3 rounded-2xl border border-primary/15 p-3 shadow-sm min-[360px]:p-4 sm:items-center sm:p-5">
-          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm"><PanelIcono className="size-5" /></span>
+          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground ring-1 ring-primary-foreground/10"><PanelIcono className="size-5" /></span>
           <div className="min-w-0"><h2 className="font-display text-xl font-bold tracking-tight">{panelActivo.etiqueta}</h2><p className="mt-1 text-sm leading-relaxed text-muted-foreground max-[359px]:hidden">{panelActivo.detalle}. Los cambios de perfil se guardan juntos; el resto se aplica al momento.</p></div>
         </div>
 
@@ -602,7 +602,7 @@ export default function AjustesPage() {
           {/* Copia de seguridad local automática */}
           <div className="flex flex-col gap-2.5 rounded-xl border border-border/70 bg-secondary/35 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
-              <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-card text-weight shadow-sm"><HistoryIcon className="size-3.5" /></span>
+              <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-card text-weight ring-1 ring-border/70"><HistoryIcon className="size-3.5" /></span>
               <span>{backupInfo ? <>Copia local guardada · {fmtFechaCorta(backupInfo.at.slice(0, 10))}</> : "Aún no hay copia local automática."}</span>
             </div>
             {backupInfo && (

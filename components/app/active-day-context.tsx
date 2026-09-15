@@ -20,7 +20,7 @@ export function ActiveDayContext() {
   return (
     <aside className="flex flex-col gap-2 rounded-xl border border-border/75 bg-secondary/30 px-3 py-2.5 sm:flex-row sm:items-center" aria-label="Día activo compartido">
       <div className="flex min-w-0 items-center gap-2.5 sm:mr-auto">
-        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-card text-primary shadow-sm"><CalendarDays className="size-4" /></span>
+        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-card text-primary ring-1 ring-border/70"><CalendarDays className="size-4" /></span>
         <div className="min-w-0"><p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Día en contexto</p><p className="truncate text-sm font-semibold">{fecha === hoy() ? "Hoy" : capitalizar(fmtFechaLarga(fecha))}</p></div>
       </div>
       <div className="grid grid-cols-3 gap-px overflow-hidden rounded-lg border border-border bg-border text-center text-xs sm:flex sm:min-w-[17rem]">
