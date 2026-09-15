@@ -10,7 +10,7 @@ const estado = {
 
 describe("informe profesional privado", () => {
   it("incluye solo los apartados elegidos y escapa texto personal", () => {
-    const html = generarInformeProfesional(estado, { period: "all", identity: true, weight: true, body: false, habits: false, nutrition: true, notes: false, meals: false }, "2026-09-08");
+    const html = generarInformeProfesional(estado, { period: "all", identity: true, weight: true, body: false, habits: false, health: false, nutrition: true, notes: false, meals: false }, "2026-09-08");
     expect(html).toContain("Alex &lt;script&gt;");
     expect(html).toContain("Evolución de peso");
     expect(html).toContain("Registro nutricional");
@@ -20,9 +20,21 @@ describe("informe profesional privado", () => {
   });
 
   it("permite compartir notas y comidas de forma explícita", () => {
-    const html = generarInformeProfesional(estado, { period: "all", identity: false, weight: false, body: false, habits: false, nutrition: false, notes: true, meals: true }, "2026-09-08");
+    const html = generarInformeProfesional(estado, { period: "all", identity: false, weight: false, body: false, habits: false, health: false, nutrition: false, notes: true, meals: true }, "2026-09-08");
     expect(html).toContain("Informe sin nombre");
     expect(html).toContain("Dato privado");
     expect(html).toContain("Pollo &amp; arroz");
+  });
+
+  it("incluye actividad y descanso únicamente cuando se seleccionan", () => {
+    const conSalud = {
+      ...estado,
+      dias: { "2026-09-08": { ...estado.dias["2026-09-08"], pasos: 9_000, suenoMinutos: 450, entrenamientoMinutos: 35 } },
+    };
+    const html = generarInformeProfesional(conSalud, { period: "all", identity: false, weight: false, body: false, habits: false, health: true, nutrition: false, notes: false, meals: false }, "2026-09-08");
+    expect(html).toContain("Actividad y descanso importados");
+    expect(html).toContain("9000");
+    expect(html).toContain("7 h 30 min");
+    expect(html).toContain("35 min");
   });
 });

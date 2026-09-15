@@ -4,6 +4,7 @@ import * as React from "react";
 import dynamic from "next/dynamic";
 import {
   AlertTriangle,
+  Activity,
   BellOff,
   BrainCircuit,
   ChartNoAxesCombined,
@@ -49,6 +50,7 @@ import { AnnualShare } from "@/components/app/annual-share";
 
 const WeightChart = dynamic(() => import("@/components/app/charts").then((m) => m.WeightChart), { loading: () => <Skeleton className="h-72 w-full rounded-xl" /> });
 const CompositionChart = dynamic(() => import("@/components/app/charts").then((m) => m.CompositionChart), { loading: () => <Skeleton className="h-64 w-full rounded-xl" /> });
+const HealthHistory = dynamic(() => import("@/components/app/health-history").then((m) => m.HealthHistory), { loading: () => <Skeleton className="h-72 w-full rounded-xl" /> });
 
 const RANGOS = [
   { id: "1M", dias: 30 },
@@ -330,6 +332,10 @@ export default function ProgresoPage() {
           {experimentos.memoriaCorporal && memoria && <BodyMemory memoria={memoria} />}
 
           {experimentos.escenarios && escenarios.length > 0 && <Counterfactual escenarios={escenarios} actual={habitosHoy} />}
+          </FlowChapter>
+
+          <FlowChapter icon={Activity} tone="habit" title="Actividad y descanso" description="Los pasos, el sueño y los entrenamientos importados se leen juntos, sin rellenar los días que faltan ni convertirlos en ceros.">
+            <HealthHistory estado={estado} />
           </FlowChapter>
 
           <FlowChapter icon={ChartNoAxesCombined} tone="primary" title="La evolución completa" description="Gráfica, cronología y mapa corporal usan la misma historia para pasar del cambio medido al contexto que lo rodea.">

@@ -166,7 +166,7 @@ export default function NutricionPage() {
                           <span>G {c.grasas}g</span>
                           <DataSourceBadge
                             source={c.fuente === "manual" ? "measured" : c.estimado ? "estimated" : "calculated"}
-                            detail={c.fuente === "manual" ? "Valores corregidos manualmente" : c.fuente === "gemini" ? "Estimación asistida por Gemini" : "Estimación del motor nutricional de RITMO"}
+                            detail={c.fuente === "manual" ? "Valores corregidos manualmente" : c.fuente === "gemini" ? "Estimación asistida por Gemini" : c.fuente === "openfoodfacts" ? "Calculado desde los gramos indicados y datos colaborativos del etiquetado" : "Estimación del motor nutricional de RITMO"}
                             compact
                           />
                         </p>

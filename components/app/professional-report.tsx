@@ -9,11 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { Estado } from "@/lib/model/types";
 import { generarInformeProfesional, type ProfessionalReportOptions, type ReportPeriod } from "@/lib/professional-report";
 
-const INICIAL: ProfessionalReportOptions = { period: "6m", identity: true, weight: true, body: true, habits: true, nutrition: true, notes: false, meals: false };
+const INICIAL: ProfessionalReportOptions = { period: "6m", identity: true, weight: true, body: true, habits: true, health: true, nutrition: true, notes: false, meals: false };
 const CAMPOS = [
   ["weight", "Evolución de peso", "Pesajes reales y cambio del periodo"],
   ["body", "Composición corporal", "Última grasa, músculo y cintura disponibles"],
   ["habits", "Hábitos", "Cumplimiento por cada hábito activo"],
+  ["health", "Actividad y descanso", "Pasos, sueño y entrenamiento importados"],
   ["nutrition", "Resumen nutricional", "Totales de kcal y macros registrados"],
   ["notes", "Notas contextuales", "Puede contener información personal"],
   ["meals", "Texto de las comidas", "El detalle más sensible del informe"],
