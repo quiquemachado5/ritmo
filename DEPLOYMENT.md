@@ -2,11 +2,11 @@
 
 ## Revisión de lanzamiento · 15 de septiembre de 2026
 
-El [listado de mejoras y comprobaciones](docs/PRODUCCION-2026-09-15.md) documenta los cambios de esta revisión. La base de datos de producción está alineada con `202609150001`; la publicación se valida en `https://ritmo-nu-six.vercel.app/api/health` después de cada promoción.
+El [listado de mejoras y comprobaciones](docs/PRODUCCION-2026-09-15.md) documenta los cambios de esta revisión. La base de datos de producción está alineada con `202609150002`; la publicación se valida en `https://ritmo-nu-six.vercel.app/api/health` después de cada promoción.
 
 `npm run check:release` ejecuta la verificación local completa. La interfaz se prueba ahora también con una compilación de producción (`npm run test:e2e:production`), incluido el service worker, usando cuentas y transporte sintéticos. El comando completo termina recompilando con las variables habituales; no publicar el build intermedio de E2E.
 
-Esta guía distingue código preparado de servicios realmente activados. La revisión no activa facturación ni proveedores nutricionales externos. En producción están aplicadas las migraciones del repositorio hasta `202609150001`.
+Esta guía distingue código preparado de servicios realmente activados. La revisión no activa facturación ni proveedores nutricionales externos. En producción están aplicadas las migraciones del repositorio hasta `202609150002`.
 
 ## 1. Antes de desplegar
 
@@ -24,7 +24,7 @@ El origen reproducible es `supabase/migrations/`, en orden de nombre. `supabase/
 2. Probar con datos representativos y revisar la copia antes de aplicar a producción.
 3. Aplicar solo las pendientes en producción, una vez. No ejecutar a ciegas todo el directorio sobre una instalación ya migrada.
 
-Las migraciones `202609100001_admin_console.sql` a `202609150001_transactional_import_observability.sql` crean el control administrativo, la parada segura del motor nutricional, la comprobación pública de versión, la importación atómica, el consentimiento versionado, los límites distribuidos, las métricas de rendimiento y la comparación agregada del modelo. `/api/health` devuelve `503` mientras código y base de datos no estén alineados.
+Las migraciones `202609100001_admin_console.sql` a `202609150002_health_import.sql` crean el control administrativo, la parada segura del motor nutricional, la comprobación pública de versión, la importación atómica, el consentimiento versionado, los límites distribuidos, las métricas de rendimiento, la comparación agregada del modelo y el almacenamiento de sueño y entrenamiento importados. `/api/health` devuelve `503` mientras código y base de datos no estén alineados.
 
 La nueva línea base crea el esquema desde cero y conserva tablas existentes. La migración de perfil admite proteína decimal y alinea límites con el formulario. Sus restricciones nuevas son `NOT VALID`: los datos históricos no se borran ni se corrigen automáticamente; las nuevas escrituras sí se validan.
 

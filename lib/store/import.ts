@@ -61,6 +61,9 @@ export function analizarImportacion(valor: unknown, actual: StoreData): ResumenI
       || (dia.notas !== undefined && typeof dia.notas !== "string")
       || (dia.peso !== undefined && !enRango(dia.peso, 25, 400))
       || (dia.grasaPct !== undefined && !enRango(dia.grasaPct, 2, 70))
+      || (dia.pasos !== undefined && (!enRango(dia.pasos, 0, 200000) || !Number.isInteger(dia.pasos)))
+      || (dia.suenoMinutos !== undefined && (!enRango(dia.suenoMinutos, 0, 1440) || !Number.isInteger(dia.suenoMinutos)))
+      || (dia.entrenamientoMinutos !== undefined && (!enRango(dia.entrenamientoMinutos, 0, 1440) || !Number.isInteger(dia.entrenamientoMinutos)))
       || [dia.kcalConsumidas, dia.kcalQuemadas].some(n => n !== undefined && (!enRango(n, 0, 12000) || !Number.isInteger(n)))
       || (dia.comidas !== undefined && (!Array.isArray(dia.comidas) || dia.comidas.length > 100))) return { ...vacio, error: `Revisa el formato del día ${fecha.slice(0, 10)}.` };
     for (const comida of dia.comidas ?? []) {

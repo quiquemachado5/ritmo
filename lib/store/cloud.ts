@@ -15,6 +15,9 @@ const diaAFila = (d: Dia, userId: string) => ({
   kcal_consumidas: d.kcalConsumidas ?? null,
   kcal_quemadas: d.kcalQuemadas ?? null,
   grasa_pct: d.grasaPct ?? null,
+  pasos: d.pasos ?? null,
+  sueno_minutos: d.suenoMinutos ?? null,
+  entrenamiento_minutos: d.entrenamientoMinutos ?? null,
   notas: d.notas ?? null,
   comidas: d.comidas ?? [],
 });
@@ -26,6 +29,9 @@ interface DiaFila {
   kcal_consumidas: number | null;
   kcal_quemadas: number | null;
   grasa_pct: number | null;
+  pasos: number | null;
+  sueno_minutos: number | null;
+  entrenamiento_minutos: number | null;
   notas: string | null;
   comidas: Comida[] | null;
 }
@@ -36,6 +42,9 @@ const diaDesdeFila = (f: DiaFila): Dia => {
   if (f.kcal_consumidas !== null) d.kcalConsumidas = Number(f.kcal_consumidas);
   if (f.kcal_quemadas !== null) d.kcalQuemadas = Number(f.kcal_quemadas);
   if (f.grasa_pct !== null) d.grasaPct = Number(f.grasa_pct);
+  if (f.pasos != null) d.pasos = Number(f.pasos);
+  if (f.sueno_minutos != null) d.suenoMinutos = Number(f.sueno_minutos);
+  if (f.entrenamiento_minutos != null) d.entrenamientoMinutos = Number(f.entrenamiento_minutos);
   if (f.notas) d.notas = f.notas;
   if (Array.isArray(f.comidas) && f.comidas.length) d.comidas = f.comidas;
   return d;

@@ -35,7 +35,7 @@ function clonar<T>(v: T): T {
 function diaVacio(dia: Dia | undefined): boolean {
   if (!dia) return true;
   const sinHabitos = !Object.values(dia.habitos || {}).some((v) => v === true);
-  const sinNumeros = (["peso", "kcalConsumidas", "kcalQuemadas", "grasaPct"] as const).every(
+  const sinNumeros = (["peso", "kcalConsumidas", "kcalQuemadas", "grasaPct", "pasos", "suenoMinutos", "entrenamientoMinutos"] as const).every(
     (k) => dia[k] === undefined || dia[k] === null,
   );
   const sinComidas = !dia.comidas || dia.comidas.length === 0;

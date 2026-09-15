@@ -66,7 +66,24 @@ const server = http.createServer(async (req, res) => {
       announcement: platformControl.announcementEnabled ? platformControl.announcementText : null,
       updatedAt: platformControl.updatedAt,
     });
-    if (rpc === 'ritmo_public_runtime_status') return send({ databaseVersion: '202609150001', nutritionEngine: true });
+    if (rpc === 'ritmo_public_runtime_status') return send({ databaseVersion: '202609150002', nutritionEngine: true });
+    if (rpc === 'ritmo_import_data') {
+      const upsert = (tabla, filas) => {
+        for (const entrada of filas || []) {
+          const fila = { ...entrada, user_id: id, actualizado_en: new Date(Date.now() + ++tick).toISOString() };
+          const indice = db[tabla].findIndex(actual => actual.user_id === id && actual.fecha === fila.fecha);
+          if (indice >= 0) db[tabla][indice] = fila; else db[tabla].push(fila);
+        }
+      };
+      if (body.p_profile) {
+        const perfil = { ...body.p_profile, user_id: id, actualizado_en: new Date(Date.now() + ++tick).toISOString() };
+        const indice = db.perfiles.findIndex(actual => actual.user_id === id);
+        if (indice >= 0) db.perfiles[indice] = perfil; else db.perfiles.push(perfil);
+      }
+      upsert('dias', body.p_days);
+      upsert('composicion', body.p_measurements);
+      return send({ profile: body.p_profile ? 1 : 0, days: body.p_days?.length || 0, measurements: body.p_measurements?.length || 0 });
+    }
     if (rpc === 'ritmo_admin_snapshot') {
       if (id !== ids[1]) return send({ message: 'Acceso no autorizado' }, 403);
       return send({ metrics: { users: 2, onboarded: 2, active30: 2, suspended: 0, admins: 1, pilots: 0 }, features, control: platformControl, audit: [] });

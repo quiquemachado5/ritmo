@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Award, CheckCircle2, Eye, EyeOff, Flame, Plus, Scale, Target, TrendingDown, TrendingUp, Utensils } from "lucide-react";
+import { Award, CheckCircle2, Dumbbell, Eye, EyeOff, Flame, Footprints, MoonStar, Plus, Scale, Target, TrendingDown, TrendingUp, Utensils } from "lucide-react";
 import { useRitmo } from "@/lib/store/provider";
 import { useQuickLog } from "@/components/app/quick-log-provider";
 import { resumen, adherenciaPorHabito, recordsPersonales, resumenPorMes } from "@/lib/model/analytics";
@@ -29,6 +29,13 @@ function saludo(): string {
   if (h < 13) return "Buenos días";
   if (h < 21) return "Buenas tardes";
   return "Buenas noches";
+}
+
+function duracionBreve(minutos: number): string {
+  const horas = Math.floor(minutos / 60);
+  const resto = minutos % 60;
+  if (!horas) return `${resto} min`;
+  return resto ? `${horas} h ${resto} min` : `${horas} h`;
 }
 
 export default function HoyPage() {
@@ -74,6 +81,11 @@ export default function HoyPage() {
   const pesoRequiereAtencion = r.peso.actual == null || diasDesdePeso >= 7 || (tendKg != null && Math.abs(tendKg) >= 0.25);
   const pesoEnSegundoPlano = experimentos.modoInvisible && !pesoRequiereAtencion && !mostrarLecturasSecundarias;
   const calidadRegistro = qualityForDay(comidas, habitosHechos, habitosActivos.length);
+  const saludHoy = [
+    diaHoy.pasos !== undefined ? { id: "pasos", etiqueta: "Pasos", valor: diaHoy.pasos.toLocaleString("es-ES"), icono: Footprints, tono: "text-primary bg-primary/8" } : null,
+    diaHoy.suenoMinutos !== undefined ? { id: "sueno", etiqueta: "Sueño", valor: duracionBreve(diaHoy.suenoMinutos), icono: MoonStar, tono: "text-weight bg-weight-wash" } : null,
+    diaHoy.entrenamientoMinutos !== undefined ? { id: "entrenamiento", etiqueta: "Entrenamiento", valor: duracionBreve(diaHoy.entrenamientoMinutos), icono: Dumbbell, tono: "text-habit-ink bg-habit-wash" } : null,
+  ].filter((metrica): metrica is NonNullable<typeof metrica> => metrica !== null);
   const lecturaPrincipal = comidas.length === 0 && habitosHechos === 0
     ? "Tu día empieza con un registro"
     : habitosHechos === habitosActivos.length
@@ -276,6 +288,20 @@ export default function HoyPage() {
       </section>
       </div>
       </div>
+
+      {saludHoy.length > 0 && (
+        <section>
+          <SectionLabel action={<Link href="/ajustes?panel=datos#ajuste-salud" className="text-xs font-medium text-primary hover:underline">Gestionar datos</Link>}>Actividad y descanso</SectionLabel>
+          <Card className="grid overflow-hidden p-0 sm:grid-cols-3">
+            {saludHoy.map(({ id, etiqueta, valor, icono: Icono, tono }) => (
+              <div key={id} className="flex min-h-20 items-center gap-3 border-b border-border/70 px-4 py-3 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0">
+                <span className={cn("grid size-9 shrink-0 place-items-center rounded-xl ring-1 ring-border/60", tono)}><Icono className="size-4" /></span>
+                <div className="min-w-0"><p className="text-xs text-muted-foreground">{etiqueta}</p><p className="mt-0.5 font-display text-lg font-bold tabular">{valor}</p></div>
+              </div>
+            ))}
+          </Card>
+        </section>
+      )}
 
       {/* Comidas de hoy */}
       <section>
