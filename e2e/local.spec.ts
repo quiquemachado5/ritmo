@@ -235,7 +235,13 @@ test("la navegación normal no expone administración ni herramientas internas",
 
 test("el modo mínimo sustituye la app por una única acción y recupera la pestaña", async ({ page, request }, info) => {
   await request.post("http://127.0.0.1:3199/__reset");
+  const auditoriaInicial = page.waitForResponse(response =>
+    response.url().includes("/rest/v1/rpc/model_audit_snapshot") && response.ok(),
+  );
   await iniciarSesion(page);
+  // Espera la escritura de fondo antes de probar una recarga. Si se interrumpe
+  // justo al navegar, WebKit informa el aborto como un error CORS de la página.
+  await auditoriaInicial;
   await irA(page, "/nutricion");
   await page.getByRole("button", { name: "Activar modo mínimo", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-vista-minima", "true");
