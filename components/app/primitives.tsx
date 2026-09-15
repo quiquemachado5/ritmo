@@ -3,7 +3,7 @@ import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function IntegratedFlow({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <div data-slot="integrated-flow" className={cn("relative flex flex-col gap-8 before:absolute before:bottom-5 before:left-[1.12rem] before:top-5 before:hidden before:w-px before:bg-border/80 sm:gap-10 sm:before:block", className)}>{children}</div>;
+  return <div data-slot="integrated-flow" className={cn("ritmo-integrated-flow relative flex flex-col gap-8 before:absolute before:bottom-5 before:left-[1.12rem] before:top-5 before:hidden before:w-px before:bg-border/80 sm:gap-10 sm:before:block", className)}>{children}</div>;
 }
 
 export function FlowChapter({ title, description, icon: Icon, tone = "primary", children, className }: {
@@ -21,7 +21,7 @@ export function FlowChapter({ title, description, icon: Icon, tone = "primary", 
     body: "border-body-border bg-body text-body-foreground",
     weight: "border-weight-border bg-weight text-weight-foreground",
   } as const;
-  return <section data-slot="flow-chapter" className={cn("relative sm:pl-12", className)}>
+  return <section data-slot="flow-chapter" className={cn("ritmo-flow-chapter relative sm:pl-12", className)}>
     <span className={cn("absolute left-0 top-0 z-10 grid size-9 place-items-center rounded-xl border-4 border-background shadow-sm", tonos[tone])} aria-hidden="true"><Icon className="size-4" /></span>
     <header data-slot="flow-header" className="mb-4 min-w-0 pl-12 pt-0.5 sm:pl-0"><h2 className="font-display text-xl font-bold tracking-tight">{title}</h2><p data-slot="flow-description" className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</p></header>
     <div data-slot="flow-content" className="flex min-w-0 flex-col gap-4">{children}</div>
@@ -41,7 +41,7 @@ export function PageHeader({
   className?: string;
 }) {
   return (
-    <header data-slot="page-header" className={cn("page-header flex flex-col gap-4 border-b border-border/75 pb-5 sm:flex-row sm:items-end sm:justify-between", className)}>
+    <header data-slot="page-header" className={cn("ritmo-page-header page-header flex flex-col gap-4 border-b border-border/75 pb-5 sm:flex-row sm:items-end sm:justify-between", className)}>
       <div className="min-w-0">
         <h1 className="font-display text-[1.7rem] font-bold leading-tight tracking-tight text-balance sm:text-[2rem]">{title}</h1>
         {description && <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</p>}
@@ -62,7 +62,7 @@ export function SectionLabel({
   action?: React.ReactNode;
 }) {
   return (
-    <div data-slot="section-header" className={cn("mb-3 flex min-w-0 items-center justify-between gap-3", className)}>
+    <div data-slot="section-header" className={cn("ritmo-section-label mb-3 flex min-w-0 items-center justify-between gap-3", className)}>
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <h2 className="shrink-0 text-[0.7rem] font-bold uppercase tracking-[0.11em] text-muted-foreground">
           {children}
@@ -105,7 +105,7 @@ export function Metric({
     <div className={cn("flex flex-col gap-1", className)}>
       <MicroLabel>{label}</MicroLabel>
       <div className="flex items-baseline gap-1">
-        <span className="font-display text-2xl font-bold leading-none tabular" style={color}>
+        <span className="ritmo-metric-value font-display text-2xl font-bold leading-none tabular" style={color}>
           {value}
         </span>
         {unit && <span className="text-sm font-medium text-muted-foreground">{unit}</span>}
@@ -153,7 +153,7 @@ export function Ring({
       aria-valuemin={0}
       aria-valuemax={100}
     >
-      <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
+      <svg width={size} height={size} className="ritmo-ring-visual -rotate-90" aria-hidden="true">
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={`var(${trackVar})`} strokeWidth={stroke} />
         {segments?.length ? (() => {
           let offset = 0;
@@ -208,9 +208,9 @@ export function MacroBar({
           {max ? ` / ${Math.round(max)}` : ""} {unit}
         </span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-secondary">
+      <div className="ritmo-progress-track h-2 overflow-hidden rounded-full bg-secondary">
         <div
-          className="h-full rounded-full transition-[width] duration-700 ease-out"
+          className="ritmo-progress-fill h-full rounded-full transition-[width] duration-700 ease-out"
           style={{ width: `${pct}%`, backgroundColor: `var(${colorVar})` }}
         />
       </div>
@@ -265,7 +265,7 @@ export function EmptyState({
   unlocks?: string[];
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card px-5 py-8 text-center sm:px-6 sm:py-10">
+    <div className="ritmo-empty-state flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card px-5 py-8 text-center sm:px-6 sm:py-10">
       {icon && <div className="text-muted-foreground/60">{icon}</div>}
       <p className="font-display text-base font-semibold text-foreground">{title}</p>
       {children && <p className="max-w-xs text-sm text-muted-foreground">{children}</p>}
