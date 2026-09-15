@@ -9,7 +9,7 @@ async function cabeceras(url: string) {
   vi.stubEnv("NEXT_PUBLIC_APP_URL", url);
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
   const reglas = await config.headers!();
-  return new Headers(reglas[0].headers.map(({ key, value }) => [key, value]));
+  return new Headers(reglas[0].headers.map(({ key, value }): [string, string] => [key, value]));
 }
 
 describe("cabeceras de la compilación de producción", () => {
