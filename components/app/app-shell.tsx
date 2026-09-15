@@ -120,7 +120,6 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
   const pulso = React.useMemo(() => estadoVisualRitmo(estado), [estado]);
   const viaje = useModoViaje(userId);
   const [momento, setMomento] = React.useState<MomentoRitmo>("dia");
-  const [textoAmpliado, setTextoAmpliado] = React.useState(false);
   const vistaMinima = React.useSyncExternalStore(
     React.useCallback((actualizar) => {
       const onStorage = (event: StorageEvent) => { if (event.key === claveVistaMinima(userId)) actualizar(); };
@@ -162,15 +161,6 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
     document.documentElement.dataset.vistaMinima = String(vistaMinima);
     return () => { delete document.documentElement.dataset.vistaMinima; };
   }, [vistaMinima]);
-
-  React.useEffect(() => {
-    const actualizar = () => setTextoAmpliado(Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) > 23);
-    const observador = new MutationObserver(actualizar);
-    actualizar();
-    observador.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "style"] });
-    window.addEventListener("resize", actualizar);
-    return () => { observador.disconnect(); window.removeEventListener("resize", actualizar); };
-  }, []);
 
   function alternarVistaMinima() {
     const siguiente = !vistaMinima;
@@ -219,7 +209,6 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
       data-ritmo={experimentos.interfazViva ? pulso.estado : "neutro"}
       data-momento={experimentos.interfazViva ? momento : "dia"}
       data-contexto={experimentos.interfazViva && viaje.activo ? "viaje" : pulso.estado}
-      data-route={pathname}
       className="app-canvas min-h-dvh bg-background"
     >
       <a href="#contenido-principal" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-xl focus:bg-primary focus:px-5 focus:py-3 focus:text-sm focus:font-semibold focus:text-primary-foreground">Saltar al contenido</a>
@@ -227,10 +216,10 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
       {platform.announcement && <div className="border-b border-primary/20 bg-primary/8 px-4 py-2 text-center text-xs font-medium text-primary md:pl-[16.25rem]">{platform.announcement}</div>}
       {!vistaMinima && <TravelBanner />}
       {/* Sidebar — escritorio */}
-      <aside data-app-sidebar className="ritmo-sidebar fixed inset-y-0 left-0 z-40 hidden w-[16.25rem] flex-col border-r border-border/80 bg-card/97 px-3 py-3 shadow-[8px_0_28px_-28px_var(--foreground)] md:flex">
+      <aside data-app-sidebar className="fixed inset-y-0 left-0 z-40 hidden w-[16.25rem] flex-col border-r border-border/80 bg-card/97 px-3 py-3 shadow-[8px_0_28px_-28px_var(--foreground)] md:flex">
         {vistaMinima ? <>
           <div className="flex h-12 items-center px-2">
-            <RitmoLogo className="ritmo-sidebar-logo" wordmarkClassName="h-8" />
+            <RitmoLogo wordmarkClassName="h-8" />
           </div>
           <div className="flex flex-1 flex-col items-center justify-center px-5 text-center">
             <span className="grid size-11 place-items-center rounded-2xl bg-primary/10 text-primary"><Focus className="size-5" /></span>
@@ -241,10 +230,10 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
         </> : <>
         <div className="flex h-12 items-center justify-between gap-3 px-2">
           <Link href="/" aria-label="RITMO — inicio" className="inline-flex rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            <RitmoLogo className="ritmo-sidebar-logo" wordmarkClassName="h-8" />
+            <RitmoLogo wordmarkClassName="h-8" />
           </Link>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="ritmo-sidebar-search size-9 rounded-xl text-muted-foreground hover:bg-secondary hover:text-foreground" onClick={() => setBusquedaAbierta(true)} aria-label="Buscar en RITMO" title="Buscar · ⌘K">
+            <Button variant="ghost" size="icon" className="size-9 rounded-xl text-muted-foreground hover:bg-secondary hover:text-foreground" onClick={() => setBusquedaAbierta(true)} aria-label="Buscar en RITMO" title="Buscar · ⌘K">
               <Search className="size-[1.05rem]" />
             </Button>
           </div>
@@ -252,7 +241,7 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
         <div className="mt-3">
           <Button
             onClick={() => abrir(recomendada.tab)}
-            className="ritmo-register-cta h-14 w-full justify-start gap-2.5 rounded-2xl px-2.5 text-sm shadow-sm"
+            className="h-14 w-full justify-start gap-2.5 rounded-2xl px-2.5 text-sm shadow-sm"
             aria-label="Registrar"
             title={`${recomendada.etiqueta}. ${recomendada.detalle}`}
           >
@@ -264,7 +253,7 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
             <span className="ml-auto rounded-md bg-primary-foreground/12 px-2 py-1 text-[0.62rem] font-bold tabular">{recomendada.corta}</span>
           </Button>
         </div>
-        <nav className="ritmo-sidebar-nav mt-3 overflow-y-auto rounded-2xl border border-border/65 bg-secondary/30 p-1.5 [scrollbar-width:none]" aria-label="Secciones de RITMO">
+        <nav className="mt-3 overflow-y-auto rounded-2xl border border-border/65 bg-secondary/30 p-1.5 [scrollbar-width:none]" aria-label="Secciones de RITMO">
           <div className="flex flex-col gap-0.5">
             {primarios.map((item) => <SidebarNavLink key={item.href} item={item} active={activo(item.href)} />)}
           </div>
@@ -275,7 +264,7 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
           </div>
         </nav>
         <div className="min-h-3 flex-1" aria-hidden="true" />
-        <div className="ritmo-account-dock mt-3 rounded-2xl border border-border/80 bg-background/60 p-1 shadow-sm">
+        <div className="mt-3 rounded-2xl border border-border/80 bg-background/60 p-1 shadow-sm">
           <div className="flex min-w-0 items-center gap-0.5">
             <UserMenu expanded isAdmin={isAdmin} />
             <span className="h-7 w-px bg-border" aria-hidden="true" />
@@ -287,7 +276,7 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
       </aside>
 
       {/* Cabecera — móvil */}
-      <header className="ritmo-mobile-header sticky top-0 z-30 flex min-h-14 items-center justify-between border-b border-border bg-background/92 px-3 pt-[env(safe-area-inset-top)] backdrop-blur-md min-[360px]:px-4 md:hidden">
+      <header className="sticky top-0 z-30 flex min-h-14 items-center justify-between border-b border-border bg-background/92 px-3 pt-[env(safe-area-inset-top)] backdrop-blur-md min-[360px]:px-4 md:hidden">
         <Link href="/" aria-label="RITMO — inicio">
           <RitmoBadge className="min-[360px]:hidden" />
           <RitmoLogo className="hidden min-[360px]:inline-flex" wordmarkClassName="h-8" />
@@ -302,7 +291,7 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
 
       {/* Contenido */}
       <div className="md:pl-[16.25rem]">
-        <main id="contenido-principal" tabIndex={-1} className="ritmo-main app-content mx-auto w-full max-w-[88rem] px-[clamp(1rem,3vw,3.5rem)] pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-5 focus:outline-none md:pb-14 md:pt-9">
+        <main id="contenido-principal" tabIndex={-1} className="app-content mx-auto w-full max-w-[88rem] px-[clamp(1rem,3vw,3.5rem)] pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-5 focus:outline-none md:pb-14 md:pt-9">
           <PageTransition>{vistaMinima ? <MinimalFocus estado={estado} recomendada={recomendada} onRegistrar={() => abrir(recomendada.tab)} /> : children}</PageTransition>
           {!vistaMinima && <footer className="mt-10 border-t border-border pt-4 text-center text-[0.68rem] text-muted-foreground/60 md:text-left">
             hecho por{" "}
@@ -314,7 +303,7 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
       </div>
 
       {/* Barra inferior + FAB — móvil */}
-      {!vistaMinima && <nav aria-label="Navegación principal móvil" data-large-text={textoAmpliado} className="ritmo-mobile-nav fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur-md md:hidden">
+      {!vistaMinima && <nav aria-label="Navegación principal móvil" className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur-md md:hidden">
         <div className="mx-auto flex min-h-[4.2rem] max-w-lg items-stretch justify-around px-2 pb-[env(safe-area-inset-bottom)]">
           {primarios.slice(0, 2).map((item) => (
             <NavTab key={item.href} item={item} active={activo(item.href)} />
@@ -324,7 +313,7 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
               onClick={() => abrir(recomendada.tab)}
               aria-label="Registrar"
               title={`${recomendada.etiqueta}. ${recomendada.detalle}`}
-              className="ritmo-fab grid size-14 -translate-y-4 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-transform active:scale-95"
+              className="grid size-14 -translate-y-4 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-transform active:scale-95"
             >
               <Plus className="size-7" />
             </button>
@@ -389,9 +378,8 @@ function SidebarNavLink({ item, active }: { item: (typeof NAV_ITEMS)[number]; ac
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
-      data-active={active}
       className={cn(
-        "ritmo-sidebar-link group flex h-10 items-center gap-2.5 rounded-xl px-2 text-[0.84rem] font-medium outline-none transition-[background-color,color,box-shadow,transform] focus-visible:ring-2 focus-visible:ring-ring",
+        "group flex h-10 items-center gap-2.5 rounded-xl px-2 text-[0.84rem] font-medium outline-none transition-[background-color,color,box-shadow,transform] focus-visible:ring-2 focus-visible:ring-ring",
         active
           ? "bg-card text-foreground shadow-sm ring-1 ring-border/75"
           : "text-muted-foreground hover:translate-x-0.5 hover:bg-card/70 hover:text-foreground",
@@ -411,9 +399,8 @@ function NavTab({ item, active }: { item: (typeof NAV_ITEMS)[number]; active: bo
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
-      data-active={active}
       className={cn(
-        "ritmo-nav-tab flex min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-1 px-1 py-2 text-center text-[0.62rem] font-medium transition-colors",
+        "flex min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-1 px-1 py-2 text-center text-[0.62rem] font-medium transition-colors",
         active ? "text-primary" : "text-muted-foreground",
       )}
     >
