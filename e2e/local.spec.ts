@@ -104,7 +104,10 @@ test("auditoría visual de despliegue cubre anchuras críticas", async ({ page, 
 });
 
 test("recorrido visual y guardado con datos sintéticos", async ({ page, request }, info) => {
-  test.setTimeout(120000);
+  // WebKit en los runners compartidos puede tardar bastante más al generar
+  // todas las capturas; el recorrido sigue comprobando cada paso de forma
+  // individual y no debe agotarse solo por la velocidad de la máquina.
+  test.setTimeout(240000);
   const analisisRemotos: string[] = [];
   page.on("request", request => { if (request.url().includes("/api/nutricion") || /generativelanguage|api\.edamam/.test(request.url())) analisisRemotos.push(request.url()); });
   await request.post("http://127.0.0.1:3199/__reset");

@@ -59,7 +59,7 @@ export function ServiceWorkerRegister() {
     };
   }, []);
   if (!waiting || abierto) return null;
-  return <div className="fixed bottom-24 left-4 right-4 z-40 flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-3 shadow-md sm:left-auto sm:max-w-sm md:bottom-5" role="status">
+  return <div className="relative z-40 m-3 flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-3 shadow-md sm:fixed sm:bottom-24 sm:left-auto sm:right-4 sm:m-0 sm:max-w-sm md:bottom-5" role="status">
     <p className="text-sm">Hay una versión nueva de RITMO.</p>
     <Button size="sm" disabled={sincronizando || pendientes > 0} onClick={() => {
       navigator.serviceWorker.addEventListener("controllerchange", () => window.location.reload(), { once: true });
