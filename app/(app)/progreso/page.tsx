@@ -36,7 +36,6 @@ import { cn } from "@/lib/utils";
 import { DataLegend } from "@/components/app/data-legend";
 import { SnapRail } from "@/components/ui/snap-rail";
 import { DataSourceBadge } from "@/components/app/data-source";
-import { ActiveDayContext } from "@/components/app/active-day-context";
 import { ModelAudit } from "@/components/app/model-audit";
 import { habitosModelo } from "@/lib/model/config";
 import { escenariosRitmo, memoriaCorporal } from "@/lib/model/insights";
@@ -252,8 +251,6 @@ export default function ProgresoPage() {
         description="Tu historial confirmado y la orientación del modelo se leen por separado."
         action={<Button onClick={() => abrir("peso")} className="min-h-11 w-full gap-2 sm:w-auto"><Scale className="size-4" /> Registrar medición</Button>}
       />
-      <ActiveDayContext />
-
       {!hayPesajes ? (
         <EmptyState icon={<Scale className="size-8" />} title="Empieza con una medición real" unlocks={["1 pesaje: punto de partida", "2 pesajes: cambio real", "4+ pesajes: error personalizado"]} action={<Button onClick={() => abrir("peso")} className="mt-1 gap-2"><Scale className="size-4" /> Registrar peso</Button>}>
           Con pesajes regulares, RITMO podrá separar tu evolución real de la estimación del modelo.
