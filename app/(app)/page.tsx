@@ -305,7 +305,7 @@ export default function HoyPage() {
 
       {/* Comidas de hoy */}
       <section>
-        <SectionLabel action={<button onClick={() => abrir("comida")} className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground"><Plus className="size-3.5" /> Añadir</button>}>
+        <SectionLabel action={<button onClick={() => abrir("comida")} className="inline-flex min-h-10 items-center rounded-lg px-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/7">Añadir</button>}>
           Comidas de hoy
         </SectionLabel>
         <Card className="overflow-hidden p-0">

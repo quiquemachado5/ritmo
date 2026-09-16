@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { fmtFechaCorta } from "@/lib/format";
 import {
   combinarImportacionesSalud,
+  interpretarAppleHealthArchivo,
   interpretarTextoSalud,
   prepararImportacionSalud,
   totalesImportacionSalud,
@@ -90,9 +91,12 @@ async function descomprimir(file: File): Promise<Array<{ nombre: string; texto: 
 }
 
 async function leerArchivo(file: File, fuenteEsperada: FuenteSalud): Promise<ImportacionSalud> {
-  const archivos = await descomprimir(file);
-  const importaciones = archivos.map(({ nombre, texto }) => interpretarTextoSalud(texto, nombre));
-  const resultado = combinarImportacionesSalud(importaciones);
+  if (file.size > LIMITE_ARCHIVO) throw new Error(file.name.toLowerCase().endsWith(".zip")
+    ? "El ZIP supera 250 MB. Extrae export.xml y selecciónalo directamente."
+    : "El archivo supera 250 MB. Exporta un periodo más corto para importarlo.");
+  const resultado = file.name.toLowerCase().endsWith(".xml")
+    ? await interpretarAppleHealthArchivo(file)
+    : combinarImportacionesSalud((await descomprimir(file)).map(({ nombre, texto }) => interpretarTextoSalud(texto, nombre)));
   const dias = Object.keys(resultado.dias).length;
   if (!dias) {
     if (fuenteEsperada === "health-connect") throw new Error("No encontré peso, pasos, sueño ni entrenamientos en un formato legible. La copia cifrada de Android debe convertirse primero a JSON o CSV.");
@@ -222,7 +226,7 @@ export function HealthImport({
           <DialogContent showCloseButton={false} className="max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl p-5 sm:max-w-md" onEscapeKeyDown={event => { if (guardando) event.preventDefault(); }} onInteractOutside={event => { if (guardando) event.preventDefault(); }} onCloseAutoFocus={event => { event.preventDefault(); triggerRef.current?.focus(); }} aria-busy={guardando}>
             <div>
               <DialogTitle className="font-display text-xl font-bold">Tu salud, lista para importar</DialogTitle>
-              <DialogDescription className="mt-1.5 leading-relaxed">{FUENTES[preview.fuente].nombre} · {totales.dias} días{preview.desde && preview.hasta ? ` · ${fmtFechaCorta(preview.desde)}–${fmtFechaCorta(preview.hasta)}` : ""}</DialogDescription>
+              <DialogDescription className="mt-1.5 leading-relaxed">{FUENTES[preview.fuente].nombre} · {totales.dias} {totales.dias === 1 ? "día" : "días"}{preview.desde && preview.hasta ? ` · ${fmtFechaCorta(preview.desde)}${preview.desde === preview.hasta ? "" : `–${fmtFechaCorta(preview.hasta)}`}` : ""}</DialogDescription>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
@@ -239,20 +243,22 @@ export function HealthImport({
               })}
             </div>
 
+            {preview.avisos.map(aviso => <p key={aviso} className="rounded-xl border border-warning-border bg-warning-wash px-3.5 py-3 text-xs leading-relaxed text-warning-ink">{aviso}</p>)}
+
             <div className="flex items-start justify-between gap-4 rounded-xl border border-border/80 px-3.5 py-3">
               <div><p className="text-sm font-semibold">Conservar mis datos actuales</p><p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">Si una fecha ya tiene esa métrica, RITMO mantiene tu registro.</p></div>
               <Switch checked={conservarExistentes} disabled={guardando} onCheckedChange={setConservarExistentes} aria-label="Conservar datos actuales" />
             </div>
 
             <div className="rounded-xl bg-secondary/45 px-3.5 py-3 text-xs leading-relaxed text-muted-foreground">
-              <span className="font-semibold text-foreground">{aplicacion.resumen.dias} días preparados.</span>{aplicacion.resumen.omitidos > 0 ? ` ${aplicacion.resumen.omitidos} valores existentes se conservarán.` : " No se detectan valores que deban omitirse."} Comidas, hábitos y notas no se modifican.
+              <span className="font-semibold text-foreground">{aplicacion.resumen.dias} {aplicacion.resumen.dias === 1 ? "día preparado" : "días preparados"}.</span>{aplicacion.resumen.omitidos > 0 ? ` ${aplicacion.resumen.omitidos} ${aplicacion.resumen.omitidos === 1 ? "valor existente se conservará" : "valores existentes se conservarán"}.` : " No se detectan valores que deban omitirse."} Comidas, hábitos y notas no se modifican.
             </div>
 
             {guardando && progreso && <div className="space-y-2" role="status" aria-live="polite"><div className="flex justify-between text-xs"><span>Guardando métricas</span><span className="tabular text-muted-foreground">{progreso.porcentaje}%</span></div><Progress value={progreso.porcentaje} /></div>}
 
             <div className="flex gap-2">
               <Button type="button" variant="secondary" disabled={guardando} onClick={() => setPreview(null)} className="min-h-11 flex-1 rounded-xl">Cancelar</Button>
-              <Button type="button" disabled={guardando || disabled || aplicacion.resumen.dias === 0} onClick={() => void confirmar()} className="min-h-11 flex-1 rounded-xl">{guardando ? "Guardando…" : aplicacion.resumen.dias ? `Guardar ${aplicacion.resumen.dias} días` : "Nada nuevo"}</Button>
+              <Button type="button" disabled={guardando || disabled || aplicacion.resumen.dias === 0} onClick={() => void confirmar()} className="min-h-11 flex-1 rounded-xl">{guardando ? "Guardando…" : aplicacion.resumen.dias ? `Guardar ${aplicacion.resumen.dias} ${aplicacion.resumen.dias === 1 ? "día" : "días"}` : "Nada nuevo"}</Button>
             </div>
           </DialogContent>
         )}

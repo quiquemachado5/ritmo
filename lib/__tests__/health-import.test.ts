@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { interpretarAppleHealthXml, interpretarHealthConnectCsv, interpretarHealthConnectJson, prepararImportacionSalud } from "@/lib/health-import";
+import { interpretarAppleHealthArchivo, interpretarAppleHealthXml, interpretarHealthConnectCsv, interpretarHealthConnectJson, prepararImportacionSalud } from "@/lib/health-import";
 import { PERFIL_DEFECTO } from "@/lib/model/config";
 
 describe("importación de Apple Health", () => {
@@ -16,6 +16,29 @@ describe("importación de Apple Health", () => {
     const resultado = interpretarAppleHealthXml(xml);
     expect(resultado.fuente).toBe("apple-health");
     expect(resultado.dias["2026-09-14"]).toMatchObject({ peso: 82.1, pasos: 5500, suenoMinutos: 450, entrenamientoMinutos: 45 });
+  });
+
+  it("lee pesos del CDA aunque Apple concatene entradas después del documento", () => {
+    const xml = `<?xml version="1.0"?><ClinicalDocument></ClinicalDocument>
+      <entry><observation><text><sourceName>Báscula</sourceName><type>HKQuantityTypeIdentifierBodyMass</type></text>
+      <effectiveTime><low value="20260914080000+0200"/><high value="20260914080000+0200"/></effectiveTime>
+      <value xsi:type="PQ" value="81.7" unit="kg"/></observation></entry>`;
+    const resultado = interpretarAppleHealthXml(xml);
+    expect(resultado.dias["2026-09-14"]).toMatchObject({ peso: 81.7 });
+  });
+
+  it("ignora registros ajenos y lee export.xml por bloques", async () => {
+    const relleno = `<Record type="HKQuantityTypeIdentifierDistanceWalkingRunning" unit="km" value="1" startDate="2026-09-14 08:00:00 +0200"/>`.repeat(1_000);
+    const xml = `<?xml version="1.0"?><HealthData>${relleno}<Record type="HKQuantityTypeIdentifierStepCount" sourceName="iPhone" unit="count" value="4321" startDate="2026-09-14 08:00:00 +0200" endDate="2026-09-14 20:00:00 +0200"/></HealthData>`;
+    const resultado = await interpretarAppleHealthArchivo(new Blob([xml]));
+    expect(resultado.registrosLeidos).toBe(1);
+    expect(resultado.dias["2026-09-14"].pasos).toBe(4321);
+  });
+
+  it("acepta tiempo en cama y avisa de su menor precisión", () => {
+    const resultado = interpretarAppleHealthXml(`<HealthData><Record type="HKCategoryTypeIdentifierSleepAnalysis" value="HKCategoryValueSleepAnalysisInBed" startDate="2026-09-13 23:00:00 +0200" endDate="2026-09-14 07:00:00 +0200"/></HealthData>`);
+    expect(resultado.dias["2026-09-14"].suenoMinutos).toBe(480);
+    expect(resultado.avisos).toHaveLength(1);
   });
 });
 
