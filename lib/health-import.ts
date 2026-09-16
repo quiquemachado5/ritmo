@@ -55,14 +55,21 @@ function nuevoDia(): DiaAcumulado {
 function fechaDe(valor: unknown): string | null {
   if (typeof valor !== "string") return null;
   const match = valor.match(FECHA);
-  if (!match) return null;
-  const fecha = match[0];
+  const compacta = valor.trim().match(/^(\d{4})(\d{2})(\d{2})/);
+  if (!match && !compacta) return null;
+  const fecha = match?.[0] ?? `${compacta?.[1]}-${compacta?.[2]}-${compacta?.[3]}`;
   const d = new Date(`${fecha}T12:00:00Z`);
   return Number.isFinite(d.getTime()) && d.toISOString().slice(0, 10) === fecha ? fecha : null;
 }
 
 function instante(valor: unknown): number | null {
   if (typeof valor !== "string") return null;
+  const compacta = valor.trim().match(/^(\d{4})(\d{2})(\d{2})(?:(\d{2})(\d{2})(\d{2}))?([+-]\d{2})(\d{2})$/);
+  if (compacta) {
+    const [, ano, mes, dia, hora = "12", minuto = "00", segundo = "00", zonaHora, zonaMinuto] = compacta;
+    const n = Date.parse(`${ano}-${mes}-${dia}T${hora}:${minuto}:${segundo}${zonaHora}:${zonaMinuto}`);
+    return Number.isFinite(n) ? n : null;
+  }
   // Apple usa "+0200"; Date.parse es más consistente con "+02:00".
   const normalizado = valor.trim().replace(/ ([+-]\d{2})(\d{2})$/, "$1:$2").replace(" ", "T");
   const n = Date.parse(normalizado);
@@ -178,26 +185,95 @@ class AcumuladorSalud {
   }
 }
 
-export function interpretarAppleHealthXml(xml: string): ImportacionSalud {
-  const acumulador = new AcumuladorSalud();
+function procesarEtiquetasAppleHealth(xml: string, acumulador: AcumuladorSalud, avisos: Set<string>) {
   for (const match of xml.matchAll(/<(Record|Workout)\b[^>]*\/?>/g)) {
-    acumulador.contar();
     const clase = match[1];
     const a = atributos(match[0]);
     if (clase === "Workout") {
+      acumulador.contar();
       const duracion = minutos(a.duration, a.durationUnit);
       const fecha = fechaDe(a.startDate);
       acumulador.entrenamiento(fecha, duracion, `${a.startDate}|${a.endDate}|${a.workoutActivityType}`);
       continue;
     }
     const tipo = (a.type ?? "").toLowerCase();
-    if (tipo.includes("bodymass")) acumulador.peso(fechaDe(a.startDate), kg(a.value, a.unit), instante(a.startDate));
-    else if (tipo.includes("stepcount")) acumulador.pasos(fechaDe(a.startDate), numero(a.value), a.sourceName || "Apple Health");
-    else if (tipo.includes("sleepanalysis") && (a.value ?? "").toLowerCase().includes("asleep")) {
-      acumulador.sueno(fechaDe(a.endDate) ?? fechaDe(a.startDate), instante(a.startDate), instante(a.endDate));
+    if (tipo.endsWith("bodymass")) {
+      acumulador.contar();
+      acumulador.peso(fechaDe(a.startDate), kg(a.value, a.unit), instante(a.startDate));
+    } else if (tipo.includes("stepcount")) {
+      acumulador.contar();
+      acumulador.pasos(fechaDe(a.startDate), numero(a.value), a.sourceName || "Apple Health");
+    }
+    else if (tipo.includes("sleepanalysis")) {
+      const estado = (a.value ?? "").toLowerCase();
+      if (estado.includes("asleep") || estado.includes("inbed")) {
+        acumulador.contar();
+        acumulador.sueno(fechaDe(a.endDate) ?? fechaDe(a.startDate), instante(a.startDate), instante(a.endDate));
+        if (estado.includes("inbed")) avisos.add("Apple registró tiempo en cama. RITMO lo mostrará como sueño y puede incluir periodos despierto.");
+      }
     }
   }
-  return acumulador.resultado("apple-health");
+}
+
+function contenidoElemento(xml: string, nombre: string): string | null {
+  return xml.match(new RegExp(`<${nombre}\\b[^>]*>([^<]*)<\\/${nombre}>`, "i"))?.[1]?.trim() || null;
+}
+
+/**
+ * Apple también genera export_cda.xml. Algunos historiales concatenan entradas
+ * después de cerrar ClinicalDocument; leer las observaciones de forma tolerante
+ * recupera los datos sin exigir que ese documento sea XML estricto.
+ */
+function procesarAppleHealthCda(xml: string, acumulador: AcumuladorSalud) {
+  for (const match of xml.matchAll(/<observation\b[\s\S]*?<\/observation>/gi)) {
+    const observacion = match[0];
+    const tipo = (contenidoElemento(observacion, "type") ?? "").toLowerCase();
+    if (!/(?:bodymass|stepcount|sleepanalysis)$/.test(tipo)) continue;
+    const despuesDelTexto = observacion.split(/<\/text>/i).at(-1) ?? observacion;
+    const valorTag = despuesDelTexto.match(/<value\b[^>]*\/?>/i)?.[0] ?? "";
+    const valor = atributos(valorTag);
+    const inicio = atributos(observacion.match(/<low\b[^>]*\/?>/i)?.[0] ?? "").value;
+    const fin = atributos(observacion.match(/<high\b[^>]*\/?>/i)?.[0] ?? "").value;
+    const fuente = contenidoElemento(observacion, "sourceName") ?? "Apple Health";
+    acumulador.contar();
+    if (tipo.endsWith("bodymass")) acumulador.peso(fechaDe(inicio ?? fin), kg(valor.value, valor.unit), instante(inicio ?? fin));
+    else if (tipo.includes("stepcount")) acumulador.pasos(fechaDe(inicio ?? fin), numero(valor.value), fuente);
+    else if ((valor.code ?? valor.value ?? "").toLowerCase().includes("asleep")) {
+      acumulador.sueno(fechaDe(fin) ?? fechaDe(inicio), instante(inicio), instante(fin));
+    }
+  }
+}
+
+export function interpretarAppleHealthXml(xml: string): ImportacionSalud {
+  const acumulador = new AcumuladorSalud();
+  const avisos = new Set<string>();
+  procesarEtiquetasAppleHealth(xml, acumulador, avisos);
+  if (/<ClinicalDocument\b|<observation\b/i.test(xml)) procesarAppleHealthCda(xml, acumulador);
+  return acumulador.resultado("apple-health", [...avisos]);
+}
+
+/** Lee export.xml por bloques para que historiales grandes no dupliquen cientos
+ * de megabytes en memoria. Los tags de Apple contienen toda la información
+ * compatible en su apertura; el pequeño remanente conserva tags entre bloques. */
+export async function interpretarAppleHealthArchivo(archivo: Blob): Promise<ImportacionSalud> {
+  const cabecera = await archivo.slice(0, 8_192).text();
+  if (/<ClinicalDocument\b/i.test(cabecera)) return interpretarAppleHealthXml(await archivo.text());
+  const acumulador = new AcumuladorSalud();
+  const avisos = new Set<string>();
+  const lector = archivo.stream().getReader();
+  const decoder = new TextDecoder();
+  let pendiente = "";
+  for (;;) {
+    const { value, done } = await lector.read();
+    pendiente += decoder.decode(value, { stream: !done });
+    if (done) break;
+    const ultimoTag = pendiente.lastIndexOf("<");
+    if (ultimoTag <= 0) continue;
+    procesarEtiquetasAppleHealth(pendiente.slice(0, ultimoTag), acumulador, avisos);
+    pendiente = pendiente.slice(ultimoTag);
+  }
+  procesarEtiquetasAppleHealth(pendiente, acumulador, avisos);
+  return acumulador.resultado("apple-health", [...avisos]);
 }
 
 function claveNormalizada(valor: string): string {

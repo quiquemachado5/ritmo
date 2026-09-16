@@ -585,7 +585,7 @@ test("importa métricas de salud sin reemplazar el historial del día", async ({
   const dialogo = page.getByRole("dialog", { name: "Tu salud, lista para importar" });
   await expect(dialogo).toBeVisible();
   await expect(dialogo.getByText("3 valores existentes se conservarán.")).toHaveCount(0);
-  await dialogo.getByRole("button", { name: /Guardar 1 días/ }).click();
+  await dialogo.getByRole("button", { name: /Guardar 1 día/ }).click();
   await expect(dialogo).toHaveCount(0);
   await irA(page, "/");
   const salud = page.locator("section").filter({ has: page.getByText("Actividad y descanso", { exact: true }) });
@@ -593,6 +593,37 @@ test("importa métricas de salud sin reemplazar el historial del día", async ({
   await expect(salud.getByText("7 h 30 min", { exact: true })).toBeVisible();
   await expect(salud.getByText("40 min", { exact: true })).toBeVisible();
   await expect(page.getByText("Arroz con verduras y pollo", { exact: true })).toBeVisible();
+});
+
+test("acepta Apple Health, incluido tiempo en cama, antes de guardar", async ({ page, request }, info) => {
+  test.skip(info.project.name !== "desktop", "El contrato de archivo se cubre una vez y la geometría se comprueba a anchura móvil");
+  await request.post("http://127.0.0.1:3199/__reset");
+  await iniciarSesion(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await irA(page, "/ajustes");
+  await page.getByRole("navigation", { name: "Áreas de ajustes" }).getByRole("button", { name: /Datos y cuenta/ }).click();
+  const hoy = await page.evaluate(() => new Date().toLocaleDateString("en-CA"));
+  const ayer = await page.evaluate(() => { const fecha = new Date(); fecha.setDate(fecha.getDate() - 1); return fecha.toLocaleDateString("en-CA"); });
+  const selectorArchivo = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Seleccionar archivo" }).first().click();
+  await (await selectorArchivo).setFiles({
+    name: "export.xml",
+    mimeType: "text/xml",
+    buffer: Buffer.from(`<HealthData>
+      <Record type="HKQuantityTypeIdentifierBodyMass" sourceName="Báscula" unit="kg" value="80.2" startDate="${hoy} 08:00:00 +0200" endDate="${hoy} 08:00:00 +0200"/>
+      <Record type="HKQuantityTypeIdentifierStepCount" sourceName="iPhone" unit="count" value="8450" startDate="${hoy} 08:00:00 +0200" endDate="${hoy} 20:00:00 +0200"/>
+      <Record type="HKCategoryTypeIdentifierSleepAnalysis" value="HKCategoryValueSleepAnalysisInBed" startDate="${ayer} 23:00:00 +0200" endDate="${hoy} 07:00:00 +0200"/>
+      <Workout workoutActivityType="HKWorkoutActivityTypeRunning" duration="35" durationUnit="min" startDate="${hoy} 18:00:00 +0200" endDate="${hoy} 18:35:00 +0200"/>
+    </HealthData>`),
+  });
+  const dialogo = page.getByRole("dialog", { name: "Tu salud, lista para importar" });
+  await expect(dialogo).toBeVisible();
+  await expect(dialogo.getByText(/Apple registró tiempo en cama/)).toBeVisible();
+  await expect(dialogo.getByText("1 día", { exact: true })).toHaveCount(4);
+  await sinDesbordamiento(page);
+  await page.screenshot({ path: "test-results/desktop-apple-health-import.png" });
+  await dialogo.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(dialogo).toHaveCount(0);
 });
 
 test("la PWA recupera sin conexión y no guarda páginas privadas", async ({ page, request, context }, info) => {

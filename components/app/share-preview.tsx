@@ -44,7 +44,7 @@ export function SharePreview({ render, filename, title, monthly = false, trigger
     const a = document.createElement("a"); a.href = preview.url; a.download = filename; a.click();
   }
   return <>
-    <Button variant="secondary" size="sm" onClick={() => setOpen(true)} aria-label={triggerLabel ? `Preparar ${triggerLabel.toLocaleLowerCase("es-ES")}` : monthly ? "Preparar informe mensual" : "Preparar resumen semanal"} className="gap-2"><Share2 className="size-4" />{triggerLabel ?? (monthly ? "Informe" : "Compartir")}</Button>
+    <Button variant="outline" size="sm" onClick={() => setOpen(true)} aria-label={triggerLabel ? `Preparar ${triggerLabel.toLocaleLowerCase("es-ES")}` : monthly ? "Preparar informe mensual" : "Preparar resumen semanal"} className="min-h-10 border-border/80 bg-card px-3 shadow-none hover:bg-secondary/45">{triggerLabel ?? (monthly ? "Informe" : "Compartir")}</Button>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="flex max-h-[92dvh] flex-col gap-4 overflow-hidden sm:max-w-2xl">
         <DialogHeader><DialogTitle>{title}</DialogTitle><DialogDescription>Elige qué mostrar. No se incluye tu nombre, correo ni notas personales.</DialogDescription></DialogHeader>
